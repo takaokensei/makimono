@@ -73,6 +73,7 @@ class SettingsFragment : BaseFragment() {
         setupDefaultPlayerMenu()
         setupCheckForUpdates()
         setupMalIntegration()
+        setupPlaybackExperience()
     }
 
     private fun setupThemeMenu() {
@@ -242,6 +243,26 @@ class SettingsFragment : BaseFragment() {
                 }
                 authDialog.show(parentFragmentManager, MalAuthDialog.TAG)
             }
+        }
+    }
+
+    private fun setupPlaybackExperience() {
+        binding.switchAutoSkip.isChecked = malSessionManager.isAutoSkipEnabled()
+        binding.settingAutoSkipToggle.setOnClickListener {
+            binding.switchAutoSkip.toggle()
+        }
+        binding.switchAutoSkip.setOnCheckedChangeListener { _, isChecked ->
+            malSessionManager.setAutoSkipEnabled(isChecked)
+            showSnackBar(if (isChecked) "Pulo de aberturas automático ativado" else "Pulo de aberturas automático desativado")
+        }
+
+        binding.switchGestures.isChecked = malSessionManager.isGesturesEnabled()
+        binding.settingGesturesToggle.setOnClickListener {
+            binding.switchGestures.toggle()
+        }
+        binding.switchGestures.setOnCheckedChangeListener { _, isChecked ->
+            malSessionManager.setGesturesEnabled(isChecked)
+            showSnackBar(if (isChecked) "Gestos touch ativados" else "Gestos touch desativados")
         }
     }
 

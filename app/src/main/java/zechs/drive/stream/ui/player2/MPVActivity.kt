@@ -39,17 +39,24 @@ import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.app.UiModeManager
+import android.content.pm.PackageManager
+import android.view.MotionEvent
 import zechs.drive.stream.R
 import zechs.drive.stream.data.model.PlaylistItem
 import zechs.drive.stream.data.model.SubtitleItem
 import zechs.drive.stream.databinding.ActivityMpvBinding
 import zechs.drive.stream.databinding.PlayerControlViewBinding
 import zechs.drive.stream.data.model.MalAnimeNode
+import zechs.drive.stream.data.repository.AniSkipRepository
 import zechs.drive.stream.data.repository.MalRepository
 import zechs.drive.stream.ui.player.PlayerViewModel
 import zechs.drive.stream.ui.player.MalRatingDialog
+import zechs.drive.stream.ui.player.PlayerGestureHelper
+import zechs.drive.stream.ui.player.PlayerGestureCallback
 import zechs.drive.stream.utils.MalSessionManager
 import zechs.drive.stream.utils.EpisodeParser
+import zechs.drive.stream.utils.MatroskaChapterParser
 import zechs.drive.stream.utils.util.Constants.Companion.DRIVE_API
 import zechs.drive.stream.utils.util.Orientation
 import zechs.drive.stream.utils.util.getNextOrientation
@@ -105,6 +112,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     @Inject
     lateinit var malSessionManager: dagger.Lazy<MalSessionManager>
 
+    @Inject
+    lateinit var aniSkipRepository: dagger.Lazy<AniSkipRepository>
+
     // States
     private var activityIsForeground = true
     private var userIsOperatingSeekbar = false
@@ -112,6 +122,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     private var hasAutoSelectedMpvTracks = false
     private var parsedChapters = listOf<ParsedChapter>()
     private var activeSkipChapter: ParsedChapter? = null
+    private lateinit var gestureHelper: PlayerGestureHelper
+    private var hasAutoSkippedCurrentInterval = false
 
     // Playlist & Next Episode Auto-Play
     private var currentFileId: String = ""
@@ -253,6 +265,10 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             btnSpeed.setOnClickListener { pickSpeed() }
             btnResize.setOnClickListener { player.cycleScale() }
 
+            val isTvDevice = packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+                || (getSystemService(Context.UI_MODE_SERVICE) as? UiModeManager)?.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION
+            btnRotate.visibility = if (isTvDevice) View.GONE else View.VISIBLE
+
             btnRotate.setOnClickListener {
                 orientation = getNextOrientation(orientation)
                 Log.d(TAG, "orientation=${orientation}")
@@ -270,6 +286,51 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             }
 
         }
+
+        gestureHelper = PlayerGestureHelper(
+            activity = this,
+            hudBinding = binding.gestureHud,
+            callback = object : PlayerGestureCallback {
+                override fun onToggleControls() {
+                    if (controller.root.isVisible) {
+                        hideControls()
+                    } else {
+                        showControlsWithFocus()
+                    }
+                }
+
+                override fun onSeekRelative(deltaMs: Long) {
+                    skipRelative((deltaMs / 1000).toInt())
+                }
+
+                override fun onSeekTo(positionMs: Long) {
+                    val posSec = (positionMs / 1000).toInt()
+                    player.timePos = posSec
+                }
+
+                override fun getCurrentPosition(): Long = ((player.timePos ?: 0) * 1000L).coerceAtLeast(0L)
+                override fun getDuration(): Long = ((player.duration ?: 0) * 1000L).coerceAtLeast(0L)
+
+                override fun onTogglePlayPause() {
+                    player.cyclePause()
+                }
+
+                override fun onSetSpeed(speed: Float) {
+                    MPVLib.setPropertyDouble("speed", speed.toDouble())
+                }
+
+                override fun isControlsLocked(): Boolean = controlsLocked
+                override fun isControllerVisible(): Boolean = controller.root.isVisible
+                override fun getTouchIgnoredViews(): List<View> = listOf(
+                    controller.playerToolbar,
+                    controller.controlsScrollView,
+                    controller.linearLayout2,
+                    controller.mainControls,
+                    binding.netflixSkipRow,
+                    binding.nextEpisodeCard.root
+                )
+            }
+        )
 
         binding.btnNetflixSkip.setOnClickListener {
             performSkipIntroOrCredits()
@@ -298,6 +359,13 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             playlist[currentIndex + 1]
         } else null
         Log.d(TAG, "updateNextEpisode: currentIndex=$currentIndex, nextEpisode=${nextEpisode?.title}")
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (malSessionManager.get().isGesturesEnabled() && ::gestureHelper.isInitialized && gestureHelper.onTouchEvent(ev)) {
+            return true
+        }
+        return super.dispatchTouchEvent(ev)
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -446,6 +514,51 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         MPVLib.setPropertyInt("sub-pos", subPos)
     }
 
+    private fun mergeAniSkipChapters(aniSkipChapters: List<MatroskaChapterParser.ParsedChapter>) {
+        if (aniSkipChapters.isEmpty()) return
+        val existing = parsedChapters.toMutableList()
+        val hasMkvOp = existing.any { it.type == ChapterType.OPENING }
+        val hasMkvEd = existing.any { it.type == ChapterType.ENDING }
+
+        for (aniCh in aniSkipChapters) {
+            val mpvType = when (aniCh.type) {
+                MatroskaChapterParser.ChapterType.OPENING -> ChapterType.OPENING
+                MatroskaChapterParser.ChapterType.ENDING -> ChapterType.ENDING
+                MatroskaChapterParser.ChapterType.RECAP -> ChapterType.RECAP
+                else -> ChapterType.OTHER
+            }
+            if (mpvType == ChapterType.OPENING && !hasMkvOp) {
+                existing.add(ParsedChapter(
+                    index = existing.size,
+                    title = aniCh.title,
+                    startTimeSeconds = aniCh.startTimeMs / 1000.0,
+                    endTimeSeconds = aniCh.endTimeMs / 1000.0,
+                    type = mpvType
+                ))
+            } else if (mpvType == ChapterType.ENDING && !hasMkvEd) {
+                existing.add(ParsedChapter(
+                    index = existing.size,
+                    title = aniCh.title,
+                    startTimeSeconds = aniCh.startTimeMs / 1000.0,
+                    endTimeSeconds = aniCh.endTimeMs / 1000.0,
+                    type = mpvType
+                ))
+            } else if (mpvType == ChapterType.RECAP && !existing.any { it.type == ChapterType.RECAP }) {
+                existing.add(ParsedChapter(
+                    index = existing.size,
+                    title = aniCh.title,
+                    startTimeSeconds = aniCh.startTimeMs / 1000.0,
+                    endTimeSeconds = aniCh.endTimeMs / 1000.0,
+                    type = mpvType
+                ))
+            }
+        }
+        parsedChapters = existing.sortedBy { it.startTimeSeconds }
+        Log.d(TAG, "[MPV Chapters] Updated parsedChapters with AniSkip: ${parsedChapters.size} total")
+        val currentPos = (player.timePos ?: 0).toDouble()
+        checkChapterAutoSkip(currentPos)
+    }
+
     private fun checkChapterAutoSkip(currentTimeSeconds: Double) {
         val specialChapter = parsedChapters.firstOrNull { chapter ->
             chapter.type != ChapterType.OTHER &&
@@ -456,6 +569,17 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         activeSkipChapter = specialChapter
 
         if (specialChapter != null) {
+            val isOpOrRecap = specialChapter.type == ChapterType.OPENING || specialChapter.type == ChapterType.RECAP
+            val isAutoSkip = malSessionManager.get().isAutoSkipEnabled()
+            if (isAutoSkip && isOpOrRecap && !hasAutoSkippedCurrentInterval) {
+                if (currentTimeSeconds in specialChapter.startTimeSeconds..(specialChapter.startTimeSeconds + 3.5)) {
+                    hasAutoSkippedCurrentInterval = true
+                    MPVLib.command(arrayOf("seek", specialChapter.endTimeSeconds.toString(), "absolute"))
+                    configSnackbar("⏩ Abertura pulada automaticamente (AniSkip)")
+                    return
+                }
+            }
+
             val skipLabel = when (specialChapter.type) {
                 ChapterType.RECAP -> "Pular Recap"
                 ChapterType.OPENING -> "Pular Abertura"
@@ -484,6 +608,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                 controller.skipIntroRow.animate().alpha(1f).setDuration(200L).start()
             }
         } else {
+            hasAutoSkippedCurrentInterval = false
             // Natural playback crossed the chapter boundary: hide Netflix floating pill
             if (binding.netflixSkipRow.visibility == View.VISIBLE) {
                 binding.netflixSkipRow.animate().alpha(0f).setDuration(200L).withEndAction {
@@ -661,17 +786,29 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         val parsed = EpisodeParser.parse(title ?: "")
         currentEpNumber = parsed.episode?.toInt() ?: 1
 
-        if (malSessionManager.get().isSyncEnabled() && malSessionManager.get().isLoggedIn()) {
-            val searchTitle = parsed.showTitle.ifBlank { title ?: "" }
+        val searchTitle = parsed.showTitle.ifBlank { title ?: "" }
+        if (searchTitle.isNotBlank()) {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
                     val matched = malRepository.get().matchAnime(searchTitle)
                     if (matched != null) {
                         currentMalAnime = matched
                         Log.d(TAG, "MAL matched anime: '${matched.title}' (ID: ${matched.id}, total eps: ${matched.numEpisodes})")
+
+                        // Query AniSkip
+                        val aniSkipChapters = aniSkipRepository.get().getSkipChapters(
+                            malId = matched.id,
+                            episodeNumber = currentEpNumber,
+                            episodeLength = 0.0
+                        )
+                        if (aniSkipChapters.isNotEmpty()) {
+                            withContext(Dispatchers.Main) {
+                                mergeAniSkipChapters(aniSkipChapters)
+                            }
+                        }
                     }
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed to match anime on MAL", e)
+                    Log.w(TAG, "Failed to match anime on MAL / AniSkip", e)
                 }
             }
         }
@@ -1032,6 +1169,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             Configuration.ORIENTATION_PORTRAIT -> {
                 controller.btnRotate.apply {
                     orientation = Orientation.PORTRAIT
+                    text = "Paisagem"
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         tooltipText = getString(R.string.landscape)
                     }
@@ -1044,6 +1182,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             else -> {
                 controller.btnRotate.apply {
                     orientation = Orientation.LANDSCAPE
+                    text = "Girar"
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         tooltipText = getString(R.string.portrait)
                     }

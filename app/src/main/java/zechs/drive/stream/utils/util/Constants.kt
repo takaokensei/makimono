@@ -41,5 +41,8 @@ class Constants {
         const val MAL_CLIENT_SECRET = "YOUR_MAL_CLIENT_SECRET"
         const val MAL_REDIRECT_URI = "http://127.0.0.1:1420/auth/callback"
         const val MAL_REDIRECT_PORT = 1420
+
+        // AniSkip API
+        const val ANISKIP_API_BASE_URL = "https://api.aniskip.com/"
     }
 }

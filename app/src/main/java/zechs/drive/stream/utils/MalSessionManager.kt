@@ -69,6 +69,18 @@ class MalSessionManager @Inject constructor(
         _isSyncEnabledFlow.value = enabled
     }
 
+    fun isAutoSkipEnabled(): Boolean = prefs.getBoolean(KEY_AUTO_SKIP_ENABLED, true)
+
+    fun setAutoSkipEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTO_SKIP_ENABLED, enabled).apply()
+    }
+
+    fun isGesturesEnabled(): Boolean = prefs.getBoolean(KEY_GESTURES_ENABLED, true)
+
+    fun setGesturesEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_GESTURES_ENABLED, enabled).apply()
+    }
+
     fun clearSession() {
         prefs.edit().clear().apply()
         _isLoggedInFlow.value = false
@@ -83,5 +95,7 @@ class MalSessionManager @Inject constructor(
         private const val KEY_USERNAME = "mal_username"
         private const val KEY_USER_PICTURE = "mal_user_picture"
         private const val KEY_SYNC_ENABLED = "mal_sync_enabled"
+        private const val KEY_AUTO_SKIP_ENABLED = "auto_skip_enabled"
+        private const val KEY_GESTURES_ENABLED = "gestures_enabled"
     }
 }

@@ -118,9 +118,15 @@ class MalRepository @Inject constructor(
 
             val token = ensureValidToken()
             val authHeader = if (token != null) "Bearer $token" else null
+            val clientIdHeader = if (authHeader == null) Constants.MAL_CLIENT_ID else null
 
-            Log.d(TAG, "Searching MAL for: '$clean'")
-            val response = malApi.get().searchAnime(query = clean, limit = 5, authHeader = authHeader)
+            Log.d(TAG, "Searching MAL for: '$clean' (auth=${authHeader != null})")
+            val response = malApi.get().searchAnime(
+                query = clean,
+                limit = 5,
+                authHeader = authHeader,
+                clientIdHeader = clientIdHeader
+            )
             if (response.isSuccessful && response.body() != null) {
                 val list = response.body()!!.data.map { it.node }
                 Resource.Success(list)

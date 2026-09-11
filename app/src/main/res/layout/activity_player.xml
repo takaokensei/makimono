@@ -74,4 +74,13 @@
         android:translationZ="30dp"
         android:visibility="gone" />
 
+    <!-- Mobile Touch Gestures HUD (Brightness, Volume, Seek, Speed, Ripple) -->
+    <include
+        android:id="@+id/gestureHud"
+        layout="@layout/view_player_gesture_hud"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:elevation="28dp"
+        android:translationZ="28dp" />
+
 </FrameLayout>

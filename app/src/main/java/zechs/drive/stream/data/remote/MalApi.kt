@@ -15,14 +15,16 @@ interface MalApi {
         @Query("q") query: String,
         @Query("limit") limit: Int = 10,
         @Query("fields") fields: String = "id,title,main_picture,num_episodes,status,synopsis,mean,my_list_status",
-        @Header("Authorization") authHeader: String? = null
+        @Header("Authorization") authHeader: String? = null,
+        @Header("X-MAL-CLIENT-ID") clientIdHeader: String? = null
     ): Response<MalAnimeSearchResponse>
 
     @GET("v2/anime/{anime_id}")
     suspend fun getAnimeDetails(
         @Path("anime_id") animeId: Long,
         @Query("fields") fields: String = "id,title,main_picture,num_episodes,status,synopsis,mean,my_list_status",
-        @Header("Authorization") authHeader: String? = null
+        @Header("Authorization") authHeader: String? = null,
+        @Header("X-MAL-CLIENT-ID") clientIdHeader: String? = null
     ): Response<MalAnimeNode>
 
     @FormUrlEncoded

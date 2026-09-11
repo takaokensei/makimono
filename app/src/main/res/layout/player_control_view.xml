@@ -409,11 +409,26 @@
                 android:layout_height="0dp"
                 android:visibility="gone" />
 
+            <!-- Rotate Screen Button (Mobile/Tablet) -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnRotate"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:visibility="gone" />
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="2dp"
+                android:background="@drawable/glass_action_item_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:fontFamily="@font/inter"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="Girar"
+                android:textColor="?attr/colorTextPrimary"
+                android:textSize="12sp"
+                app:backgroundTint="@null"
+                app:icon="@drawable/ic_portrait_24"
+                app:iconSize="16dp"
+                app:iconTint="?attr/colorAccentPrimary" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPip"

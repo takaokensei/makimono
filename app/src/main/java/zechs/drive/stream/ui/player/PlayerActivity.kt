@@ -86,12 +86,17 @@ import zechs.drive.stream.utils.MatroskaChapterParser
 import zechs.drive.stream.utils.SessionManager
 import zechs.drive.stream.utils.state.Resource
 import zechs.drive.stream.data.model.MalAnimeNode
+import zechs.drive.stream.data.repository.AniSkipRepository
 import zechs.drive.stream.data.repository.MalRepository
 import zechs.drive.stream.utils.MalSessionManager
 import zechs.drive.stream.utils.util.Constants.Companion.DRIVE_API
 import zechs.drive.stream.utils.util.Orientation
 import zechs.drive.stream.utils.util.getNextOrientation
 import zechs.drive.stream.utils.util.setOrientation
+import android.app.UiModeManager
+import android.content.Context
+import android.content.pm.PackageManager
+import android.view.MotionEvent
 import java.util.*
 import javax.inject.Inject
 import kotlin.math.roundToInt
@@ -122,6 +127,9 @@ class PlayerActivity : AppCompatActivity() {
 
     @Inject
     lateinit var malSessionManager: Lazy<MalSessionManager>
+
+    @Inject
+    lateinit var aniSkipRepository: Lazy<AniSkipRepository>
 
     // View binding
     private lateinit var binding: ActivityPlayerBinding
@@ -163,6 +171,8 @@ class PlayerActivity : AppCompatActivity() {
     private var hasAutoSelectedTracks = false
     private var parsedChapters: List<MatroskaChapterParser.ParsedChapter> = emptyList()
     private var activeSkipChapter: MatroskaChapterParser.ParsedChapter? = null
+    private lateinit var gestureHelper: PlayerGestureHelper
+    private var hasAutoSkippedCurrentInterval = false
 
     // Kodi features states
     private var isKodiHudVisible = false
@@ -326,11 +336,71 @@ class PlayerActivity : AppCompatActivity() {
             }
         }
 
+        val isTvDevice = packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+            || (getSystemService(Context.UI_MODE_SERVICE) as? UiModeManager)?.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION
+        btnRotate.visibility = if (isTvDevice) View.GONE else View.VISIBLE
+
         btnRotate.setOnClickListener {
             orientation = getNextOrientation(orientation)
             Log.d(TAG, "orientation=${orientation}")
             setOrientation(this@PlayerActivity, orientation)
         }
+
+        gestureHelper = PlayerGestureHelper(
+            activity = this,
+            hudBinding = binding.gestureHud,
+            callback = object : PlayerGestureCallback {
+                override fun onToggleControls() {
+                    if (playerView.isControllerVisible) {
+                        playerView.hideController()
+                    } else {
+                        playerView.showController()
+                    }
+                }
+
+                override fun onSeekRelative(deltaMs: Long) {
+                    seekRelative(deltaMs)
+                }
+
+                override fun onSeekTo(positionMs: Long) {
+                    if (::player.isInitialized) {
+                        player.seekTo(positionMs)
+                    }
+                }
+
+                override fun getCurrentPosition(): Long = if (::player.isInitialized) player.currentPosition else 0L
+                override fun getDuration(): Long = if (::player.isInitialized) player.duration.coerceAtLeast(0L) else 0L
+
+                override fun onTogglePlayPause() {
+                    if (!::player.isInitialized) return
+                    if (player.playbackState == Player.STATE_ENDED) {
+                        player.seekToDefaultPosition()
+                        player.play()
+                    } else if (player.isPlaying) {
+                        player.pause()
+                    } else {
+                        player.play()
+                    }
+                }
+
+                override fun onSetSpeed(speed: Float) {
+                    if (::player.isInitialized) {
+                        player.playbackParameters = PlaybackParameters(speed)
+                    }
+                }
+
+                override fun isControlsLocked(): Boolean = controlsLocked
+                override fun isControllerVisible(): Boolean = playerView.isControllerVisible
+                override fun getTouchIgnoredViews(): List<View> = listOf(
+                    toolbar,
+                    controlsScrollView,
+                    progressViewGroup,
+                    mainControlsRoot,
+                    binding.netflixSkipRow,
+                    binding.nextEpisodeCard.root
+                )
+            }
+        )
 
         btnLock.setOnClickListener {
             controlsLocked = true
@@ -695,6 +765,13 @@ class PlayerActivity : AppCompatActivity() {
 
     }
 
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (malSessionManager.get().isGesturesEnabled() && ::gestureHelper.isInitialized && gestureHelper.onTouchEvent(ev)) {
+            return true
+        }
+        return super.dispatchTouchEvent(ev)
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) {
             when (event.keyCode) {
@@ -890,17 +967,29 @@ class PlayerActivity : AppCompatActivity() {
         val parsed = EpisodeParser.parse(title ?: "")
         currentEpNumber = parsed.episode?.toInt() ?: 1
 
-        if (malSessionManager.get().isSyncEnabled() && malSessionManager.get().isLoggedIn()) {
-            val searchTitle = parsed.showTitle.ifBlank { title ?: "" }
+        val searchTitle = parsed.showTitle.ifBlank { title ?: "" }
+        if (searchTitle.isNotBlank()) {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
                     val matched = malRepository.get().matchAnime(searchTitle)
                     if (matched != null) {
                         currentMalAnime = matched
                         Log.d(TAG, "MAL matched anime: '${matched.title}' (ID: ${matched.id}, total eps: ${matched.numEpisodes})")
+
+                        // Query AniSkip
+                        val aniSkipChapters = aniSkipRepository.get().getSkipChapters(
+                            malId = matched.id,
+                            episodeNumber = currentEpNumber,
+                            episodeLength = 0.0
+                        )
+                        if (aniSkipChapters.isNotEmpty()) {
+                            withContext(Dispatchers.Main) {
+                                mergeAniSkipChapters(aniSkipChapters)
+                            }
+                        }
                     }
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed to match anime on MAL", e)
+                    Log.w(TAG, "Failed to match anime on MAL / AniSkip", e)
                 }
             }
         }
@@ -1290,6 +1379,28 @@ class PlayerActivity : AppCompatActivity() {
         }.show()
     }
 
+    private fun mergeAniSkipChapters(aniSkipChapters: List<MatroskaChapterParser.ParsedChapter>) {
+        if (aniSkipChapters.isEmpty()) return
+        val existing = parsedChapters.toMutableList()
+        val hasMkvOp = existing.any { it.type == MatroskaChapterParser.ChapterType.OPENING }
+        val hasMkvEd = existing.any { it.type == MatroskaChapterParser.ChapterType.ENDING }
+
+        for (aniCh in aniSkipChapters) {
+            if (aniCh.type == MatroskaChapterParser.ChapterType.OPENING && !hasMkvOp) {
+                existing.add(aniCh)
+            } else if (aniCh.type == MatroskaChapterParser.ChapterType.ENDING && !hasMkvEd) {
+                existing.add(aniCh)
+            } else if (aniCh.type == MatroskaChapterParser.ChapterType.RECAP && !existing.any { it.type == MatroskaChapterParser.ChapterType.RECAP }) {
+                existing.add(aniCh)
+            }
+        }
+        parsedChapters = existing.sortedBy { it.startTimeMs }
+        Log.d(TAG, "Updated parsedChapters with AniSkip: ${parsedChapters.size} total")
+        if (::player.isInitialized) {
+            updateIntroButtonVisibility(player.currentPosition)
+        }
+    }
+
     private fun updateIntroButtonVisibility(positionMs: Long) {
         if (controlsLocked || isNextEpisodeCardShowing) {
             binding.netflixSkipRow.animate().cancel()
@@ -1311,6 +1422,18 @@ class PlayerActivity : AppCompatActivity() {
         activeSkipChapter = specialChapter
 
         if (specialChapter != null) {
+            val isOpOrRecap = specialChapter.type == MatroskaChapterParser.ChapterType.OPENING ||
+                    specialChapter.type == MatroskaChapterParser.ChapterType.RECAP
+            val isAutoSkip = malSessionManager.get().isAutoSkipEnabled()
+            if (isAutoSkip && isOpOrRecap && !hasAutoSkippedCurrentInterval) {
+                if (positionMs in specialChapter.startTimeMs..(specialChapter.startTimeMs + 3_500L)) {
+                    hasAutoSkippedCurrentInterval = true
+                    player.seekTo(specialChapter.endTimeMs)
+                    Snackbar.make(playerView, "⏩ Abertura pulada automaticamente (AniSkip)", 1500).show()
+                    return
+                }
+            }
+
             val label = when (specialChapter.type) {
                 MatroskaChapterParser.ChapterType.RECAP -> "Pular Recap"
                 MatroskaChapterParser.ChapterType.OPENING -> "Pular Abertura"
@@ -1338,6 +1461,7 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         // 2. Outside special chapters: floating pill MUST ALWAYS BE GONE
+        hasAutoSkippedCurrentInterval = false
         binding.netflixSkipRow.animate().cancel()
         binding.netflixSkipRow.visibility = View.GONE
 
@@ -1445,6 +1569,7 @@ class PlayerActivity : AppCompatActivity() {
             Configuration.ORIENTATION_PORTRAIT -> {
                 btnRotate.apply {
                     orientation = Orientation.PORTRAIT
+                    text = "Paisagem"
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         tooltipText = getString(R.string.landscape)
                     }
@@ -1457,6 +1582,7 @@ class PlayerActivity : AppCompatActivity() {
             else -> {
                 btnRotate.apply {
                     orientation = Orientation.LANDSCAPE
+                    text = "Girar"
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         tooltipText = getString(R.string.portrait)
                     }

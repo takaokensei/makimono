@@ -13,17 +13,20 @@ import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import zechs.drive.stream.BuildConfig
 import zechs.drive.stream.data.model.StarredAdapter
+import zechs.drive.stream.data.remote.AniSkipApi
 import zechs.drive.stream.data.remote.DriveApi
 import zechs.drive.stream.data.remote.GithubApi
 import zechs.drive.stream.data.remote.MalApi
 import zechs.drive.stream.data.remote.AnimePosterResolver
 import zechs.drive.stream.data.remote.TokenApi
+import zechs.drive.stream.data.repository.AniSkipRepository
 import zechs.drive.stream.data.repository.DriveRepository
 import zechs.drive.stream.data.repository.GithubRepository
 import zechs.drive.stream.data.repository.MalRepository
 import zechs.drive.stream.data.repository.TokenAuthenticator
 import zechs.drive.stream.utils.MalSessionManager
 import zechs.drive.stream.utils.SessionManager
+import zechs.drive.stream.utils.util.Constants.Companion.ANISKIP_API_BASE_URL
 import zechs.drive.stream.utils.util.Constants.Companion.GITHUB_API
 import zechs.drive.stream.utils.util.Constants.Companion.GOOGLE_ACCOUNTS_URL
 import zechs.drive.stream.utils.util.Constants.Companion.GOOGLE_API
@@ -179,6 +182,29 @@ object ApiModule {
         posterResolver: AnimePosterResolver
     ): MalRepository {
         return MalRepository(malApi, sessionManager, posterResolver)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAniSkipApi(
+        @Named("OkHttpClient")
+        client: OkHttpClient,
+        moshi: Moshi
+    ): AniSkipApi {
+        return Retrofit.Builder()
+            .baseUrl(ANISKIP_API_BASE_URL)
+            .client(client)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+            .create(AniSkipApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAniSkipRepository(
+        aniSkipApi: Lazy<AniSkipApi>
+    ): AniSkipRepository {
+        return AniSkipRepository(aniSkipApi)
     }
 
 }
