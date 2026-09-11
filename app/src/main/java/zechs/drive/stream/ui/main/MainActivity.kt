@@ -147,8 +147,15 @@ class MainActivity : AppCompatActivity() {
                         Log.d(TAG, "Already on latest version")
                     } else {
                         Log.d(TAG, "Newer version of app is available (latest=${release.tagName})")
-                        showUpdateAvailableDialog(release)
-                        sendUpdateNotification(release)
+                        if (viewModel.updateDownloadState.value is MainViewModel.UpdateDownloadState.Idle) {
+                            android.widget.Toast.makeText(
+                                this@MainActivity,
+                                "Nova versão encontrada: Baixando Makimono ${release.tagName}...",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                            viewModel.startUpdateDownload(release)
+                            sendUpdateNotification(release)
+                        }
                     }
                 }
 
@@ -340,6 +347,11 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
                         is MainViewModel.UpdateDownloadState.ReadyToInstall -> {
+                            android.widget.Toast.makeText(
+                                this@MainActivity,
+                                "Instalando nova versão Makimono ${viewModel.latest.value?.data?.tagName ?: ""}...",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
                             progressBinding?.apply {
                                 tvUpdateTitle.text = "Download Concluído!"
                                 tvUpdateSubtitle.text = "Iniciando instalador do sistema..."

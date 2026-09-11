@@ -55,3 +55,7 @@
 
 # R8 full mode strips signatures from non-kept items.
 -keep,allowobfuscation,allowshrinking class zechs.drive.stream.utils.state.Resource
+
+# ZXing QR Code
+-keep class com.google.zxing.** { *; }
+-dontwarn com.google.zxing.**

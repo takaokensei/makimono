@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?attr/colorBgSurface"
     android:orientation="vertical">
 
+    <!-- Top Bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="56dp"
@@ -15,15 +17,34 @@
         android:paddingStart="16dp"
         android:paddingEnd="16dp">
 
+        <ImageView
+            android:id="@+id/ivDialogIcon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="12dp"
+            android:src="@drawable/ic_unlock_24"
+            app:tint="?attr/colorAccentPrimary" />
+
         <TextView
+            android:id="@+id/tvDialogTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:fontFamily="@font/inter"
-            android:text="Conectar MyAnimeList"
+            android:text="Conectar MyAnimeList na TV"
             android:textColor="?attr/colorTextPrimary"
             android:textSize="16sp"
             android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnToggleMode"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:text="Navegador Interno"
+            android:textColor="?attr/colorAccentPrimary"
+            android:textSize="12sp" />
 
         <ImageView
             android:id="@+id/btnCloseAuth"
@@ -43,12 +64,129 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:indeterminate="true"
+        android:visibility="gone"
         app:indicatorColor="?attr/colorAccentPrimary"
         app:trackColor="?attr/colorBgGlass" />
 
-    <WebView
-        android:id="@+id/webViewAuth"
+    <!-- Container 1: QR Code TV Mode -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/layoutQrMode"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="#FFFFFF"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="8dp"
+                app:strokeColor="?attr/colorAccentPrimary"
+                app:strokeWidth="2dp">
+
+                <ImageView
+                    android:id="@+id/ivMalQrCode"
+                    android:layout_width="240dp"
+                    android:layout_height="240dp"
+                    android:layout_gravity="center"
+                    android:padding="8dp"
+                    android:scaleType="fitCenter"
+                    tools:src="@drawable/ic_player_24" />
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Instructions -->
+            <TextView
+                android:id="@+id/tvInstructionsTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:fontFamily="@font/inter"
+                android:text="1. Aponte a câmera do celular para o QR Code"
+                android:textColor="?attr/colorTextPrimary"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvServerUrl"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:fontFamily="@font/inter"
+                android:text="Ou acesse no navegador: http://192.168.1.xxx:1420/mal"
+                android:textColor="?attr/colorAccentPrimary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvStep2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:fontFamily="@font/inter"
+                android:text="2. Faça login no MyAnimeList pelo celular para conectar a TV"
+                android:textColor="?attr/colorTextSecondary"
+                android:textSize="13sp" />
+
+            <!-- Status Pill -->
+            <LinearLayout
+                android:id="@+id/layoutStatusPill"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/glass_circle_button_bg"
+                android:backgroundTint="?attr/colorBgBase"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="8dp">
+
+                <View
+                    android:id="@+id/dotStatus"
+                    android:layout_width="10dp"
+                    android:layout_height="10dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/glass_circle_button_bg"
+                    android:backgroundTint="?attr/colorAccentPrimary" />
+
+                <TextView
+                    android:id="@+id/tvStatusText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/inter"
+                    android:text="Aguardando autorização no celular..."
+                    android:textColor="?attr/colorTextPrimary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Container 2: WebView Mode (Optional fallback) -->
+    <LinearLayout
+        android:id="@+id/layoutWebMode"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <WebView
+            android:id="@+id/webViewAuth"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </LinearLayout>
 
 </LinearLayout>
