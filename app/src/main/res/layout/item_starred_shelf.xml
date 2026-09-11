@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/cardStarredItem"
+    android:layout_width="148dp"
+    android:layout_height="222dp"
+    android:layout_marginEnd="14dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:nextFocusLeft="@id/btnMyDrive"
+    app:cardBackgroundColor="?attr/colorBgSurface"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/shelf_card_stroke_color"
+    app:strokeWidth="3dp">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <!-- Background / Poster Image (Full Poster Cover) -->
+        <ImageView
+            android:id="@+id/ivStarredThumb"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="@null"
+            android:scaleType="centerCrop"
+            android:visibility="gone"
+            tools:src="@drawable/kodi_primary_bg"
+            tools:visibility="visible" />
+
+        <!-- Gradient Fallback Background (when poster is loading or unavailable) -->
+        <View
+            android:id="@+id/folderBgView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/home_hero_gradient" />
+
+        <!-- Center watermark icon for folders without poster -->
+        <ImageView
+            android:id="@+id/ivWatermarkIcon"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_gravity="center"
+            android:alpha="0.25"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_folder_24"
+            app:tint="?attr/colorAccentPrimary" />
+
+        <!-- Bottom Scrim for Title Legibility -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="96dp"
+            android:layout_gravity="bottom"
+            android:background="@drawable/shelf_item_scrim" />
+
+        <!-- Top Header Row: Subtle Type Badge + Golden Star -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="8dp">
+
+            <TextView
+                android:id="@+id/tvStarredTypeBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/glass_pill_bg"
+                android:fontFamily="@font/inter"
+                android:letterSpacing="0.06"
+                android:paddingStart="6dp"
+                android:paddingTop="2dp"
+                android:paddingEnd="6dp"
+                android:paddingBottom="2dp"
+                android:text="PASTA"
+                android:textColor="?attr/colorAccentPrimary"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                tools:text="PASTA" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_star_filled_24"
+                app:tint="#FFD700" />
+        </LinearLayout>
+
+        <!-- Bottom Details: Title & Subtitle -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <TextView
+                android:id="@+id/tvStarredTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFamily="@font/inter"
+                android:maxLines="2"
+                android:shadowColor="#CC000000"
+                android:shadowDx="0"
+                android:shadowDy="1"
+                android:shadowRadius="3"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                tools:text="Sousou no Frieren" />
+
+            <TextView
+                android:id="@+id/tvStarredSubtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:fontFamily="@font/inter"
+                android:maxLines="1"
+                android:textColor="#C0C0C0"
+                android:textSize="10sp"
+                tools:text="Pasta • Abrir" />
+
+        </LinearLayout>
+
+    </FrameLayout>
+
+</com.google.android.material.card.MaterialCardView>

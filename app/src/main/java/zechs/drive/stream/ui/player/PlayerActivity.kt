@@ -1,0 +1,2056 @@
+package zechs.drive.stream.ui.player
+
+import android.app.Dialog
+import android.app.PictureInPictureParams
+import android.content.Intent
+import android.content.res.Configuration
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.util.Log
+import android.graphics.Color
+import android.graphics.Typeface
+import android.util.TypedValue
+import android.view.KeyEvent
+import android.view.View
+import android.view.animation.AccelerateInterpolator
+import android.widget.HorizontalScrollView
+import android.widget.LinearLayout
+import android.widget.Toast
+import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.view.*
+import androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.transition.AutoTransition
+import androidx.transition.TransitionManager
+import com.google.android.exoplayer2.*
+import com.google.android.exoplayer2.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
+import com.google.android.exoplayer2.mediacodec.MediaCodecSelector
+import com.google.android.exoplayer2.ExoPlaybackException.*
+import com.google.android.exoplayer2.Format.NO_VALUE
+import com.google.android.exoplayer2.audio.AudioAttributes
+import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory
+import com.google.android.exoplayer2.extractor.ts.DefaultTsPayloadReaderFactory
+import com.google.android.exoplayer2.extractor.ts.TsExtractor
+import com.google.android.exoplayer2.source.DefaultMediaSourceFactory
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
+import com.google.android.exoplayer2.trackselection.MappingTrackSelector.MappedTrackInfo
+import com.google.android.exoplayer2.trackselection.TrackSelectionOverride
+import com.google.android.exoplayer2.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL
+import com.google.android.exoplayer2.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+import com.google.android.exoplayer2.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+import com.google.android.exoplayer2.ui.CaptionStyleCompat
+import com.google.android.exoplayer2.ui.PlayerView
+import com.google.android.exoplayer2.ui.SubtitleView
+import com.google.android.exoplayer2.text.Cue
+import com.google.android.exoplayer2.text.CueGroup
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.StyleSpan
+import com.google.android.exoplayer2.ui.TrackSelectionDialogBuilder
+import com.google.android.exoplayer2.upstream.DataSource
+import com.google.android.exoplayer2.upstream.DefaultDataSource
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
+import androidx.core.view.isVisible
+import com.bumptech.glide.Glide
+import dagger.Lazy
+import dagger.hilt.android.AndroidEntryPoint
+import com.google.android.exoplayer2.util.MimeTypes
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.consumeAsFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import zechs.drive.stream.R
+import zechs.drive.stream.data.model.PlaylistItem
+import zechs.drive.stream.data.model.SubtitleItem
+import zechs.drive.stream.data.repository.DriveRepository
+import zechs.drive.stream.databinding.ActivityPlayerBinding
+import zechs.drive.stream.ui.player.utils.AuthenticatingDataSource
+import zechs.drive.stream.ui.player.utils.BufferConfig
+import zechs.drive.stream.ui.player.utils.CustomTrackNameProvider
+import zechs.drive.stream.ui.player2.MPVActivity
+import zechs.drive.stream.utils.EpisodeParser
+import zechs.drive.stream.utils.MatroskaChapterParser
+import zechs.drive.stream.utils.SessionManager
+import zechs.drive.stream.utils.state.Resource
+import zechs.drive.stream.utils.util.Constants.Companion.DRIVE_API
+import zechs.drive.stream.utils.util.Orientation
+import zechs.drive.stream.utils.util.getNextOrientation
+import zechs.drive.stream.utils.util.setOrientation
+import java.util.*
+import javax.inject.Inject
+import kotlin.math.roundToInt
+
+
+@AndroidEntryPoint
+class PlayerActivity : AppCompatActivity() {
+
+    companion object {
+        const val TAG = "PlayerActivity"
+
+        // Anime intro/outro skip amount. Change this if you want a
+        // different default (e.g. 85_000L for a slightly shorter OP).
+        const val SKIP_INTRO_MS = 90_000L
+    }
+
+    @Inject
+    lateinit var driveRepository: Lazy<DriveRepository>
+
+    @Inject
+    lateinit var sessionManager: Lazy<SessionManager>
+
+    @Inject
+    lateinit var appSettings: Lazy<zechs.drive.stream.utils.AppSettings>
+
+    // View binding
+    private lateinit var binding: ActivityPlayerBinding
+
+    // ViewModel
+    private val viewModel by viewModels<PlayerViewModel>()
+
+    // Exoplayer
+    private lateinit var player: ExoPlayer
+    private lateinit var dataSourceFactory: DataSource.Factory
+    private lateinit var trackSelector: DefaultTrackSelector
+
+    @Suppress("DEPRECATION")
+    private lateinit var playerView: PlayerView
+
+    // Player views
+    private lateinit var mainControlsRoot: LinearLayout
+    private lateinit var controlsScrollView: HorizontalScrollView
+    private lateinit var progressViewGroup: LinearLayout
+    private lateinit var toolbar: MaterialToolbar
+    private lateinit var btnPlayPause: MaterialButton
+    private lateinit var btnAudio: MaterialButton
+    private lateinit var btnSubtitle: MaterialButton
+    private lateinit var btnChapter: MaterialButton
+    private lateinit var btnResize: MaterialButton
+    private lateinit var btnInfo: MaterialButton
+    private lateinit var btnPip: MaterialButton
+    private lateinit var btnSpeed: MaterialButton
+    private lateinit var btnRotate: MaterialButton
+    private lateinit var btnLock: MaterialButton
+    private lateinit var btnUnlock: MaterialButton
+    private lateinit var btnSkipIntro: MaterialButton
+    private lateinit var btnSkipIntroBack: MaterialButton
+    private lateinit var skipIntroRow: LinearLayout
+
+    // States
+    private var onStopCalled = false
+    private var controlsLocked = false
+    private var hasAutoSelectedTracks = false
+    private var parsedChapters: List<MatroskaChapterParser.ParsedChapter> = emptyList()
+    private var activeSkipChapter: MatroskaChapterParser.ParsedChapter? = null
+
+    // Kodi features states
+    private var isKodiHudVisible = false
+    private var kodiHudUpdateJob: Job? = null
+    private var forcedSubtitleUri: Uri? = null
+    private var activeExternalSubItem: SubtitleItem? = null
+    private var activeExternalSubFile: java.io.File? = null
+    private var currentSubtitleOffsetMs = 0L
+
+    // Playlist & Next Episode Auto-Play
+    private var currentFileId: String = ""
+    private var currentTitle: String = ""
+    private var currentThumbnailLink: String? = null
+    private var playlist = mutableListOf<PlaylistItem>()
+    private var nextEpisode: PlaylistItem? = null
+    private var nextEpisodeCanceled = false
+    private var isNextEpisodeCardShowing = false
+    private var countdownJob: Job? = null
+    private var progressTrackerJob: Job? = null
+    private var folderSubtitles = mutableListOf<SubtitleItem>()
+    private val addedSubtitleFileIds = mutableSetOf<String>()
+
+    // Configs
+    private var speed = arrayOf("0.25x", "0.5x", "Normal", "1.25x", "1.5x", "2x")
+    private var orientation = Orientation.LANDSCAPE
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        val themeValue = intent.getIntExtra("theme", 0)
+        val themeRes = when (zechs.drive.stream.utils.AppTheme.fromValue(themeValue)) {
+            zechs.drive.stream.utils.AppTheme.TOKYO_NIGHT -> R.style.Theme_Fullscreen_TokyoNight
+            zechs.drive.stream.utils.AppTheme.DRACULA -> R.style.Theme_Fullscreen_Dracula
+            zechs.drive.stream.utils.AppTheme.NORD -> R.style.Theme_Fullscreen_Nord
+            zechs.drive.stream.utils.AppTheme.CATPPUCCIN_MOCHA -> R.style.Theme_Fullscreen_CatppuccinMocha
+            zechs.drive.stream.utils.AppTheme.KODI_ESTUARY -> R.style.Theme_Fullscreen_KodiEstuary
+        }
+        setTheme(themeRes)
+        super.onCreate(savedInstanceState)
+
+        binding = ActivityPlayerBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        hideSystemUI()
+
+        playerView = binding.playerView
+
+        mainControlsRoot = playerView.findViewById(R.id.mainControls)
+        controlsScrollView = playerView.findViewById(R.id.controlsScrollView)
+        progressViewGroup = playerView.findViewById(R.id.linearLayout2)
+        toolbar = playerView.findViewById(R.id.playerToolbar)
+        btnPlayPause = playerView.findViewById(R.id.btnPlayPause)
+        btnAudio = playerView.findViewById(R.id.btnAudio)
+        btnSubtitle = playerView.findViewById(R.id.btnSubtitle)
+        btnChapter = playerView.findViewById(R.id.btnChapter)
+        btnResize = playerView.findViewById(R.id.btnResize)
+        btnInfo = playerView.findViewById(R.id.btnInfo)
+        btnPip = playerView.findViewById(R.id.btnPip)
+        btnSpeed = playerView.findViewById(R.id.btnSpeed)
+        btnRotate = playerView.findViewById(R.id.btnRotate)
+        btnLock = playerView.findViewById(R.id.btnLock)
+        btnUnlock = playerView.findViewById(R.id.btnUnlock)
+        btnSkipIntro = playerView.findViewById(R.id.btnSkipIntro)
+        btnSkipIntroBack = playerView.findViewById(R.id.btnSkipIntroBack)
+        skipIntroRow = playerView.findViewById(R.id.skipIntroRow)
+
+        // Back button
+        toolbar.setNavigationOnClickListener {
+            finish()
+        }
+
+        btnAudio.setOnClickListener {
+            showAudioTrackDialog()
+        }
+
+        btnSubtitle.setOnClickListener {
+            showSubtitleTrackDialog()
+        }
+
+        btnChapter.setOnClickListener {
+            showChapterDialog()
+        }
+
+        btnInfo.setOnClickListener {
+            toggleKodiInfoHud()
+        }
+
+        btnResize.setOnClickListener {
+            TransitionManager.beginDelayedTransition(
+                playerView, AutoTransition().apply {
+                    interpolator = AccelerateInterpolator()
+                    duration = 250
+                }
+            )
+            playerView.apply {
+                val nextMode = when (resizeMode) {
+                    RESIZE_MODE_FIT -> RESIZE_MODE_ZOOM
+                    RESIZE_MODE_ZOOM -> RESIZE_MODE_FILL
+                    else -> RESIZE_MODE_FIT
+                }
+                resizeMode = nextMode
+                val modeLabel = when (nextMode) {
+                    RESIZE_MODE_FIT -> "Modo de Vídeo: Ajustar (Original)"
+                    RESIZE_MODE_ZOOM -> "Modo de Vídeo: Zoom (Cortar Bordas)"
+                    RESIZE_MODE_FILL -> "Modo de Vídeo: Esticar (Preencher Tela)"
+                    else -> "Modo de Vídeo"
+                }
+                Snackbar.make(playerView, modeLabel, 1000).apply {
+                    anchorView = progressViewGroup
+                }.show()
+            }
+        }
+
+        btnPip.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                enterPIPMode()
+            } else {
+                Toast.makeText(
+                    this,
+                    getString(R.string.pip_not_supported),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+
+        btnSpeed.setOnClickListener {
+            val currentSpeed = if (::player.isInitialized) player.playbackParameters.speed else 1.0f
+            val currentSpeedIndex = when {
+                kotlin.math.abs(currentSpeed - 0.25f) < 0.05f -> 0
+                kotlin.math.abs(currentSpeed - 0.50f) < 0.05f -> 1
+                kotlin.math.abs(currentSpeed - 1.00f) < 0.05f -> 2
+                kotlin.math.abs(currentSpeed - 1.25f) < 0.05f -> 3
+                kotlin.math.abs(currentSpeed - 1.50f) < 0.05f -> 4
+                kotlin.math.abs(currentSpeed - 2.00f) < 0.05f -> 5
+                else -> 2
+            }
+
+            MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog).apply {
+                setTitle(getString(R.string.select_speed))
+                setSingleChoiceItems(speed, currentSpeedIndex) { dialog, which ->
+                    val param = when (which) {
+                        0 -> PlaybackParameters(0.25f)
+                        1 -> PlaybackParameters(0.5f)
+                        2 -> PlaybackParameters(1.0f)
+                        3 -> PlaybackParameters(1.25f)
+                        4 -> PlaybackParameters(1.50f)
+                        5 -> PlaybackParameters(2.00f)
+                        else -> PlaybackParameters(1.0f)
+                    }
+                    Log.d(TAG, "Speed=${param.speed}")
+
+                    player.playbackParameters = param
+                    dialog.dismiss()
+                    speedSnackbar(which)
+                }
+                show()
+            }
+        }
+
+        btnRotate.setOnClickListener {
+            orientation = getNextOrientation(orientation)
+            Log.d(TAG, "orientation=${orientation}")
+            setOrientation(this@PlayerActivity, orientation)
+        }
+
+        btnLock.setOnClickListener {
+            controlsLocked = true
+            handleLockingControls()
+        }
+
+        btnUnlock.setOnClickListener {
+            controlsLocked = false
+            handleLockingControls()
+        }
+
+        btnSkipIntro.setOnClickListener {
+            performSkipIntroOrCredits()
+        }
+
+        binding.btnNetflixSkip.setOnClickListener {
+            performSkipIntroOrCredits()
+        }
+
+        btnSkipIntroBack.setOnClickListener {
+            seekRelative(-SKIP_INTRO_MS)
+        }
+
+        currentFileId = intent.getStringExtra("fileId") ?: ""
+        currentTitle = intent.getStringExtra("title") ?: ""
+        currentThumbnailLink = intent.getStringExtra("thumbnailLink")
+
+        @Suppress("DEPRECATION")
+        val rawPlaylist = intent.getSerializableExtra("playlist") as? ArrayList<PlaylistItem>
+        if (rawPlaylist != null && rawPlaylist.isNotEmpty()) {
+            playlist = rawPlaylist.toMutableList()
+            updateNextEpisode()
+        } else if (currentFileId.isNotEmpty()) {
+            viewModel.fetchSiblings(currentFileId)
+        }
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.playlistChannel.consumeAsFlow().collect { list ->
+                    if (playlist.isEmpty() && list.isNotEmpty()) {
+                        playlist = list.toMutableList()
+                        updateNextEpisode()
+                    }
+                }
+            }
+        }
+
+        @Suppress("DEPRECATION")
+        val rawSubtitles = intent.getSerializableExtra("subtitles") as? ArrayList<SubtitleItem>
+        if (rawSubtitles != null && rawSubtitles.isNotEmpty()) {
+            folderSubtitles = rawSubtitles.toMutableList()
+        } else if (currentFileId.isNotEmpty()) {
+            viewModel.fetchSubtitles(currentFileId)
+        }
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.subtitlesChannel.consumeAsFlow().collect { list ->
+                    if (list.isNotEmpty()) {
+                        folderSubtitles = list.toMutableList()
+                        loadMatchingExternalSubtitles()
+                    }
+                }
+            }
+        }
+
+        updateOrientation(resources.configuration)
+        initPlayer()
+        playMedia()
+    }
+
+    private fun updateNextEpisode() {
+        if (playlist.isEmpty()) {
+            nextEpisode = null
+            return
+        }
+        val currentIndex = playlist.indexOfFirst { it.fileId == currentFileId }
+        nextEpisode = if (currentIndex != -1 && currentIndex + 1 < playlist.size) {
+            playlist[currentIndex + 1]
+        } else null
+        Log.d(TAG, "updateNextEpisode: currentIndex=$currentIndex, nextEpisode=${nextEpisode?.title}")
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        playMedia()
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun enterPIPMode() {
+        this.enterPictureInPictureMode(
+            PictureInPictureParams
+                .Builder()
+                .build()
+        )
+    }
+
+    private val playerListener = object : Player.Listener {
+
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            // Prevent screen from timing-out when video is playing
+            playerView.keepScreenOn = when (playbackState) {
+                Player.STATE_BUFFERING, Player.STATE_READY -> true
+                else -> false
+            }
+
+            if (playbackState == Player.STATE_ENDED) {
+                if (nextEpisode != null && !nextEpisodeCanceled) {
+                    playNextEpisodeDirectly()
+                    return
+                }
+            }
+
+            if (playbackState == Player.STATE_READY) {
+                var subtitleText = ""
+
+                player.videoFormat?.let {
+                    if (it.width != NO_VALUE && it.height != NO_VALUE) {
+                        subtitleText += "${it.width}x${it.height} - "
+                    }
+                    // frameRate can return NO_VALUE, which is a int
+                    // can't compare it against float.
+                    if (it.frameRate > 0) {
+                        val rounded = (it.frameRate * 100.0).roundToInt() / 100.0
+                        subtitleText += "${rounded}fps - "
+                    }
+                    it.codecs?.let { codec ->
+                        subtitleText += codec
+                    }
+                }
+
+                btnPlayPause.setOnClickListener {
+                    if (player.playbackState == Player.STATE_ENDED) {
+                        player.seekToDefaultPosition()
+                        player.play()
+                    } else {
+                        player.playWhenReady = !player.playWhenReady
+                    }
+                }
+
+                if (toolbar.title.isNullOrEmpty()) {
+                    toolbar.title = player.mediaMetadata.title
+                }
+
+                if (toolbar.title.isNullOrEmpty()) {
+                    // if `player.mediaMetadata.title` was empty
+                    toolbar.title = getString(R.string.unknown)
+                }
+
+                toolbar.subtitle = subtitleText
+            }
+        }
+
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            TransitionManager.beginDelayedTransition(
+                mainControlsRoot,
+                AutoTransition().apply {
+                    interpolator = AccelerateInterpolator()
+                    duration = 150L
+                }
+            )
+            btnPlayPause.icon = ContextCompat.getDrawable(
+                /* context */ applicationContext,
+                /* drawableId */ if (isPlaying) R.drawable.ic_pause_24
+                else R.drawable.ic_play_24
+            )
+            Log.d(TAG, "isPlaying=${isPlaying}")
+        }
+
+        override fun onPlayerError(error: PlaybackException) {
+            super.onPlayerError(error)
+            Log.e(TAG, "ExoPlayer onPlayerError: errorCodeName=${error.errorCodeName}, errorCode=${error.errorCode}", error)
+            showError(error)
+        }
+
+        override fun onPositionDiscontinuity(
+            oldPosition: Player.PositionInfo,
+            newPosition: Player.PositionInfo,
+            reason: Int
+        ) {
+            super.onPositionDiscontinuity(oldPosition, newPosition, reason)
+            if (::player.isInitialized) {
+                val pos = player.currentPosition
+                val duration = player.duration
+                updateIntroButtonVisibility(pos)
+                checkAutoPlayNextEpisode(pos, duration)
+            }
+        }
+
+        override fun onTracksChanged(tracks: Tracks) {
+            super.onTracksChanged(tracks)
+            autoSelectPreferredTracks(tracks)
+        }
+
+        override fun onCues(cueGroup: CueGroup) {
+            super.onCues(cueGroup)
+            handleNormalizedCues(cueGroup.cues)
+        }
+
+        @Deprecated("Deprecated in Java")
+        override fun onCues(cues: List<Cue>) {
+            @Suppress("DEPRECATION")
+            super.onCues(cues)
+            handleNormalizedCues(cues)
+        }
+    }
+
+    private fun handleNormalizedCues(cues: List<Cue>) {
+        if (cues.isEmpty()) {
+            playerView.subtitleView?.setCues(emptyList())
+            return
+        }
+        val normalizedCues = cues.map { cue ->
+            val builder = cue.buildUpon()
+
+            // 1. HEIGHT NORMALIZATION:
+            // Snap all bottom-aligned dialogue to 0.95f (5% from bottom, matching Gachiakuta's clean position)
+            // This eliminates the high vertical margin embedded in some ASS scripts (e.g. Teogonia at ~0.88f / 62px)
+            val isBottomDialogue = cue.line == Cue.DIMEN_UNSET ||
+                    cue.lineAnchor == Cue.ANCHOR_TYPE_END ||
+                    cue.line >= 0.70f
+
+            if (isBottomDialogue) {
+                builder.setLine(0.985f, Cue.LINE_TYPE_FRACTION)
+                builder.setLineAnchor(Cue.ANCHOR_TYPE_END)
+            }
+
+            // 2. TYPOGRAPHY ENHANCEMENT:
+            // Ensure bold styling for tracks that lack bold styling spans
+            val text = cue.text
+            if (text != null && text.isNotEmpty()) {
+                val spannable = SpannableStringBuilder.valueOf(text)
+                val hasBold = spannable.getSpans(0, spannable.length, StyleSpan::class.java)
+                    .any { it.style == Typeface.BOLD }
+                if (!hasBold) {
+                    spannable.setSpan(
+                        StyleSpan(Typeface.BOLD),
+                        0,
+                        spannable.length,
+                        Spanned.SPAN_INCLUSIVE_INCLUSIVE
+                    )
+                    builder.setText(spannable)
+                }
+            }
+
+            builder.build()
+        }
+        playerView.subtitleView?.setCues(normalizedCues)
+    }
+
+    private fun initPlayer() {
+        val extractorsFactory = DefaultExtractorsFactory()
+            .setTsExtractorFlags(DefaultTsPayloadReaderFactory.FLAG_ENABLE_HDMV_DTS_AUDIO_STREAMS)
+            .setTsExtractorTimestampSearchBytes(1500 * TsExtractor.TS_PACKET_SIZE)
+
+        val mediaCodecSelector = MediaCodecSelector { mimeType, requiresSecureDecoder, requiresTunnelingDecoder ->
+            val decoders = MediaCodecSelector.DEFAULT.getDecoderInfos(mimeType, requiresSecureDecoder, requiresTunnelingDecoder)
+            // Always prioritize hardware-accelerated decoders (e.g. c2.mtk.hevc.decoder on Android TV).
+            // Do not force c2.android software decoders for HEVC as they drop to 1 FPS on mobile/TV ARM chips.
+            decoders.sortedWith(compareByDescending { it.hardwareAccelerated })
+        }
+
+        val rendererFactory = DefaultRenderersFactory(this).apply {
+            setExtensionRendererMode(EXTENSION_RENDERER_MODE_PREFER)
+            setMediaCodecSelector(mediaCodecSelector)
+            setEnableDecoderFallback(true)
+        }
+
+        // handles the duration of media to retain in the buffer
+        val loadControl = DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                BufferConfig.MIN_BUFFER_DURATION,
+                BufferConfig.MAX_BUFFER_DURATION,
+                BufferConfig.MIN_PLAYBACK_START_BUFFER,
+                BufferConfig.MIN_PLAYBACK_RESUME_BUFFER
+            )
+            .setPrioritizeTimeOverSizeThresholds(true)
+            .setBackBuffer(BufferConfig.BACK_BUFFER_DURATION, /* retainBackBufferFromKeyframe = */ true)
+            .build()
+
+        trackSelector = DefaultTrackSelector(this).apply {
+            parameters = this.buildUponParameters()
+                .setPreferredAudioLanguages("ja", "jpn", "jp", "japanese")
+                .setPreferredTextLanguages("pt", "por", "pt-BR", "pt_BR", "pob", "portuguese")
+                .setSelectUndeterminedTextLanguage(true)
+                .build()
+        }
+
+        val baseHttpDataSourceFactory = DataSource.Factory {
+            val dataSource = DefaultHttpDataSource.Factory()
+
+            AuthenticatingDataSource
+                .Factory(dataSource, driveRepository.get(), sessionManager.get())
+                .createDataSource()
+        }
+
+        dataSourceFactory = DefaultDataSource.Factory(this, baseHttpDataSourceFactory)
+
+        player = ExoPlayer.Builder(this, rendererFactory)
+            .setTrackSelector(trackSelector)
+            .setMediaSourceFactory(
+                DefaultMediaSourceFactory(
+                    dataSourceFactory,
+                    extractorsFactory
+                )
+            )
+            .setLoadControl(loadControl)
+            .setSeekForwardIncrementMs(10_000)
+            .setSeekBackIncrementMs(10_000)
+            .build()
+
+        playerView.setControllerVisibilityListener { visibility ->
+            val density = resources.displayMetrics.density
+            val targetCardY = if (visibility == View.VISIBLE) -84f * density else 0f
+            if (binding.nextEpisodeCard.root.isVisible) {
+                binding.nextEpisodeCard.root.animate().translationY(targetCardY).setDuration(220L).start()
+            }
+
+            if (visibility == View.VISIBLE) {
+                handleLockingControls()
+                btnPlayPause.post {
+                    btnPlayPause.requestFocus()
+                }
+                if (::player.isInitialized) {
+                    updateIntroButtonVisibility(player.currentPosition)
+                }
+            } else {
+                if (::player.isInitialized) {
+                    updateIntroButtonVisibility(player.currentPosition)
+                }
+            }
+        }
+
+        // Configure subtitle appearance (PotPlayer style: crisp white text, strong black outline, no background box, bold)
+        playerView.subtitleView?.apply {
+            val captionStyle = CaptionStyleCompat(
+                /* foregroundColor  */ Color.WHITE,
+                /* backgroundColor */ Color.TRANSPARENT,
+                /* windowColor     */ Color.TRANSPARENT,
+                /* edgeType        */ CaptionStyleCompat.EDGE_TYPE_OUTLINE,
+                /* edgeColor       */ Color.BLACK,
+                /* typeface        */ Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+            )
+            setStyle(captionStyle)
+            setApplyEmbeddedStyles(true)
+            setApplyEmbeddedFontSizes(true)
+            setBottomPaddingFraction(0.015f)
+        }
+
+        lifecycleScope.launch {
+            try {
+                val savedSize = appSettings.get().fetchSubtitleSize()
+                if (savedSize > 0f) {
+                    playerView.subtitleView?.setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, savedSize)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed loading subtitle size", e)
+            }
+        }
+
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_CENTER,
+                KeyEvent.KEYCODE_ENTER,
+                KeyEvent.KEYCODE_NUMPAD_ENTER,
+                KeyEvent.KEYCODE_BUTTON_A -> {
+                    if (binding.nextEpisodeCard.root.isVisible) {
+                        if (binding.nextEpisodeCard.btnCancelNextEpisode.isFocused) {
+                            dismissNextEpisodeCard(isManualCancel = true)
+                        } else {
+                            playNextEpisodeDirectly()
+                        }
+                        return true
+                    }
+                    if (binding.netflixSkipRow.isVisible) {
+                        performSkipIntroOrCredits()
+                        return true
+                    }
+                    if (!playerView.isControllerVisible) {
+                        playerView.showController()
+                        btnPlayPause.post { btnPlayPause.requestFocus() }
+                        return true
+                    }
+                }
+
+                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    if (!playerView.isControllerVisible) {
+                        seekRelative(-10_000L)
+                        Snackbar.make(playerView, "<< -10s", 500).show()
+                        return true
+                    }
+                }
+
+                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    if (!playerView.isControllerVisible) {
+                        seekRelative(10_000L)
+                        Snackbar.make(playerView, "+10s >>", 500).show()
+                        return true
+                    }
+                }
+
+                KeyEvent.KEYCODE_DPAD_UP,
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    if (!playerView.isControllerVisible) {
+                        playerView.showController()
+                        btnPlayPause.post { btnPlayPause.requestFocus() }
+                        return true
+                    }
+                }
+
+                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+                KeyEvent.KEYCODE_HEADSETHOOK -> {
+                    if (player.playbackState == Player.STATE_ENDED) {
+                        player.seekToDefaultPosition()
+                        player.play()
+                    } else if (player.isPlaying) {
+                        player.pause()
+                    } else {
+                        player.play()
+                    }
+                    return true
+                }
+
+                KeyEvent.KEYCODE_MEDIA_PLAY -> {
+                    if (player.playbackState == Player.STATE_ENDED) {
+                        player.seekToDefaultPosition()
+                    }
+                    player.play()
+                    return true
+                }
+
+                KeyEvent.KEYCODE_MEDIA_PAUSE -> {
+                    player.pause()
+                    return true
+                }
+
+                KeyEvent.KEYCODE_MEDIA_FAST_FORWARD,
+                KeyEvent.KEYCODE_BUTTON_R1,
+                KeyEvent.KEYCODE_PAGE_DOWN -> {
+                    seekRelative(SKIP_INTRO_MS)
+                    Snackbar.make(playerView, "⏩ +90s Pular Abertura", 750).show()
+                    return true
+                }
+
+                KeyEvent.KEYCODE_INFO,
+                KeyEvent.KEYCODE_GUIDE,
+                KeyEvent.KEYCODE_WINDOW -> {
+                    toggleKodiInfoHud()
+                    return true
+                }
+
+                KeyEvent.KEYCODE_BACK -> {
+                    if (isKodiHudVisible) {
+                        toggleKodiInfoHud()
+                        return true
+                    }
+                    if (binding.nextEpisodeCard.root.isVisible) {
+                        dismissNextEpisodeCard()
+                        return true
+                    }
+                    if (playerView.isControllerVisible) {
+                        playerView.hideController()
+                        return true
+                    }
+                    if (binding.netflixSkipRow.isVisible) {
+                        binding.netflixSkipRow.visibility = View.GONE
+                        return true
+                    }
+                }
+
+                KeyEvent.KEYCODE_MEDIA_REWIND,
+                KeyEvent.KEYCODE_BUTTON_L1,
+                KeyEvent.KEYCODE_PAGE_UP -> {
+                    seekRelative(-SKIP_INTRO_MS)
+                    Snackbar.make(playerView, "⏪ -90s Voltar", 750).show()
+                    return true
+                }
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun onBackPressed() {
+        if (isKodiHudVisible) {
+            toggleKodiInfoHud()
+            return
+        }
+        if (binding.nextEpisodeCard.root.isVisible) {
+            dismissNextEpisodeCard()
+            return
+        }
+        if (playerView.isControllerVisible) {
+            playerView.hideController()
+            return
+        }
+        if (binding.netflixSkipRow.isVisible) {
+            binding.netflixSkipRow.visibility = View.GONE
+            return
+        }
+        super.onBackPressed()
+    }
+
+    private fun handleLockingControls() {
+        TransitionManager.beginDelayedTransition(
+            playerView, AutoTransition().apply {
+                duration = 150L
+            }
+        )
+        if (controlsLocked) {
+            lockControls()
+        } else {
+            unlockControls()
+        }
+    }
+
+    private fun lockControls() {
+        controlsScrollView.visibility = View.GONE
+        mainControlsRoot.visibility = View.GONE
+        skipIntroRow.visibility = View.GONE
+        binding.netflixSkipRow.visibility = View.GONE
+        binding.nextEpisodeCard.root.visibility = View.GONE
+        btnUnlock.visibility = View.VISIBLE
+        toolbar.visibility = View.GONE
+    }
+
+    private fun unlockControls() {
+        btnUnlock.visibility = View.GONE
+        toolbar.visibility = View.VISIBLE
+        controlsScrollView.visibility = View.VISIBLE
+        mainControlsRoot.visibility = View.VISIBLE
+        skipIntroRow.visibility = View.VISIBLE
+    }
+
+    private fun releasePlayer() {
+        if (::player.isInitialized) {
+            player.removeListener(playerListener)
+            player.clearMediaItems()
+            player.release()
+        }
+        playerView.player = null
+    }
+
+    private fun playMedia(startAtPositionMs: Long? = null) {
+        hasAutoSelectedTracks = false
+        val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") }
+        val title = currentTitle.ifBlank { intent.getStringExtra("title") }
+
+        toolbar.title = title
+
+        playerView.apply {
+            player = this@PlayerActivity.player
+            controllerHideOnTouch = true
+        }
+
+        val audioAttributes = AudioAttributes.Builder()
+            .setUsage(C.USAGE_MEDIA)
+            .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+            .build()
+
+        if (fileId != null) {
+            viewModel.getWatch(fileId)
+            val streamUri = getStreamUrl(fileId)
+
+            val subConfigs = mutableListOf<MediaItem.SubtitleConfiguration>()
+            val matching = folderSubtitles.filter { it.matchesVideo(title ?: "") }
+            matching.forEach { sub ->
+                val safeName = sub.name.replace("[^a-zA-Z0-9._-]".toRegex(), "_")
+                val cachedFile = java.io.File(cacheDir, "subtitles/${sub.id}_$safeName")
+                if (cachedFile.exists() && cachedFile.length() > 0) {
+                    val isPortuguese = sub.languageCode == "por" || sub.name.lowercase().contains(".por.") || sub.name.lowercase().contains("pt")
+                    val (subUri, mimeType) = zechs.drive.stream.utils.SubtitleConverter.prepareSubtitleForExoPlayer(cacheDir, sub, cachedFile)
+                    subConfigs.add(
+                        MediaItem.SubtitleConfiguration.Builder(subUri)
+                            .setMimeType(mimeType)
+                            .setLanguage(sub.languageCode)
+                            .setLabel("★ [Drive] ${sub.languageLabel}")
+                            .setRoleFlags(C.ROLE_FLAG_SUBTITLE)
+                            .setSelectionFlags(if (isPortuguese) C.SELECTION_FLAG_DEFAULT else 0)
+                            .build()
+                    )
+                    addedSubtitleFileIds.add(sub.id)
+                }
+            }
+
+            val mediaItem = MediaItem.Builder()
+                .setUri(streamUri)
+                .apply {
+                    if (subConfigs.isNotEmpty()) {
+                        setSubtitleConfigurations(subConfigs)
+                    }
+                }
+                .build()
+
+            lifecycleScope.launch {
+                try {
+                    val client = sessionManager.get().fetchClient()
+                    val token = if (client != null) {
+                        val res = driveRepository.get().fetchAccessToken(client)
+                        if (res is Resource.Success) res.data?.accessToken else null
+                    } else null
+                    val chapters = MatroskaChapterParser.extractChapters(streamUri.toString(), token)
+                    parsedChapters = chapters
+                    Log.d(TAG, "Extracted ${chapters.size} chapters from MKV")
+                    if (::player.isInitialized) {
+                        updateIntroButtonVisibility(player.currentPosition)
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Chapter extraction failed", e)
+                }
+            }
+
+            player.apply {
+                removeListener(playerListener)
+                addListener(playerListener)
+                setAudioAttributes(audioAttributes, true)
+                setMediaItem(mediaItem, /* resetPosition = */ true)
+                prepare()
+                if (startAtPositionMs != null && startAtPositionMs > 0L) {
+                    seekTo(startAtPositionMs)
+                } else {
+                    seekToDefaultPosition()
+                }
+                playWhenReady = true
+            }
+            player.play()
+            startProgressTracker()
+
+            if (folderSubtitles.isNotEmpty()) {
+                loadMatchingExternalSubtitles()
+            } else {
+                viewModel.fetchSubtitles(fileId)
+            }
+
+            if (startAtPositionMs == null) {
+                viewModel.getWatchPosition(fileId) { startPosition ->
+                    if (startPosition > 5_000L) {
+                        resumeVideo(startPosition)
+                    }
+                }
+            }
+
+        }
+    }
+
+    private fun loadMatchingExternalSubtitles() {
+        val videoTitle = currentTitle.ifBlank { intent.getStringExtra("title") ?: "" }
+        val matching = folderSubtitles.filter { it.matchesVideo(videoTitle) }
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            matching.forEach { sub ->
+                if (!addedSubtitleFileIds.contains(sub.id)) {
+                    val cached = viewModel.downloadSubtitle(sub, cacheDir)
+                    if (cached != null && cached.exists()) {
+                        addedSubtitleFileIds.add(sub.id)
+                        withContext(Dispatchers.Main) {
+                            applyExternalSubtitle(cached, sub, isMatching = true)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun applyExternalSubtitle(
+        cachedFile: java.io.File,
+        sub: SubtitleItem,
+        isMatching: Boolean = false,
+        forceSelect: Boolean = false
+    ) {
+        if (!::player.isInitialized) return
+        val currentMediaItem = player.currentMediaItem ?: return
+
+        activeExternalSubItem = sub
+        activeExternalSubFile = cachedFile
+
+        val (rawUri, mimeType) = zechs.drive.stream.utils.SubtitleConverter.prepareSubtitleForExoPlayer(cacheDir, sub, cachedFile)
+        val finalUri = if (currentSubtitleOffsetMs != 0L && rawUri.scheme == "file") {
+            val sourceFile = java.io.File(rawUri.path ?: "")
+            val shiftedFile = java.io.File(cacheDir, "subtitles/${sub.id}_shifted_${currentSubtitleOffsetMs}.srt")
+            if (zechs.drive.stream.utils.SubtitleConverter.shiftSrtTimestamps(sourceFile, shiftedFile, currentSubtitleOffsetMs)) {
+                Uri.fromFile(shiftedFile)
+            } else rawUri
+        } else rawUri
+
+        val isPortuguese = sub.languageCode == "por" || sub.name.lowercase().contains(".por.") || sub.name.lowercase().contains("pt")
+        val trackLabel = if (isMatching) "★ [Drive] ${sub.languageLabel}" else "📁 [Drive] ${sub.name}"
+
+        val subConfig = MediaItem.SubtitleConfiguration.Builder(finalUri)
+            .setMimeType(mimeType)
+            .setLanguage(sub.languageCode)
+            .setLabel(trackLabel)
+            .setRoleFlags(C.ROLE_FLAG_SUBTITLE)
+            .setSelectionFlags(if (forceSelect || (isMatching && isPortuguese)) C.SELECTION_FLAG_DEFAULT else 0)
+            .build()
+
+        val existingConfigs = currentMediaItem.localConfiguration?.subtitleConfigurations ?: emptyList()
+        val filteredConfigs = existingConfigs.filter { !it.uri.toString().contains(sub.id) }
+        val newConfigs = filteredConfigs + subConfig
+
+        forcedSubtitleUri = subConfig.uri
+
+        val newMediaItem = currentMediaItem.buildUpon()
+            .setSubtitleConfigurations(newConfigs)
+            .build()
+
+        val currentPos = player.currentPosition
+        val playWhenReady = player.playWhenReady
+        hasAutoSelectedTracks = false
+        player.setMediaItem(newMediaItem, /* resetPosition = */ false)
+        player.prepare()
+        player.seekTo(currentPos)
+        player.playWhenReady = playWhenReady
+
+        val delaySuffix = if (currentSubtitleOffsetMs != 0L) " (${if (currentSubtitleOffsetMs > 0) "+" else ""}${currentSubtitleOffsetMs}ms)" else ""
+        Snackbar.make(playerView, "Legenda: $trackLabel$delaySuffix", 1500).apply {
+            anchorView = progressViewGroup
+        }.show()
+    }
+
+    private fun startProgressTracker() {
+        progressTrackerJob?.cancel()
+        progressTrackerJob = lifecycleScope.launch {
+            while (isActive) {
+                if (::player.isInitialized) {
+                    val pos = player.currentPosition
+                    val duration = player.duration
+                    updateIntroButtonVisibility(pos)
+                    checkAutoPlayNextEpisode(pos, duration)
+                }
+                delay(1000L)
+            }
+        }
+    }
+
+    private fun checkAutoPlayNextEpisode(positionMs: Long, durationMs: Long) {
+        if (controlsLocked || durationMs <= 60_000L) {
+            if (isNextEpisodeCardShowing) {
+                dismissNextEpisodeCard(isManualCancel = false)
+            }
+            return
+        }
+        val next = nextEpisode ?: return
+        val remainingMs = durationMs - positionMs
+
+        // Instant advance if episode reaches or exceeds full duration
+        if (remainingMs <= 1_000L || positionMs >= durationMs) {
+            if (!nextEpisodeCanceled) {
+                playNextEpisodeDirectly()
+                return
+            }
+        }
+
+        val isNearEnd = remainingMs in 1_000L..10_500L
+
+        if (isNextEpisodeCardShowing) {
+            if (!isNearEnd) {
+                dismissNextEpisodeCard(isManualCancel = false)
+            }
+            return
+        }
+
+        if (nextEpisodeCanceled) return
+
+        if (isNearEnd) {
+            showNextEpisodeCard(next)
+        }
+    }
+
+    private fun showNextEpisodeCard(next: PlaylistItem) {
+        if (isNextEpisodeCardShowing) return
+        isNextEpisodeCardShowing = true
+
+        // Suppress skip intro/credits buttons to prevent overlap with next episode card
+        binding.netflixSkipRow.animate().cancel()
+        binding.netflixSkipRow.visibility = View.GONE
+        skipIntroRow.animate().cancel()
+        skipIntroRow.visibility = View.GONE
+
+        val card = binding.nextEpisodeCard
+        val density = resources.displayMetrics.density
+        card.root.translationY = if (playerView.isControllerVisible) -84f * density else 0f
+
+        val parsed = EpisodeParser.parse(next.title)
+        card.tvNextEpisodeTitle.text = parsed.cleanTitle
+
+        val thumbUrl = next.thumbnailLink?.let {
+            if (it.contains(Regex("=s\\d+"))) it.replace(Regex("=s\\d+"), "=s600") else "$it=s600"
+        }
+        Glide.with(this)
+            .load(thumbUrl)
+            .placeholder(R.drawable.kodi_primary_bg)
+            .error(R.drawable.kodi_primary_bg)
+            .centerCrop()
+            .into(card.ivNextEpisodeThumb)
+
+        card.root.alpha = 0f
+        card.root.visibility = View.VISIBLE
+        card.root.animate().alpha(1f).setDuration(250L).start()
+
+        card.btnPlayNextEpisodeNow.setOnClickListener {
+            playNextEpisodeDirectly()
+        }
+
+        card.btnCancelNextEpisode.setOnClickListener {
+            dismissNextEpisodeCard(isManualCancel = true)
+        }
+
+        countdownJob?.cancel()
+        countdownJob = lifecycleScope.launch {
+            while (isActive && isNextEpisodeCardShowing) {
+                if (::player.isInitialized) {
+                    val remainingMs = player.duration - player.currentPosition
+                    val sec = kotlin.math.ceil(remainingMs / 1000.0).toInt().coerceAtLeast(0)
+                    card.tvNextEpisodeCountdown.text = "A SEGUIR • ${sec}s"
+                    if (sec <= 0 || remainingMs <= 1_000L) {
+                        playNextEpisodeDirectly()
+                        break
+                    }
+                }
+                delay(300L)
+            }
+        }
+    }
+
+    private fun dismissNextEpisodeCard(isManualCancel: Boolean = true) {
+        countdownJob?.cancel()
+        countdownJob = null
+        if (isManualCancel) {
+            nextEpisodeCanceled = true
+        }
+        isNextEpisodeCardShowing = false
+        val card = binding.nextEpisodeCard.root
+        card.animate().alpha(0f).setDuration(200L).withEndAction {
+            card.visibility = View.GONE
+            card.translationY = 0f
+        }.start()
+        if (::player.isInitialized) {
+            updateIntroButtonVisibility(player.currentPosition)
+        }
+    }
+
+    private fun playNextEpisodeDirectly() {
+        val next = nextEpisode ?: return
+        countdownJob?.cancel()
+        isNextEpisodeCardShowing = false
+        binding.nextEpisodeCard.root.visibility = View.GONE
+
+        saveProgress()
+
+        currentFileId = next.fileId
+        currentTitle = next.title
+        currentThumbnailLink = next.thumbnailLink
+        nextEpisodeCanceled = false
+        addedSubtitleFileIds.clear()
+        updateNextEpisode()
+
+        playMedia()
+        val parsed = EpisodeParser.parse(next.title)
+        Snackbar.make(playerView, "Iniciando: ${parsed.cleanTitle}", 1500).apply {
+            anchorView = progressViewGroup
+        }.show()
+    }
+
+    private fun updateIntroButtonVisibility(positionMs: Long) {
+        if (controlsLocked || isNextEpisodeCardShowing) {
+            binding.netflixSkipRow.animate().cancel()
+            binding.netflixSkipRow.visibility = View.GONE
+            skipIntroRow.animate().cancel()
+            skipIntroRow.visibility = View.GONE
+            return
+        }
+
+        // 1. Check if current position is within an OPENING or ENDING chapter
+        val specialChapter = if (parsedChapters.isNotEmpty()) {
+            parsedChapters.firstOrNull { chapter ->
+                chapter.type != MatroskaChapterParser.ChapterType.OTHER &&
+                        positionMs >= chapter.startTimeMs &&
+                        positionMs < chapter.endTimeMs
+            }
+        } else null
+
+        activeSkipChapter = specialChapter
+
+        if (specialChapter != null) {
+            val label = when (specialChapter.type) {
+                MatroskaChapterParser.ChapterType.RECAP -> "Pular Recap"
+                MatroskaChapterParser.ChapterType.OPENING -> "Pular Abertura"
+                MatroskaChapterParser.ChapterType.ENDING -> "Pular Créditos"
+                else -> "Pular"
+            }
+            btnSkipIntro.text = label
+            binding.btnNetflixSkip.text = label
+
+            if (!playerView.isControllerVisible) {
+                // Watching video without HUD: show floating Netflix-style pill
+                binding.netflixSkipRow.animate().cancel()
+                binding.netflixSkipRow.alpha = 1f
+                binding.netflixSkipRow.visibility = View.VISIBLE
+                skipIntroRow.visibility = View.GONE
+            } else {
+                // Controls HUD is visible: show button above timeline
+                binding.netflixSkipRow.animate().cancel()
+                binding.netflixSkipRow.visibility = View.GONE
+                skipIntroRow.animate().cancel()
+                skipIntroRow.alpha = 1f
+                skipIntroRow.visibility = View.VISIBLE
+            }
+            return
+        }
+
+        // 2. Outside special chapters: floating pill MUST ALWAYS BE GONE
+        binding.netflixSkipRow.animate().cancel()
+        binding.netflixSkipRow.visibility = View.GONE
+
+        // 3. Fallback for files WITHOUT chapters: only show skip button in the HUD controls when controller is open
+        val hasRecognizedChapters = parsedChapters.any { it.type != MatroskaChapterParser.ChapterType.OTHER }
+        if (!hasRecognizedChapters && playerView.isControllerVisible) {
+            val isFirst140s = positionMs in 1_000L..140_000L
+            if (isFirst140s) {
+                btnSkipIntro.text = "Pular Abertura (+90s)"
+                skipIntroRow.animate().cancel()
+                skipIntroRow.alpha = 1f
+                skipIntroRow.visibility = View.VISIBLE
+                return
+            }
+        }
+
+        skipIntroRow.animate().cancel()
+        skipIntroRow.visibility = View.GONE
+    }
+
+    private fun performSkipIntroOrCredits() {
+        val chapter = activeSkipChapter
+        if (chapter != null && chapter.endTimeMs > player.currentPosition) {
+            seekTo(chapter.endTimeMs)
+            val label = when (chapter.type) {
+                MatroskaChapterParser.ChapterType.RECAP -> "⏩ Recap pulado"
+                MatroskaChapterParser.ChapterType.OPENING -> "⏩ Abertura pulada"
+                MatroskaChapterParser.ChapterType.ENDING -> "⏩ Créditos pulados"
+                else -> "⏩ Capítulo pulado"
+            }
+            Snackbar.make(playerView, label, 750).apply {
+                anchorView = progressViewGroup
+            }.show()
+        } else {
+            seekRelative(SKIP_INTRO_MS)
+        }
+        binding.netflixSkipRow.visibility = View.GONE
+        skipIntroRow.visibility = View.GONE
+    }
+
+    private fun resumeVideo(startPosition: Long) {
+        player.addListener(object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                super.onIsPlayingChanged(isPlaying)
+                if (isPlaying) {
+                    player.seekTo(startPosition)
+                    Log.d(TAG, "Seeking to $startPosition")
+                    player.removeListener(this)
+                }
+            }
+        })
+    }
+
+
+    /**
+     * Seeks forward/backward by [deltaMs], clamped to the media's
+     * actual bounds so it never seeks past the end or before zero.
+     * Pass a negative value to seek backward (used by btnSkipIntroBack).
+     *
+     * Guard: does nothing (with a brief Toast) if the stream's index has not
+     * been fetched yet — this is the reason the buttons appeared broken when
+     * tapped immediately after playback started.
+     */
+    private fun seekRelative(deltaMs: Long) {
+        if (!player.isCurrentMediaItemSeekable) {
+            Toast.makeText(this, getString(R.string.seeking_not_ready), Toast.LENGTH_SHORT).show()
+            return
+        }
+        val duration = player.duration
+        val target = player.currentPosition + deltaMs
+        val clamped = when {
+            target < 0L -> 0L
+            duration != C.TIME_UNSET && target > duration -> duration
+            else -> target
+        }
+        Log.d(TAG, "seekRelative(${deltaMs}ms) -> ${clamped}ms")
+        player.seekTo(clamped)
+    }
+
+    private fun seekTo(positionMs: Long) {
+        if (!player.isCurrentMediaItemSeekable) {
+            Toast.makeText(this, getString(R.string.seeking_not_ready), Toast.LENGTH_SHORT).show()
+            return
+        }
+        val duration = player.duration
+        val clamped = when {
+            positionMs < 0L -> 0L
+            duration != C.TIME_UNSET && positionMs > duration -> duration
+            else -> positionMs
+        }
+        Log.d(TAG, "seekTo(${positionMs}ms) -> ${clamped}ms")
+        player.seekTo(clamped)
+    }
+
+    private fun getStreamUrl(fileId: String): Uri {
+        val uri = Uri.parse(
+            "$DRIVE_API/files/${fileId}?supportsAllDrives=True&alt=media"
+        )
+        Log.d(TAG, "STREAM_URL=$uri")
+        return uri
+    }
+
+    private fun updateOrientation(newConfig: Configuration) {
+        when (newConfig.orientation) {
+            Configuration.ORIENTATION_PORTRAIT -> {
+                btnRotate.apply {
+                    orientation = Orientation.PORTRAIT
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        tooltipText = getString(R.string.landscape)
+                    }
+                    icon = ContextCompat.getDrawable(
+                        /* context */ this@PlayerActivity,
+                        /* drawableId */ R.drawable.ic_landscape_24
+                    )
+                }
+            }
+            else -> {
+                btnRotate.apply {
+                    orientation = Orientation.LANDSCAPE
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        tooltipText = getString(R.string.portrait)
+                    }
+                    icon = ContextCompat.getDrawable(
+                        /* context */ this@PlayerActivity,
+                        /* drawableId */ R.drawable.ic_portrait_24
+                    )
+                }
+            }
+        }
+    }
+
+    private fun showAudioTrackDialog() {
+        data class AudioTrackItem(val group: Tracks.Group, val trackIndex: Int, val name: String, val isSelected: Boolean)
+        val audioItems = mutableListOf<AudioTrackItem>()
+
+        player.currentTracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }.forEach { group ->
+            for (i in 0 until group.length) {
+                val format = group.getTrackFormat(i)
+                val lang = format.language?.takeIf { it.isNotBlank() }
+                val label = format.label?.takeIf { it.isNotBlank() }
+                val name = if (label != null && lang != null) {
+                    "$label ($lang)"
+                } else label ?: lang ?: "Faixa ${audioItems.size + 1}"
+                val selected = group.isTrackSelected(i)
+                audioItems.add(AudioTrackItem(group, i, name, selected))
+            }
+        }
+
+        if (audioItems.isEmpty()) {
+            Toast.makeText(this, "Nenhuma faixa de áudio encontrada", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val names = audioItems.map { it.name }.toTypedArray()
+        val selectedIndex = audioItems.indexOfFirst { it.isSelected }.coerceAtLeast(0)
+
+        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog).apply {
+            setTitle(getString(R.string.select_audio))
+            setSingleChoiceItems(names, selectedIndex) { dialog, which ->
+                val chosen = audioItems[which]
+                val builder = player.trackSelectionParameters.buildUpon()
+                builder.clearOverridesOfType(C.TRACK_TYPE_AUDIO)
+                builder.addOverride(TrackSelectionOverride(chosen.group.mediaTrackGroup, listOf(chosen.trackIndex)))
+                player.trackSelectionParameters = builder.build()
+                dialog.dismiss()
+                Snackbar.make(playerView, "Áudio: ${chosen.name}", 750).apply {
+                    anchorView = progressViewGroup
+                }.show()
+            }
+            show()
+        }
+    }
+
+    private fun showSubtitleTrackDialog() {
+        data class ExoSubChoice(
+            val group: Tracks.Group?,
+            val trackIndex: Int,
+            val folderSub: SubtitleItem?,
+            val displayName: String,
+            val isSelected: Boolean
+        )
+
+        val choices = mutableListOf<ExoSubChoice>()
+
+        val anySubtitleSelected = player.currentTracks.groups
+            .filter { it.type == C.TRACK_TYPE_TEXT }
+            .any { group -> (0 until group.length).any { group.isTrackSelected(it) } }
+        val isTextDisabled = !anySubtitleSelected
+
+        // 1. Off option
+        choices.add(ExoSubChoice(null, -1, null, getString(R.string.track_off), isTextDisabled))
+
+        // 2. Active/embedded tracks in ExoPlayer
+        player.currentTracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }.forEach { group ->
+            for (i in 0 until group.length) {
+                val format = group.getTrackFormat(i)
+                val lang = format.language?.takeIf { it.isNotBlank() }
+                val label = format.label?.takeIf { it.isNotBlank() }
+                val name = if (label != null && lang != null) {
+                    "$label ($lang)"
+                } else label ?: lang ?: "Legenda ${choices.size}"
+                val selected = group.isTrackSelected(i)
+                choices.add(ExoSubChoice(group, i, null, name, selected))
+            }
+        }
+
+        // 3. ALL Google Drive folder subtitles: ALWAYS list them!
+        val videoTitle = currentTitle.ifBlank { intent.getStringExtra("title") ?: "" }
+        folderSubtitles.forEach { sub ->
+            val alreadyPresent = choices.any {
+                it.displayName.contains(sub.name, ignoreCase = true) ||
+                (it.displayName.contains("[Drive]", ignoreCase = true) && it.displayName.contains(sub.languageLabel, ignoreCase = true))
+            }
+            if (!alreadyPresent) {
+                val isMatching = sub.matchesVideo(videoTitle)
+                val prefix = if (isMatching) "★ [Drive] " else "📁 [Drive] "
+                val tag = if (isMatching) " (Episódio atual)" else " (Outro episódio)"
+                val label = "$prefix${sub.name}$tag"
+                choices.add(ExoSubChoice(null, -1, sub, label, false))
+            }
+        }
+
+        val names = choices.map { it.displayName }.toTypedArray()
+        val selectedIndex = choices.indexOfFirst { it.isSelected }.coerceAtLeast(0)
+
+        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog).apply {
+            setTitle(getString(R.string.select_subtitle))
+            setSingleChoiceItems(names, selectedIndex) { dialog, which ->
+                val choice = choices[which]
+                dialog.dismiss()
+                if (choice.group != null) {
+                    val builder = player.trackSelectionParameters.buildUpon()
+                    builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                    builder.clearOverridesOfType(C.TRACK_TYPE_TEXT)
+                    builder.addOverride(TrackSelectionOverride(choice.group.mediaTrackGroup, listOf(choice.trackIndex)))
+                    player.trackSelectionParameters = builder.build()
+                    Snackbar.make(playerView, "Legenda: ${choice.displayName}", 750).apply {
+                        anchorView = progressViewGroup
+                    }.show()
+                } else if (choice.trackIndex == -1 && choice.folderSub == null) {
+                    val builder = player.trackSelectionParameters.buildUpon()
+                    builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                    player.trackSelectionParameters = builder.build()
+                    Snackbar.make(playerView, getString(R.string.track_off), 750).apply {
+                        anchorView = progressViewGroup
+                    }.show()
+                } else if (choice.folderSub != null) {
+                    val sub = choice.folderSub
+                    val isMatching = sub.matchesVideo(videoTitle)
+                    Snackbar.make(playerView, "Carregando legenda: ${sub.name}...", 1000).apply {
+                        anchorView = progressViewGroup
+                    }.show()
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        val cached = viewModel.downloadSubtitle(sub, cacheDir)
+                        if (cached != null && cached.exists()) {
+                            withContext(Dispatchers.Main) {
+                                applyExternalSubtitle(cached, sub, isMatching = isMatching, forceSelect = true)
+                            }
+                        } else {
+                            withContext(Dispatchers.Main) {
+                                Snackbar.make(playerView, "Erro ao baixar legenda do Drive", 1500).apply {
+                                    anchorView = progressViewGroup
+                                }.show()
+                            }
+                        }
+                    }
+                }
+            }
+            setPositiveButton("Tamanho") { _, _ ->
+                showSubtitleSizeDialog()
+            }
+            setNeutralButton("Sincronia") { _, _ ->
+                showSubtitleSyncDialog()
+            }
+            setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.dismiss() }
+            show()
+        }
+    }
+
+    private fun showSubtitleSizeDialog() {
+        val sizes = arrayOf(
+            "Pequeno (16sp)",
+            "Médio (20sp - Padrão)",
+            "Grande (24sp)",
+            "Extra Grande (28sp)"
+        )
+        val sizeValues = floatArrayOf(16f, 20f, 24f, 28f)
+
+        lifecycleScope.launch {
+            val savedSp = try {
+                appSettings.get().fetchSubtitleSize()
+            } catch (e: Exception) {
+                20f
+            }
+            val selectedIdx = sizeValues.indexOfFirst { kotlin.math.abs(it - savedSp) < 0.5f }.coerceAtLeast(1)
+
+            MaterialAlertDialogBuilder(this@PlayerActivity, R.style.ThemeOverlay_DriveStream_Dialog).apply {
+                setTitle("Tamanho da Legenda (Kodi)")
+                setSingleChoiceItems(sizes, selectedIdx) { dialog, which ->
+                    val chosenSp = sizeValues[which]
+                    playerView.subtitleView?.setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, chosenSp)
+                    lifecycleScope.launch {
+                        try {
+                            appSettings.get().saveSubtitleSize(chosenSp)
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Error saving subtitle size", e)
+                        }
+                    }
+                    dialog.dismiss()
+                    Snackbar.make(playerView, "Tamanho definido: ${sizes[which]}", 1000).apply {
+                        anchorView = progressViewGroup
+                    }.show()
+                }
+                setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.dismiss() }
+                show()
+            }
+        }
+    }
+
+    private fun showSubtitleSyncDialog() {
+        val options = arrayOf(
+            "+500 ms (Adiantar muito)",
+            "+250 ms (Adiantar)",
+            "+100 ms (Adiantar um pouco)",
+            "0 ms (Sincronizado)",
+            "-100 ms (Atrasar um pouco)",
+            "-250 ms (Atrasar)",
+            "-500 ms (Atrasar muito)"
+        )
+        val offsets = longArrayOf(500L, 250L, 100L, 0L, -100L, -250L, -500L)
+        val selectedIdx = offsets.indexOfFirst { it == currentSubtitleOffsetMs }.takeIf { it >= 0 } ?: 3
+
+        val title = if (currentSubtitleOffsetMs != 0L) {
+            "Sincronia de Legenda (Atual: ${if (currentSubtitleOffsetMs > 0) "+" else ""}${currentSubtitleOffsetMs}ms)"
+        } else {
+            "Sincronia de Legenda (0ms)"
+        }
+
+        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog).apply {
+            setTitle(title)
+            setSingleChoiceItems(options, selectedIdx) { dialog, which ->
+                val chosenOffset = offsets[which]
+                currentSubtitleOffsetMs = chosenOffset
+                dialog.dismiss()
+
+                val activeSub = activeExternalSubItem
+                val activeFile = activeExternalSubFile
+
+                if (activeSub != null && activeFile != null && activeFile.exists()) {
+                    applyExternalSubtitle(activeFile, activeSub, isMatching = true, forceSelect = true)
+                } else {
+                    val sign = if (chosenOffset > 0) "+" else ""
+                    Snackbar.make(playerView, "Offset definido para ${sign}${chosenOffset}ms (aplicável a legendas do Drive)", 2000).apply {
+                        anchorView = progressViewGroup
+                    }.show()
+                }
+            }
+            setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.dismiss() }
+            show()
+        }
+    }
+
+    private fun toggleKodiInfoHud() {
+        isKodiHudVisible = !isKodiHudVisible
+        binding.kodiInfoHud.root.isVisible = isKodiHudVisible
+        if (isKodiHudVisible) {
+            startKodiHudUpdater()
+        } else {
+            kodiHudUpdateJob?.cancel()
+        }
+    }
+
+    private fun startKodiHudUpdater() {
+        kodiHudUpdateJob?.cancel()
+        kodiHudUpdateJob = lifecycleScope.launch {
+            while (isActive && isKodiHudVisible) {
+                updateKodiInfoHud()
+                delay(800L)
+            }
+        }
+    }
+
+    private fun updateKodiInfoHud() {
+        if (!::player.isInitialized) return
+        val vFormat = player.videoFormat
+        val aFormat = player.audioFormat
+
+        // 1. Video Codec & Decoder
+        val mime = vFormat?.sampleMimeType ?: "Desconhecido"
+        val codecPretty = when {
+            mime.contains("hevc", true) -> "HEVC (H.265)"
+            mime.contains("avc", true) -> "AVC (H.264)"
+            mime.contains("vp9", true) -> "VP9"
+            mime.contains("av01", true) -> "AV1"
+            else -> mime.substringAfterLast("/")
+        }
+        binding.kodiInfoHud.tvHudVideoCodec.text = "$codecPretty • HW MediaCodec"
+
+        // 2. Video Resolution & Framerate
+        val width = vFormat?.width ?: 0
+        val height = vFormat?.height ?: 0
+        val fps = vFormat?.frameRate ?: 0f
+        val fpsText = if (fps > 0) String.format(Locale.US, "%.3f fps", fps) else "Taxa Dinâmica"
+        val resText = if (width > 0 && height > 0) "${width}x${height} @ $fpsText" else "1080p @ $fpsText"
+        binding.kodiInfoHud.tvHudVideoResolution.text = resText
+
+        // 3. Audio Info
+        val audioMime = aFormat?.sampleMimeType ?: "Áudio Padrão"
+        val audioCodec = when {
+            audioMime.contains("mp4a", true) || audioMime.contains("aac", true) -> "AAC"
+            audioMime.contains("opus", true) -> "Opus"
+            audioMime.contains("flac", true) -> "FLAC"
+            audioMime.contains("ac3", true) -> "Dolby Digital (AC-3)"
+            audioMime.contains("eac3", true) -> "Dolby Digital Plus (E-AC-3)"
+            else -> audioMime.substringAfterLast("/")
+        }
+        val channels = when (aFormat?.channelCount) {
+            1 -> "Mono (1.0)"
+            2 -> "Estéreo (2.0)"
+            6 -> "Surround (5.1)"
+            8 -> "Surround (7.1)"
+            else -> "Estéreo"
+        }
+        val sampleRate = if ((aFormat?.sampleRate ?: 0) > 0) "${(aFormat!!.sampleRate / 1000f)} kHz" else "48 kHz"
+        binding.kodiInfoHud.tvHudAudioInfo.text = "$audioCodec • $channels ($sampleRate)"
+
+        // 4. Subtitle Info
+        val activeSub = player.currentTracks.groups
+            .filter { it.type == C.TRACK_TYPE_TEXT }
+            .flatMap { group -> (0 until group.length).filter { group.isTrackSelected(it) }.map { group.getTrackFormat(it) } }
+            .firstOrNull()
+
+        binding.kodiInfoHud.tvHudSubtitleInfo.text = if (activeSub != null) {
+            activeSub.label ?: activeSub.language ?: "Ativa"
+        } else {
+            "Nenhuma legenda ativa"
+        }
+
+        // 5. Buffer health
+        val bufferedPos = player.bufferedPosition
+        val currentPos = player.currentPosition
+        val bufferSecs = maxOf(0.0, (bufferedPos - currentPos) / 1000.0)
+        binding.kodiInfoHud.tvHudBufferDuration.text = String.format(Locale.US, "%.1fs em buffer (RAM)", bufferSecs)
+
+        if (bufferSecs >= 12.0) {
+            binding.kodiInfoHud.tvHudBufferBadge.text = "🟢 Saudável (>12s)"
+            binding.kodiInfoHud.tvHudBufferBadge.setTextColor(Color.parseColor("#4CAF50"))
+        } else if (bufferSecs >= 4.0) {
+            binding.kodiInfoHud.tvHudBufferBadge.text = "🟡 Estável (4-12s)"
+            binding.kodiInfoHud.tvHudBufferBadge.setTextColor(Color.parseColor("#FFC107"))
+        } else {
+            binding.kodiInfoHud.tvHudBufferBadge.text = "🔴 Baixo (<4s)"
+            binding.kodiInfoHud.tvHudBufferBadge.setTextColor(Color.parseColor("#F44336"))
+        }
+    }
+
+    private fun showChapterDialog() {
+        if (parsedChapters.isNotEmpty()) {
+            val chapterNames = parsedChapters.map { ch ->
+                val min = (ch.startTimeMs / 1000) / 60
+                val sec = (ch.startTimeMs / 1000) % 60
+                String.format(Locale.getDefault(), "[%02d:%02d] %s", min, sec, ch.title)
+            }.toTypedArray()
+
+            val currentPos = if (::player.isInitialized) player.currentPosition else 0L
+            val currentIndex = parsedChapters.indexOfLast { currentPos >= it.startTimeMs }.coerceAtLeast(0)
+
+            MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog).apply {
+                setTitle(getString(R.string.chapters))
+                setSingleChoiceItems(chapterNames, currentIndex) { dialog, which ->
+                    val targetChapter = parsedChapters[which]
+                    seekTo(targetChapter.startTimeMs)
+                    dialog.dismiss()
+                    Snackbar.make(playerView, "Capítulo: ${targetChapter.title}", 750).apply {
+                        anchorView = progressViewGroup
+                    }.show()
+                }
+                setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.dismiss() }
+                show()
+            }
+            return
+        }
+
+        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog).apply {
+            setTitle(getString(R.string.chapters))
+            setMessage("Nenhum capítulo embutido foi detectado neste arquivo de vídeo.\n\nDeseja alternar para o MPV Player?")
+            setPositiveButton("Abrir no MPV") { dialog, _ ->
+                dialog.dismiss()
+                launchMpvFallback()
+            }
+            setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.dismiss() }
+            show()
+        }
+    }
+
+    private fun hideSystemUI() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowInsetsControllerCompat(window, window.decorView).let { controller ->
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+            controller.systemBarsBehavior = BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+    }
+
+    private fun speedSnackbar(speedIndex: Int) {
+        Snackbar.make(
+            binding.playerView,
+            "Playback speed set to ${speed[speedIndex]}",
+            /* duration */ 750
+        ).apply {
+            anchorView = progressViewGroup
+        }.also { it.show() }
+    }
+
+    private fun autoSelectPreferredTracks(tracks: Tracks) {
+        if (hasAutoSelectedTracks) return
+
+        var preferredAudioOverride: TrackSelectionOverride? = null
+        var preferredTextOverride: TrackSelectionOverride? = null
+
+        // 1. Audio: Auto-select Japanese
+        val audioGroups = tracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
+        audioLoop@ for (group in audioGroups) {
+            for (i in 0 until group.length) {
+                val format = group.getTrackFormat(i)
+                val lang = format.language?.lowercase() ?: ""
+                val label = (format.label ?: "").lowercase()
+
+                val isJapanese = lang in listOf("ja", "jpn", "jp", "japanese") ||
+                        label.contains("jap") || label.contains("jpn")
+
+                if (isJapanese) {
+                    Log.d(TAG, "Exo auto-selected Japanese audio: lang=$lang, label=$label, index=$i")
+                    preferredAudioOverride = TrackSelectionOverride(group.mediaTrackGroup, listOf(i))
+                    break@audioLoop
+                }
+            }
+        }
+
+        // 2. Subtitle: Auto-select Portuguese (prioritize Brazilian Portuguese / full dialogue)
+        val textGroups = tracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
+        var bestSubScore = -1
+        var bestSubGroup: Tracks.Group? = null
+        var bestSubIndex = -1
+
+        if (forcedSubtitleUri != null) {
+            val targetStr = forcedSubtitleUri.toString()
+            findForced@ for (group in textGroups) {
+                for (i in 0 until group.length) {
+                    val format = group.getTrackFormat(i)
+                    if (format.id == targetStr || (format.label != null && format.label!!.contains("[Drive]"))) {
+                        bestSubGroup = group
+                        bestSubIndex = i
+                        bestSubScore = 999
+                        break@findForced
+                    }
+                }
+            }
+        }
+
+        if (bestSubScore < 0) {
+            for (group in textGroups) {
+                for (i in 0 until group.length) {
+                val format = group.getTrackFormat(i)
+                val lang = format.language?.lowercase() ?: ""
+                val label = (format.label ?: "").lowercase()
+
+                val isPortuguese = lang in listOf("pt", "por", "pt-br", "pt_br", "pob", "portuguese") ||
+                        label.contains("portugu") || label.contains("pt-br") || label.contains("pt_br") ||
+                        label.contains("brazil") || label.contains("ptbr")
+
+                if (isPortuguese) {
+                    var score = 10
+                    if (label.contains("[drive]")) {
+                        score = 25
+                    } else if (label.contains("forced") || label.contains("forçada") || label.contains("forçado") ||
+                        label.contains("signs") || label.contains("músicas") || label.contains("songs")) {
+                        score = 5
+                    } else if (label.contains("brasil") || label.contains("brazil") || label.contains("pt-br") || label.contains("pt_br")) {
+                        score = 15
+                    }
+
+                    if (score > bestSubScore) {
+                        bestSubScore = score
+                        bestSubGroup = group
+                        bestSubIndex = i
+                    }
+                }
+            }
+        }
+    }
+
+        if (bestSubGroup != null && bestSubIndex >= 0) {
+            val format = bestSubGroup.getTrackFormat(bestSubIndex)
+            Log.d(TAG, "Exo auto-selected Portuguese subtitle: lang=${format.language}, label=${format.label}, index=$bestSubIndex")
+            preferredTextOverride = TrackSelectionOverride(bestSubGroup.mediaTrackGroup, listOf(bestSubIndex))
+        }
+
+        if (preferredAudioOverride != null || preferredTextOverride != null) {
+            val builder = player.trackSelectionParameters.buildUpon()
+            preferredAudioOverride?.let {
+                builder.clearOverridesOfType(C.TRACK_TYPE_AUDIO)
+                builder.addOverride(it)
+            }
+            preferredTextOverride?.let {
+                builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                builder.clearOverridesOfType(C.TRACK_TYPE_TEXT)
+                builder.addOverride(it)
+            }
+            player.trackSelectionParameters = builder.build()
+            hasAutoSelectedTracks = true
+        } else if (audioGroups.isNotEmpty() || textGroups.isNotEmpty()) {
+            hasAutoSelectedTracks = true
+        }
+    }
+
+    private fun launchMpvFallback() {
+        val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") ?: return }
+        val title = currentTitle.ifBlank { intent.getStringExtra("title") ?: return }
+        val thumbnailLink = currentThumbnailLink ?: intent.getStringExtra("thumbnailLink")
+        val theme = intent.getIntExtra("theme", 0)
+        val currentPos = if (::player.isInitialized) player.currentPosition else 0L
+
+        lifecycleScope.launch {
+            try {
+                Toast.makeText(this@PlayerActivity, "Alternando para MPV Player...", Toast.LENGTH_SHORT).show()
+                val client = sessionManager.get().fetchClient()
+                if (client != null) {
+                    val tokenRes = driveRepository.get().fetchAccessToken(client)
+                    if (tokenRes is Resource.Success && tokenRes.data != null) {
+                        val mpvIntent = Intent(this@PlayerActivity, MPVActivity::class.java).apply {
+                            putExtra("fileId", fileId)
+                            putExtra("title", title)
+                            putExtra("thumbnailLink", thumbnailLink)
+                            putExtra("accessToken", tokenRes.data.accessToken)
+                            putExtra("theme", theme)
+                            putExtra("playlist", ArrayList(playlist))
+                            putExtra("subtitles", ArrayList(folderSubtitles))
+                            if (currentPos > 0) {
+                                putExtra("startPosition", currentPos)
+                            }
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        }
+                        finish()
+                        startActivity(mpvIntent)
+                        return@launch
+                    }
+                }
+                Toast.makeText(this@PlayerActivity, "Falha ao obter token para abrir no MPV", Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error launching MPV fallback", e)
+            }
+        }
+    }
+
+    private fun showError(error: PlaybackException) {
+        Log.e(TAG, "ExoPlayer onPlayerError: errorCodeName=${error.errorCodeName}, errorCode=${error.errorCode}", error)
+
+        val errorGeneral = error.localizedMessage ?: getString(R.string.something_went_wrong)
+        val exoException = error as? ExoPlaybackException
+        val rendererException = exoException?.rendererException
+        val rendererFormat = exoException?.rendererFormat
+        val mimeType = rendererFormat?.sampleMimeType ?: ""
+        val rendererName = exoException?.rendererName ?: ""
+
+        val errorDetailed = when (exoException?.type) {
+            TYPE_SOURCE -> exoException.sourceException.localizedMessage
+            TYPE_RENDERER -> rendererException?.localizedMessage
+            TYPE_UNEXPECTED -> exoException.unexpectedException.localizedMessage
+            TYPE_REMOTE -> errorGeneral
+            else -> error.message
+        }
+
+        // 1. Subtitle error resilience: recover automatically if ASS/SSA subtitles fail
+        val isSubtitleError = (exoException?.type == TYPE_RENDERER) && (
+                mimeType.startsWith("text/") ||
+                mimeType.contains("sub") ||
+                mimeType.contains("ssa") ||
+                mimeType.contains("ass") ||
+                rendererName.contains("Text")
+        )
+
+        if (isSubtitleError && ::player.isInitialized) {
+            Log.w(TAG, "Subtitle rendering failed ($mimeType: ${rendererException?.message}). Disabling subtitle and resuming playback.")
+            val resumePosition = player.currentPosition
+            player.trackSelectionParameters = player.trackSelectionParameters
+                .buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                .build()
+            player.seekTo(resumePosition)
+            player.prepare()
+            player.play()
+
+            Snackbar.make(
+                playerView,
+                "Legenda incompatível com decodificador padrão. Reproduzindo sem legenda.",
+                Snackbar.LENGTH_LONG
+            ).apply {
+                anchorView = progressViewGroup
+                setAction("Abrir no MPV") { launchMpvFallback() }
+            }.show()
+            return
+        }
+
+        // 2. Audio error classification
+        val isAudioError = (exoException?.type == TYPE_RENDERER) && (
+                mimeType.startsWith("audio/") ||
+                rendererName.contains("Audio") ||
+                rendererException?.javaClass?.name?.contains("Audio") == true
+        )
+
+        // 3. Video error classification
+        val isVideoError = (exoException?.type == TYPE_RENDERER) && (
+                mimeType.startsWith("video/") ||
+                rendererName.contains("Video") ||
+                rendererException?.javaClass?.name?.contains("Video") == true ||
+                rendererException?.message?.contains("video", ignoreCase = true) == true
+        )
+
+        val isCodecError = (exoException?.type == TYPE_RENDERER) ||
+                (error.message?.contains("decoder", ignoreCase = true) == true) ||
+                (errorDetailed?.contains("decoder", ignoreCase = true) == true) ||
+                (errorDetailed?.contains("OMX.", ignoreCase = true) == true) ||
+                (errorDetailed?.contains("c2.", ignoreCase = true) == true)
+
+        if (isVideoError || isCodecError) {
+            val reason = if (isVideoError) "vídeo" else if (isAudioError) "áudio" else "decodificação"
+            Log.w(TAG, "Hardware decoder failed for $reason ($errorDetailed). Switching to MPV...")
+            Toast.makeText(
+                this,
+                "Incompatibilidade no decodificador de $reason do dispositivo. Alternando para o MPV...",
+                Toast.LENGTH_SHORT
+            ).show()
+            launchMpvFallback()
+            return
+        } else {
+            errorSnackbar(errorGeneral, errorDetailed, canOpenMpv = false)
+        }
+    }
+
+    private fun errorSnackbar(textPrimary: String, textSecondary: String?, canOpenMpv: Boolean = false) {
+        Snackbar.make(playerView, textPrimary, Snackbar.LENGTH_LONG).apply {
+            anchorView = progressViewGroup
+
+            if (canOpenMpv) {
+                setAction("Abrir no MPV") {
+                    launchMpvFallback()
+                }
+            } else if (textSecondary != null) {
+                setAction(getString(R.string.details)) {
+                    MaterialAlertDialogBuilder(
+                        this@PlayerActivity
+                    ).apply {
+                        setMessage(textSecondary)
+                        setPositiveButton(R.string.ok) { dialog, _ -> dialog.dismiss() }
+                        create()
+                    }.also { it.show() }
+                }
+            }
+
+        }.also { it.show() }
+    }
+
+    private fun saveProgress() {
+        val watchedDuration = player.currentPosition
+        val totalDuration = player.duration
+        val watchProgress = (watchedDuration.toDouble() / totalDuration.toDouble()).toFloat() * 100
+        if (watchProgress > 10) {
+            val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId")!! }
+            val title = currentTitle.ifBlank { intent.getStringExtra("title")!! }
+            val thumbnailLink = currentThumbnailLink ?: intent.getStringExtra("thumbnailLink")
+            viewModel.saveWatch(
+                name = title,
+                videoId = fileId,
+                watchedDuration = watchedDuration,
+                totalDuration = totalDuration,
+                thumbnailLink = thumbnailLink
+            )
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: Configuration
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        playerView.apply {
+            controllerAutoShow = !isInPictureInPictureMode
+            if (isInPictureInPictureMode) hideController() else showController()
+        }
+        if (onStopCalled) {
+            saveProgress()
+            finish()
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        updateOrientation(newConfig)
+    }
+
+    override fun onPause() {
+        saveProgress()
+        super.onPause()
+    }
+
+    override fun onStop() {
+        player.pause()
+        super.onStop()
+        onStopCalled = true
+    }
+
+    override fun onResume() {
+        super.onResume()
+        onStopCalled = false
+    }
+
+    override fun onDestroy() {
+        countdownJob?.cancel()
+        releasePlayer()
+        super.onDestroy()
+    }
+
+}

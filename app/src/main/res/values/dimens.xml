@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Google TV / Android TV guidelines (and most consumer TV panels still sold today)
+        recommend keeping interactive and text content at least 5% inset from each edge
+        to survive overscan cropping. On a 1920x1080 canvas that is ~24dp on the short
+        edges. We centralize it here instead of hardcoding 16dp/20dp per-layout so every
+        TV-facing screen stays consistent and the margin can be tuned in one place.
+    -->
+    <dimen name="tv_overscan_margin">24dp</dimen>
+    <dimen name="tv_overscan_margin_vertical">24dp</dimen>
+</resources>

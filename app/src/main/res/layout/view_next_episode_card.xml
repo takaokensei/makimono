@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/cardNextEpisodeRoot"
+    android:layout_width="380dp"
+    android:layout_height="wrap_content"
+    android:clickable="true"
+    android:elevation="24dp"
+    android:focusable="false"
+    android:translationZ="24dp"
+    app:cardBackgroundColor="#F2121520"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="16dp"
+    app:strokeColor="?attr/colorBorderGlass"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="10dp">
+
+        <!-- 16:9 Thumbnail Preview with Play Icon Overlay -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="120dp"
+            android:layout_height="72dp"
+            app:cardBackgroundColor="@android:color/transparent"
+            app:cardCornerRadius="9dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#20FFFFFF"
+            app:strokeWidth="0.8dp">
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <ImageView
+                    android:id="@+id/ivNextEpisodeThumb"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@null"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/kodi_primary_bg" />
+
+                <!-- Scrim for contrast -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="#26000000" />
+
+                <!-- Play Glyph Badge -->
+                <ImageView
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/glass_circle_button_bg"
+                    android:contentDescription="@null"
+                    android:padding="6dp"
+                    android:src="@drawable/ic_play_24"
+                    app:tint="#FFFFFFFF" />
+            </FrameLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Right Side: Info & Actions -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <!-- Top Header: Countdown Kicker + Close Button -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvNextEpisodeCountdown"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/inter"
+                    android:letterSpacing="0.08"
+                    android:text="A SEGUIR • 10s"
+                    android:textColor="?attr/colorAccentPrimary"
+                    android:textSize="10.5sp"
+                    android:textStyle="bold" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <ImageView
+                    android:id="@+id/btnCancelNextEpisode"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="@drawable/glass_circle_button_bg"
+                    android:clickable="true"
+                    android:contentDescription="Cancelar"
+                    android:focusable="true"
+                    android:nextFocusDown="@+id/btnPlayNextEpisodeNow"
+                    android:padding="5dp"
+                    android:src="@drawable/ic_close_24"
+                    app:tint="#FFFFFFFF" />
+            </LinearLayout>
+
+            <!-- Clean Episode Title -->
+            <TextView
+                android:id="@+id/tvNextEpisodeTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="6dp"
+                android:ellipsize="end"
+                android:fontFamily="@font/inter"
+                android:maxLines="2"
+                android:textColor="#FFFFFFFF"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                tools:text="Tensei Shitara Slime Datta Ken • Ep. 04" />
+
+            <!-- Primary Action Button: Compact Pill -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPlayNextEpisodeNow"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:background="@drawable/glass_pill_accent_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:nextFocusUp="@+id/btnCancelNextEpisode"
+                android:fontFamily="@font/inter"
+                android:paddingStart="12dp"
+                android:paddingTop="0dp"
+                android:paddingEnd="14dp"
+                android:paddingBottom="0dp"
+                android:text="Assistir Agora"
+                android:textColor="#FFFFFFFF"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                app:backgroundTint="@null"
+                app:icon="@drawable/ic_play_24"
+                app:iconGravity="textStart"
+                app:iconPadding="4dp"
+                app:iconSize="13dp"
+                app:iconTint="#FFFFFFFF" />
+
+        </LinearLayout>
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

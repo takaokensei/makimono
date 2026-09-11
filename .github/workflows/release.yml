@@ -1,0 +1,61 @@
+﻿name: Makimono Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & Release Makimono
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Grant Execute Permission to Gradlew
+        run: chmod +x gradlew
+
+      - name: Setup local.properties (Optional Secrets)
+        run: |
+          touch local.properties
+          if [ -n "${{ secrets.DRIVE_CLIENT_ID }}" ]; then
+            echo "drive.clientId=${{ secrets.DRIVE_CLIENT_ID }}" >> local.properties
+          fi
+          if [ -n "${{ secrets.DRIVE_CLIENT_SECRET }}" ]; then
+            echo "drive.clientSecret=${{ secrets.DRIVE_CLIENT_SECRET }}" >> local.properties
+          fi
+          if [ -n "${{ secrets.DRIVE_REFRESH_TOKEN }}" ]; then
+            echo "drive.refreshToken=${{ secrets.DRIVE_REFRESH_TOKEN }}" >> local.properties
+          fi
+
+      - name: Build Debug APKs (Split & Universal)
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Collect APKs
+        id: collect_apks
+        run: |
+          mkdir -p release_artifacts
+          cp app/build/outputs/apk/debug/*.apk release_artifacts/
+          ls -la release_artifacts/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          name: Makimono ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: release_artifacts/*.apk

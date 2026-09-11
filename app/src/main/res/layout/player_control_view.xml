@@ -1,0 +1,427 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/controls"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/player_bottom_scrim">
+
+    <!-- Top Scrim Gradient for text contrast over bright scenes -->
+    <View
+        android:id="@+id/topScrim"
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
+        android:background="@drawable/top_scrim"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Top Bar: Back button, Title & Subtitle -->
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/playerToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@android:color/transparent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:navigationIcon="@drawable/ic_back_24"
+        app:navigationIconTint="#FFFFFFFF"
+        app:subtitleTextAppearance="@style/subtitleTextAppearance"
+        app:subtitleTextColor="?attr/colorTextSecondary"
+        app:titleTextAppearance="@style/titleTextAppearance"
+        app:titleTextColor="?attr/colorTextPrimary"
+        tools:subtitle="1080p • HEVC • Multi-Subs"
+        tools:title="Episódio - Título do Vídeo" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnUnlock"
+        style="@style/Widget.Material3.Button.TonalButton.Icon.Only"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:padding="14dp"
+        android:tooltipText="@string/unlock"
+        android:visibility="gone"
+        app:icon="@drawable/ic_unlock_24"
+        app:iconSize="24dp"
+        app:iconTint="#FFFFFFFF"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/playerToolbar"
+        tools:targetApi="o" />
+
+    <!-- Center Playback Cluster (Symmetric Nordic Design, Mathematically Centered) -->
+    <LinearLayout
+        android:id="@+id/mainControls"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.5">
+
+        <!-- Rewind 10s -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/exo_rew"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginEnd="32dp"
+            android:clickable="true"
+            android:contentDescription="@string/rewind_10_seconds"
+            android:focusable="true"
+            android:insetLeft="0dp"
+            android:insetTop="0dp"
+            android:insetRight="0dp"
+            android:insetBottom="0dp"
+            android:padding="0dp"
+            app:cornerRadius="28dp"
+            app:backgroundTint="@color/player_circle_bg_selector"
+            app:strokeWidth="1.5dp"
+            app:strokeColor="@color/player_rewffwd_stroke_selector"
+            app:icon="@drawable/ic_rewind_skip_24"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:iconSize="30dp"
+            app:iconTint="#FFFFFFFF" />
+
+        <!-- Play / Pause Button (Enlarged with Accent Highlight) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPlayPause"
+            android:layout_width="76dp"
+            android:layout_height="76dp"
+            android:clickable="true"
+            android:contentDescription="Play/Pause"
+            android:focusable="true"
+            android:focusedByDefault="true"
+            android:insetLeft="0dp"
+            android:insetTop="0dp"
+            android:insetRight="0dp"
+            android:insetBottom="0dp"
+            android:padding="0dp"
+            app:cornerRadius="38dp"
+            app:backgroundTint="@color/player_circle_bg_selector"
+            app:strokeWidth="2dp"
+            app:strokeColor="@color/player_circle_stroke_selector"
+            app:elevation="4dp"
+            app:icon="@drawable/ic_pause_24"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:iconSize="40dp"
+            app:iconTint="#FFFFFFFF" />
+
+        <!-- Fast Forward 10s -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/exo_ffwd"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginStart="32dp"
+            android:clickable="true"
+            android:contentDescription="@string/skip_10_seconds"
+            android:focusable="true"
+            android:insetLeft="0dp"
+            android:insetTop="0dp"
+            android:insetRight="0dp"
+            android:insetBottom="0dp"
+            android:padding="0dp"
+            app:cornerRadius="28dp"
+            app:backgroundTint="@color/player_circle_bg_selector"
+            app:strokeWidth="1.5dp"
+            app:strokeColor="@color/player_rewffwd_stroke_selector"
+            app:icon="@drawable/ic_forward_skip_24"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:iconSize="30dp"
+            app:iconTint="#FFFFFFFF" />
+
+    </LinearLayout>
+
+    <!-- Skip Intro Row: Positioned in Bottom-Right above timeline (Netflix/Crunchyroll standard) -->
+    <LinearLayout
+        android:id="@+id/skipIntroRow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="28dp"
+        android:layout_marginBottom="12dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toTopOf="@+id/linearLayout2"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- -90s Pill (Neutral Glass) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSkipIntroBack"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginEnd="10dp"
+            android:background="@drawable/glass_pill_button_bg"
+            android:clickable="true"
+            android:focusable="true"
+            android:fontFamily="@font/inter"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:text="-90s"
+            android:textColor="#FFFFFFFF"
+            android:textSize="12sp"
+            app:backgroundTint="@null"
+            app:icon="@drawable/ic_skip_previous_24"
+            app:iconGravity="textStart"
+            app:iconSize="16dp"
+            app:iconTint="#FFFFFFFF" />
+
+        <!-- Pular Abertura Pill (Solid Accent Primary Glass, NO EMOJIS) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSkipIntro"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:background="@drawable/glass_pill_accent_bg"
+            android:clickable="true"
+            android:focusable="true"
+            android:fontFamily="@font/inter"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:text="Pular Abertura"
+            android:textColor="#FFFFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            app:backgroundTint="@null"
+            app:icon="@drawable/ic_skip_next_24"
+            app:iconGravity="textStart"
+            app:iconSize="16dp"
+            app:iconTint="#FFFFFFFF" />
+
+    </LinearLayout>
+
+    <!-- Timeline / Progress Bar -->
+    <LinearLayout
+        android:id="@+id/linearLayout2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="28dp"
+        android:layout_marginEnd="28dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toTopOf="@+id/controlsScrollView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <!-- Current position -->
+        <TextView
+            android:id="@id/exo_position"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:fontFamily="@font/inter"
+            android:textColor="#FFFFFFFF"
+            android:textSize="13sp"
+            tools:text="08:24" />
+
+        <!-- ExoPlayer TimeBar -->
+        <com.google.android.exoplayer2.ui.DefaultTimeBar
+            android:id="@id/exo_progress"
+            android:layout_width="0dp"
+            android:layout_height="28dp"
+            android:layout_weight="1"
+            app:played_color="?attr/colorAccentPrimary"
+            app:scrubber_color="?attr/colorAccentPrimary"
+            app:unplayed_color="#33FFFFFF" />
+
+        <!-- MPV SeekBar -->
+        <SeekBar
+            android:id="@+id/progressBar"
+            android:layout_width="0dp"
+            android:layout_height="28dp"
+            android:layout_weight="1"
+            android:progressTint="?attr/colorAccentPrimary"
+            android:thumbTint="?attr/colorAccentPrimary"
+            android:visibility="gone" />
+
+        <!-- Total duration -->
+        <TextView
+            android:id="@id/exo_duration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:fontFamily="@font/inter"
+            android:textColor="?attr/colorTextSecondary"
+            android:textSize="13sp"
+            tools:text="24:30" />
+
+    </LinearLayout>
+
+    <!-- Bottom Actions Bar: Unified Glass Panel -->
+    <HorizontalScrollView
+        android:id="@+id/controlsScrollView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="18dp"
+        android:clipToPadding="false"
+        android:scrollbars="none"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <LinearLayout
+            android:id="@+id/linearLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/glass_panel_bg"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="6dp">
+
+            <!-- Subtitles Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="2dp"
+                android:background="@drawable/glass_action_item_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:fontFamily="@font/inter"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="@string/subtitles"
+                android:textColor="?attr/colorTextPrimary"
+                android:textSize="12sp"
+                app:backgroundTint="@null"
+                app:icon="@drawable/ic_subtitles_24"
+                app:iconSize="16dp"
+                app:iconTint="?attr/colorAccentPrimary" />
+
+            <!-- Audio Track Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAudio"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="2dp"
+                android:background="@drawable/glass_action_item_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:fontFamily="@font/inter"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="@string/audio"
+                android:textColor="?attr/colorTextPrimary"
+                android:textSize="12sp"
+                app:backgroundTint="@null"
+                app:icon="@drawable/ic_audio_24"
+                app:iconSize="16dp"
+                app:iconTint="?attr/colorAccentPrimary" />
+
+            <!-- Playback Speed Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSpeed"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="2dp"
+                android:background="@drawable/glass_action_item_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:fontFamily="@font/inter"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="Velocidade"
+                android:textColor="?attr/colorTextPrimary"
+                android:textSize="12sp"
+                app:backgroundTint="@null"
+                app:icon="@drawable/ic_speed_24"
+                app:iconSize="16dp"
+                app:iconTint="?attr/colorAccentPrimary" />
+
+            <!-- Chapters Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnChapter"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="2dp"
+                android:background="@drawable/glass_action_item_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:fontFamily="@font/inter"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="@string/chapters"
+                android:textColor="?attr/colorTextPrimary"
+                android:textSize="12sp"
+                app:backgroundTint="@null"
+                app:icon="@drawable/ic_chapter_24"
+                app:iconSize="16dp"
+                app:iconTint="?attr/colorAccentPrimary" />
+
+            <!-- Resize Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnResize"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="2dp"
+                android:background="@drawable/glass_action_item_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:fontFamily="@font/inter"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="@string/resize"
+                android:textColor="?attr/colorTextPrimary"
+                android:textSize="12sp"
+                app:backgroundTint="@null"
+                app:icon="@drawable/ic_resize_24"
+                app:iconSize="16dp"
+                app:iconTint="?attr/colorAccentPrimary" />
+
+            <!-- Kodi Info Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnInfo"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="2dp"
+                android:background="@drawable/glass_action_item_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:fontFamily="@font/inter"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="Info"
+                android:textColor="?attr/colorTextPrimary"
+                android:textSize="12sp"
+                app:backgroundTint="@null"
+                app:icon="@drawable/ic_info_24"
+                app:iconSize="16dp"
+                app:iconTint="?attr/colorAccentPrimary" />
+
+
+            <!-- Hidden phone-only buttons (kept for code binding compatibility) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnLock"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnRotate"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPip"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone" />
+
+        </LinearLayout>
+    </HorizontalScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,5 @@
+# Exemplo de configuracao local (NAO COLOQUE SUAS CHAVES REAIS NO GIT)
+sdk.dir=C:\\Users\\AppData\\Local\\Android\\Sdk
+drive.clientId=YOUR_GOOGLE_DRIVE_CLIENT_ID
+drive.clientSecret=YOUR_GOOGLE_DRIVE_CLIENT_SECRET
+drive.refreshToken=YOUR_GOOGLE_DRIVE_REFRESH_TOKEN

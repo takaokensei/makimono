@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tokyo Night (Default) -->
+    <color name="tn_bg_base">#1A1B26</color>
+    <color name="tn_bg_surface">#1F2335</color>
+    <color name="tn_bg_glass">#261F2335</color>
+    <color name="tn_border_glass">#24FFFFFF</color>
+    <color name="tn_text_primary">#C0CAF5</color>
+    <color name="tn_text_secondary">#7B82A3</color>
+    <color name="tn_accent_primary">#7AA2F7</color>
+    <color name="tn_accent_secondary">#BB9AF7</color>
+    <color name="tn_success">#9ECE6A</color>
+    <color name="tn_warning">#E0AF68</color>
+    <color name="tn_danger">#F7768E</color>
+
+    <!-- Dracula ("Vampire") -->
+    <color name="dracula_bg_base">#282A36</color>
+    <color name="dracula_bg_surface">#343746</color>
+    <color name="dracula_bg_glass">#2644475A</color>
+    <color name="dracula_border_glass">#24FFFFFF</color>
+    <color name="dracula_text_primary">#F8F8F2</color>
+    <color name="dracula_text_secondary">#8390B7</color>
+    <color name="dracula_accent_primary">#BD93F9</color>
+    <color name="dracula_accent_secondary">#FF79C6</color>
+    <color name="dracula_success">#50FA7B</color>
+    <color name="dracula_warning">#FFB86C</color>
+    <color name="dracula_danger">#FF5555</color>
+
+    <!-- Nord (Scandinavian Minimalism) -->
+    <color name="nord_bg_base">#2E3440</color>
+    <color name="nord_bg_surface">#3B4252</color>
+    <color name="nord_bg_glass">#26434C5E</color>
+    <color name="nord_border_glass">#1FFFFFFF</color>
+    <color name="nord_text_primary">#ECEFF4</color>
+    <color name="nord_text_secondary">#979DA9</color>
+    <color name="nord_accent_primary">#88C0D0</color>
+    <color name="nord_accent_secondary">#81A1C1</color>
+    <color name="nord_success">#A3BE8C</color>
+    <color name="nord_warning">#EBCB8B</color>
+    <color name="nord_danger">#BF616A</color>
+
+    <!-- Catppuccin Mocha -->
+    <color name="mocha_bg_base">#1E1E2E</color>
+    <color name="mocha_bg_surface">#313244</color>
+    <color name="mocha_bg_glass">#2645475A</color>
+    <color name="mocha_border_glass">#1FFFFFFF</color>
+    <color name="mocha_text_primary">#CDD6F4</color>
+    <color name="mocha_text_secondary">#A6ADC8</color>
+    <color name="mocha_accent_primary">#89B4FA</color>
+    <color name="mocha_accent_secondary">#CBA6F7</color>
+    <color name="mocha_success">#A6E3A1</color>
+    <color name="mocha_warning">#FAB387</color>
+    <color name="mocha_danger">#F38BA8</color>
+
+    <!-- Theme 5: Kodi Estuary - exact values from estuary_colors_defaults.xml
+         (docs/kodi_reference/estuary_colors_defaults.xml), not approximations:
+         background=#FF000000, primary_background=#FF0E597E,
+         dialog_tint=#FF1A2123, button_focus=#FF12A0C7. See
+         KODI_ESTUARY_DESIGN_ANALYSIS.md for the full source mapping table. -->
+    <color name="estuary_bg_base">#000000</color>
+    <color name="estuary_bg_surface">#1A2123</color>
+    <color name="estuary_bg_glass">#B31A2123</color>
+    <color name="estuary_border_glass">#60FFFFFF</color>
+    <color name="estuary_text_primary">#F0F0F0</color>
+    <color name="estuary_text_secondary">#A0A0A0</color>
+    <color name="estuary_accent_primary">#12A0C7</color>
+    <color name="estuary_accent_secondary">#0E597E</color>
+    <color name="estuary_success">#4CBB6C</color>
+    <color name="estuary_warning">#FFB70F</color>
+    <color name="estuary_danger">#E85B5B</color>
+
+    <!-- Shared / Legacy Aliases (mapped to Tokyo Night defaults for backwards compatibility) -->
+    <color name="colorPrimary">#1A1B26</color>
+    <color name="colorBackground">#1A1B26</color>
+    <color name="colorSurface">#1F2335</color>
+    <color name="colorSurfaceVariant">#292E42</color>
+    <color name="blackColor_74">#3DFFFFFF</color>
+    <color name="cardColor_50">#1F2335</color>
+    <color name="colorAccent">#7AA2F7</color>
+    <color name="colorAccentNeon">#BB9AF7</color>
+    <color name="playerAccent">#7AA2F7</color>
+    <color name="textColor">#C0CAF5</color>
+    <color name="textColor_54">#7B82A3</color>
+    <color name="textColor_74">#A9B1D6</color>
+    <color name="textColor_87">#C0CAF5</color>
+    <color name="fadedColor">#1A1B26</color>
+    <color name="cardStrokeDefault">#24FFFFFF</color>
+    <color name="cardFocusedStroke">#7AA2F7</color>
+    <color name="playerButtonBgDefault">#261F2335</color>
+    <color name="playerButtonBgFocused">#7AA2F7</color>
+</resources>

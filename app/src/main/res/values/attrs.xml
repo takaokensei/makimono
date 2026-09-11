@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Background tokens -->
+    <attr name="colorBgBase" format="color" />
+    <attr name="colorBgSurface" format="color" />
+    <attr name="colorBgGlass" format="color" />
+    <attr name="colorBorderGlass" format="color" />
+
+    <!-- Typography tokens -->
+    <attr name="colorTextPrimary" format="color" />
+    <attr name="colorTextSecondary" format="color" />
+
+    <!-- Brand / Action tokens -->
+    <attr name="colorAccentPrimary" format="color" />
+    <attr name="colorAccentSecondary" format="color" />
+
+    <!-- Status feedback tokens -->
+    <attr name="colorStatusSuccess" format="color" />
+    <attr name="colorStatusWarning" format="color" />
+    <attr name="colorStatusDanger" format="color" />
+</resources>

@@ -1,0 +1,27 @@
+# Local configuration (SDK path, drive.clientId/clientSecret/refreshToken)
+local.properties
+
+# Android Studio / Gradle
+.gradle/
+build/
+app/build/
+mpv/build/
+*.iml
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Keystores (never commit signing keys)
+*.jks
+*.keystore
+
+# OS / editor cruft
+.DS_Store
+*.swp
+*.apk
+*.zip
+*.diff
+*.class
+scratch/
+__pycache__/

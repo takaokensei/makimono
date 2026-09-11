@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorBgBase"
+    tools:context=".ui.home.HomeFragment">
+
+    <!--
+        Kodi Estuary cinematic vignette texture (ripped_assets/kodi_primary_bg.jpg,
+        the skin's own radial-gradient background), tinted per-theme instead of
+        shown as raw grayscale. The source jpg is a plain luminance map (bright
+        center, dark corners); tintMode="multiply" recolors it using each
+        theme's own ?attr/colorBgBase so the vignette darkens the edges of
+        whichever theme is active instead of overlaying a flat grey slab that
+        fights the theme's palette (e.g. Tokyo Night's purple/blue).
+    -->
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:alpha="0.4"
+        android:contentDescription="@null"
+        android:scaleType="centerCrop"
+        android:src="@drawable/kodi_primary_bg"
+        android:tint="?attr/colorBgBase"
+        android:tintMode="multiply" />
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:backgroundTint="?attr/colorBgSurface"
+        android:elevation="0dp"
+        android:focusable="false"
+        app:elevation="0dp">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            style="@style/MenuTheme"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:focusable="false"
+            app:menu="@menu/main_menu"
+            app:title="@string/app_name"
+            app:titleTextColor="?attr/colorTextPrimary" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!--
+        Kodi Estuary "Left Navigation Rail": a fixed vertical panel of destination
+        pills that stays put while the content column (below) scrolls independently.
+        This LinearLayout - not the NestedScrollView - now carries the AppBarLayout
+        scrolling behavior, since it is the direct CoordinatorLayout child.
+    -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior">
+
+        <LinearLayout
+            android:id="@+id/navRail"
+            android:layout_width="232dp"
+            android:layout_height="match_parent"
+            android:background="?attr/colorBgSurface"
+            android:orientation="vertical"
+            android:paddingStart="@dimen/tv_overscan_margin"
+            android:paddingTop="20dp"
+            android:paddingEnd="12dp">
+
+            <!-- 1. Meu Drive -->
+            <LinearLayout
+                android:id="@+id/btnMyDrive"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/rail_item_focus_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:nextFocusDown="@id/btnSharedDrives"
+                android:nextFocusRight="@id/rvStarredShelf"
+                android:orientation="horizontal"
+                android:padding="12dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:contentDescription="@null"
+                    android:duplicateParentState="true"
+                    android:src="@drawable/ic_my_drive_24"
+                    app:tint="@color/rail_item_icon_selector" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_weight="1"
+                    android:duplicateParentState="true"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/inter"
+                    android:maxLines="1"
+                    android:text="@string/my_drive"
+                    android:textColor="@color/rail_item_text_selector"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- 2. Drives Compartilhados -->
+            <LinearLayout
+                android:id="@+id/btnSharedDrives"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/rail_item_focus_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:nextFocusUp="@id/btnMyDrive"
+                android:nextFocusDown="@id/btnSharedWithMe"
+                android:nextFocusRight="@id/rvContinueWatchingShelf"
+                android:orientation="horizontal"
+                android:padding="12dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:contentDescription="@null"
+                    android:duplicateParentState="true"
+                    android:src="@drawable/ic_shared_drive_24"
+                    app:tint="@color/rail_item_icon_selector" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_weight="1"
+                    android:duplicateParentState="true"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/inter"
+                    android:maxLines="1"
+                    android:text="@string/shared_drives"
+                    android:textColor="@color/rail_item_text_selector"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- 4. Compartilhados Comigo -->
+            <LinearLayout
+                android:id="@+id/btnSharedWithMe"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/rail_item_focus_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:nextFocusUp="@id/btnSharedDrives"
+                android:nextFocusDown="@id/btnSettings"
+                android:nextFocusRight="@id/rvContinueWatchingShelf"
+                android:orientation="horizontal"
+                android:padding="12dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:contentDescription="@null"
+                    android:duplicateParentState="true"
+                    android:src="@drawable/ic_shared_me_24"
+                    app:tint="@color/rail_item_icon_selector" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_weight="1"
+                    android:duplicateParentState="true"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/inter"
+                    android:maxLines="1"
+                    android:text="@string/shared_with_me"
+                    android:textColor="@color/rail_item_text_selector"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Spacer pushes Settings/Trash to the bottom of the rail,
+                 mirroring Estuary's footer-anchored utility items. -->
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <!-- 5. Configurações -->
+            <LinearLayout
+                android:id="@+id/btnSettings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/rail_item_focus_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:nextFocusUp="@id/btnSharedWithMe"
+                android:nextFocusDown="@id/btnTrash"
+                android:nextFocusRight="@id/rvContinueWatchingShelf"
+                android:orientation="horizontal"
+                android:padding="12dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:contentDescription="@null"
+                    android:duplicateParentState="true"
+                    android:src="@drawable/ic_settings_24"
+                    app:tint="@color/rail_item_settings_selector" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_weight="1"
+                    android:duplicateParentState="true"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/inter"
+                    android:maxLines="1"
+                    android:text="@string/settings"
+                    android:textColor="@color/rail_item_settings_selector"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- 6. Lixeira -->
+            <LinearLayout
+                android:id="@+id/btnTrash"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/rail_item_focus_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:nextFocusUp="@id/btnSettings"
+                android:nextFocusRight="@id/rvContinueWatchingShelf"
+                android:orientation="horizontal"
+                android:padding="12dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:contentDescription="@null"
+                    android:duplicateParentState="true"
+                    android:src="@drawable/ic_delete_24"
+                    app:tint="@color/rail_item_trash_selector" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_weight="1"
+                    android:duplicateParentState="true"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/inter"
+                    android:maxLines="1"
+                    android:text="@string/trash"
+                    android:textColor="@color/rail_item_trash_selector"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <androidx.core.widget.NestedScrollView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:paddingStart="20dp"
+            android:paddingTop="12dp"
+            android:paddingEnd="@dimen/tv_overscan_margin"
+            android:paddingBottom="@dimen/tv_overscan_margin_vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipChildren="false"
+                android:orientation="vertical">
+
+                <!-- Hero Header Banner (Nordic Kodi Style) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:background="@drawable/home_hero_gradient"
+                    android:orientation="vertical"
+                    android:paddingStart="20dp"
+                    android:paddingTop="18dp"
+                    android:paddingEnd="20dp"
+                    android:paddingBottom="18dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/inter"
+                        android:letterSpacing="0.12"
+                        android:text="CENTRAL DE MÍDIA • GOOGLE DRIVE"
+                        android:textColor="?attr/colorAccentPrimary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="@font/inter"
+                        android:text="Biblioteca de Animes"
+                        android:textColor="?attr/colorTextPrimary"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="@font/inter"
+                        android:text="Navegue pelas pastas e assista em qualidade máxima"
+                        android:textColor="?attr/colorTextSecondary"
+                        android:textSize="13sp" />
+
+                </LinearLayout>
+
+                <!--
+                    "Favoritos" Shelf (Pastas e Arquivos Favoritados do Google Drive)
+                -->
+                <TextView
+                    android:id="@+id/tvStarredLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    android:fontFamily="@font/inter"
+                    android:letterSpacing="0.08"
+                    android:text="FAVORITOS"
+                    android:textColor="?attr/colorAccentPrimary"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvStarredShelf"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="24dp"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
+                    android:descendantFocusability="afterDescendants"
+                    android:focusable="false"
+                    android:nextFocusLeft="@id/btnMyDrive"
+                    android:nextFocusDown="@id/rvContinueWatchingShelf"
+                    android:orientation="horizontal"
+                    android:paddingEnd="8dp"
+                    android:visibility="gone"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    tools:itemCount="3"
+                    tools:listitem="@layout/item_starred_shelf"
+                    tools:visibility="visible" />
+
+                <!--
+                    "Continuar assistindo" Shelf (Kodi Estuary "In progress" row).
+                    This is now the ONLY "continue watching" surface on Home - the
+                    old single-item glass hero card (cardContinueWatching) was a
+                    duplicate of the first item in this shelf and has been removed.
+                -->
+                <TextView
+                    android:id="@+id/tvShelfLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    android:fontFamily="@font/inter"
+                    android:letterSpacing="0.08"
+                    android:text="CONTINUAR ASSISTINDO"
+                    android:textColor="?attr/colorAccentSecondary"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvContinueWatchingShelf"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="20dp"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
+                    android:descendantFocusability="afterDescendants"
+                    android:focusable="false"
+                    android:nextFocusLeft="@id/btnMyDrive"
+                    android:nextFocusUp="@id/rvStarredShelf"
+                    android:orientation="horizontal"
+                    android:paddingEnd="8dp"
+                    android:visibility="gone"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    tools:itemCount="3"
+                    tools:listitem="@layout/item_continue_watching_shelf"
+                    tools:visibility="visible" />
+
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+    </LinearLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
