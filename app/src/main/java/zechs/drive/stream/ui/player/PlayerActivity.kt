@@ -998,7 +998,8 @@ class PlayerActivity : AppCompatActivity() {
 
         playerView.apply {
             player = this@PlayerActivity.player
-            controllerHideOnTouch = true
+            controllerHideOnTouch = !malSessionManager.get().isGesturesEnabled()
+            controllerAutoShow = false
         }
 
         val audioAttributes = AudioAttributes.Builder()
@@ -1429,7 +1430,7 @@ class PlayerActivity : AppCompatActivity() {
                 if (positionMs in specialChapter.startTimeMs..(specialChapter.startTimeMs + 3_500L)) {
                     hasAutoSkippedCurrentInterval = true
                     player.seekTo(specialChapter.endTimeMs)
-                    Snackbar.make(playerView, "⏩ Abertura pulada automaticamente (AniSkip)", 1500).show()
+                    gestureHelper.showNotification("⏩ Abertura pulada automaticamente (AniSkip)")
                     return
                 }
             }

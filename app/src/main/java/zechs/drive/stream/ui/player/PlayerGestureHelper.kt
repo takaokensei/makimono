@@ -87,6 +87,23 @@ class PlayerGestureHelper(
             .start()
     }
 
+    private val hideNotificationRunnable = Runnable {
+        hudBinding.gestureNotificationPill.animate()
+            .alpha(0f)
+            .setDuration(250)
+            .withEndAction { hudBinding.gestureNotificationPill.visibility = View.GONE }
+            .start()
+    }
+
+    fun showNotification(text: String, durationMs: Long = 2500L) {
+        handler.removeCallbacks(hideNotificationRunnable)
+        hudBinding.tvGestureNotificationText.text = text
+        hudBinding.gestureNotificationPill.animate().cancel()
+        hudBinding.gestureNotificationPill.alpha = 1f
+        hudBinding.gestureNotificationPill.visibility = View.VISIBLE
+        handler.postDelayed(hideNotificationRunnable, durationMs)
+    }
+
     private val gestureDetector = GestureDetector(activity, object : GestureDetector.SimpleOnGestureListener() {
 
         override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
@@ -130,23 +147,33 @@ class PlayerGestureHelper(
         }
     })
 
+    private var isInteractingWithControls = false
+
     fun onTouchEvent(event: MotionEvent): Boolean {
         if (callback.isControlsLocked()) {
             return false
         }
 
         // If controller is visible and user clicked on an interactive view, let system handle it
-        if (callback.isControllerVisible() && event.action == MotionEvent.ACTION_DOWN) {
-            val ignored = callback.getTouchIgnoredViews()
-            val hitRect = Rect()
-            for (v in ignored) {
-                if (v.isVisible) {
-                    v.getGlobalVisibleRect(hitRect)
-                    if (hitRect.contains(event.rawX.toInt(), event.rawY.toInt())) {
-                        return false
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+            isInteractingWithControls = false
+            if (callback.isControllerVisible()) {
+                val ignored = callback.getTouchIgnoredViews()
+                val hitRect = Rect()
+                for (v in ignored) {
+                    if (v.isVisible) {
+                        v.getGlobalVisibleRect(hitRect)
+                        if (hitRect.contains(event.rawX.toInt(), event.rawY.toInt())) {
+                            isInteractingWithControls = true
+                            return false
+                        }
                     }
                 }
             }
+        }
+
+        if (isInteractingWithControls) {
+            return false
         }
 
         val width = activity.resources.displayMetrics.widthPixels
@@ -165,6 +192,7 @@ class PlayerGestureHelper(
                 initialBrightness = if (lp.screenBrightness < 0f) 0.5f else lp.screenBrightness
                 initialVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
                 initialPosition = callback.getCurrentPosition()
+                return true
             }
 
             MotionEvent.ACTION_MOVE -> {
@@ -274,11 +302,11 @@ class PlayerGestureHelper(
                 val wasDragging = dragMode != DragMode.NONE
                 dragMode = DragMode.NONE
                 isGestureActive = false
-                if (wasDragging) return true
+                return true
             }
         }
 
-        return false
+        return true
     }
 
     private fun showDoubleTapBubble(bubble: View) {

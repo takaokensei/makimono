@@ -45,6 +45,8 @@ class HomeFragment : BaseFragment() {
         playWatchItem(watchItem)
     }
 
+    private var isRailCollapsed = false
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -94,13 +96,25 @@ class HomeFragment : BaseFragment() {
                 findNavController().navigateSafe(R.id.action_homeFragment_to_settingsFragment)
             }
 
-            setupRailFocus(
+            val homePrefs = requireContext().getSharedPreferences("home_prefs", android.content.Context.MODE_PRIVATE)
+            isRailCollapsed = homePrefs.getBoolean("nav_rail_collapsed", false)
+            applyNavRailState(animate = false)
+
+            btnToggleRail?.setOnClickListener {
+                isRailCollapsed = !isRailCollapsed
+                homePrefs.edit().putBoolean("nav_rail_collapsed", isRailCollapsed).apply()
+                applyNavRailState(animate = true)
+            }
+
+            val railViews = listOfNotNull(
+                btnToggleRail,
                 btnMyDrive,
                 btnSharedDrives,
                 btnSharedWithMe,
                 btnSettings,
                 btnTrash
             )
+            setupRailFocus(*railViews.toTypedArray())
 
             btnMyDrive.post {
                 btnMyDrive.requestFocus()
@@ -127,6 +141,51 @@ class HomeFragment : BaseFragment() {
                     v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(120L).start()
                 }
             }
+        }
+    }
+
+    private fun applyNavRailState(animate: Boolean) {
+        val navRail = binding.navRail ?: return
+        if (animate) {
+            android.transition.TransitionManager.beginDelayedTransition(binding.root)
+        }
+        val density = resources.displayMetrics.density
+        val collapsedWidth = (68 * density).toInt()
+        val expandedWidth = (232 * density).toInt()
+
+        val lp = navRail.layoutParams
+        lp.width = if (isRailCollapsed) collapsedWidth else expandedWidth
+        navRail.layoutParams = lp
+
+        val paddingStart = if (isRailCollapsed) (8 * density).toInt() else resources.getDimensionPixelSize(R.dimen.tv_overscan_margin)
+        val paddingEnd = if (isRailCollapsed) (8 * density).toInt() else (12 * density).toInt()
+        navRail.setPadding(paddingStart, (20 * density).toInt(), paddingEnd, 0)
+
+        val textVisibility = if (isRailCollapsed) View.GONE else View.VISIBLE
+        binding.tvToggleRail?.visibility = textVisibility
+        binding.tvMyDrive?.visibility = textVisibility
+        binding.tvSharedDrives?.visibility = textVisibility
+        binding.tvSharedWithMe?.visibility = textVisibility
+        binding.tvSettings?.visibility = textVisibility
+        binding.tvTrash?.visibility = textVisibility
+
+        binding.ivToggleRail?.setImageResource(
+            if (isRailCollapsed) R.drawable.ic_menu_expand_24 else R.drawable.ic_menu_collapse_24
+        )
+        binding.ivToggleRail?.contentDescription = getString(
+            if (isRailCollapsed) R.string.expand_menu else R.string.collapse_menu
+        )
+
+        val railItemGravity = if (isRailCollapsed) android.view.Gravity.CENTER else (android.view.Gravity.CENTER_VERTICAL or android.view.Gravity.START)
+        listOfNotNull(
+            binding.btnToggleRail,
+            binding.btnMyDrive,
+            binding.btnSharedDrives,
+            binding.btnSharedWithMe,
+            binding.btnSettings,
+            binding.btnTrash
+        ).forEach {
+            it.gravity = railItemGravity
         }
     }
 

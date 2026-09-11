@@ -213,8 +213,10 @@ class FilesFragment : BaseFragment() {
     private fun updateLayoutMode() {
         val screenWidthDp = resources.configuration.screenWidthDp
         val spanCount = when {
-            screenWidthDp >= 1100 -> 4
-            screenWidthDp >= 750 -> 3
+            screenWidthDp >= 1200 -> 6
+            screenWidthDp >= 900 -> 5
+            screenWidthDp >= 650 -> 4
+            screenWidthDp >= 420 -> 3
             else -> 2
         }
 

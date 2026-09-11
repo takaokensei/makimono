@@ -69,6 +69,46 @@
             android:paddingTop="20dp"
             android:paddingEnd="12dp">
 
+            <!-- 0. Toggle Rail Collapse/Expand -->
+            <LinearLayout
+                android:id="@+id/btnToggleRail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/rail_item_focus_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:nextFocusDown="@id/btnMyDrive"
+                android:nextFocusRight="@id/rvStarredShelf"
+                android:orientation="horizontal"
+                android:padding="12dp">
+
+                <ImageView
+                    android:id="@+id/ivToggleRail"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:contentDescription="@string/collapse_menu"
+                    android:duplicateParentState="true"
+                    android:src="@drawable/ic_menu_collapse_24"
+                    app:tint="@color/rail_item_icon_selector" />
+
+                <TextView
+                    android:id="@+id/tvToggleRail"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_weight="1"
+                    android:duplicateParentState="true"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/inter"
+                    android:maxLines="1"
+                    android:text="@string/collapse_menu"
+                    android:textColor="@color/rail_item_text_selector"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
             <!-- 1. Meu Drive -->
             <LinearLayout
                 android:id="@+id/btnMyDrive"
@@ -78,6 +118,7 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center_vertical"
+                android:nextFocusUp="@id/btnToggleRail"
                 android:nextFocusDown="@id/btnSharedDrives"
                 android:nextFocusRight="@id/rvStarredShelf"
                 android:orientation="horizontal"
@@ -92,6 +133,7 @@
                     app:tint="@color/rail_item_icon_selector" />
 
                 <TextView
+                    android:id="@+id/tvMyDrive"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
@@ -131,6 +173,7 @@
                     app:tint="@color/rail_item_icon_selector" />
 
                 <TextView
+                    android:id="@+id/tvSharedDrives"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
@@ -170,6 +213,7 @@
                     app:tint="@color/rail_item_icon_selector" />
 
                 <TextView
+                    android:id="@+id/tvSharedWithMe"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
@@ -215,6 +259,7 @@
                     app:tint="@color/rail_item_settings_selector" />
 
                 <TextView
+                    android:id="@+id/tvSettings"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
@@ -254,6 +299,7 @@
                     app:tint="@color/rail_item_trash_selector" />
 
                 <TextView
+                    android:id="@+id/tvTrash"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"

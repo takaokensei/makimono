@@ -72,6 +72,13 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         splashScreen.setKeepOnScreenCondition { viewModel.isLoading.value }
+        splashScreen.setOnExitAnimationListener { splashScreenView ->
+            splashScreenView.view.animate()
+                .alpha(0f)
+                .setDuration(350L)
+                .withEndAction { splashScreenView.remove() }
+                .start()
+        }
 
         super.onCreate(savedInstanceState)
 

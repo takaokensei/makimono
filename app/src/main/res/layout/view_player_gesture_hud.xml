@@ -236,4 +236,32 @@
             app:tint="#FFFFFFFF" />
     </LinearLayout>
 
+    <!-- Top Notification Pill (AniSkip, sync info, etc.) -->
+    <LinearLayout
+        android:id="@+id/gestureNotificationPill"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="32dp"
+        android:background="@drawable/glass_panel_bg"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingStart="20dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="10dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <TextView
+            android:id="@+id/tvGestureNotificationText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/inter"
+            android:textColor="#FFFFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            tools:text="⏩ Abertura pulada automaticamente (AniSkip)" />
+    </LinearLayout>
+
 </FrameLayout>

@@ -338,10 +338,12 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
 
         // hide/show controller
         player.setOnClickListener {
-            if (!controller.root.isVisible) {
-                showControlsWithFocus()
-            } else {
-                hideControls()
+            if (!malSessionManager.get().isGesturesEnabled()) {
+                if (!controller.root.isVisible) {
+                    showControlsWithFocus()
+                } else {
+                    hideControls()
+                }
             }
         }
 
@@ -575,7 +577,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                 if (currentTimeSeconds in specialChapter.startTimeSeconds..(specialChapter.startTimeSeconds + 3.5)) {
                     hasAutoSkippedCurrentInterval = true
                     MPVLib.command(arrayOf("seek", specialChapter.endTimeSeconds.toString(), "absolute"))
-                    configSnackbar("⏩ Abertura pulada automaticamente (AniSkip)")
+                    gestureHelper.showNotification("⏩ Abertura pulada automaticamente (AniSkip)")
                     return
                 }
             }
