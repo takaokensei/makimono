@@ -28,6 +28,9 @@ import zechs.drive.stream.utils.AppTheme
 import zechs.drive.stream.utils.VideoPlayer
 import zechs.drive.stream.utils.state.Resource
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+import zechs.drive.stream.data.repository.MalRepository
+import zechs.drive.stream.utils.MalSessionManager
 
 @AndroidEntryPoint
 class SettingsFragment : BaseFragment() {
@@ -40,6 +43,12 @@ class SettingsFragment : BaseFragment() {
     private val binding get() = _binding!!
 
     private val mainViewModel by activityViewModels<MainViewModel>()
+
+    @Inject
+    lateinit var malRepository: MalRepository
+
+    @Inject
+    lateinit var malSessionManager: MalSessionManager
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -63,6 +72,7 @@ class SettingsFragment : BaseFragment() {
         setupThemeMenu()
         setupDefaultPlayerMenu()
         setupCheckForUpdates()
+        setupMalIntegration()
     }
 
     private fun setupThemeMenu() {
@@ -178,6 +188,61 @@ class SettingsFragment : BaseFragment() {
             }
         }
 
+    }
+
+    private fun setupMalIntegration() {
+        fun updateMalUi() {
+            val isLoggedIn = malSessionManager.isLoggedIn()
+            val username = malSessionManager.getUsername()
+            if (isLoggedIn) {
+                binding.tvMalTitle.text = "MyAnimeList"
+                binding.tvMalSubtitle.text = "Conectado como: ${username ?: "Usuário"} • Toque para desconectar"
+                binding.ivMalIcon.setImageResource(R.drawable.ic_unlock_24)
+            } else {
+                binding.tvMalTitle.text = "MyAnimeList"
+                binding.tvMalSubtitle.text = "Conectar conta para scrobble automático"
+                binding.ivMalIcon.setImageResource(R.drawable.ic_lock_24)
+            }
+            binding.switchMalSync.isChecked = malSessionManager.isSyncEnabled()
+            binding.settingMalSyncToggle.isVisible = isLoggedIn
+        }
+
+        updateMalUi()
+
+        binding.switchMalSync.setOnCheckedChangeListener { _, isChecked ->
+            malSessionManager.setSyncEnabled(isChecked)
+            showSnackBar(if (isChecked) "Sincronização com o MyAnimeList ativada" else "Sincronização com o MyAnimeList pausada")
+        }
+
+        binding.settingMalAccount.setOnClickListener {
+            if (malSessionManager.isLoggedIn()) {
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("Desconectar do MyAnimeList?")
+                    .setMessage("O scrobble automático de episódios será desativado.")
+                    .setPositiveButton("Desconectar") { dialog, _ ->
+                        malSessionManager.clearSession()
+                        updateMalUi()
+                        dialog.dismiss()
+                        showSnackBar("Conta do MyAnimeList desconectada")
+                    }
+                    .setNegativeButton("Cancelar") { dialog, _ -> dialog.dismiss() }
+                    .show()
+            } else {
+                val authDialog = MalAuthDialog { code, verifier ->
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        showSnackBar("Autenticando com MyAnimeList...")
+                        val res = malRepository.exchangeToken(code, verifier)
+                        if (res is Resource.Success) {
+                            updateMalUi()
+                            showSnackBar("MyAnimeList conectado com sucesso!")
+                        } else {
+                            showSnackBar(res.message ?: "Falha ao conectar MyAnimeList")
+                        }
+                    }
+                }
+                authDialog.show(parentFragmentManager, MalAuthDialog.TAG)
+            }
+        }
     }
 
     private fun showSnackBar(message: String) {

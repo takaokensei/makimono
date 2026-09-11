@@ -177,6 +177,116 @@
 
             </LinearLayout>
 
+            <!-- MyAnimeList Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="24dp"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="6dp"
+                android:fontFamily="@font/inter"
+                android:letterSpacing="0.08"
+                android:text="INTEGRAÇÕES"
+                android:textColor="?attr/colorAccentPrimary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:id="@+id/settingMalAccount"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="6dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginBottom="6dp"
+                android:background="@drawable/glass_action_item_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
+
+                <ImageView
+                    android:id="@+id/ivMalIcon"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_unlock_24"
+                    app:tint="?attr/colorAccentPrimary" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/tvMalTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="MyAnimeList"
+                        android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/tvMalSubtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Conectar conta para scrobble automático"
+                        android:textAppearance="?attr/textAppearanceBodySmall" />
+                </LinearLayout>
+
+                <ImageView
+                    android:id="@+id/ivMalChevron"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_external_24"
+                    app:tint="?attr/colorTextSecondary" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/settingMalSyncToggle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="6dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginBottom="6dp"
+                android:background="@drawable/glass_action_item_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="16dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Sincronizar Episódios com o MAL"
+                        android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Atualiza o episódio visto no seu perfil ao atingir 85% do vídeo"
+                        android:textAppearance="?attr/textAppearanceBodySmall" />
+                </LinearLayout>
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchMalSync"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true" />
+            </LinearLayout>
+
         </LinearLayout>
 
     </androidx.core.widget.NestedScrollView>

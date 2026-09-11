@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/colorBgSurface"
+    android:orientation="vertical"
+    android:paddingStart="24dp"
+    android:paddingTop="24dp"
+    android:paddingEnd="24dp"
+    android:paddingBottom="24dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:fontFamily="@font/inter"
+        android:letterSpacing="0.08"
+        android:text="SÉRIE CONCLUÍDA"
+        android:textColor="?attr/colorAccentPrimary"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tvRatingAnimeTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="6dp"
+        android:fontFamily="@font/inter"
+        android:textColor="?attr/colorTextPrimary"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        tools:text="Sousou no Frieren" />
+
+    <TextView
+        android:id="@+id/tvRatingPrompt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:fontFamily="@font/inter"
+        android:text="Você completou todos os episódios! Como você avalia este anime no MyAnimeList?"
+        android:textColor="?attr/colorTextSecondary"
+        android:textSize="13sp" />
+
+    <!-- Big Score & Label Preview -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/glass_panel_bg"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/tvScoreNumber"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/inter"
+            android:text="10"
+            android:textColor="?attr/colorAccentPrimary"
+            android:textSize="36sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvScoreLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:fontFamily="@font/inter"
+            android:text="★ 10 - Obra-prima (Masterpiece)"
+            android:textColor="?attr/colorTextPrimary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Score Picker / Slider -->
+    <SeekBar
+        android:id="@+id/seekBarScore"
+        android:layout_width="match_parent"
+        android:layout_height="32dp"
+        android:layout_marginBottom="24dp"
+        android:max="10"
+        android:progress="10"
+        android:progressTint="?attr/colorAccentPrimary"
+        android:thumbTint="?attr/colorAccentPrimary" />
+
+    <!-- Action Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSkipRating"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:layout_marginEnd="10dp"
+            android:fontFamily="@font/inter"
+            android:text="Pular"
+            android:textColor="?attr/colorTextSecondary" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSubmitRating"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:backgroundTint="?attr/colorAccentPrimary"
+            android:fontFamily="@font/inter"
+            android:text="Enviar para o MAL"
+            android:textColor="#FFFFFFFF"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+</LinearLayout>

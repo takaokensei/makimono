@@ -85,6 +85,9 @@ import zechs.drive.stream.utils.EpisodeParser
 import zechs.drive.stream.utils.MatroskaChapterParser
 import zechs.drive.stream.utils.SessionManager
 import zechs.drive.stream.utils.state.Resource
+import zechs.drive.stream.data.model.MalAnimeNode
+import zechs.drive.stream.data.repository.MalRepository
+import zechs.drive.stream.utils.MalSessionManager
 import zechs.drive.stream.utils.util.Constants.Companion.DRIVE_API
 import zechs.drive.stream.utils.util.Orientation
 import zechs.drive.stream.utils.util.getNextOrientation
@@ -113,6 +116,12 @@ class PlayerActivity : AppCompatActivity() {
 
     @Inject
     lateinit var appSettings: Lazy<zechs.drive.stream.utils.AppSettings>
+
+    @Inject
+    lateinit var malRepository: Lazy<MalRepository>
+
+    @Inject
+    lateinit var malSessionManager: Lazy<MalSessionManager>
 
     // View binding
     private lateinit var binding: ActivityPlayerBinding
@@ -175,6 +184,12 @@ class PlayerActivity : AppCompatActivity() {
     private var progressTrackerJob: Job? = null
     private var folderSubtitles = mutableListOf<SubtitleItem>()
     private val addedSubtitleFileIds = mutableSetOf<String>()
+
+    // MAL Scrobble & Rating State
+    private var currentMalAnime: MalAnimeNode? = null
+    private var currentEpNumber: Int = 1
+    private var hasScrobbledThisEp: Boolean = false
+    private var hasPromptedRating: Boolean = false
 
     // Configs
     private var speed = arrayOf("0.25x", "0.5x", "Normal", "1.25x", "1.5x", "2x")
@@ -423,6 +438,8 @@ class PlayerActivity : AppCompatActivity() {
             }
 
             if (playbackState == Player.STATE_ENDED) {
+                checkMalScrobble(player.duration, player.duration)
+                checkMalCompletionPrompt(player.duration, player.duration)
                 if (nextEpisode != null && !nextEpisodeCanceled) {
                     playNextEpisodeDirectly()
                     return
@@ -863,8 +880,30 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun playMedia(startAtPositionMs: Long? = null) {
         hasAutoSelectedTracks = false
+        hasScrobbledThisEp = false
+        hasPromptedRating = false
+        currentMalAnime = null
+
         val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") }
         val title = currentTitle.ifBlank { intent.getStringExtra("title") }
+
+        val parsed = EpisodeParser.parse(title ?: "")
+        currentEpNumber = parsed.episode?.toInt() ?: 1
+
+        if (malSessionManager.get().isSyncEnabled() && malSessionManager.get().isLoggedIn()) {
+            val searchTitle = parsed.showTitle.ifBlank { title ?: "" }
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    val matched = malRepository.get().matchAnime(searchTitle)
+                    if (matched != null) {
+                        currentMalAnime = matched
+                        Log.d(TAG, "MAL matched anime: '${matched.title}' (ID: ${matched.id}, total eps: ${matched.numEpisodes})")
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to match anime on MAL", e)
+                }
+            }
+        }
 
         toolbar.title = title
 
@@ -1047,8 +1086,77 @@ class PlayerActivity : AppCompatActivity() {
                     val duration = player.duration
                     updateIntroButtonVisibility(pos)
                     checkAutoPlayNextEpisode(pos, duration)
+                    checkMalScrobble(pos, duration)
+                    checkMalCompletionPrompt(pos, duration)
                 }
                 delay(1000L)
+            }
+        }
+    }
+
+    private fun checkMalScrobble(posMs: Long, durationMs: Long) {
+        if (durationMs <= 60_000L || hasScrobbledThisEp) return
+        val progress = posMs.toDouble() / durationMs.toDouble()
+        if (progress < 0.85) return
+
+        val session = malSessionManager.get()
+        if (!session.isSyncEnabled() || !session.isLoggedIn()) return
+
+        hasScrobbledThisEp = true
+        lifecycleScope.launch(Dispatchers.IO) {
+            val anime = currentMalAnime ?: run {
+                val title = currentTitle.ifBlank { intent.getStringExtra("title") ?: "" }
+                val parsed = EpisodeParser.parse(title)
+                val searchTitle = parsed.showTitle.ifBlank { title }
+                malRepository.get().matchAnime(searchTitle).also { currentMalAnime = it }
+            }
+            if (anime != null) {
+                val res = malRepository.get().updateEpisodeProgress(anime.id, currentEpNumber)
+                withContext(Dispatchers.Main) {
+                    if (res is Resource.Success) {
+                        Snackbar.make(playerView, "MAL: Episódio $currentEpNumber sincronizado! (${anime.title})", 2500).apply {
+                            anchorView = progressViewGroup
+                        }.show()
+                    } else {
+                        Log.w(TAG, "MAL scrobble failed: ${res.message}")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun checkMalCompletionPrompt(posMs: Long, durationMs: Long) {
+        if (hasPromptedRating || durationMs <= 60_000L) return
+        val remainingMs = durationMs - posMs
+        if (remainingMs > 2_000L) return
+
+        val session = malSessionManager.get()
+        if (!session.isSyncEnabled() || !session.isLoggedIn()) return
+
+        val anime = currentMalAnime ?: return
+        val isFinal = (anime.numEpisodes > 0 && currentEpNumber >= anime.numEpisodes) ||
+                (nextEpisode == null && currentEpNumber >= 1)
+
+        if (isFinal) {
+            hasPromptedRating = true
+            runOnUiThread {
+                MalRatingDialog.show(
+                    activity = this@PlayerActivity,
+                    animeTitle = anime.title,
+                    totalEpisodes = anime.numEpisodes,
+                    onSubmit = { score ->
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            val res = malRepository.get().completeAnimeWithScore(anime.id, anime.numEpisodes, score)
+                            withContext(Dispatchers.Main) {
+                                if (res is Resource.Success) {
+                                    Toast.makeText(this@PlayerActivity, "MAL: Anime marcado como Completo! (Nota: $score/10)", Toast.LENGTH_LONG).show()
+                                } else {
+                                    Toast.makeText(this@PlayerActivity, "MAL: Erro ao salvar avaliação: ${res.message}", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }
+                )
             }
         }
     }

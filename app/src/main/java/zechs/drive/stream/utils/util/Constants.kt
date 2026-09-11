@@ -33,5 +33,13 @@ class Constants {
             redirectUri = DEFAULT_REDIRECT_URI,
             scopes = listOf(DEFAULT_DRIVE_SCOPE)
         )
+
+        // MyAnimeList (MAL) API v2 Credentials & Endpoints
+        const val MAL_API_BASE_URL = "https://api.myanimelist.net/"
+        const val MAL_OAUTH_BASE_URL = "https://myanimelist.net/"
+        const val MAL_CLIENT_ID = "YOUR_MAL_CLIENT_ID"
+        const val MAL_CLIENT_SECRET = "YOUR_MAL_CLIENT_SECRET"
+        const val MAL_REDIRECT_URI = "http://127.0.0.1:1420/auth/callback"
+        const val MAL_REDIRECT_PORT = 1420
     }
 }

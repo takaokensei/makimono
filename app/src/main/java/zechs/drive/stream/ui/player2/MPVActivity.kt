@@ -44,7 +44,11 @@ import zechs.drive.stream.data.model.PlaylistItem
 import zechs.drive.stream.data.model.SubtitleItem
 import zechs.drive.stream.databinding.ActivityMpvBinding
 import zechs.drive.stream.databinding.PlayerControlViewBinding
+import zechs.drive.stream.data.model.MalAnimeNode
+import zechs.drive.stream.data.repository.MalRepository
 import zechs.drive.stream.ui.player.PlayerViewModel
+import zechs.drive.stream.ui.player.MalRatingDialog
+import zechs.drive.stream.utils.MalSessionManager
 import zechs.drive.stream.utils.EpisodeParser
 import zechs.drive.stream.utils.util.Constants.Companion.DRIVE_API
 import zechs.drive.stream.utils.util.Orientation
@@ -95,6 +99,12 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     // ViewModel
     private val viewModel by viewModels<PlayerViewModel>()
 
+    @Inject
+    lateinit var malRepository: dagger.Lazy<MalRepository>
+
+    @Inject
+    lateinit var malSessionManager: dagger.Lazy<MalSessionManager>
+
     // States
     private var activityIsForeground = true
     private var userIsOperatingSeekbar = false
@@ -117,6 +127,12 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     private val addedSubtitleFileIds = mutableSetOf<String>()
     private var isFileLoaded = false
     private val pendingSubtitles = mutableListOf<Pair<java.io.File, SubtitleItem>>()
+
+    // MAL Scrobble & Rating State
+    private var currentMalAnime: MalAnimeNode? = null
+    private var currentEpNumber: Int = 1
+    private var hasScrobbledThisEp: Boolean = false
+    private var hasPromptedRating: Boolean = false
 
     // Configs
     private var onLoadCommands = mutableListOf<Array<String>>()
@@ -628,6 +644,10 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     }
 
     private fun playMedia() {
+        hasScrobbledThisEp = false
+        hasPromptedRating = false
+        currentMalAnime = null
+
         val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") }
         val title = currentTitle.ifBlank { intent.getStringExtra("title") }
         val accessToken = currentAccessToken.ifBlank { intent.getStringExtra("accessToken") }
@@ -636,6 +656,24 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             Log.d(TAG, "FileId & AccessToken both are required. exiting...")
             finish()
             return
+        }
+
+        val parsed = EpisodeParser.parse(title ?: "")
+        currentEpNumber = parsed.episode?.toInt() ?: 1
+
+        if (malSessionManager.get().isSyncEnabled() && malSessionManager.get().isLoggedIn()) {
+            val searchTitle = parsed.showTitle.ifBlank { title ?: "" }
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    val matched = malRepository.get().matchAnime(searchTitle)
+                    if (matched != null) {
+                        currentMalAnime = matched
+                        Log.d(TAG, "MAL matched anime: '${matched.title}' (ID: ${matched.id}, total eps: ${matched.numEpisodes})")
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to match anime on MAL", e)
+                }
+            }
         }
 
         Log.d(TAG, "MPVActivity(fileId=$fileId, title=$title, accessToken=$accessToken)")
@@ -1209,6 +1247,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                 runOnUiThread { updatePlaybackStatus(value) }
             } else if (property == "eof-reached" && value) {
                 runOnUiThread {
+                    val dur = (player.duration ?: 0).toLong()
+                    checkMalScrobble(dur * 1000L, dur * 1000L)
+                    checkMalCompletionPrompt(dur * 1000L, dur * 1000L)
                     if (nextEpisode != null && !nextEpisodeCanceled) {
                         playNextEpisodeDirectly()
                     }
@@ -1224,12 +1265,80 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                 "time-pos" -> {
                     updatePlaybackPos(value.toInt())
                     checkChapterAutoSkip(value.toDouble())
-                    checkAutoPlayNextEpisode(value, (player.duration ?: 0).toLong())
+                    val dur = (player.duration ?: 0).toLong()
+                    checkAutoPlayNextEpisode(value, dur)
+                    checkMalScrobble(value * 1000L, dur * 1000L)
+                    checkMalCompletionPrompt(value * 1000L, dur * 1000L)
                 }
                 "duration" -> {
                     updatePlaybackDuration(value.toInt())
                     updateChapters()
                 }
+            }
+        }
+    }
+
+    private fun checkMalScrobble(posMs: Long, durationMs: Long) {
+        if (durationMs <= 60_000L || hasScrobbledThisEp) return
+        val progress = posMs.toDouble() / durationMs.toDouble()
+        if (progress < 0.85) return
+
+        val session = malSessionManager.get()
+        if (!session.isSyncEnabled() || !session.isLoggedIn()) return
+
+        hasScrobbledThisEp = true
+        lifecycleScope.launch(Dispatchers.IO) {
+            val anime = currentMalAnime ?: run {
+                val title = currentTitle.ifBlank { intent.getStringExtra("title") ?: "" }
+                val parsed = EpisodeParser.parse(title)
+                val searchTitle = parsed.showTitle.ifBlank { title }
+                malRepository.get().matchAnime(searchTitle).also { currentMalAnime = it }
+            }
+            if (anime != null) {
+                val res = malRepository.get().updateEpisodeProgress(anime.id, currentEpNumber)
+                withContext(Dispatchers.Main) {
+                    if (res is zechs.drive.stream.utils.state.Resource.Success) {
+                        Snackbar.make(binding.root, "MAL: Episódio $currentEpNumber sincronizado! (${anime.title})", 2500).show()
+                    } else {
+                        Log.w(TAG, "MAL scrobble failed: ${res.message}")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun checkMalCompletionPrompt(posMs: Long, durationMs: Long) {
+        if (hasPromptedRating || durationMs <= 60_000L) return
+        val remainingMs = durationMs - posMs
+        if (remainingMs > 2_000L) return
+
+        val session = malSessionManager.get()
+        if (!session.isSyncEnabled() || !session.isLoggedIn()) return
+
+        val anime = currentMalAnime ?: return
+        val isFinal = (anime.numEpisodes > 0 && currentEpNumber >= anime.numEpisodes) ||
+                (nextEpisode == null && currentEpNumber >= 1)
+
+        if (isFinal) {
+            hasPromptedRating = true
+            runOnUiThread {
+                MalRatingDialog.show(
+                    activity = this@MPVActivity,
+                    animeTitle = anime.title,
+                    totalEpisodes = anime.numEpisodes,
+                    onSubmit = { score ->
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            val res = malRepository.get().completeAnimeWithScore(anime.id, anime.numEpisodes, score)
+                            withContext(Dispatchers.Main) {
+                                if (res is zechs.drive.stream.utils.state.Resource.Success) {
+                                    android.widget.Toast.makeText(this@MPVActivity, "MAL: Anime marcado como Completo! (Nota: $score/10)", android.widget.Toast.LENGTH_LONG).show()
+                                } else {
+                                    android.widget.Toast.makeText(this@MPVActivity, "MAL: Erro ao salvar avaliação: ${res.message}", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }
+                )
             }
         }
     }
