@@ -360,7 +360,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun getResumeOrFirstEpisode(folder: DriveFile, onResult: (DriveFile?) -> Unit) = viewModelScope.launch(Dispatchers.IO) {
+    fun getResumeOrFirstEpisode(folder: DriveFile, onResult: (DriveFile?, Long) -> Unit) = viewModelScope.launch(Dispatchers.IO) {
         try {
             val folderId = if (folder.isShortcut && folder.shortcutDetails.targetId != null) {
                 folder.shortcutDetails.targetId
@@ -376,7 +376,7 @@ class HomeViewModel @Inject constructor(
             }
 
             if (matchedWatch != null && !matchedWatch.hasFinished()) {
-                Log.d(TAG, "Resuming last watched episode for ${folder.name}: ${matchedWatch.name} (id: ${matchedWatch.videoId})")
+                Log.d(TAG, "Resuming in-progress episode for ${folder.name}: ${matchedWatch.name} (id: ${matchedWatch.videoId}, pos: ${matchedWatch.watchedDuration})")
                 val resumeFile = DriveFile(
                     id = matchedWatch.videoId,
                     name = matchedWatch.name,
@@ -388,7 +388,7 @@ class HomeViewModel @Inject constructor(
                     starred = zechs.drive.stream.data.model.Starred.UNSTARRED
                 )
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
-                    onResult(resumeFile)
+                    onResult(resumeFile, matchedWatch.watchedDuration)
                 }
                 return@launch
             }
@@ -404,21 +404,47 @@ class HomeViewModel @Inject constructor(
                 val videos = files.filter { it.isVideoFile || it.isShortcutVideo }.sortedBy { it.name }
 
                 if (videos.isNotEmpty()) {
-                    // Check if any video in this folder was in progress
                     val watchMap = recentWatches.associateBy { it.videoId }
+
+                    // A: Video currently in progress
                     val inProgressVideo = videos.firstOrNull { v ->
                         val targetId = if (v.isShortcut && v.shortcutDetails.targetId != null) v.shortcutDetails.targetId else v.id
                         val w = watchMap[targetId]
                         w != null && !w.hasFinished()
                     }
 
-                    val chosenVideo = inProgressVideo ?: videos.first()
+                    if (inProgressVideo != null) {
+                        val targetId = if (inProgressVideo.isShortcut && inProgressVideo.shortcutDetails.targetId != null) inProgressVideo.shortcutDetails.targetId else inProgressVideo.id
+                        val resumeMs = watchMap[targetId]?.watchedDuration ?: 0L
+                        val targetVideo = if (inProgressVideo.isShortcut && inProgressVideo.shortcutDetails.targetId != null) {
+                            inProgressVideo.copy(id = inProgressVideo.shortcutDetails.targetId)
+                        } else inProgressVideo
+
+                        kotlinx.coroutines.withContext(Dispatchers.Main) {
+                            onResult(targetVideo, resumeMs)
+                        }
+                        return@launch
+                    }
+
+                    // B: If previous episodes were finished, pick the next unwatched episode
+                    val lastFinishedIndex = videos.indexOfLast { v ->
+                        val targetId = if (v.isShortcut && v.shortcutDetails.targetId != null) v.shortcutDetails.targetId else v.id
+                        val w = watchMap[targetId]
+                        w != null && w.hasFinished()
+                    }
+
+                    val chosenVideo = if (lastFinishedIndex >= 0 && lastFinishedIndex + 1 < videos.size) {
+                        videos[lastFinishedIndex + 1]
+                    } else {
+                        videos.first()
+                    }
+
                     val targetVideo = if (chosenVideo.isShortcut && chosenVideo.shortcutDetails.targetId != null) {
                         chosenVideo.copy(id = chosenVideo.shortcutDetails.targetId)
                     } else chosenVideo
 
                     kotlinx.coroutines.withContext(Dispatchers.Main) {
-                        onResult(targetVideo)
+                        onResult(targetVideo, 0L)
                     }
                     return@launch
                 }
@@ -439,18 +465,44 @@ class HomeViewModel @Inject constructor(
                         val subVideos = subFiles.filter { it.isVideoFile || it.isShortcutVideo }.sortedBy { it.name }
                         if (subVideos.isNotEmpty()) {
                             val watchMap = recentWatches.associateBy { it.videoId }
-                            val inProgressSubVideo = subVideos.firstOrNull { v ->
+
+                            val inProgressSub = subVideos.firstOrNull { v ->
                                 val targetId = if (v.isShortcut && v.shortcutDetails.targetId != null) v.shortcutDetails.targetId else v.id
                                 val w = watchMap[targetId]
                                 w != null && !w.hasFinished()
                             }
-                            val chosenSub = inProgressSubVideo ?: subVideos.first()
+
+                            if (inProgressSub != null) {
+                                val targetId = if (inProgressSub.isShortcut && inProgressSub.shortcutDetails.targetId != null) inProgressSub.shortcutDetails.targetId else inProgressSub.id
+                                val resumeMs = watchMap[targetId]?.watchedDuration ?: 0L
+                                val targetVideo = if (inProgressSub.isShortcut && inProgressSub.shortcutDetails.targetId != null) {
+                                    inProgressSub.copy(id = inProgressSub.shortcutDetails.targetId)
+                                } else inProgressSub
+
+                                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                    onResult(targetVideo, resumeMs)
+                                }
+                                return@launch
+                            }
+
+                            val lastFinishedIndex = subVideos.indexOfLast { v ->
+                                val targetId = if (v.isShortcut && v.shortcutDetails.targetId != null) v.shortcutDetails.targetId else v.id
+                                val w = watchMap[targetId]
+                                w != null && w.hasFinished()
+                            }
+
+                            val chosenSub = if (lastFinishedIndex >= 0 && lastFinishedIndex + 1 < subVideos.size) {
+                                subVideos[lastFinishedIndex + 1]
+                            } else {
+                                subVideos.first()
+                            }
+
                             val targetVideo = if (chosenSub.isShortcut && chosenSub.shortcutDetails.targetId != null) {
                                 chosenSub.copy(id = chosenSub.shortcutDetails.targetId)
                             } else chosenSub
 
                             kotlinx.coroutines.withContext(Dispatchers.Main) {
-                                onResult(targetVideo)
+                                onResult(targetVideo, 0L)
                             }
                             return@launch
                         }
@@ -461,7 +513,7 @@ class HomeViewModel @Inject constructor(
             Log.e(TAG, "Error resolving episode to play", e)
         }
         kotlinx.coroutines.withContext(Dispatchers.Main) {
-            onResult(null)
+            onResult(null, 0L)
         }
     }
 

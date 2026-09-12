@@ -507,9 +507,9 @@ class HomeFragment : BaseFragment() {
             launchVideoPlayer(target)
         } else if (file.isFolder || file.isShortcutFolder) {
             android.widget.Toast.makeText(context, "Iniciando ${file.name}...", android.widget.Toast.LENGTH_SHORT).show()
-            viewModel.getResumeOrFirstEpisode(file) { video ->
+            viewModel.getResumeOrFirstEpisode(file) { video, startPos ->
                 if (video != null) {
-                    launchVideoPlayer(video)
+                    launchVideoPlayer(video, startPos)
                 } else {
                     handleOpenFolder(file)
                 }
@@ -536,22 +536,26 @@ class HomeFragment : BaseFragment() {
         }
     }
 
-    private fun launchVideoPlayer(file: DriveFile) {
+    private fun launchVideoPlayer(file: DriveFile, startPosition: Long = -1L) {
         val fileId = file.id
+        val thumb = file.thumbnailLarge ?: file.posterUrl ?: file.thumbnailLink
         when (mainViewModel.currentPlayerIndex) {
             zechs.drive.stream.utils.VideoPlayer.EXO_PLAYER -> {
                 val intent = android.content.Intent(requireContext(), zechs.drive.stream.ui.player.PlayerActivity::class.java).apply {
                     putExtra("fileId", fileId)
                     putExtra("title", file.name)
-                    putExtra("thumbnailLink", file.thumbnailLarge ?: file.posterUrl)
+                    putExtra("thumbnailLink", thumb)
                     putExtra("theme", mainViewModel.currentThemeIndex)
+                    if (startPosition > 0L) {
+                        putExtra("startPosition", startPosition)
+                    }
                     flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
                 }
                 startActivity(intent)
             }
             zechs.drive.stream.utils.VideoPlayer.MPV -> {
                 android.widget.Toast.makeText(requireContext(), "Iniciando MPV Player...", android.widget.Toast.LENGTH_SHORT).show()
-                viewModel.fetchToken(fileId, file.name, file.thumbnailLarge ?: file.posterUrl)
+                viewModel.fetchToken(fileId, file.name, thumb)
             }
         }
     }
@@ -564,6 +568,9 @@ class HomeFragment : BaseFragment() {
                     putExtra("title", watchItem.name)
                     putExtra("thumbnailLink", watchItem.thumbnailLink)
                     putExtra("theme", mainViewModel.currentThemeIndex)
+                    if (watchItem.watchedDuration > 0L) {
+                        putExtra("startPosition", watchItem.watchedDuration)
+                    }
                     flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
                 }
                 startActivity(intent)

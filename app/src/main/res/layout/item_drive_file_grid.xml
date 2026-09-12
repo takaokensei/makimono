@@ -99,7 +99,7 @@
                     android:layout_height="1dp"
                     android:layout_weight="1" />
 
-                <!-- Floating Folder Button on top-right (Mockup detail) -->
+                <!-- Floating Folder Button on top-right (Hidden as requested: cards are opened via long-press) -->
                 <ImageView
                     android:id="@+id/btnGridFolder"
                     android:layout_width="32dp"
@@ -108,6 +108,7 @@
                     android:contentDescription="Abrir pasta"
                     android:padding="7dp"
                     android:src="@drawable/ic_folder_24"
+                    android:visibility="gone"
                     app:tint="#FFFFFF" />
 
             </LinearLayout>

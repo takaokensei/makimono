@@ -285,13 +285,8 @@ sealed class FilesViewHolder(
                 // Show play icon for video files or folders with anime covers
                 ivPlayOverlay.isVisible = isVideo || hasPoster
 
-                // Floating folder button on top-right (opens folder contents)
-                btnGridFolder.apply {
-                    isVisible = isFolder
-                    setOnClickListener {
-                        filesAdapter.onLongClickListener.invoke(item)
-                    }
-                }
+                // Folder button hidden — folder access is via long-press on the card itself
+                btnGridFolder.isVisible = false
 
                 val displayThumb = item.posterUrl ?: item.thumbnailLarge ?: item.thumbnailLink
                 if (!displayThumb.isNullOrBlank()) {

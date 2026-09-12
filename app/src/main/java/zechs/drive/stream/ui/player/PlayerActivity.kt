@@ -619,14 +619,16 @@ class PlayerActivity : AppCompatActivity() {
             val builder = cue.buildUpon()
 
             // 1. HEIGHT NORMALIZATION:
-            // Snap all bottom-aligned dialogue to 0.95f (5% from bottom, matching Gachiakuta's clean position)
-            // This eliminates the high vertical margin embedded in some ASS scripts (e.g. Teogonia at ~0.88f / 62px)
-            val isBottomDialogue = cue.line == Cue.DIMEN_UNSET ||
-                    cue.lineAnchor == Cue.ANCHOR_TYPE_END ||
-                    cue.line >= 0.70f
+            // Top signs / notes are explicitly in the top third (line < 0.35f with START anchor).
+            // All other dialogue is unified to a stable, crisp bottom position: 0.93f (7% clearance from bottom).
+            // This eliminates random vertical jumping between ASS styles, prevents text from being
+            // buried at the bottom bezel, and stops text from floating awkwardly in the middle.
+            val isTopSign = cue.lineType == Cue.LINE_TYPE_FRACTION &&
+                    cue.line in 0.0f..0.35f &&
+                    cue.lineAnchor == Cue.ANCHOR_TYPE_START
 
-            if (isBottomDialogue) {
-                builder.setLine(0.985f, Cue.LINE_TYPE_FRACTION)
+            if (!isTopSign) {
+                builder.setLine(0.93f, Cue.LINE_TYPE_FRACTION)
                 builder.setLineAnchor(Cue.ANCHOR_TYPE_END)
             }
 
@@ -716,12 +718,19 @@ class PlayerActivity : AppCompatActivity() {
 
         playerView.setControllerVisibilityListener { visibility ->
             val density = resources.displayMetrics.density
-            val targetCardY = if (visibility == View.VISIBLE) -84f * density else 0f
+            val isVisible = visibility == View.VISIBLE
+
+            val targetCardY = if (isVisible) -84f * density else 0f
             if (binding.nextEpisodeCard.root.isVisible) {
                 binding.nextEpisodeCard.root.animate().translationY(targetCardY).setDuration(220L).start()
             }
 
-            if (visibility == View.VISIBLE) {
+            // Elevate subtitles above the bottom action bar when the GUI is showing so text is never covered!
+            // When the GUI retracts, smoothly slide subtitle back to its baseline position.
+            val targetSubtitleY = if (isVisible) -74f * density else 0f
+            playerView.subtitleView?.animate()?.translationY(targetSubtitleY)?.setDuration(220L)?.start()
+
+            if (isVisible) {
                 handleLockingControls()
                 btnPlayPause.post {
                     btnPlayPause.requestFocus()
@@ -998,8 +1007,12 @@ class PlayerActivity : AppCompatActivity() {
 
         playerView.apply {
             player = this@PlayerActivity.player
-            controllerHideOnTouch = !malSessionManager.get().isGesturesEnabled()
-            controllerAutoShow = false
+            // Always hide controls on touch so the UI doesn't get stuck visible
+            controllerHideOnTouch = true
+            // Auto-show controls when playback starts/resumes so the user sees them immediately
+            controllerAutoShow = true
+            // Auto-hide controls after 4.5 seconds of inactivity so UI disappears naturally
+            controllerShowTimeoutMs = 4500
         }
 
         val audioAttributes = AudioAttributes.Builder()
@@ -1059,14 +1072,17 @@ class PlayerActivity : AppCompatActivity() {
                 }
             }
 
+            val passedStartMs = intent.getLongExtra("startPosition", -1L)
+            val effectiveStartMs = startAtPositionMs ?: if (passedStartMs > 5_000L) passedStartMs else null
+
             player.apply {
                 removeListener(playerListener)
                 addListener(playerListener)
                 setAudioAttributes(audioAttributes, true)
                 setMediaItem(mediaItem, /* resetPosition = */ true)
                 prepare()
-                if (startAtPositionMs != null && startAtPositionMs > 0L) {
-                    seekTo(startAtPositionMs)
+                if (effectiveStartMs != null && effectiveStartMs > 0L) {
+                    seekTo(effectiveStartMs)
                 } else {
                     seekToDefaultPosition()
                 }
@@ -1081,7 +1097,7 @@ class PlayerActivity : AppCompatActivity() {
                 viewModel.fetchSubtitles(fileId)
             }
 
-            if (startAtPositionMs == null) {
+            if (effectiveStartMs == null) {
                 viewModel.getWatchPosition(fileId) { startPosition ->
                     if (startPosition > 5_000L) {
                         resumeVideo(startPosition)
@@ -1504,16 +1520,22 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun resumeVideo(startPosition: Long) {
-        player.addListener(object : Player.Listener {
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                super.onIsPlayingChanged(isPlaying)
-                if (isPlaying) {
-                    player.seekTo(startPosition)
-                    Log.d(TAG, "Seeking to $startPosition")
-                    player.removeListener(this)
-                }
+        if (!::player.isInitialized || startPosition <= 0L) return
+        runOnUiThread {
+            try {
+                player.seekTo(startPosition)
+                Log.d(TAG, "Seeking immediately to resume position: $startPosition ms")
+                Snackbar.make(
+                    playerView,
+                    "Retomando de onde você parou",
+                    Snackbar.LENGTH_SHORT
+                ).apply {
+                    anchorView = progressViewGroup
+                }.show()
+            } catch (e: Exception) {
+                Log.w(TAG, "Error seeking to resume position", e)
             }
-        })
+        }
     }
 
 
