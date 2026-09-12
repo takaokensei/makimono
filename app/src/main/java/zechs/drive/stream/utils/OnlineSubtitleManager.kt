@@ -25,6 +25,13 @@ data class OnlineSubtitle(
     val source: String = "OpenSubtitles"
 )
 
+data class SavedSubtitle(
+    val file: File,
+    val lang: String,
+    val langName: String,
+    val isPortuguese: Boolean
+)
+
 @Singleton
 class OnlineSubtitleManager @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -183,11 +190,75 @@ class OnlineSubtitleManager @Inject constructor(
     }
 
     /**
-     * Downloads an online subtitle file to the local cache directory.
+     * Directory where downloaded subtitles are permanently stored in internal storage.
+     */
+    val subtitlesDir: File
+        get() = File(context.filesDir, "subtitles").apply { if (!exists()) mkdirs() }
+
+    fun sanitizePrefix(title: String): String {
+        val parsed = EpisodeParser.parse(title)
+        val base = if (parsed.showTitle.isNotBlank() && parsed.episode != null) {
+            "${parsed.showTitle}_E${parsed.episode.toInt()}"
+        } else {
+            parsed.cleanTitle.ifBlank { title }
+        }
+        return base.replace(Regex("[^a-zA-Z0-9._-]"), "_").trim('_')
+    }
+
+    /**
+     * Returns all permanently saved subtitles matching the given video title or episode.
+     */
+    fun getSavedSubtitles(videoTitle: String): List<SavedSubtitle> {
+        val dir = subtitlesDir
+        if (!dir.exists() || !dir.isDirectory) return emptyList()
+
+        val cleanPrefix = sanitizePrefix(videoTitle)
+        val rawClean = videoTitle.replace(Regex("[^a-zA-Z0-9._-]"), "_").trim('_')
+
+        val files = dir.listFiles { f ->
+            f.isFile && f.extension.equals("srt", ignoreCase = true) &&
+                    (f.name.startsWith(cleanPrefix) || f.name.startsWith(rawClean))
+        } ?: return emptyList()
+
+        return files.mapNotNull { file ->
+            try {
+                val withoutExt = file.nameWithoutExtension
+                val parts = withoutExt.split("__")
+                val langPart = parts.firstOrNull { it.startsWith("online_") }?.removePrefix("online_") ?: "pt"
+                val rawLangName = parts.lastOrNull()?.takeIf { it != withoutExt && !it.startsWith("online_") }?.let {
+                    try {
+                        java.net.URLDecoder.decode(it, "UTF-8")
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+                val langName = rawLangName ?: when (langPart) {
+                    "pob", "pt-br" -> "Português (Brasil)"
+                    "por", "pt" -> "Português"
+                    "eng", "en" -> "Inglês (English)"
+                    "spa", "es" -> "Espanhol"
+                    "jpn", "ja" -> "Japonês"
+                    else -> langPart.uppercase()
+                }
+                val isPt = langPart in listOf("pob", "por", "pt", "pt-br") || langName.contains("Português", ignoreCase = true)
+                SavedSubtitle(
+                    file = file,
+                    lang = langPart,
+                    langName = langName,
+                    isPortuguese = isPt
+                )
+            } catch (e: Exception) {
+                Log.w(TAG, "Error parsing saved subtitle file: ${file.name}", e)
+                null
+            }
+        }
+    }
+
+    /**
+     * Downloads an online subtitle file to persistent internal storage.
      */
     suspend fun downloadSubtitle(
         sub: OnlineSubtitle,
-        cacheDir: File,
         filenamePrefix: String
     ): Result<File> = withContext(Dispatchers.IO) {
         try {
@@ -208,9 +279,10 @@ class OnlineSubtitleManager @Inject constructor(
                 IOException("Corpo da resposta vazio ao baixar legenda")
             )
 
-            val dir = File(cacheDir, "subtitles").apply { if (!exists()) mkdirs() }
-            val cleanPrefix = filenamePrefix.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-            val targetFile = File(dir, "${cleanPrefix}_online_${sub.lang}.srt")
+            val dir = subtitlesDir
+            val cleanPrefix = sanitizePrefix(filenamePrefix)
+            val encodedLangName = URLEncoder.encode(sub.langName, "UTF-8")
+            val targetFile = File(dir, "${cleanPrefix}__online_${sub.lang}__${encodedLangName}.srt")
 
             body.byteStream().use { input ->
                 FileOutputStream(targetFile).use { output ->
@@ -218,11 +290,17 @@ class OnlineSubtitleManager @Inject constructor(
                 }
             }
 
-            Log.d(TAG, "Subtitle downloaded: ${targetFile.absolutePath} (${targetFile.length()} bytes)")
+            Log.d(TAG, "Subtitle downloaded and permanently saved: ${targetFile.absolutePath} (${targetFile.length()} bytes)")
             Result.success(targetFile)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to download online subtitle", e)
             Result.failure(e)
         }
     }
+
+    suspend fun downloadSubtitle(
+        sub: OnlineSubtitle,
+        cacheDir: File?,
+        filenamePrefix: String
+    ): Result<File> = downloadSubtitle(sub, filenamePrefix)
 }

@@ -700,7 +700,7 @@ class PlayerActivity : AppCompatActivity() {
                     cue.lineAnchor == Cue.ANCHOR_TYPE_START
 
             if (!isTopSign) {
-                builder.setLine(0.88f, Cue.LINE_TYPE_FRACTION)
+                builder.setLine(0.95f, Cue.LINE_TYPE_FRACTION)
                 builder.setLineAnchor(Cue.ANCHOR_TYPE_END)
             }
 
@@ -824,9 +824,9 @@ class PlayerActivity : AppCompatActivity() {
                 /* typeface        */ Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
             )
             setStyle(captionStyle)
-            setApplyEmbeddedStyles(true)
-            setApplyEmbeddedFontSizes(true)
-            setBottomPaddingFraction(0.015f)
+            setApplyEmbeddedStyles(false)
+            setApplyEmbeddedFontSizes(false)
+            setBottomPaddingFraction(0.035f)
         }
 
         lifecycleScope.launch {
@@ -1235,6 +1235,25 @@ class PlayerActivity : AppCompatActivity() {
         val matching = folderSubtitles.filter { it.matchesVideo(videoTitle) }
 
         lifecycleScope.launch(Dispatchers.IO) {
+            // 1. Load permanently saved online subtitles from internal storage
+            val savedSubs = onlineSubtitleManager.get().getSavedSubtitles(videoTitle)
+            savedSubs.forEach { saved ->
+                val virtualId = "saved_${saved.file.nameWithoutExtension}"
+                if (!addedSubtitleFileIds.contains(virtualId)) {
+                    addedSubtitleFileIds.add(virtualId)
+                    val virtualSub = SubtitleItem(
+                        id = virtualId,
+                        name = "💾 [Salva] ${saved.langName}",
+                        languageLabel = saved.langName,
+                        languageCode = saved.lang
+                    )
+                    withContext(Dispatchers.Main) {
+                        applyExternalSubtitle(saved.file, virtualSub, isMatching = true, forceSelect = saved.isPortuguese)
+                    }
+                }
+            }
+
+            // 2. Load matching Drive subtitles
             matching.forEach { sub ->
                 if (!addedSubtitleFileIds.contains(sub.id)) {
                     val cached = viewModel.downloadSubtitle(sub, cacheDir)
@@ -1833,6 +1852,7 @@ class PlayerActivity : AppCompatActivity() {
             val trackIndex: Int,
             val folderSub: SubtitleItem?,
             val onlineSub: zechs.drive.stream.utils.OnlineSubtitle? = null,
+            val savedSub: zechs.drive.stream.utils.SavedSubtitle? = null,
             val displayName: String,
             val subtitle: String? = null,
             val isSelected: Boolean
@@ -1846,7 +1866,7 @@ class PlayerActivity : AppCompatActivity() {
         val isTextDisabled = !anySubtitleSelected
 
         // 1. Off option
-        choices.add(ExoSubChoice(null, -1, null, null, getString(R.string.track_off), null, isTextDisabled))
+        choices.add(ExoSubChoice(null, -1, null, null, null, getString(R.string.track_off), null, isTextDisabled))
 
         // 2. Active/embedded tracks in ExoPlayer
         player.currentTracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }.forEach { group ->
@@ -1858,12 +1878,35 @@ class PlayerActivity : AppCompatActivity() {
                     "$label ($lang)"
                 } else label ?: lang ?: "Legenda ${choices.size}"
                 val selected = group.isTrackSelected(i)
-                choices.add(ExoSubChoice(group, i, null, null, name, "Embutida", selected))
+                choices.add(ExoSubChoice(group, i, null, null, null, name, "Embutida", selected))
             }
         }
 
-        // 3. ALL Google Drive folder subtitles: ALWAYS list them!
         val videoTitle = currentTitle.ifBlank { intent.getStringExtra("title") ?: "" }
+
+        // 3. Permanently saved online subtitles from internal storage
+        val savedSubs = onlineSubtitleManager.get().getSavedSubtitles(videoTitle)
+        savedSubs.forEach { saved ->
+            val alreadyPresent = choices.any {
+                it.displayName.contains(saved.langName, ignoreCase = true)
+            }
+            if (!alreadyPresent) {
+                choices.add(
+                    ExoSubChoice(
+                        group = null,
+                        trackIndex = -1,
+                        folderSub = null,
+                        onlineSub = null,
+                        savedSub = saved,
+                        displayName = "💾 [Salva] ${saved.langName}",
+                        subtitle = "Armazenada no dispositivo",
+                        isSelected = false
+                    )
+                )
+            }
+        }
+
+        // 4. ALL Google Drive folder subtitles: ALWAYS list them!
         folderSubtitles.forEach { sub ->
             val alreadyPresent = choices.any {
                 it.displayName.contains(sub.name, ignoreCase = true) ||
@@ -1874,7 +1917,7 @@ class PlayerActivity : AppCompatActivity() {
                 val prefix = if (isMatching) "★ [Drive] " else "📁 [Drive] "
                 val tag = if (isMatching) " (Episódio atual)" else " (Outro episódio)"
                 val label = "$prefix${sub.name}$tag"
-                choices.add(ExoSubChoice(null, -1, sub, null, label, "Google Drive", false))
+                choices.add(ExoSubChoice(null, -1, sub, null, null, label, "Google Drive", false))
             }
         }
 
@@ -1908,13 +1951,22 @@ class PlayerActivity : AppCompatActivity() {
                 Snackbar.make(playerView, "Legenda: ${choice.displayName}", 750).apply {
                     anchorView = progressViewGroup
                 }.show()
-            } else if (choice.trackIndex == -1 && choice.folderSub == null && choice.onlineSub == null) {
+            } else if (choice.trackIndex == -1 && choice.folderSub == null && choice.onlineSub == null && choice.savedSub == null) {
                 val builder = player.trackSelectionParameters.buildUpon()
                 builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
                 player.trackSelectionParameters = builder.build()
                 Snackbar.make(playerView, getString(R.string.track_off), 750).apply {
                     anchorView = progressViewGroup
                 }.show()
+            } else if (choice.savedSub != null) {
+                val saved = choice.savedSub
+                val virtualSub = SubtitleItem(
+                    id = "saved_${saved.file.nameWithoutExtension}",
+                    name = "💾 [Salva] ${saved.langName}",
+                    languageLabel = saved.langName,
+                    languageCode = saved.lang
+                )
+                applyExternalSubtitle(saved.file, virtualSub, isMatching = true, forceSelect = true)
             } else if (choice.folderSub != null) {
                 val sub = choice.folderSub
                 val isMatching = sub.matchesVideo(videoTitle)
@@ -1941,15 +1993,17 @@ class PlayerActivity : AppCompatActivity() {
                     anchorView = progressViewGroup
                 }.show()
                 lifecycleScope.launch(Dispatchers.IO) {
-                    val result = onlineSubtitleManager.get().downloadSubtitle(onlineSub, cacheDir, videoTitle)
+                    val result = onlineSubtitleManager.get().downloadSubtitle(onlineSub, videoTitle)
                     withContext(Dispatchers.Main) {
                         result.onSuccess { cachedFile ->
                             val virtualSub = SubtitleItem(
-                                id = "online_${onlineSub.id}",
-                                name = "${onlineSub.langName} [Online]"
+                                id = "saved_${cachedFile.nameWithoutExtension}",
+                                name = "💾 [Salva] ${onlineSub.langName}",
+                                languageLabel = onlineSub.langName,
+                                languageCode = onlineSub.lang
                             )
                             applyExternalSubtitle(cachedFile, virtualSub, isMatching = true, forceSelect = true)
-                            Snackbar.make(playerView, "Legenda online ativada: ${onlineSub.langName}", 1500).apply {
+                            Snackbar.make(playerView, "Legenda salva e ativada: ${onlineSub.langName}!", 1500).apply {
                                 anchorView = progressViewGroup
                             }.show()
                         }.onFailure { err ->
@@ -1986,7 +2040,7 @@ class PlayerActivity : AppCompatActivity() {
                         val flag = if (os.isPortuguese) "🇧🇷 " else "🌐 "
                         val name = "$flag${os.langName}"
                         val subText = "Online • ${os.source}"
-                        updatedChoices.add(ExoSubChoice(null, -2, null, os, name, subText, false))
+                        updatedChoices.add(ExoSubChoice(null, -2, null, os, null, name, subText, false))
                     }
                     d.updateItems(buildMenuItems(updatedChoices))
                     Snackbar.make(playerView, "${onlineResults.size} legendas encontradas online!", 1500).apply {

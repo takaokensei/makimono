@@ -58,6 +58,8 @@ import zechs.drive.stream.ui.player.PlayerGlassMenuDialog
 import zechs.drive.stream.ui.player.GlassMenuItem
 import zechs.drive.stream.utils.OnlineSubtitleManager
 import zechs.drive.stream.utils.OnlineSubtitle
+import zechs.drive.stream.utils.SavedSubtitle
+import zechs.drive.stream.utils.AppSettings
 import zechs.drive.stream.utils.MalSessionManager
 import zechs.drive.stream.utils.EpisodeParser
 import zechs.drive.stream.utils.MatroskaChapterParser
@@ -121,6 +123,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
 
     @Inject
     lateinit var onlineSubtitleManager: dagger.Lazy<OnlineSubtitleManager>
+
+    @Inject
+    lateinit var appSettings: dagger.Lazy<AppSettings>
 
     // States
     private var activityIsForeground = true
@@ -233,6 +238,35 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
 
         player.initialize(filesDir.path)
         player.addObserver(this)
+
+        // Enforce PotPlayer subtitle typography & fixed 96% bottom positioning
+        MPVLib.setPropertyInt("sub-pos", 96)
+        MPVLib.setPropertyString("sub-ass-override", "force")
+        MPVLib.setPropertyString("sub-font", "sans-serif")
+        MPVLib.setPropertyString("sub-bold", "yes")
+        MPVLib.setPropertyString("sub-color", "#FFFFFFFF")
+        MPVLib.setPropertyString("sub-border-color", "#FF000000")
+        MPVLib.setPropertyDouble("sub-border-size", 3.2)
+        MPVLib.setPropertyDouble("sub-shadow-offset", 0.0)
+        MPVLib.setPropertyString("sub-back-color", "#00000000")
+
+        lifecycleScope.launch {
+            try {
+                val savedSp = appSettings.get().fetchSubtitleSize()
+                if (savedSp > 0f) {
+                    val mpvSize = when {
+                        savedSp <= 16f -> 38
+                        savedSp <= 20f -> 48
+                        savedSp <= 24f -> 58
+                        else -> 68
+                    }
+                    MPVLib.setPropertyInt("sub-font-size", mpvSize)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed loading MPV subtitle size", e)
+            }
+        }
+
         playMedia()
 
         audioManager = getSystemService(
@@ -518,7 +552,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         if (binding.nextEpisodeCard.root.isVisible) {
             binding.nextEpisodeCard.root.animate().translationY(-84f * density).setDuration(animDuration).start()
         }
-        updateSubtitlePosition(true)
         handleLockingControls()
         val currentPos = (player.timePos ?: 0).toDouble()
         checkChapterAutoSkip(currentPos)
@@ -552,14 +585,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         if (binding.nextEpisodeCard.root.isVisible) {
             binding.nextEpisodeCard.root.animate().translationY(0f).setDuration(animDuration).start()
         }
-        updateSubtitlePosition(false)
         val currentPos = (player.timePos ?: 0).toDouble()
         checkChapterAutoSkip(currentPos)
-    }
-
-    private fun updateSubtitlePosition(controlsVisible: Boolean) {
-        // Keeping sub-pos stable at 88 prevents MPV subtitle re-rendering artifacts / horizontal clipping on toggle
-        MPVLib.setPropertyInt("sub-pos", 88)
     }
 
     private fun mergeAniSkipChapters(aniSkipChapters: List<MatroskaChapterParser.ParsedChapter>) {
@@ -907,6 +934,24 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         val toLoad = matching
 
         lifecycleScope.launch(Dispatchers.IO) {
+            // 1. Load permanently saved online subtitles from internal storage
+            val savedSubs = onlineSubtitleManager.get().getSavedSubtitles(videoTitle)
+            savedSubs.forEach { saved ->
+                val virtualId = "saved_${saved.file.nameWithoutExtension}"
+                if (!addedSubtitleFileIds.contains(virtualId)) {
+                    val virtualSub = SubtitleItem(
+                        id = virtualId,
+                        name = "💾 [Salva] ${saved.langName}",
+                        languageLabel = saved.langName,
+                        languageCode = saved.lang
+                    )
+                    withContext(Dispatchers.Main) {
+                        addSubtitleToMpv(saved.file, virtualSub)
+                    }
+                }
+            }
+
+            // 2. Load matching Drive subtitles
             toLoad.forEach { sub ->
                 if (!addedSubtitleFileIds.contains(sub.id)) {
                     val cached = viewModel.downloadSubtitle(sub, cacheDir)
@@ -930,7 +975,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
 
         val isPortuguese = sub.languageCode == "por" || sub.name.lowercase().contains(".por.") || sub.name.lowercase().contains("pt")
         val selectMode = if (isPortuguese) "select" else "auto"
-        val trackTitle = "★ [Drive] ${sub.languageLabel}"
+        val trackTitle = if (sub.id.startsWith("saved_")) sub.name else "★ [Drive] ${sub.languageLabel}"
         Log.d(TAG, "Adding external subtitle to MPV: ${cached.absolutePath} (mode=$selectMode)")
         MPVLib.command(arrayOf("sub-add", cached.absolutePath, selectMode, trackTitle, sub.languageCode))
         if (isPortuguese) {
@@ -1063,6 +1108,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             val mpvTrackId: Int?,
             val folderSub: SubtitleItem?,
             val onlineSub: OnlineSubtitle? = null,
+            val savedSub: SavedSubtitle? = null,
             val label: String,
             val subtitle: String? = null,
             val isSelected: Boolean
@@ -1072,15 +1118,37 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
 
         // 1. Off option (mpvId == -1)
         val isOff = selectedMpvId == -1 || tracks.none { it.mpvId == selectedMpvId }
-        choices.add(SubChoice(-1, null, null, getString(R.string.track_off), null, isOff))
+        choices.add(SubChoice(-1, null, null, null, getString(R.string.track_off), null, isOff))
 
         // 2. Embedded video subtitle tracks
         tracks.filter { it.mpvId > 0 }.forEach { t ->
-            choices.add(SubChoice(t.mpvId, null, null, t.name, "Embutida", t.mpvId == selectedMpvId))
+            choices.add(SubChoice(t.mpvId, null, null, null, t.name, "Embutida", t.mpvId == selectedMpvId))
         }
 
-        // 3. ALL Google Drive folder subtitles: ALWAYS list them!
         val videoTitle = currentTitle.ifBlank { intent.getStringExtra("title") ?: "" }
+
+        // 3. Permanently saved online subtitles from internal storage
+        val savedSubs = onlineSubtitleManager.get().getSavedSubtitles(videoTitle)
+        savedSubs.forEach { saved ->
+            val matchingTrack = tracks.firstOrNull {
+                it.name.contains(saved.langName, ignoreCase = true) ||
+                (it.title?.contains(saved.langName, ignoreCase = true) == true)
+            }
+            val isSelected = matchingTrack != null && matchingTrack.mpvId == selectedMpvId
+            choices.add(
+                SubChoice(
+                    mpvTrackId = matchingTrack?.mpvId,
+                    folderSub = null,
+                    onlineSub = null,
+                    savedSub = saved,
+                    label = "💾 [Salva] ${saved.langName}",
+                    subtitle = "Armazenada no dispositivo",
+                    isSelected = isSelected
+                )
+            )
+        }
+
+        // 4. ALL Google Drive folder subtitles: ALWAYS list them!
         folderSubtitles.forEach { sub ->
             val alreadyPresent = choices.any {
                 it.label.contains(sub.name, ignoreCase = true) ||
@@ -1091,7 +1159,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                 val prefix = if (isMatching) "★ [Drive] " else "📁 [Drive] "
                 val tag = if (isMatching) " (Episódio atual)" else " (Outro episódio)"
                 val label = "$prefix${sub.name}$tag"
-                choices.add(SubChoice(null, sub, null, label, "Google Drive", false))
+                choices.add(SubChoice(null, sub, null, null, label, "Google Drive", false))
             }
         }
 
@@ -1119,6 +1187,13 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             if (choice.mpvTrackId != null) {
                 player.sid = choice.mpvTrackId
                 trackSwitchNotification { TrackData(choice.mpvTrackId, "sub") }
+            } else if (choice.savedSub != null) {
+                val saved = choice.savedSub
+                val trackTitle = "💾 [Salva] ${saved.langName}"
+                Log.d(TAG, "Manual add saved subtitle to MPV: ${saved.file.absolutePath}")
+                MPVLib.command(arrayOf("sub-add", saved.file.absolutePath, "select", trackTitle, saved.lang))
+                player.loadTracks()
+                configSnackbar("Legenda salva ativada: ${saved.langName}")
             } else if (choice.folderSub != null) {
                 val sub = choice.folderSub
                 configSnackbar("Carregando legenda: ${sub.name}...")
@@ -1142,13 +1217,13 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                 val os = choice.onlineSub
                 configSnackbar("Baixando legenda online: ${os.langName}...")
                 lifecycleScope.launch(Dispatchers.IO) {
-                    val result = onlineSubtitleManager.get().downloadSubtitle(os, cacheDir, videoTitle)
+                    val result = onlineSubtitleManager.get().downloadSubtitle(os, videoTitle)
                     withContext(Dispatchers.Main) {
                         result.onSuccess { cachedFile ->
-                            val trackTitle = "🌐 [Online] ${os.langName}"
+                            val trackTitle = "💾 [Salva] ${os.langName}"
                             MPVLib.command(arrayOf("sub-add", cachedFile.absolutePath, "select", trackTitle, os.lang))
                             player.loadTracks()
-                            configSnackbar("Legenda online ativada: ${os.langName}")
+                            configSnackbar("Legenda salva e ativada: ${os.langName}!")
                         }.onFailure { err ->
                             configSnackbar("Erro ao baixar legenda online: ${err.message}")
                         }
@@ -1179,7 +1254,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                         val flag = if (os.isPortuguese) "🇧🇷 " else "🌐 "
                         val name = "$flag${os.langName}"
                         val subText = "Online • ${os.source}"
-                        updatedChoices.add(SubChoice(null, null, os, name, subText, false))
+                        updatedChoices.add(SubChoice(null, null, os, null, name, subText, false))
                     }
                     d.updateItems(buildMenuItems(updatedChoices))
                     configSnackbar("${onlineResults.size} legendas encontradas online!", 1500)
@@ -1187,7 +1262,62 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             }
         }
 
+        glassDialog.setFooterPrimary("Tamanho") {
+            showSubtitleSizeDialog()
+        }
+
         glassDialog.show()
+    }
+
+    private fun showSubtitleSizeDialog() {
+        val sizes = arrayOf(
+            "Pequeno (16sp)",
+            "Médio (20sp - Padrão)",
+            "Grande (24sp)",
+            "Extra Grande (28sp)"
+        )
+        val sizeValues = floatArrayOf(16f, 20f, 24f, 28f)
+
+        lifecycleScope.launch {
+            val savedSp = try {
+                appSettings.get().fetchSubtitleSize()
+            } catch (e: Exception) {
+                20f
+            }
+            val selectedIdx = sizeValues.indexOfFirst { abs(it - savedSp) < 0.5f }.coerceAtLeast(1)
+
+            val items = sizes.mapIndexed { idx, label ->
+                GlassMenuItem(
+                    id = "size_$idx",
+                    title = label,
+                    isSelected = idx == selectedIdx,
+                    tag = sizeValues[idx]
+                )
+            }
+
+            PlayerGlassMenuDialog(
+                context = this@MPVActivity,
+                title = "Tamanho da Legenda",
+                items = items
+            ) { selected ->
+                val chosenSp = selected.tag as? Float ?: 20f
+                val mpvSize = when {
+                    chosenSp <= 16f -> 38
+                    chosenSp <= 20f -> 48
+                    chosenSp <= 24f -> 58
+                    else -> 68
+                }
+                MPVLib.setPropertyInt("sub-font-size", mpvSize)
+                lifecycleScope.launch {
+                    try {
+                        appSettings.get().saveSubtitleSize(chosenSp)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Error saving subtitle size", e)
+                    }
+                }
+                configSnackbar("Tamanho definido: ${selected.title}", 1000)
+            }.show()
+        }
     }
 
     private fun pickChapter() {
