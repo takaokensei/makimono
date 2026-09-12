@@ -282,8 +282,8 @@ sealed class FilesViewHolder(
                     }
                 }
 
-                // Show play icon for video files or folders with anime covers
-                ivPlayOverlay.isVisible = isVideo || hasPoster
+                // Quick play overlay hidden on anime covers for clean, non-redundant poster UI
+                ivPlayOverlay.isVisible = false
 
                 // Folder button hidden — folder access is via long-press on the card itself
                 btnGridFolder.isVisible = false

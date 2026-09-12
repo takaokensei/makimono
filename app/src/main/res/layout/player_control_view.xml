@@ -117,49 +117,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Center Seek Controls (±10s) — Reference mockup: .center-controls -->
-    <LinearLayout
-        android:id="@+id/mainControls"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="horizontal"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.5">
 
-        <!-- Rewind 10s (Circular 48dp glass button) -->
-        <ImageButton
-            android:id="@+id/exo_rew"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginEnd="24dp"
-            android:background="@drawable/bg_player_center_seek"
-            android:clickable="true"
-            android:contentDescription="@string/rewind_10_seconds"
-            android:focusable="true"
-            android:padding="11dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_rewind_skip_24"
-            app:tint="#FFFFFFFF" />
-
-        <!-- Fast Forward 10s (Circular 48dp glass button) -->
-        <ImageButton
-            android:id="@+id/exo_ffwd"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="@drawable/bg_player_center_seek"
-            android:clickable="true"
-            android:contentDescription="@string/skip_10_seconds"
-            android:focusable="true"
-            android:padding="11dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_forward_skip_24"
-            app:tint="#FFFFFFFF" />
-
-    </LinearLayout>
 
     <!-- Floating AniSkip Pill (Reference mockup: .aniskip-pill, centered at bottom ~15%) -->
     <LinearLayout
@@ -257,20 +215,23 @@
         app:layout_constraintBottom_toBottomOf="parent">
 
         <!-- ROW 1: Controls Row (.controls-row) -->
-        <LinearLayout
+        <!-- ROW 1: Controls Row (.controls-row) -->
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/controlsRow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:layout_marginBottom="16dp">
 
             <!-- LEFT GROUP: Actions (Legendas, Áudio, Velocidade, Capítulos, Resize) -->
             <LinearLayout
+                android:id="@+id/leftActions"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent">
 
                 <!-- 1. Legendas -->
                 <LinearLayout
@@ -443,40 +404,55 @@
 
             </LinearLayout>
 
-            <!-- Spacer -->
-            <View
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
-
-            <!-- CENTER TRANSPORT GROUP: [ Anterior | Play/Pause | Próximo ] -->
+            <!-- CENTER TRANSPORT GROUP: [ Anterior | -10s | Play/Pause | +10s | Próximo ] -->
+            <!-- Mathematically centered across the entire screen width -->
             <LinearLayout
+                android:id="@+id/mainControls"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="center"
-                android:orientation="horizontal">
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent">
 
                 <!-- Previous Episode -->
                 <ImageButton
                     android:id="@+id/btnPrevEp"
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:clickable="true"
                     android:contentDescription="Episódio Anterior"
                     android:focusable="true"
-                    android:padding="9dp"
+                    android:padding="8dp"
                     android:scaleType="fitCenter"
                     android:src="@drawable/ic_skip_previous_24"
                     app:tint="#D4D4D4" />
+
+                <!-- Rewind 10s -->
+                <ImageButton
+                    android:id="@+id/exo_rew"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:layout_marginStart="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:contentDescription="@string/rewind_10_seconds"
+                    android:focusable="true"
+                    android:padding="9dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_rewind_skip_24"
+                    app:tint="#FFFFFFFF" />
 
                 <!-- Prominent Play / Pause Button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnPlayPause"
                     android:layout_width="52dp"
                     android:layout_height="52dp"
-                    android:layout_marginStart="18dp"
-                    android:layout_marginEnd="18dp"
+                    android:layout_marginStart="14dp"
+                    android:layout_marginEnd="14dp"
                     android:clickable="true"
                     android:contentDescription="Play/Pause"
                     android:focusable="true"
@@ -496,34 +472,47 @@
                     app:strokeColor="#4DFFFFFF"
                     app:strokeWidth="1.5dp" />
 
+                <!-- Fast Forward 10s -->
+                <ImageButton
+                    android:id="@+id/exo_ffwd"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:contentDescription="@string/skip_10_seconds"
+                    android:focusable="true"
+                    android:padding="9dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_forward_skip_24"
+                    app:tint="#FFFFFFFF" />
+
                 <!-- Next Episode -->
                 <ImageButton
                     android:id="@+id/btnNextEp"
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:clickable="true"
                     android:contentDescription="Próximo Episódio"
                     android:focusable="true"
-                    android:padding="9dp"
+                    android:padding="8dp"
                     android:scaleType="fitCenter"
                     android:src="@drawable/ic_skip_next_24"
                     app:tint="#D4D4D4" />
 
             </LinearLayout>
 
-            <!-- Spacer -->
-            <View
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
-
             <!-- RIGHT GROUP: Girar & Info -->
             <LinearLayout
+                android:id="@+id/rightActions"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent">
 
                 <!-- Girar -->
                 <LinearLayout
@@ -596,7 +585,7 @@
 
             </LinearLayout>
 
-        </LinearLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
         <!-- ROW 2: Scrub Row (.scrub-row) -->
         <!-- Named linearLayout2 for code compatibility with PlayerActivity progressViewGroup -->

@@ -697,7 +697,7 @@ class PlayerActivity : AppCompatActivity() {
                     cue.lineAnchor == Cue.ANCHOR_TYPE_START
 
             if (!isTopSign) {
-                builder.setLine(0.93f, Cue.LINE_TYPE_FRACTION)
+                builder.setLine(0.88f, Cue.LINE_TYPE_FRACTION)
                 builder.setLineAnchor(Cue.ANCHOR_TYPE_END)
             }
 
@@ -781,6 +781,7 @@ class PlayerActivity : AppCompatActivity() {
                 )
             )
             .setLoadControl(loadControl)
+            .setSeekParameters(SeekParameters.CLOSEST_SYNC)
             .setSeekForwardIncrementMs(10_000)
             .setSeekBackIncrementMs(10_000)
             .build()
@@ -793,11 +794,6 @@ class PlayerActivity : AppCompatActivity() {
             if (binding.nextEpisodeCard.root.isVisible) {
                 binding.nextEpisodeCard.root.animate().translationY(targetCardY).setDuration(220L).start()
             }
-
-            // Elevate subtitles above the bottom action bar when the GUI is showing so text is never covered!
-            // When the GUI retracts, smoothly slide subtitle back to its baseline position.
-            val targetSubtitleY = if (isVisible) -74f * density else 0f
-            playerView.subtitleView?.animate()?.translationY(targetSubtitleY)?.setDuration(220L)?.start()
 
             if (isVisible) {
                 handleLockingControls()
@@ -879,7 +875,7 @@ class PlayerActivity : AppCompatActivity() {
                 KeyEvent.KEYCODE_DPAD_LEFT -> {
                     if (!playerView.isControllerVisible) {
                         seekRelative(-10_000L)
-                        Snackbar.make(playerView, "<< -10s", 500).show()
+                        gestureHelper.showNotification("⏪ -10s")
                         return true
                     }
                 }
@@ -887,7 +883,7 @@ class PlayerActivity : AppCompatActivity() {
                 KeyEvent.KEYCODE_DPAD_RIGHT -> {
                     if (!playerView.isControllerVisible) {
                         seekRelative(10_000L)
-                        Snackbar.make(playerView, "+10s >>", 500).show()
+                        gestureHelper.showNotification("⏩ +10s")
                         return true
                     }
                 }
@@ -931,7 +927,7 @@ class PlayerActivity : AppCompatActivity() {
                 KeyEvent.KEYCODE_BUTTON_R1,
                 KeyEvent.KEYCODE_PAGE_DOWN -> {
                     seekRelative(SKIP_INTRO_MS)
-                    Snackbar.make(playerView, "⏩ +90s Pular Abertura", 750).show()
+                    gestureHelper.showNotification("⏩ +90s Pular Abertura")
                     return true
                 }
 
@@ -965,7 +961,7 @@ class PlayerActivity : AppCompatActivity() {
                 KeyEvent.KEYCODE_BUTTON_L1,
                 KeyEvent.KEYCODE_PAGE_UP -> {
                     seekRelative(-SKIP_INTRO_MS)
-                    Snackbar.make(playerView, "⏪ -90s Voltar", 750).show()
+                    gestureHelper.showNotification("⏪ -90s Voltar")
                     return true
                 }
             }
