@@ -99,6 +99,43 @@
                         android:textStyle="bold" />
                 </LinearLayout>
 
+                <!-- 1.5. Animes (oneblacki) -->
+                <LinearLayout
+                    android:id="@+id/btnAnimes"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/rail_item_focus_bg"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="14dp">
+
+                    <ImageView
+                        android:id="@+id/ivAnimes"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:contentDescription="@null"
+                        android:duplicateParentState="true"
+                        android:src="@drawable/ic_play_24"
+                        app:tint="@color/rail_item_icon_selector" />
+
+                    <TextView
+                        android:id="@+id/tvAnimes"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:duplicateParentState="true"
+                        android:fontFamily="@font/inter"
+                        android:maxLines="1"
+                        android:text="@string/animes"
+                        android:textColor="@color/rail_item_text_selector"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
                 <!-- 2. Drives Compartilhados -->
                 <LinearLayout
                     android:id="@+id/btnSharedDrives"

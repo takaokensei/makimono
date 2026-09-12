@@ -18,32 +18,34 @@ class AnimePosterResolver @Inject constructor() {
         private const val TAG = "AnimePosterResolver"
         private const val JIKAN_BASE_URL = "https://api.jikan.moe/v4/anime"
         private const val KITSU_BASE_URL = "https://kitsu.io/api/edge/anime"
+
+        /**
+         * Cleans a Google Drive folder name to produce an optimal anime search query.
+         * E.g.: "[Erai-raws] Teogonia [1080p CR WEB-DL]" -> "Teogonia"
+         *       "Sousou no Frieren (2023)" -> "Sousou no Frieren"
+         */
+        fun cleanAnimeTitle(folderName: String): String {
+            var clean = folderName
+            // Remove brackets [ ... ] and ( ... )
+            clean = clean.replace(Regex("\\[.*?\\]"), " ")
+            clean = clean.replace(Regex("\\(.*?\\)"), " ")
+            // Remove common resolution / codec / source keywords
+            clean = clean.replace(
+                Regex("(?i)\\b(1080p|720p|480p|2160p|4k|hevc|avc|x264|x265|bluray|bdrip|web-dl|webrip|multisub|dual|audio)\\b"),
+                " "
+            )
+            // Clean extra spacing
+            clean = clean.trim().replace(Regex("\\s+"), " ")
+            return clean.ifBlank { folderName.trim() }
+        }
     }
+
+    fun cleanAnimeTitle(folderName: String): String = Companion.cleanAnimeTitle(folderName)
 
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(5, TimeUnit.SECONDS)
         .readTimeout(8, TimeUnit.SECONDS)
         .build()
-
-    /**
-     * Cleans a Google Drive folder name to produce an optimal anime search query.
-     * E.g.: "[Erai-raws] Teogonia [1080p CR WEB-DL]" -> "Teogonia"
-     *       "Sousou no Frieren (2023)" -> "Sousou no Frieren"
-     */
-    fun cleanAnimeTitle(folderName: String): String {
-        var clean = folderName
-        // Remove brackets [ ... ] and ( ... )
-        clean = clean.replace(Regex("\\[.*?\\]"), " ")
-        clean = clean.replace(Regex("\\(.*?\\)"), " ")
-        // Remove common resolution / codec / source keywords
-        clean = clean.replace(
-            Regex("(?i)\\b(1080p|720p|480p|2160p|4k|hevc|avc|x264|x265|bluray|bdrip|web-dl|webrip|multisub|dual|audio)\\b"),
-            " "
-        )
-        // Clean extra spacing
-        clean = clean.trim().replace(Regex("\\s+"), " ")
-        return clean.ifBlank { folderName.trim() }
-    }
 
     /**
      * Resolves the official anime poster URL for a folder.

@@ -45,6 +45,30 @@ class FilesViewModel @Inject constructor(
         }
     }
 
+    fun getFirstEpisodeInFolder(folderId: String, onResult: (DriveFile?) -> Unit) = viewModelScope.launch(Dispatchers.IO) {
+        try {
+            val res = driveRepository.getFiles(
+                query = "'$folderId' in parents and mimeType contains 'video/' and trashed=false",
+                pageToken = null,
+                pageSize = 10
+            )
+            if (res is Resource.Success && !res.data?.files.isNullOrEmpty()) {
+                val videoFiles = res.data!!.files.map { it.toDriveFile() }
+                    .sortedWith { a, b -> zechs.drive.stream.utils.EpisodeParser.naturalCompare(a.name, b.name) }
+                val firstEp = videoFiles.firstOrNull()
+                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                    onResult(firstEp)
+                }
+                return@launch
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error resolving first episode in folder $folderId", e)
+        }
+        kotlinx.coroutines.withContext(Dispatchers.Main) {
+            onResult(null)
+        }
+    }
+
     private val _filesList = MutableLiveData<Resource<List<FilesDataModel>>>()
     val filesList: LiveData<Resource<List<FilesDataModel>>>
         get() = _filesList

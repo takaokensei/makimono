@@ -13,6 +13,7 @@ import com.google.android.material.color.MaterialColors
 import zechs.drive.stream.R
 import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.data.model.Starred
+import zechs.drive.stream.data.remote.AnimePosterResolver
 import zechs.drive.stream.databinding.ItemDriveFileBinding
 import zechs.drive.stream.databinding.ItemDriveFileGridBinding
 import zechs.drive.stream.databinding.ItemLoadingBinding
@@ -212,20 +213,63 @@ sealed class FilesViewHolder(
         fun bind(file: FilesDataModel.File) {
             val item = file.driveFile
             itemBinding.apply {
-                tvGridFileName.text = item.name
-                tvGridFileSize.text = item.humanSize ?: if (item.isFolder || item.isShortcutFolder) "Pasta" else ""
-
                 val isFolder = item.isFolder || item.isShortcutFolder
                 val isVideo = item.isVideoFile || item.isShortcutVideo
+                val hasPoster = !item.posterUrl.isNullOrBlank()
 
-                tvGridTypeBadge.text = when {
-                    isFolder -> "PASTA"
-                    isVideo -> "VÍDEO"
-                    item.isSubtitleFile -> "LEGENDA"
-                    else -> "ARQUIVO"
+                // Clean anime title if folder or has poster
+                val cleanTitle = if (hasPoster || isFolder) {
+                    AnimePosterResolver.cleanAnimeTitle(item.name)
+                } else item.name
+
+                tvGridFileName.text = cleanTitle
+                tvGridFileSize.text = item.humanSize ?: if (isFolder) "Pasta" else ""
+
+                // Extract resolution and codec tags from original filename
+                val upperName = item.name.uppercase()
+                val resTag = when {
+                    "2160P" in upperName || "4K" in upperName -> "4K"
+                    "1080P" in upperName -> "1080p"
+                    "720P" in upperName -> "720p"
+                    "480P" in upperName -> "480p"
+                    else -> null
+                }
+                val codecTag = when {
+                    "HEVC" in upperName || "X265" in upperName || "H265" in upperName || "H.265" in upperName -> "HEVC"
+                    "AVC" in upperName || "X264" in upperName || "H264" in upperName || "H.264" in upperName -> "AVC"
+                    else -> null
                 }
 
-                ivPlayOverlay.isVisible = isVideo
+                tvGridResBadge.apply {
+                    isVisible = resTag != null
+                    text = resTag
+                }
+
+                tvGridCodecBadge.apply {
+                    isVisible = codecTag != null
+                    text = codecTag
+                }
+
+                tvGridTypeBadge.apply {
+                    isVisible = resTag == null && codecTag == null
+                    text = when {
+                        isFolder -> "PASTA"
+                        isVideo -> "VÍDEO"
+                        item.isSubtitleFile -> "LEGENDA"
+                        else -> "ARQUIVO"
+                    }
+                }
+
+                // Show play icon for video files or folders with anime covers
+                ivPlayOverlay.isVisible = isVideo || hasPoster
+
+                // Floating folder button on top-right (opens folder contents)
+                btnGridFolder.apply {
+                    isVisible = isFolder
+                    setOnClickListener {
+                        filesAdapter.onClickListener.invoke(item)
+                    }
+                }
 
                 val displayThumb = item.posterUrl ?: item.thumbnailLarge ?: item.thumbnailLink
                 if (!displayThumb.isNullOrBlank()) {
@@ -254,6 +298,15 @@ sealed class FilesViewHolder(
                     ivGridFallbackIcon.setImageResource(iconRes)
                 }
 
+                // Center quick play overlay click
+                ivPlayOverlay.setOnClickListener {
+                    if (filesAdapter.onPlayClickListener != null) {
+                        filesAdapter.onPlayClickListener.invoke(item)
+                    } else {
+                        filesAdapter.onClickListener.invoke(item)
+                    }
+                }
+
                 root.setOnClickListener {
                     filesAdapter.onClickListener.invoke(item)
                 }
@@ -265,7 +318,7 @@ sealed class FilesViewHolder(
 
                 root.setOnFocusChangeListener { v, hasFocus ->
                     if (hasFocus) {
-                        v.animate().scaleX(1.04f).scaleY(1.04f).translationZ(10f).setDuration(140L).start()
+                        v.animate().scaleX(1.05f).scaleY(1.05f).translationZ(12f).setDuration(140L).start()
                     } else {
                         v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(140L).start()
                     }

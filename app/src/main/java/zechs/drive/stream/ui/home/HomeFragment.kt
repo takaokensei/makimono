@@ -71,6 +71,22 @@ class HomeFragment : BaseFragment() {
                 query = "'root' in parents and trashed = false"
             )
 
+            // Animes (oneblacki repository)
+            btnAnimes?.setOnClickListener {
+                viewModel.getOneBlackiFolder { folderId, _ ->
+                    val query = if (folderId != null) {
+                        "'$folderId' in parents and trashed=false"
+                    } else {
+                        "name contains 'oneblacki' and trashed=false"
+                    }
+                    val action = HomeFragmentDirections.actionHomeFragmentToFilesFragment(
+                        name = "oneblacki",
+                        query = query
+                    )
+                    findNavController().navigateSafe(action)
+                }
+            }
+
             // Shared drives
             navigateToFiles(
                 view = btnSharedDrives,
@@ -109,6 +125,7 @@ class HomeFragment : BaseFragment() {
             val railViews = listOfNotNull(
                 btnToggleRail,
                 btnMyDrive,
+                btnAnimes,
                 btnSharedDrives,
                 btnSharedWithMe,
                 btnSettings,
@@ -164,6 +181,7 @@ class HomeFragment : BaseFragment() {
         val textVisibility = if (isRailCollapsed) View.GONE else View.VISIBLE
         binding.tvToggleRail?.visibility = textVisibility
         binding.tvMyDrive?.visibility = textVisibility
+        binding.tvAnimes?.visibility = textVisibility
         binding.tvSharedDrives?.visibility = textVisibility
         binding.tvSharedWithMe?.visibility = textVisibility
         binding.tvSettings?.visibility = textVisibility
@@ -180,6 +198,7 @@ class HomeFragment : BaseFragment() {
         listOfNotNull(
             binding.btnToggleRail,
             binding.btnMyDrive,
+            binding.btnAnimes,
             binding.btnSharedDrives,
             binding.btnSharedWithMe,
             binding.btnSettings,

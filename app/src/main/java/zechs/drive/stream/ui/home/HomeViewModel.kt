@@ -77,6 +77,43 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private var cachedOneBlackiId: String? = null
+
+    fun getOneBlackiFolder(onResult: (folderId: String?, folderName: String) -> Unit) = viewModelScope.launch(Dispatchers.IO) {
+        if (!cachedOneBlackiId.isNullOrBlank()) {
+            kotlinx.coroutines.withContext(Dispatchers.Main) {
+                onResult(cachedOneBlackiId, "oneblacki")
+            }
+            return@launch
+        }
+
+        try {
+            val response = driveRepository.get().getFiles(
+                query = "name contains 'oneblacki' and mimeType = 'application/vnd.google-apps.folder' and trashed=false",
+                pageToken = null,
+                pageSize = 5
+            )
+            if (response is Resource.Success && response.data != null) {
+                val folder = response.data.files.firstOrNull {
+                    it.name.contains("oneblacki", ignoreCase = true)
+                }
+                if (folder != null) {
+                    cachedOneBlackiId = folder.id
+                    kotlinx.coroutines.withContext(Dispatchers.Main) {
+                        onResult(folder.id, folder.name)
+                    }
+                    return@launch
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error finding oneblacki folder", e)
+        }
+
+        kotlinx.coroutines.withContext(Dispatchers.Main) {
+            onResult(null, "oneblacki")
+        }
+    }
+
     fun getStarredFiles() = viewModelScope.launch(Dispatchers.IO) {
         try {
             val response = driveRepository.get().getFiles(

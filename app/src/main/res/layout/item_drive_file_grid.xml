@@ -14,17 +14,22 @@
     app:strokeColor="@color/shelf_card_stroke_color"
     app:strokeWidth="2dp">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:layout_height="wrap_content">
 
-        <!-- 16:9 Video / Item Preview Banner -->
+        <!-- 2:3 Portrait Aspect Ratio Poster Container -->
         <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="136dp">
+            android:id="@+id/framePosterContainer"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            app:layout_constraintDimensionRatio="H,2:3"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
-            <!-- Video / Folder Thumbnail Preview -->
+            <!-- Full-bleed poster image -->
             <ImageView
                 android:id="@+id/ivGridThumb"
                 android:layout_width="match_parent"
@@ -53,109 +58,193 @@
                 android:visibility="gone"
                 app:tint="?attr/colorAccentPrimary" />
 
-            <!-- Bottom scrim gradient -->
+            <!-- Deep dark gradient overlay at the bottom -->
             <View
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
+                android:layout_height="140dp"
                 android:layout_gravity="bottom"
                 android:background="@drawable/shelf_item_scrim" />
 
-            <!-- Type badge (e.g. "VÍDEO", "PASTA", "LEGENDA") -->
-            <TextView
-                android:id="@+id/tvGridTypeBadge"
-                android:layout_width="wrap_content"
+            <!-- Top Action Buttons: Folder and Star -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="top|start"
+                android:layout_gravity="top"
                 android:layout_margin="8dp"
-                android:background="@drawable/glass_pill_bg"
-                android:fontFamily="@font/inter"
-                android:letterSpacing="0.06"
-                android:paddingStart="6dp"
-                android:paddingTop="2dp"
-                android:paddingEnd="6dp"
-                android:paddingBottom="2dp"
-                android:text="VÍDEO"
-                android:textColor="?attr/colorAccentPrimary"
-                android:textSize="9sp"
-                android:textStyle="bold"
-                tools:text="VÍDEO" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-            <!-- Star button on top-right -->
-            <ImageButton
-                android:id="@+id/btnGridStar"
-                style="@style/Widget.Material3.Button.IconButton"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:layout_gravity="top|end"
-                android:layout_margin="6dp"
-                android:background="@drawable/glass_circle_button_bg"
-                android:contentDescription="Favoritar"
-                android:focusable="true"
-                android:padding="6dp"
-                android:src="@drawable/ic_star_outline_24"
-                app:tint="?attr/colorTextPrimary" />
+                <!-- Star button on top-left -->
+                <ImageButton
+                    android:id="@+id/btnGridStar"
+                    style="@style/Widget.Material3.Button.IconButton"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:background="@drawable/glass_circle_button_bg"
+                    android:contentDescription="Favoritar"
+                    android:focusable="true"
+                    android:padding="6dp"
+                    android:src="@drawable/ic_star_outline_24"
+                    app:tint="?attr/colorTextPrimary" />
 
-            <ProgressBar
-                android:id="@+id/gridStarLoading"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_gravity="top|end"
-                android:layout_margin="14dp"
-                android:visibility="gone" />
+                <ProgressBar
+                    android:id="@+id/gridStarLoading"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_marginStart="6dp"
+                    android:visibility="gone" />
 
-            <!-- Center play icon for videos -->
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <!-- Floating Folder Button on top-right (Mockup detail) -->
+                <ImageView
+                    android:id="@+id/btnGridFolder"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:background="@drawable/glass_circle_button_bg"
+                    android:contentDescription="Abrir pasta"
+                    android:padding="7dp"
+                    android:src="@drawable/ic_folder_24"
+                    app:tint="#FFFFFF" />
+
+            </LinearLayout>
+
+            <!-- Center Quick-Play overlay button -->
             <ImageView
                 android:id="@+id/ivPlayOverlay"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
                 android:layout_gravity="center"
-                android:alpha="0.85"
+                android:alpha="0.9"
                 android:background="@drawable/glass_circle_button_bg"
-                android:contentDescription="@null"
-                android:padding="6dp"
+                android:contentDescription="Reproduzir"
+                android:padding="10dp"
                 android:src="@drawable/ic_play_24"
                 android:visibility="gone"
                 app:tint="#FFFFFF"
                 tools:visibility="visible" />
 
+            <!-- Bottom Information: Clean Title + Badges -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:orientation="vertical"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:paddingBottom="10dp">
+
+                <!-- Clean Anime Title -->
+                <TextView
+                    android:id="@+id/tvGridFileName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/inter"
+                    android:maxLines="2"
+                    android:shadowColor="#CC000000"
+                    android:shadowDx="0"
+                    android:shadowDy="2"
+                    android:shadowRadius="4"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    tools:text="Jujutsu Kaisen" />
+
+                <!-- Video Specs Chips Row (Mockup Frosted Glass Badges) -->
+                <LinearLayout
+                    android:id="@+id/layoutGridBadges"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <!-- Resolution badge (e.g. 1080p, 720p, 4K) -->
+                    <TextView
+                        android:id="@+id/tvGridResBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/glass_pill_bg"
+                        android:fontFamily="@font/inter"
+                        android:letterSpacing="0.04"
+                        android:paddingStart="6dp"
+                        android:paddingTop="2dp"
+                        android:paddingEnd="6dp"
+                        android:paddingBottom="2dp"
+                        android:textColor="?attr/colorAccentPrimary"
+                        android:textSize="9sp"
+                        android:textStyle="bold"
+                        android:visibility="gone"
+                        tools:text="1080p"
+                        tools:visibility="visible" />
+
+                    <!-- Codec badge (e.g. HEVC, AVC) -->
+                    <TextView
+                        android:id="@+id/tvGridCodecBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:background="@drawable/glass_pill_bg"
+                        android:fontFamily="@font/inter"
+                        android:letterSpacing="0.04"
+                        android:paddingStart="6dp"
+                        android:paddingTop="2dp"
+                        android:paddingEnd="6dp"
+                        android:paddingBottom="2dp"
+                        android:textColor="#E2E8F0"
+                        android:textSize="9sp"
+                        android:textStyle="bold"
+                        android:visibility="gone"
+                        tools:text="HEVC"
+                        tools:visibility="visible" />
+
+                    <!-- Size / Episode count badge -->
+                    <TextView
+                        android:id="@+id/tvGridFileSize"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:background="@drawable/glass_pill_bg"
+                        android:fontFamily="@font/inter"
+                        android:letterSpacing="0.04"
+                        android:paddingStart="6dp"
+                        android:paddingTop="2dp"
+                        android:paddingEnd="6dp"
+                        android:paddingBottom="2dp"
+                        android:textColor="#CBD5E1"
+                        android:textSize="9sp"
+                        android:textStyle="bold"
+                        tools:text="24 Ep" />
+
+                    <!-- General type fallback badge -->
+                    <TextView
+                        android:id="@+id/tvGridTypeBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:background="@drawable/glass_pill_bg"
+                        android:fontFamily="@font/inter"
+                        android:letterSpacing="0.04"
+                        android:paddingStart="5dp"
+                        android:paddingTop="2dp"
+                        android:paddingEnd="5dp"
+                        android:paddingBottom="2dp"
+                        android:textColor="?attr/colorAccentPrimary"
+                        android:textSize="9sp"
+                        android:textStyle="bold"
+                        android:visibility="gone"
+                        tools:text="PASTA" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
         </FrameLayout>
 
-        <!-- Details below thumbnail -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingStart="10dp"
-            android:paddingTop="8dp"
-            android:paddingEnd="10dp"
-            android:paddingBottom="10dp">
-
-            <TextView
-                android:id="@+id/tvGridFileName"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:fontFamily="@font/inter"
-                android:maxLines="2"
-                android:textColor="?attr/colorTextPrimary"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                tools:text="[Erai-raws] Teogonia - 01 [1080p CR WEB-DL AVC AAC].mkv" />
-
-            <TextView
-                android:id="@+id/tvGridFileSize"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:ellipsize="end"
-                android:fontFamily="@font/inter"
-                android:maxLines="1"
-                android:textColor="?attr/colorTextSecondary"
-                android:textSize="11sp"
-                tools:text="1.34 GB" />
-
-        </LinearLayout>
-
-    </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </com.google.android.material.card.MaterialCardView>

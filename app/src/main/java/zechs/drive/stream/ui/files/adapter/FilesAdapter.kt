@@ -12,7 +12,8 @@ import zechs.drive.stream.databinding.ItemLoadingBinding
 class FilesAdapter(
     val onClickListener: (DriveFile) -> Unit,
     val onLongClickListener: (DriveFile) -> Unit,
-    val onStarClickListener: (DriveFile, Boolean) -> Unit
+    val onStarClickListener: (DriveFile, Boolean) -> Unit,
+    val onPlayClickListener: ((DriveFile) -> Unit)? = null
 ) : ListAdapter<FilesDataModel, FilesViewHolder>(FilesItemDiffCallback()) {
 
     var isGridMode: Boolean = false

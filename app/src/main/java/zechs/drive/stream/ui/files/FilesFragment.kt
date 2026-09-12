@@ -158,6 +158,10 @@ class FilesFragment : BaseFragment() {
 
     private fun onSuccess(files: List<FilesDataModel>) {
         Log.d(TAG, "onSuccess(files=${files.size})")
+        val fileCount = files.count { it is FilesDataModel.File }
+        binding.containerItemCount.isVisible = fileCount > 0
+        binding.tvItemCount.text = "$fileCount itens"
+
         if (!viewModel.hasLoaded) {
             doTransition(MaterialFadeThrough())
         }
@@ -186,7 +190,7 @@ class FilesFragment : BaseFragment() {
 
     private fun setupSearchAndLayoutToggle() {
         val prefs = requireContext().getSharedPreferences("FILES_PREFS", android.content.Context.MODE_PRIVATE)
-        isGridMode = prefs.getBoolean("IS_GRID_MODE", false)
+        isGridMode = if (viewModel.isCurrentFolderOneBlacki) true else prefs.getBoolean("IS_GRID_MODE", false)
         updateLayoutMode()
 
         binding.btnToggleGrid.setOnClickListener {
@@ -238,17 +242,20 @@ class FilesFragment : BaseFragment() {
     }
 
     private fun filterFiles(query: String) {
-        if (query.isEmpty()) {
-            filesAdapter.submitList(allFilesList.toMutableList())
+        val listToSubmit = if (query.isEmpty()) {
+            allFilesList.toMutableList()
         } else {
-            val filtered = allFilesList.filter { item ->
+            allFilesList.filter { item ->
                 when (item) {
                     is FilesDataModel.File -> item.driveFile.name.contains(query, ignoreCase = true)
                     else -> true
                 }
-            }
-            filesAdapter.submitList(filtered.toMutableList())
+            }.toMutableList()
         }
+        val count = listToSubmit.count { it is FilesDataModel.File }
+        binding.containerItemCount.isVisible = count > 0
+        binding.tvItemCount.text = "$count itens"
+        filesAdapter.submitList(listToSubmit)
     }
 
     private fun doTransition(transition: Transition) {
@@ -288,8 +295,34 @@ class FilesFragment : BaseFragment() {
             onLongClickListener = { handleFileOnLongPress(it) },
             onStarClickListener = { file, isStarred ->
                 viewModel.starFile(file, isStarred)
+            },
+            onPlayClickListener = { file ->
+                handleFileOnPlayClick(file)
             }
         )
+    }
+
+    private fun handleFileOnPlayClick(file: DriveFile) {
+        if (file.isVideoFile || file.isShortcutVideo) {
+            val targetVideo = if (file.isShortcut && file.shortcutDetails.targetId != null) {
+                file.copy(id = file.shortcutDetails.targetId)
+            } else file
+            launchVideoPlayer(targetVideo)
+        } else if (file.isFolder || file.isShortcutFolder) {
+            val folderId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
+                file.shortcutDetails.targetId
+            } else file.id
+            android.widget.Toast.makeText(context, "Buscando episódio...", android.widget.Toast.LENGTH_SHORT).show()
+            viewModel.getFirstEpisodeInFolder(folderId) { firstEp ->
+                if (firstEp != null) {
+                    launchVideoPlayer(firstEp)
+                } else {
+                    handleFileOnClick(file)
+                }
+            }
+        } else {
+            handleFileOnClick(file)
+        }
     }
 
     private fun handleFileOnLongPress(file: DriveFile) {
