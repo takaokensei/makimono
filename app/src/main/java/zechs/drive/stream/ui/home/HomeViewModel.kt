@@ -16,6 +16,7 @@ import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.data.model.WatchList
 import zechs.drive.stream.data.repository.DriveRepository
 import zechs.drive.stream.data.repository.WatchListRepository
+import zechs.drive.stream.data.remote.AnimePosterResolver
 import zechs.drive.stream.utils.Event
 import zechs.drive.stream.utils.SessionManager
 import zechs.drive.stream.utils.state.Resource
@@ -211,6 +212,146 @@ class HomeViewModel @Inject constructor(
         delay(250L)
         sessionManager.get().resetDataStore()
         _hasLoggedOut.value = true
+    }
+
+    private val _animeLibrary = MutableStateFlow<List<DriveFile>>(emptyList())
+    val animeLibrary = _animeLibrary.asStateFlow()
+
+    private val _filteredAnimes = MutableStateFlow<List<DriveFile>>(emptyList())
+    val filteredAnimes = _filteredAnimes.asStateFlow()
+
+    private val _isLoadingAnime = MutableStateFlow(false)
+    val isLoadingAnime = _isLoadingAnime.asStateFlow()
+
+    fun loadAnimeLibrary() = viewModelScope.launch(Dispatchers.IO) {
+        _isLoadingAnime.value = true
+        getOneBlackiFolder { folderId, _ ->
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    val query = if (folderId != null) {
+                        "'$folderId' in parents and trashed=false"
+                    } else {
+                        "name contains 'oneblacki' and trashed=false"
+                    }
+
+                    val response = driveRepository.get().getFiles(
+                        query = query,
+                        pageToken = null,
+                        pageSize = 100
+                    )
+
+                    if (response is Resource.Success && response.data != null) {
+                        val rawFiles = response.data.files.map { it.toDriveFile() }
+                        val allMeta = folderMetadataRepository.getAllMetadata().associateBy { it.folderId }
+
+                        val mappedFiles = rawFiles.map { file ->
+                            val meta = allMeta[file.id]
+                            if (meta?.posterUrl != null) {
+                                file.copy(posterUrl = meta.posterUrl)
+                            } else file
+                        }
+
+                        _animeLibrary.value = mappedFiles
+                        _filteredAnimes.value = mappedFiles
+                        _isLoadingAnime.value = false
+
+                        // Asynchronously resolve posters for items missing them
+                        val updatedList = mappedFiles.toMutableList()
+                        for (i in updatedList.indices) {
+                            val file = updatedList[i]
+                            if (file.posterUrl.isNullOrBlank() && (file.isFolder || file.isShortcutFolder)) {
+                                val poster = animePosterResolver.resolvePoster(file.name)
+                                if (!poster.isNullOrBlank()) {
+                                    folderMetadataRepository.updatePosterUrl(file.id, file.name, poster)
+                                    updatedList[i] = file.copy(posterUrl = poster)
+                                    _animeLibrary.value = updatedList.toList()
+                                    _filteredAnimes.value = updatedList.toList()
+                                }
+                            }
+                        }
+                    } else {
+                        _isLoadingAnime.value = false
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error loading anime library", e)
+                    _isLoadingAnime.value = false
+                }
+            }
+        }
+    }
+
+    fun filterAnimes(query: String) {
+        val trimmed = query.trim()
+        if (trimmed.isBlank()) {
+            _filteredAnimes.value = _animeLibrary.value
+        } else {
+            _filteredAnimes.value = _animeLibrary.value.filter {
+                it.name.contains(trimmed, ignoreCase = true) ||
+                AnimePosterResolver.cleanAnimeTitle(it.name).contains(trimmed, ignoreCase = true)
+            }
+        }
+    }
+
+    fun filterStarred(starredOnly: Boolean) {
+        if (starredOnly) {
+            _filteredAnimes.value = _animeLibrary.value.filter { it.starred == zechs.drive.stream.data.model.Starred.STARRED }
+        } else {
+            _filteredAnimes.value = _animeLibrary.value
+        }
+    }
+
+    fun getFirstEpisodeInFolder(folderId: String, onResult: (DriveFile?) -> Unit) = viewModelScope.launch(Dispatchers.IO) {
+        try {
+            val response = driveRepository.get().getFiles(
+                query = "'$folderId' in parents and trashed=false",
+                pageToken = null,
+                pageSize = 50
+            )
+            if (response is Resource.Success && response.data != null) {
+                val files = response.data.files.map { it.toDriveFile() }
+                val firstVideo = files.firstOrNull { it.isVideoFile || it.isShortcutVideo }
+                if (firstVideo != null) {
+                    val targetVideo = if (firstVideo.isShortcut && firstVideo.shortcutDetails.targetId != null) {
+                        firstVideo.copy(id = firstVideo.shortcutDetails.targetId)
+                    } else firstVideo
+                    kotlinx.coroutines.withContext(Dispatchers.Main) {
+                        onResult(targetVideo)
+                    }
+                    return@launch
+                }
+
+                // If no video at root, check first subfolder (e.g. Season 1)
+                val firstSubFolder = files.firstOrNull { it.isFolder || it.isShortcutFolder }
+                if (firstSubFolder != null) {
+                    val subFolderId = if (firstSubFolder.isShortcut && firstSubFolder.shortcutDetails.targetId != null) {
+                        firstSubFolder.shortcutDetails.targetId
+                    } else firstSubFolder.id
+                    val subResponse = driveRepository.get().getFiles(
+                        query = "'$subFolderId' in parents and trashed=false",
+                        pageToken = null,
+                        pageSize = 50
+                    )
+                    if (subResponse is Resource.Success && subResponse.data != null) {
+                        val subFiles = subResponse.data.files.map { it.toDriveFile() }
+                        val subVideo = subFiles.firstOrNull { it.isVideoFile || it.isShortcutVideo }
+                        if (subVideo != null) {
+                            val targetVideo = if (subVideo.isShortcut && subVideo.shortcutDetails.targetId != null) {
+                                subVideo.copy(id = subVideo.shortcutDetails.targetId)
+                            } else subVideo
+                            kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                onResult(targetVideo)
+                            }
+                            return@launch
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting first episode", e)
+        }
+        kotlinx.coroutines.withContext(Dispatchers.Main) {
+            onResult(null)
+        }
     }
 
 }
