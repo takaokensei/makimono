@@ -22,10 +22,17 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.Lifecycle
+import android.view.KeyEvent
+import android.view.View
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
+import com.google.android.exoplayer2.ExoPlayer
+import com.google.android.exoplayer2.MediaItem
+import com.google.android.exoplayer2.PlaybackException
+import com.google.android.exoplayer2.Player
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
@@ -51,7 +58,11 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val TAG = "MainActivity"
         const val NOTIFICATION_PERMISSION_CODE = 2000
+        private var hasPlayedVinheta = false
     }
+
+    private var vinhetaPlayer: ExoPlayer? = null
+    private var isVinhetaDismissed = false
 
     @Inject
     lateinit var appUpdateManager: AppUpdateManager
@@ -76,11 +87,16 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
-        splashScreen.setKeepOnScreenCondition { viewModel.isLoading.value }
+        val shouldPlayVinheta = !hasPlayedVinheta && savedInstanceState == null
+        if (shouldPlayVinheta) {
+            splashScreen.setKeepOnScreenCondition { false }
+        } else {
+            splashScreen.setKeepOnScreenCondition { viewModel.isLoading.value }
+        }
         splashScreen.setOnExitAnimationListener { splashScreenView ->
             splashScreenView.view.animate()
                 .alpha(0f)
-                .setDuration(350L)
+                .setDuration(250L)
                 .withEndAction { splashScreenView.remove() }
                 .start()
         }
@@ -115,6 +131,8 @@ class MainActivity : AppCompatActivity() {
         updateObserver()
         updateDownloadObserver()
         redirectOnLogin()
+
+        setupVinheta(savedInstanceState)
     }
 
     private fun themeObserver() {
@@ -400,8 +418,89 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupVinheta(savedInstanceState: Bundle?) {
+        if (savedInstanceState != null || hasPlayedVinheta) {
+            binding.vinhetaContainer.visibility = View.GONE
+            return
+        }
+        hasPlayedVinheta = true
+
+        binding.vinhetaContainer.visibility = View.VISIBLE
+        binding.vinhetaContainer.alpha = 1f
+        isVinhetaDismissed = false
+
+        try {
+            val vinhetaUri = Uri.parse("android.resource://$packageName/${R.raw.vinheta}")
+            val player = ExoPlayer.Builder(this).build().apply {
+                setMediaItem(MediaItem.fromUri(vinhetaUri))
+                addListener(object : Player.Listener {
+                    override fun onPlaybackStateChanged(playbackState: Int) {
+                        if (playbackState == Player.STATE_ENDED) {
+                            dismissVinheta()
+                        }
+                    }
+
+                    override fun onPlayerError(error: PlaybackException) {
+                        Log.e(TAG, "Vinheta playback error: ${error.message}", error)
+                        dismissVinheta()
+                    }
+                })
+                prepare()
+                play()
+            }
+            vinhetaPlayer = player
+            binding.pvVinheta.player = player
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize vinheta player", e)
+            dismissVinheta()
+        }
+
+        binding.vinhetaContainer.setOnClickListener {
+            dismissVinheta()
+        }
+    }
+
+    private fun dismissVinheta() {
+        if (isVinhetaDismissed) return
+        isVinhetaDismissed = true
+
+        try {
+            vinhetaPlayer?.pause()
+        } catch (_: Exception) {}
+
+        binding.vinhetaContainer.animate()
+            .alpha(0f)
+            .setDuration(280L)
+            .withEndAction {
+                binding.vinhetaContainer.visibility = View.GONE
+                binding.pvVinheta.player = null
+                vinhetaPlayer?.release()
+                vinhetaPlayer = null
+            }
+            .start()
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (binding.vinhetaContainer.isVisible) {
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                dismissVinheta()
+            }
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (binding.vinhetaContainer.isVisible) {
+            dismissVinheta()
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
+        vinhetaPlayer?.release()
+        vinhetaPlayer = null
         updateDialog?.dismiss()
         progressDialog?.dismiss()
     }
