@@ -167,7 +167,6 @@ class MainViewModel @Inject constructor(
 
         result.onSuccess { apkFile ->
             _updateDownloadState.value = UpdateDownloadState.ReadyToInstall(apkFile)
-            appUpdateManager.installApk(apkFile)
         }.onFailure { error ->
             _updateDownloadState.value = UpdateDownloadState.Failed(error.localizedMessage ?: "Falha ao baixar APK")
         }

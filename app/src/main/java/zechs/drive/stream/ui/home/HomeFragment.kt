@@ -42,6 +42,20 @@ class HomeFragment : BaseFragment() {
 
     private var isGridMode = true
     private var currentTab = "Animes"
+    private var isSidebarExpanded = false
+    private var lastFocusedAnimeView: View? = null
+
+    private val voiceSearchLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val spokenText = result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+            if (!spokenText.isNullOrBlank()) {
+                binding.etSearchAnime.setText(spokenText)
+                binding.etSearchAnime.setSelection(spokenText.length)
+            }
+        }
+    }
 
     private val animeAdapter by lazy {
         FilesAdapter(
@@ -84,9 +98,11 @@ class HomeFragment : BaseFragment() {
 
         setupAnimeGrid()
         setupHeaderSearch()
+        setupVoiceSearch()
         setupViewToggle()
         setupSidebarNavigation()
         setupBrandLogo()
+        setupBackPressedHandling()
 
         binding.rvContinueWatchingShelf.adapter = continueWatchingAdapter
 
@@ -122,6 +138,47 @@ class HomeFragment : BaseFragment() {
         binding.btnClearSearch.setOnClickListener {
             binding.etSearchAnime.setText("")
         }
+
+        binding.etSearchAnime.setOnKeyListener { _, keyCode, event ->
+            if (event.action == android.view.KeyEvent.ACTION_DOWN && keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+                if (binding.etSearchAnime.selectionStart == 0 && binding.sidebarDimOverlay != null) {
+                    expandSidebar()
+                    true
+                } else false
+            } else false
+        }
+    }
+
+    private fun setupVoiceSearch() {
+        binding.btnVoiceSearch.setOnClickListener {
+            launchVoiceSearch()
+        }
+
+        binding.btnVoiceSearch.setOnFocusChangeListener { v, hasFocus ->
+            v.animate().scaleX(if (hasFocus) 1.15f else 1.0f).scaleY(if (hasFocus) 1.15f else 1.0f).setDuration(120L).start()
+            binding.btnVoiceSearch.imageTintList = android.content.res.ColorStateList.valueOf(
+                if (hasFocus) android.graphics.Color.parseColor("#38BDF8") else android.graphics.Color.parseColor("#94A3B8")
+            )
+        }
+    }
+
+    private fun launchVoiceSearch() {
+        try {
+            val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(
+                    android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                    android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+                )
+                putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Fale o nome do anime...")
+            }
+            voiceSearchLauncher.launch(intent)
+        } catch (e: android.content.ActivityNotFoundException) {
+            android.widget.Toast.makeText(
+                context,
+                "Pesquisa por voz não suportada neste dispositivo",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 
     private fun setupViewToggle() {
@@ -155,6 +212,23 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun setupSidebarNavigation() {
+        val hasOverlay = binding.sidebarDimOverlay != null
+
+        if (hasOverlay) {
+            // Retract sidebar off-screen by default
+            binding.navRail.post {
+                val railWidth = binding.navRail.width.toFloat().coerceAtLeast(240f.dpToPx())
+                binding.navRail.translationX = -railWidth
+            }
+            binding.sidebarDimOverlay?.apply {
+                visibility = View.GONE
+                alpha = 0f
+                setOnClickListener {
+                    collapseSidebar()
+                }
+            }
+        }
+
         binding.apply {
             btnNavAnimes.setOnClickListener {
                 selectTab("Animes")
@@ -163,12 +237,14 @@ class HomeFragment : BaseFragment() {
                     viewModel.loadAnimeLibrary(forceRefresh = true)
                 }
                 contentScrollView.scrollTo(0, 0)
+                if (hasOverlay) collapseSidebar()
             }
 
             btnNavFavoritos.setOnClickListener {
                 selectTab("Favoritos")
                 viewModel.filterStarred(true)
                 contentScrollView.scrollTo(0, 0)
+                if (hasOverlay) collapseSidebar()
             }
 
             btnNavPastas.setOnClickListener {
@@ -184,20 +260,23 @@ class HomeFragment : BaseFragment() {
                 selectTab("Início")
                 viewModel.filterStarred(false)
                 contentScrollView.scrollTo(0, 0)
+                if (hasOverlay) collapseSidebar()
             }
 
             btnNavConfig.setOnClickListener {
                 findNavController().navigateSafe(R.id.action_homeFragment_to_settingsFragment)
             }
 
-            // TV Focus setup
-            listOfNotNull(
+            // TV Focus setup & D-pad Right navigation back to content
+            val navItems = listOfNotNull(
                 btnNavInicio,
                 btnNavAnimes,
                 btnNavPastas,
                 btnNavFavoritos,
                 btnNavConfig
-            ).forEach { item ->
+            )
+
+            navItems.forEach { item ->
                 item.setOnFocusChangeListener { v, hasFocus ->
                     if (hasFocus) {
                         v.animate().scaleX(1.04f).scaleY(1.04f).translationZ(6f).setDuration(120L).start()
@@ -205,9 +284,124 @@ class HomeFragment : BaseFragment() {
                         v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(120L).start()
                     }
                 }
+
+                if (hasOverlay) {
+                    item.setOnKeyListener { _, keyCode, event ->
+                        if (event.action == android.view.KeyEvent.ACTION_DOWN && keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) {
+                            collapseSidebar()
+                            lastFocusedAnimeView?.requestFocus() ?: binding.rvAnimeLibrary.requestFocus()
+                            true
+                        } else false
+                    }
+                }
             }
         }
+
+        // Setup D-pad Left on anime adapter to expand sidebar when on leftmost column
+        animeAdapter.onFocusItemListener = { v ->
+            lastFocusedAnimeView = v
+        }
+
+        animeAdapter.onDpadLeftListener = { itemView ->
+            if (hasOverlay) {
+                val pos = binding.rvAnimeLibrary.getChildAdapterPosition(itemView)
+                val spanCount = (binding.rvAnimeLibrary.layoutManager as? GridLayoutManager)?.spanCount ?: 1
+                if (pos != androidx.recyclerview.widget.RecyclerView.NO_POSITION && pos % spanCount == 0) {
+                    expandSidebar()
+                    true
+                } else false
+            } else false
+        }
+
+        continueWatchingAdapter.onFocusItemListener = { v ->
+            lastFocusedAnimeView = v
+        }
+
+        continueWatchingAdapter.onDpadLeftListener = {
+            if (hasOverlay) {
+                expandSidebar()
+                true
+            } else false
+        }
     }
+
+    private fun expandSidebar() {
+        if (isSidebarExpanded || binding.sidebarDimOverlay == null) return
+        isSidebarExpanded = true
+
+        binding.sidebarDimOverlay?.apply {
+            visibility = View.VISIBLE
+            alpha = 0f
+            animate()
+                .alpha(1f)
+                .setDuration(220L)
+                .setInterpolator(android.view.animation.DecelerateInterpolator())
+                .start()
+        }
+
+        binding.navRail.apply {
+            bringToFront()
+            animate()
+                .translationX(0f)
+                .setDuration(240L)
+                .setInterpolator(android.view.animation.DecelerateInterpolator())
+                .withEndAction {
+                    val targetBtn = when (currentTab) {
+                        "Início" -> binding.btnNavInicio
+                        "Pastas" -> binding.btnNavPastas
+                        "Favoritos" -> binding.btnNavFavoritos
+                        else -> binding.btnNavAnimes
+                    }
+                    targetBtn.requestFocus()
+                }
+                .start()
+        }
+    }
+
+    private fun collapseSidebar() {
+        if (!isSidebarExpanded || binding.sidebarDimOverlay == null) return
+        isSidebarExpanded = false
+
+        binding.sidebarDimOverlay?.apply {
+            animate()
+                .alpha(0f)
+                .setDuration(200L)
+                .setInterpolator(android.view.animation.AccelerateInterpolator())
+                .withEndAction { visibility = View.GONE }
+                .start()
+        }
+
+        val railWidth = binding.navRail.width.toFloat().coerceAtLeast(240f.dpToPx())
+        binding.navRail.animate()
+            .translationX(-railWidth)
+            .setDuration(220L)
+            .setInterpolator(android.view.animation.AccelerateInterpolator())
+            .start()
+    }
+
+    private fun toggleSidebar() {
+        if (isSidebarExpanded) collapseSidebar() else expandSidebar()
+    }
+
+    private fun setupBackPressedHandling() {
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            object : androidx.activity.OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    if (isSidebarExpanded) {
+                        collapseSidebar()
+                        lastFocusedAnimeView?.requestFocus() ?: binding.rvAnimeLibrary.requestFocus()
+                    } else {
+                        isEnabled = false
+                        requireActivity().onBackPressedDispatcher.onBackPressed()
+                    }
+                }
+            }
+        )
+    }
+
+    private fun Float.dpToPx(): Float =
+        this * resources.displayMetrics.density
 
     private fun selectTab(tab: String) {
         currentTab = tab
@@ -244,6 +438,19 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun setupBrandLogo() {
+        binding.btnBrandLogo.setOnClickListener {
+            if (binding.sidebarDimOverlay != null) {
+                toggleSidebar()
+            }
+        }
+        binding.btnBrandLogo.setOnKeyListener { _, keyCode, event ->
+            if (event.action == android.view.KeyEvent.ACTION_DOWN && keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+                if (binding.sidebarDimOverlay != null) {
+                    expandSidebar()
+                    true
+                } else false
+            } else false
+        }
         binding.btnBrandLogo.setOnLongClickListener {
             MaterialAlertDialogBuilder(requireContext())
                 .setTitle(getString(R.string.log_out_dialog_title))

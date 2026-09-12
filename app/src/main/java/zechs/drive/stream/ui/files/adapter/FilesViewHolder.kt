@@ -1,6 +1,7 @@
 package zechs.drive.stream.ui.files.adapter
 
 import android.graphics.Color
+import android.view.KeyEvent
 import android.view.View
 import androidx.core.view.isGone
 import androidx.core.view.isInvisible
@@ -141,10 +142,20 @@ sealed class FilesViewHolder(
 
                 root.setOnFocusChangeListener { v, hasFocus ->
                     if (hasFocus) {
+                        filesAdapter.onFocusItemListener?.invoke(v)
                         v.animate().scaleX(1.02f).scaleY(1.02f).translationZ(6f).setDuration(120L).start()
                     } else {
                         v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(120L).start()
                     }
+                }
+
+                root.setOnKeyListener { v, keyCode, event ->
+                    if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                        if (filesAdapter.onDpadLeftListener?.invoke(v) == true) {
+                            return@setOnKeyListener true
+                        }
+                    }
+                    false
                 }
 
                 setStarred(item, item.starred)
@@ -329,10 +340,20 @@ sealed class FilesViewHolder(
 
                 root.setOnFocusChangeListener { v, hasFocus ->
                     if (hasFocus) {
+                        filesAdapter.onFocusItemListener?.invoke(v)
                         v.animate().scaleX(1.05f).scaleY(1.05f).translationZ(12f).setDuration(140L).start()
                     } else {
                         v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(140L).start()
                     }
+                }
+
+                root.setOnKeyListener { v, keyCode, event ->
+                    if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                        if (filesAdapter.onDpadLeftListener?.invoke(v) == true) {
+                            return@setOnKeyListener true
+                        }
+                    }
+                    false
                 }
 
                 setStarred(item, item.starred)

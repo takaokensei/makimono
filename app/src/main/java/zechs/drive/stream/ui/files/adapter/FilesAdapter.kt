@@ -24,6 +24,9 @@ class FilesAdapter(
             }
         }
 
+    var onDpadLeftListener: ((android.view.View) -> Boolean)? = null
+    var onFocusItemListener: ((android.view.View) -> Unit)? = null
+
     override fun onCreateViewHolder(
         parent: ViewGroup, viewType: Int
     ): FilesViewHolder {

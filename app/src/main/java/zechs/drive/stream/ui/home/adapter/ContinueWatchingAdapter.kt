@@ -23,6 +23,9 @@ class ContinueWatchingAdapter(
     private val onClick: (WatchList) -> Unit
 ) : ListAdapter<WatchList, ContinueWatchingAdapter.ViewHolder>(DiffCallback()) {
 
+    var onDpadLeftListener: ((android.view.View) -> Boolean)? = null
+    var onFocusItemListener: ((android.view.View) -> Unit)? = null
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemContinueWatchingShelfBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -31,14 +34,14 @@ class ContinueWatchingAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(getItem(position), onClick)
+        holder.bind(getItem(position), onClick, this)
     }
 
     class ViewHolder(
         private val binding: ItemContinueWatchingShelfBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
-        fun bind(watchItem: WatchList, onClick: (WatchList) -> Unit) {
+        fun bind(watchItem: WatchList, onClick: (WatchList) -> Unit, adapter: ContinueWatchingAdapter) {
             val progressPct = watchItem.watchProgress()
             val currSec = (watchItem.watchedDuration / 1000).toInt()
             val totalSec = (watchItem.totalDuration / 1000).toInt()
@@ -60,10 +63,20 @@ class ContinueWatchingAdapter(
 
             binding.cardShelfItem.setOnFocusChangeListener { v, hasFocus ->
                 if (hasFocus) {
+                    adapter.onFocusItemListener?.invoke(v)
                     v.animate().scaleX(1.05f).scaleY(1.05f).translationZ(12f).setDuration(150L).start()
                 } else {
                     v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(150L).start()
                 }
+            }
+
+            binding.cardShelfItem.setOnKeyListener { v, keyCode, event ->
+                if (event.action == android.view.KeyEvent.ACTION_DOWN && keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+                    if (bindingAdapterPosition == 0 && adapter.onDpadLeftListener?.invoke(v) == true) {
+                        return@setOnKeyListener true
+                    }
+                }
+                false
             }
         }
     }

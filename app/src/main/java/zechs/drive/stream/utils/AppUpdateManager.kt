@@ -1,8 +1,11 @@
-﻿package zechs.drive.stream.utils
+package zechs.drive.stream.utils
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -101,12 +104,32 @@ class AppUpdateManager @Inject constructor(
     /**
      * Triggers the Android package installer to install the downloaded APK.
      * Uses FileProvider to expose content:// URI with read permission.
+     * If permission to install unknown apps is missing on Android 8+, redirects to Settings.
      */
-    fun installApk(apkFile: File): Boolean {
+    fun installApk(apkFile: File, activity: Activity? = null): Boolean {
         return try {
             if (!apkFile.exists() || apkFile.length() == 0L) {
                 Log.e(TAG, "APK file does not exist or is empty: ${apkFile.absolutePath}")
                 return false
+            }
+
+            // On Android 8.0+ (Oreo), verify if app can request package installs
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (!context.packageManager.canRequestPackageInstalls()) {
+                    Log.w(TAG, "Permission to install unknown apps not granted, redirecting to Settings")
+                    val settingsIntent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                        if (activity == null) {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                    }
+                    if (activity != null) {
+                        activity.startActivity(settingsIntent)
+                    } else {
+                        context.startActivity(settingsIntent)
+                    }
+                    return false
+                }
             }
 
             val authority = "${context.packageName}.provider"
@@ -116,10 +139,17 @@ class AppUpdateManager @Inject constructor(
             val installIntent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(apkUri, "application/vnd.android.package-archive")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                if (activity == null) {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
             }
 
-            context.startActivity(installIntent)
+            if (activity != null) {
+                activity.startActivity(installIntent)
+            } else {
+                context.startActivity(installIntent)
+            }
             true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to launch package installer for ${apkFile.name}", e)

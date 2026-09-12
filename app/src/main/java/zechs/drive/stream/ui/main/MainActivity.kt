@@ -35,6 +35,7 @@ import zechs.drive.stream.data.model.LatestRelease
 import zechs.drive.stream.databinding.ActivityMainBinding
 import zechs.drive.stream.databinding.DialogUpdateProgressBinding
 import zechs.drive.stream.utils.AppTheme
+import zechs.drive.stream.utils.AppUpdateManager
 import zechs.drive.stream.utils.ext.navigateSafe
 import zechs.drive.stream.utils.state.Resource
 import zechs.drive.stream.utils.util.Converter
@@ -42,6 +43,7 @@ import zechs.drive.stream.utils.util.NotificationKeys.Companion.UPDATE_CHANNEL_C
 import zechs.drive.stream.utils.util.NotificationKeys.Companion.UPDATE_CHANNEL_ID
 import zechs.drive.stream.utils.util.NotificationKeys.Companion.UPDATE_CHANNEL_NAME
 import java.util.*
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -50,6 +52,9 @@ class MainActivity : AppCompatActivity() {
         const val TAG = "MainActivity"
         const val NOTIFICATION_PERMISSION_CODE = 2000
     }
+
+    @Inject
+    lateinit var appUpdateManager: AppUpdateManager
 
     private val viewModel by viewModels<MainViewModel>()
     private lateinit var binding: ActivityMainBinding
@@ -354,11 +359,6 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
                         is MainViewModel.UpdateDownloadState.ReadyToInstall -> {
-                            android.widget.Toast.makeText(
-                                this@MainActivity,
-                                "Instalando nova versão Makimono ${viewModel.latest.value?.data?.tagName ?: ""}...",
-                                android.widget.Toast.LENGTH_LONG
-                            ).show()
                             progressBinding?.apply {
                                 tvUpdateTitle.text = "Download Concluído!"
                                 tvUpdateSubtitle.text = "Iniciando instalador do sistema..."
@@ -366,10 +366,20 @@ class MainActivity : AppCompatActivity() {
                                 progressBarUpdate.progress = 100
                                 tvProgressPercent.text = "100%"
                             }
+
+                            val success = appUpdateManager.installApk(state.apkFile, this@MainActivity)
+                            if (!success && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !packageManager.canRequestPackageInstalls()) {
+                                android.widget.Toast.makeText(
+                                    this@MainActivity,
+                                    "Permita a instalação de fontes desconhecidas para atualizar",
+                                    android.widget.Toast.LENGTH_LONG
+                                ).show()
+                            }
+
                             binding.root.postDelayed({
                                 dismissProgressDialog()
                                 viewModel.resetUpdateState()
-                            }, 2500L)
+                            }, 1500L)
                         }
                         is MainViewModel.UpdateDownloadState.Failed -> {
                             dismissProgressDialog()
