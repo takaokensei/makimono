@@ -151,7 +151,7 @@
             android:layout_marginStart="10dp"
             android:fontFamily="@font/inter"
             android:text="Abertura pulada (AniSkip)"
-            android:textColor="#22D3EE"
+            android:textColor="?attr/colorAccentPrimary"
             android:textSize="13sp"
             android:textStyle="bold" />
 
@@ -609,15 +609,15 @@
                 android:textSize="13sp"
                 tools:text="06:24" />
 
-            <!-- ExoPlayer TimeBar: 6dp sleek bar with cyan played/scrubber -->
+            <!-- ExoPlayer TimeBar: sleek bar with theme accent played/scrubber -->
             <com.google.android.exoplayer2.ui.DefaultTimeBar
                 android:id="@id/exo_progress"
                 android:layout_width="0dp"
                 android:layout_height="24dp"
                 android:layout_weight="1"
                 app:bar_height="6dp"
-                app:played_color="#22D3EE"
-                app:scrubber_color="#22D3EE"
+                app:played_color="?attr/colorAccentPrimary"
+                app:scrubber_color="?attr/colorAccentPrimary"
                 app:scrubber_dragged_size="16dp"
                 app:scrubber_enabled_size="14dp"
                 app:unplayed_color="#33FFFFFF" />
@@ -628,8 +628,8 @@
                 android:layout_width="0dp"
                 android:layout_height="24dp"
                 android:layout_weight="1"
-                android:progressTint="#22D3EE"
-                android:thumbTint="#22D3EE"
+                android:progressTint="?attr/colorAccentPrimary"
+                android:thumbTint="?attr/colorAccentPrimary"
                 android:visibility="gone" />
 
             <!-- Total Duration -->

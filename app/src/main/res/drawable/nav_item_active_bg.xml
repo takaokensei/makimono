@@ -1,23 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Blue gradient background -->
+    <!-- Active background using theme glass -->
     <item>
         <shape android:shape="rectangle">
             <corners android:radius="8dp" />
-            <gradient
-                android:angle="0"
-                android:startColor="#991D4ED8"
-                android:centerColor="#402563EB"
-                android:endColor="#00000000"
-                android:type="linear" />
+            <solid android:color="?attr/colorBgGlass" />
         </shape>
     </item>
-    <!-- Left cyan accent bar -->
+    <!-- Left accent bar using theme primary accent -->
     <item
         android:width="3dp"
         android:gravity="start">
         <shape android:shape="rectangle">
-            <solid android:color="#7DD3FC" />
+            <solid android:color="?attr/colorAccentPrimary" />
             <corners
                 android:topLeftRadius="8dp"
                 android:bottomLeftRadius="8dp" />

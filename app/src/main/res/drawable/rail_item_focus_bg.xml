@@ -1,23 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    Kodi Estuary's left-rail selection is a solid rectangular "pill" in the
-    accent color, not the glass/outline treatment used by the destination
-    grid cards (glass_card_bg.xml). Kept as its own drawable rather than a
-    variant of glass_card_bg so the two visual languages (grid vs rail) don't
-    fight each other if one is restyled later.
--->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="#253858" />
-            <stroke android:width="2dp" android:color="#38BDF8" />
+            <solid android:color="?attr/colorBgSurface" />
+            <stroke android:width="2dp" android:color="?attr/colorAccentPrimary" />
             <corners android:radius="10dp" />
         </shape>
     </item>
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
-            <solid android:color="#1E293B" />
-            <stroke android:width="2dp" android:color="#38BDF8" />
+            <solid android:color="?attr/colorBgGlass" />
+            <stroke android:width="2dp" android:color="?attr/colorAccentPrimary" />
             <corners android:radius="10dp" />
         </shape>
     </item>

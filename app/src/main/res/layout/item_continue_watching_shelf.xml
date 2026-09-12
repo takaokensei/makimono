@@ -15,10 +15,10 @@
     android:layout_marginEnd="14dp"
     android:clickable="true"
     android:focusable="true"
-    app:cardBackgroundColor="#1A1A1A"
+    app:cardBackgroundColor="?attr/colorBgSurface"
     app:cardCornerRadius="10dp"
     app:cardElevation="0dp"
-    app:strokeColor="#2A2A2A"
+    app:strokeColor="?attr/colorBorderGlass"
     app:strokeWidth="1dp">
 
     <FrameLayout
@@ -95,7 +95,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/inter"
-                    android:textColor="#22D3EE"
+                    android:textColor="?attr/colorAccentPrimary"
                     android:textSize="10sp"
                     android:textStyle="bold"
                     tools:text="9 min restantes" />
@@ -104,7 +104,7 @@
 
         </LinearLayout>
 
-        <!-- Cyan progress bar pinned to bottom edge of card -->
+        <!-- Accent progress bar pinned to bottom edge of card -->
         <ProgressBar
             android:id="@+id/pbShelfItemProgress"
             style="?android:attr/progressBarStyleHorizontal"
@@ -113,7 +113,7 @@
             android:layout_gravity="bottom"
             android:max="100"
             android:progress="60"
-            android:progressTint="#22D3EE"
+            android:progressTint="?attr/colorAccentPrimary"
             android:progressBackgroundTint="#33FFFFFF"
             tools:progress="40" />
 

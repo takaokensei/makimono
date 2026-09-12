@@ -54,6 +54,10 @@ import zechs.drive.stream.ui.player.PlayerViewModel
 import zechs.drive.stream.ui.player.MalRatingDialog
 import zechs.drive.stream.ui.player.PlayerGestureHelper
 import zechs.drive.stream.ui.player.PlayerGestureCallback
+import zechs.drive.stream.ui.player.PlayerGlassMenuDialog
+import zechs.drive.stream.ui.player.GlassMenuItem
+import zechs.drive.stream.utils.OnlineSubtitleManager
+import zechs.drive.stream.utils.OnlineSubtitle
 import zechs.drive.stream.utils.MalSessionManager
 import zechs.drive.stream.utils.EpisodeParser
 import zechs.drive.stream.utils.MatroskaChapterParser
@@ -114,6 +118,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
 
     @Inject
     lateinit var aniSkipRepository: dagger.Lazy<AniSkipRepository>
+
+    @Inject
+    lateinit var onlineSubtitleManager: dagger.Lazy<OnlineSubtitleManager>
 
     // States
     private var activityIsForeground = true
@@ -486,13 +493,30 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         super.onBackPressed()
     }
 
+    private var isHidingControls = false
+
     private fun showControlsWithFocus() {
+        if (controller.root.isVisible) return
         val root = controller.root
-        TransitionManager.beginDelayedTransition(root, Fade().apply { duration = 200L })
-        root.isVisible = true
         val density = resources.displayMetrics.density
+        val animDuration = 220L
+
+        controller.titleBlock.translationY = -25f * density
+        controller.titleBlock.alpha = 0f
+        controller.controlsScrollView.translationY = 40f * density
+        controller.controlsScrollView.alpha = 0f
+        controller.mainControls.alpha = 0f
+        controller.topScrim.alpha = 0f
+
+        root.isVisible = true
+
+        controller.titleBlock.animate().translationY(0f).alpha(1f).setDuration(animDuration).start()
+        controller.controlsScrollView.animate().translationY(0f).alpha(1f).setDuration(animDuration).start()
+        controller.mainControls.animate().alpha(1f).setDuration(animDuration).start()
+        controller.topScrim.animate().alpha(1f).setDuration(animDuration).start()
+
         if (binding.nextEpisodeCard.root.isVisible) {
-            binding.nextEpisodeCard.root.animate().translationY(-84f * density).setDuration(220L).start()
+            binding.nextEpisodeCard.root.animate().translationY(-84f * density).setDuration(animDuration).start()
         }
         updateSubtitlePosition(true)
         handleLockingControls()
@@ -504,11 +528,29 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     }
 
     private fun hideControls() {
-        val root = controller.root
-        TransitionManager.beginDelayedTransition(root, Fade().apply { duration = 200L })
-        root.isVisible = false
+        if (!controller.root.isVisible || isHidingControls) return
+        isHidingControls = true
+        val density = resources.displayMetrics.density
+        val animDuration = 220L
+
+        controller.titleBlock.animate().translationY(-30f * density).alpha(0f).setDuration(animDuration).start()
+        controller.controlsScrollView.animate().translationY(50f * density).alpha(0f).setDuration(animDuration).start()
+        controller.mainControls.animate().alpha(0f).setDuration(animDuration).start()
+        controller.skipIntroRow.animate().alpha(0f).setDuration(animDuration).start()
+        controller.topScrim.animate().alpha(0f).setDuration(animDuration).withEndAction {
+            isHidingControls = false
+            controller.root.isVisible = false
+            controller.titleBlock.translationY = 0f
+            controller.titleBlock.alpha = 1f
+            controller.controlsScrollView.translationY = 0f
+            controller.controlsScrollView.alpha = 1f
+            controller.mainControls.alpha = 1f
+            controller.skipIntroRow.alpha = 1f
+            controller.topScrim.alpha = 1f
+        }.start()
+
         if (binding.nextEpisodeCard.root.isVisible) {
-            binding.nextEpisodeCard.root.animate().translationY(0f).setDuration(220L).start()
+            binding.nextEpisodeCard.root.animate().translationY(0f).setDuration(animDuration).start()
         }
         updateSubtitlePosition(false)
         val currentPos = (player.timePos ?: 0).toDouble()
@@ -516,8 +558,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     }
 
     private fun updateSubtitlePosition(controlsVisible: Boolean) {
-        val subPos = if (controlsVisible) 78 else 93
-        MPVLib.setPropertyInt("sub-pos", subPos)
+        // Keeping sub-pos stable at 88 prevents MPV subtitle re-rendering artifacts / horizontal clipping on toggle
+        MPVLib.setPropertyInt("sub-pos", 88)
     }
 
     private fun mergeAniSkipChapters(aniSkipChapters: List<MatroskaChapterParser.ParsedChapter>) {
@@ -1020,7 +1062,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         data class SubChoice(
             val mpvTrackId: Int?,
             val folderSub: SubtitleItem?,
+            val onlineSub: OnlineSubtitle? = null,
             val label: String,
+            val subtitle: String? = null,
             val isSelected: Boolean
         )
 
@@ -1028,11 +1072,11 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
 
         // 1. Off option (mpvId == -1)
         val isOff = selectedMpvId == -1 || tracks.none { it.mpvId == selectedMpvId }
-        choices.add(SubChoice(-1, null, getString(R.string.track_off), isOff))
+        choices.add(SubChoice(-1, null, null, getString(R.string.track_off), null, isOff))
 
         // 2. Embedded video subtitle tracks
         tracks.filter { it.mpvId > 0 }.forEach { t ->
-            choices.add(SubChoice(t.mpvId, null, t.name, t.mpvId == selectedMpvId))
+            choices.add(SubChoice(t.mpvId, null, null, t.name, "Embutida", t.mpvId == selectedMpvId))
         }
 
         // 3. ALL Google Drive folder subtitles: ALWAYS list them!
@@ -1047,46 +1091,103 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                 val prefix = if (isMatching) "★ [Drive] " else "📁 [Drive] "
                 val tag = if (isMatching) " (Episódio atual)" else " (Outro episódio)"
                 val label = "$prefix${sub.name}$tag"
-                choices.add(SubChoice(null, sub, label, false))
+                choices.add(SubChoice(null, sub, null, label, "Google Drive", false))
             }
         }
 
-        val displayItems = choices.map { it.label }.toTypedArray()
-        val selectedIndex = choices.indexOfFirst { it.isSelected }.coerceAtLeast(0)
+        fun buildMenuItems(sourceChoices: List<SubChoice>): List<GlassMenuItem> {
+            return sourceChoices.mapIndexed { idx, c ->
+                GlassMenuItem(
+                    id = "sub_$idx",
+                    title = c.label,
+                    subtitle = c.subtitle,
+                    isSelected = c.isSelected,
+                    tag = c
+                )
+            }
+        }
 
-        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog).apply {
-            setTitle(getString(R.string.select_subtitle))
-            setSingleChoiceItems(
-                displayItems,
-                selectedIndex
-            ) { dialog, item ->
-                dialog.dismiss()
-                val choice = choices[item]
-                if (choice.mpvTrackId != null) {
-                    player.sid = choice.mpvTrackId
-                    trackSwitchNotification { TrackData(choice.mpvTrackId, "sub") }
-                } else if (choice.folderSub != null) {
-                    val sub = choice.folderSub
-                    configSnackbar("Carregando legenda: ${sub.name}...")
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        val cached = viewModel.downloadSubtitle(sub, cacheDir)
-                        if (cached != null && cached.exists()) {
-                            withContext(Dispatchers.Main) {
-                                val trackTitle = "★ [Drive] ${sub.languageLabel}"
-                                Log.d(TAG, "Manual add external subtitle to MPV: ${cached.absolutePath}")
-                                MPVLib.command(arrayOf("sub-add", cached.absolutePath, "select", trackTitle, sub.languageCode))
-                                player.loadTracks()
-                                configSnackbar("Legenda ativada: ${sub.languageLabel}")
-                            }
-                        } else {
-                            withContext(Dispatchers.Main) {
-                                configSnackbar("Erro ao baixar legenda do Drive")
-                            }
+        val menuItems = buildMenuItems(choices).toMutableList()
+
+        lateinit var glassDialog: PlayerGlassMenuDialog
+        glassDialog = PlayerGlassMenuDialog(
+            context = this,
+            title = getString(R.string.select_subtitle),
+            items = menuItems
+        ) { selected ->
+            val choice = selected.tag as? SubChoice ?: return@PlayerGlassMenuDialog
+            if (choice.mpvTrackId != null) {
+                player.sid = choice.mpvTrackId
+                trackSwitchNotification { TrackData(choice.mpvTrackId, "sub") }
+            } else if (choice.folderSub != null) {
+                val sub = choice.folderSub
+                configSnackbar("Carregando legenda: ${sub.name}...")
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val cached = viewModel.downloadSubtitle(sub, cacheDir)
+                    if (cached != null && cached.exists()) {
+                        withContext(Dispatchers.Main) {
+                            val trackTitle = "★ [Drive] ${sub.languageLabel}"
+                            Log.d(TAG, "Manual add external subtitle to MPV: ${cached.absolutePath}")
+                            MPVLib.command(arrayOf("sub-add", cached.absolutePath, "select", trackTitle, sub.languageCode))
+                            player.loadTracks()
+                            configSnackbar("Legenda ativada: ${sub.languageLabel}")
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            configSnackbar("Erro ao baixar legenda do Drive")
+                        }
+                    }
+                }
+            } else if (choice.onlineSub != null) {
+                val os = choice.onlineSub
+                configSnackbar("Baixando legenda online: ${os.langName}...")
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val result = onlineSubtitleManager.get().downloadSubtitle(os, cacheDir, videoTitle)
+                    withContext(Dispatchers.Main) {
+                        result.onSuccess { cachedFile ->
+                            val trackTitle = "🌐 [Online] ${os.langName}"
+                            MPVLib.command(arrayOf("sub-add", cachedFile.absolutePath, "select", trackTitle, os.lang))
+                            player.loadTracks()
+                            configSnackbar("Legenda online ativada: ${os.langName}")
+                        }.onFailure { err ->
+                            configSnackbar("Erro ao baixar legenda online: ${err.message}")
                         }
                     }
                 }
             }
-        }.show()
+        }
+
+        glassDialog.setActionButton("🔍 Buscar Legendas Online (PT-BR)") { d ->
+            d.showLoading(true)
+            lifecycleScope.launch(Dispatchers.IO) {
+                val onlineResults = try {
+                    onlineSubtitleManager.get().searchSubtitles(videoTitle)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error searching online subtitles", e)
+                    emptyList()
+                }
+
+                withContext(Dispatchers.Main) {
+                    d.showLoading(false)
+                    if (onlineResults.isEmpty()) {
+                        configSnackbar("Nenhuma legenda online encontrada")
+                        return@withContext
+                    }
+
+                    val updatedChoices = choices.toMutableList()
+                    onlineResults.forEach { os ->
+                        val flag = if (os.isPortuguese) "🇧🇷 " else "🌐 "
+                        val name = "$flag${os.langName}"
+                        val subText = "Online • ${os.source}"
+                        updatedChoices.add(SubChoice(null, null, os, name, subText, false))
+                    }
+                    d.updateItems(buildMenuItems(updatedChoices))
+                    configSnackbar("${onlineResults.size} legendas encontradas online!", 1500)
+                }
+            }
+        }
+
+        glassDialog.show()
     }
 
     private fun pickChapter() {
@@ -1101,41 +1202,53 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             return
         }
 
-        val chapterArray = chapters.map {
-            val timeCode = Utils.prettyTime(it.time.roundToInt())
-            val title = if (!it.title.isNullOrEmpty()) it.title else "Capítulo ${it.index + 1}"
-            "$title ($timeCode)"
-        }.toTypedArray()
-
         val selectedIndex = (MPVLib.getPropertyInt("chapter") ?: 0).coerceIn(0, chapters.size - 1)
 
-        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog)
-            .setTitle(getString(R.string.chapters))
-            .setSingleChoiceItems(chapterArray, selectedIndex) { dialog, item ->
-                MPVLib.setPropertyInt("chapter", chapters[item].index)
-                dialog.dismiss()
-                val chTitle = chapters[item].title?.takeIf { it.isNotBlank() } ?: (chapters[item].index + 1).toString()
-                configSnackbar("Capítulo: $chTitle")
-            }.show()
+        val items = chapters.mapIndexed { idx, ch ->
+            val timeCode = Utils.prettyTime(ch.time.roundToInt())
+            val title = ch.title?.takeIf { it.isNotBlank() } ?: "Capítulo ${ch.index + 1}"
+            GlassMenuItem(
+                id = "chapter_${ch.index}",
+                title = title,
+                subtitle = timeCode,
+                isSelected = idx == selectedIndex,
+                tag = ch.index
+            )
+        }
 
+        PlayerGlassMenuDialog(
+            context = this,
+            title = getString(R.string.chapters),
+            items = items
+        ) { selected ->
+            val chIndex = selected.tag as? Int ?: return@PlayerGlassMenuDialog
+            MPVLib.setPropertyInt("chapter", chIndex)
+            val chTitle = selected.title
+            configSnackbar("Capítulo: $chTitle")
+        }.show()
     }
 
     private fun selectTrack(title: String, type: String, get: () -> Int, set: (Int) -> Unit) {
         val tracks = player.tracks.getValue(type)
         val selectedMpvId = get()
-        val selectedIndex = tracks.indexOfFirst { it.mpvId == selectedMpvId }.coerceAtLeast(0)
 
-        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog).apply {
-            setTitle(title)
-            setSingleChoiceItems(
-                tracks.map { it.name }.toTypedArray(),
-                selectedIndex
-            ) { dialog, item ->
-                val trackId = tracks[item].mpvId
-                set(trackId)
-                dialog.dismiss()
-                trackSwitchNotification { TrackData(trackId, type) }
-            }
+        val items = tracks.map { track ->
+            GlassMenuItem(
+                id = "track_${track.mpvId}",
+                title = track.name,
+                isSelected = track.mpvId == selectedMpvId,
+                tag = track.mpvId
+            )
+        }
+
+        PlayerGlassMenuDialog(
+            context = this,
+            title = title,
+            items = items
+        ) { selected ->
+            val trackId = selected.tag as? Int ?: return@PlayerGlassMenuDialog
+            set(trackId)
+            trackSwitchNotification { TrackData(trackId, type) }
         }.show()
     }
 
@@ -1149,22 +1262,34 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
 
     private fun pickSpeed() {
         val currentSpeed = MPVLib.getPropertyDouble("speed") ?: 1.0
-        val selectedIndex = speeds.indexOfFirst { abs(it - currentSpeed) < 0.05 }.coerceAtLeast(0)
+        val speedOptions = listOf(
+            0.25 to "0.25x",
+            0.50 to "0.5x",
+            0.75 to "0.75x",
+            1.00 to "Normal (1.0x)",
+            1.25 to "1.25x",
+            1.50 to "1.5x",
+            1.75 to "1.75x",
+            2.00 to "2.0x"
+        )
+        val items = speedOptions.map { (sp, label) ->
+            val isSelected = abs(currentSpeed - sp) < 0.05
+            GlassMenuItem(
+                id = sp.toString(),
+                title = label,
+                isSelected = isSelected,
+                tag = sp
+            )
+        }
 
-        val speedLabels = speeds.map { if (it == 1.0) "Normal (1.0x)" else "${it}x" }.toTypedArray()
-
-        Log.d(TAG, "currentSpeed=$currentSpeed, selectedIndex=$selectedIndex")
-
-        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog).apply {
-            setTitle(getString(R.string.select_speed))
-            setSingleChoiceItems(
-                speedLabels,
-                selectedIndex
-            ) { dialog, item ->
-                setSpeed(speeds[item])
-                dialog.dismiss()
-                configSnackbar("Velocidade: ${speedLabels[item]}")
-            }
+        PlayerGlassMenuDialog(
+            context = this,
+            title = getString(R.string.playback_speed),
+            items = items
+        ) { selected ->
+            val chosenSpeed = selected.tag as? Double ?: 1.0
+            setSpeed(chosenSpeed)
+            configSnackbar("Velocidade: ${selected.title}")
         }.show()
     }
 

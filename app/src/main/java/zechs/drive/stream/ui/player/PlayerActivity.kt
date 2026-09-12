@@ -134,6 +134,9 @@ class PlayerActivity : AppCompatActivity() {
     @Inject
     lateinit var aniSkipRepository: Lazy<AniSkipRepository>
 
+    @Inject
+    lateinit var onlineSubtitleManager: Lazy<zechs.drive.stream.utils.OnlineSubtitleManager>
+
     // View binding
     private lateinit var binding: ActivityPlayerBinding
 
@@ -343,36 +346,36 @@ class PlayerActivity : AppCompatActivity() {
 
         btnSpeed.setOnClickListener {
             val currentSpeed = if (::player.isInitialized) player.playbackParameters.speed else 1.0f
-            val currentSpeedIndex = when {
-                kotlin.math.abs(currentSpeed - 0.25f) < 0.05f -> 0
-                kotlin.math.abs(currentSpeed - 0.50f) < 0.05f -> 1
-                kotlin.math.abs(currentSpeed - 1.00f) < 0.05f -> 2
-                kotlin.math.abs(currentSpeed - 1.25f) < 0.05f -> 3
-                kotlin.math.abs(currentSpeed - 1.50f) < 0.05f -> 4
-                kotlin.math.abs(currentSpeed - 2.00f) < 0.05f -> 5
-                else -> 2
+            val speedOptions = listOf(
+                0.25f to "0.25x",
+                0.50f to "0.5x",
+                0.75f to "0.75x",
+                1.00f to "Normal (1.0x)",
+                1.25f to "1.25x",
+                1.50f to "1.5x",
+                1.75f to "1.75x",
+                2.00f to "2.0x"
+            )
+            val items = speedOptions.map { (sp, label) ->
+                val isSelected = kotlin.math.abs(currentSpeed - sp) < 0.05f
+                GlassMenuItem(
+                    id = sp.toString(),
+                    title = label,
+                    isSelected = isSelected,
+                    tag = sp
+                )
             }
 
-            MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog).apply {
-                setTitle(getString(R.string.select_speed))
-                setSingleChoiceItems(speed, currentSpeedIndex) { dialog, which ->
-                    val param = when (which) {
-                        0 -> PlaybackParameters(0.25f)
-                        1 -> PlaybackParameters(0.5f)
-                        2 -> PlaybackParameters(1.0f)
-                        3 -> PlaybackParameters(1.25f)
-                        4 -> PlaybackParameters(1.50f)
-                        5 -> PlaybackParameters(2.00f)
-                        else -> PlaybackParameters(1.0f)
-                    }
-                    Log.d(TAG, "Speed=${param.speed}")
-
-                    player.playbackParameters = param
-                    dialog.dismiss()
-                    speedSnackbar(which)
-                }
-                show()
-            }
+            PlayerGlassMenuDialog(
+                context = this,
+                title = getString(R.string.playback_speed),
+                items = items
+            ) { selected ->
+                val chosenSpeed = selected.tag as? Float ?: 1.0f
+                player.playbackParameters = PlaybackParameters(chosenSpeed)
+                val idx = speed.indexOfFirst { it.startsWith(chosenSpeed.toString()) }.takeIf { it >= 0 } ?: 2
+                speedSnackbar(idx)
+            }.show()
         }
 
         val isTvDevice = packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
@@ -391,9 +394,9 @@ class PlayerActivity : AppCompatActivity() {
             callback = object : PlayerGestureCallback {
                 override fun onToggleControls() {
                     if (playerView.isControllerVisible) {
-                        playerView.hideController()
+                        animateHideController()
                     } else {
-                        playerView.showController()
+                        animateShowController()
                     }
                 }
 
@@ -948,7 +951,7 @@ class PlayerActivity : AppCompatActivity() {
                         return true
                     }
                     if (playerView.isControllerVisible) {
-                        playerView.hideController()
+                        animateHideController()
                         return true
                     }
                     if (binding.netflixSkipRow.isVisible) {
@@ -979,7 +982,7 @@ class PlayerActivity : AppCompatActivity() {
             return
         }
         if (playerView.isControllerVisible) {
-            playerView.hideController()
+            animateHideController()
             return
         }
         if (binding.netflixSkipRow.isVisible) {
@@ -987,6 +990,55 @@ class PlayerActivity : AppCompatActivity() {
             return
         }
         super.onBackPressed()
+    }
+
+    private var isHidingControls = false
+
+    private fun animateHideController(onComplete: (() -> Unit)? = null) {
+        if (!::playerView.isInitialized || !playerView.isControllerVisible || isHidingControls) return
+        isHidingControls = true
+        val density = resources.displayMetrics.density
+        val animDuration = 220L
+        val topScrim = playerView.findViewById<View>(R.id.topScrim)
+
+        titleBlock.animate().translationY(-30f * density).alpha(0f).setDuration(animDuration).start()
+        controlsScrollView.animate().translationY(50f * density).alpha(0f).setDuration(animDuration).start()
+        mainControlsRoot.animate().alpha(0f).setDuration(animDuration).start()
+        skipIntroRow.animate().alpha(0f).setDuration(animDuration).start()
+
+        (topScrim ?: controlsScrollView).animate().alpha(0f).setDuration(animDuration).withEndAction {
+            isHidingControls = false
+            playerView.hideController()
+            titleBlock.translationY = 0f
+            titleBlock.alpha = 1f
+            controlsScrollView.translationY = 0f
+            controlsScrollView.alpha = 1f
+            mainControlsRoot.alpha = 1f
+            skipIntroRow.alpha = 1f
+            topScrim?.alpha = 1f
+            onComplete?.invoke()
+        }.start()
+    }
+
+    private fun animateShowController() {
+        if (!::playerView.isInitialized || playerView.isControllerVisible) return
+        val density = resources.displayMetrics.density
+        val animDuration = 220L
+        val topScrim = playerView.findViewById<View>(R.id.topScrim)
+
+        titleBlock.translationY = -25f * density
+        titleBlock.alpha = 0f
+        controlsScrollView.translationY = 40f * density
+        controlsScrollView.alpha = 0f
+        mainControlsRoot.alpha = 0f
+        topScrim?.alpha = 0f
+
+        playerView.showController()
+
+        titleBlock.animate().translationY(0f).alpha(1f).setDuration(animDuration).start()
+        controlsScrollView.animate().translationY(0f).alpha(1f).setDuration(animDuration).start()
+        mainControlsRoot.animate().alpha(1f).setDuration(animDuration).start()
+        topScrim?.animate()?.alpha(1f)?.setDuration(animDuration)?.start()
     }
 
     private fun handleLockingControls() {
@@ -1750,24 +1802,29 @@ class PlayerActivity : AppCompatActivity() {
             return
         }
 
-        val names = audioItems.map { it.name }.toTypedArray()
-        val selectedIndex = audioItems.indexOfFirst { it.isSelected }.coerceAtLeast(0)
-
-        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog).apply {
-            setTitle(getString(R.string.select_audio))
-            setSingleChoiceItems(names, selectedIndex) { dialog, which ->
-                val chosen = audioItems[which]
-                val builder = player.trackSelectionParameters.buildUpon()
-                builder.clearOverridesOfType(C.TRACK_TYPE_AUDIO)
-                builder.addOverride(TrackSelectionOverride(chosen.group.mediaTrackGroup, listOf(chosen.trackIndex)))
-                player.trackSelectionParameters = builder.build()
-                dialog.dismiss()
-                Snackbar.make(playerView, "Áudio: ${chosen.name}", 750).apply {
-                    anchorView = progressViewGroup
-                }.show()
-            }
-            show()
+        val menuItems = audioItems.mapIndexed { idx, item ->
+            GlassMenuItem(
+                id = "audio_$idx",
+                title = item.name,
+                isSelected = item.isSelected,
+                tag = item
+            )
         }
+
+        PlayerGlassMenuDialog(
+            context = this,
+            title = getString(R.string.select_audio),
+            items = menuItems
+        ) { selected ->
+            val chosen = selected.tag as? AudioTrackItem ?: return@PlayerGlassMenuDialog
+            val builder = player.trackSelectionParameters.buildUpon()
+            builder.clearOverridesOfType(C.TRACK_TYPE_AUDIO)
+            builder.addOverride(TrackSelectionOverride(chosen.group.mediaTrackGroup, listOf(chosen.trackIndex)))
+            player.trackSelectionParameters = builder.build()
+            Snackbar.make(playerView, "Áudio: ${chosen.name}", 750).apply {
+                anchorView = progressViewGroup
+            }.show()
+        }.show()
     }
 
     private fun showSubtitleTrackDialog() {
@@ -1775,7 +1832,9 @@ class PlayerActivity : AppCompatActivity() {
             val group: Tracks.Group?,
             val trackIndex: Int,
             val folderSub: SubtitleItem?,
+            val onlineSub: zechs.drive.stream.utils.OnlineSubtitle? = null,
             val displayName: String,
+            val subtitle: String? = null,
             val isSelected: Boolean
         )
 
@@ -1787,7 +1846,7 @@ class PlayerActivity : AppCompatActivity() {
         val isTextDisabled = !anySubtitleSelected
 
         // 1. Off option
-        choices.add(ExoSubChoice(null, -1, null, getString(R.string.track_off), isTextDisabled))
+        choices.add(ExoSubChoice(null, -1, null, null, getString(R.string.track_off), null, isTextDisabled))
 
         // 2. Active/embedded tracks in ExoPlayer
         player.currentTracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }.forEach { group ->
@@ -1799,7 +1858,7 @@ class PlayerActivity : AppCompatActivity() {
                     "$label ($lang)"
                 } else label ?: lang ?: "Legenda ${choices.size}"
                 val selected = group.isTrackSelected(i)
-                choices.add(ExoSubChoice(group, i, null, name, selected))
+                choices.add(ExoSubChoice(group, i, null, null, name, "Embutida", selected))
             }
         }
 
@@ -1815,65 +1874,137 @@ class PlayerActivity : AppCompatActivity() {
                 val prefix = if (isMatching) "★ [Drive] " else "📁 [Drive] "
                 val tag = if (isMatching) " (Episódio atual)" else " (Outro episódio)"
                 val label = "$prefix${sub.name}$tag"
-                choices.add(ExoSubChoice(null, -1, sub, label, false))
+                choices.add(ExoSubChoice(null, -1, sub, null, label, "Google Drive", false))
             }
         }
 
-        val names = choices.map { it.displayName }.toTypedArray()
-        val selectedIndex = choices.indexOfFirst { it.isSelected }.coerceAtLeast(0)
+        fun buildMenuItems(sourceChoices: List<ExoSubChoice>): List<GlassMenuItem> {
+            return sourceChoices.mapIndexed { idx, c ->
+                GlassMenuItem(
+                    id = "sub_$idx",
+                    title = c.displayName,
+                    subtitle = c.subtitle,
+                    isSelected = c.isSelected,
+                    tag = c
+                )
+            }
+        }
 
-        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog).apply {
-            setTitle(getString(R.string.select_subtitle))
-            setSingleChoiceItems(names, selectedIndex) { dialog, which ->
-                val choice = choices[which]
-                dialog.dismiss()
-                if (choice.group != null) {
-                    val builder = player.trackSelectionParameters.buildUpon()
-                    builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-                    builder.clearOverridesOfType(C.TRACK_TYPE_TEXT)
-                    builder.addOverride(TrackSelectionOverride(choice.group.mediaTrackGroup, listOf(choice.trackIndex)))
-                    player.trackSelectionParameters = builder.build()
-                    Snackbar.make(playerView, "Legenda: ${choice.displayName}", 750).apply {
-                        anchorView = progressViewGroup
-                    }.show()
-                } else if (choice.trackIndex == -1 && choice.folderSub == null) {
-                    val builder = player.trackSelectionParameters.buildUpon()
-                    builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
-                    player.trackSelectionParameters = builder.build()
-                    Snackbar.make(playerView, getString(R.string.track_off), 750).apply {
-                        anchorView = progressViewGroup
-                    }.show()
-                } else if (choice.folderSub != null) {
-                    val sub = choice.folderSub
-                    val isMatching = sub.matchesVideo(videoTitle)
-                    Snackbar.make(playerView, "Carregando legenda: ${sub.name}...", 1000).apply {
-                        anchorView = progressViewGroup
-                    }.show()
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        val cached = viewModel.downloadSubtitle(sub, cacheDir)
-                        if (cached != null && cached.exists()) {
-                            withContext(Dispatchers.Main) {
-                                applyExternalSubtitle(cached, sub, isMatching = isMatching, forceSelect = true)
-                            }
-                        } else {
-                            withContext(Dispatchers.Main) {
-                                Snackbar.make(playerView, "Erro ao baixar legenda do Drive", 1500).apply {
-                                    anchorView = progressViewGroup
-                                }.show()
-                            }
+        val menuItems = buildMenuItems(choices).toMutableList()
+
+        lateinit var glassDialog: PlayerGlassMenuDialog
+        glassDialog = PlayerGlassMenuDialog(
+            context = this,
+            title = getString(R.string.select_subtitle),
+            items = menuItems
+        ) { selected ->
+            val choice = selected.tag as? ExoSubChoice ?: return@PlayerGlassMenuDialog
+            if (choice.group != null) {
+                val builder = player.trackSelectionParameters.buildUpon()
+                builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                builder.clearOverridesOfType(C.TRACK_TYPE_TEXT)
+                builder.addOverride(TrackSelectionOverride(choice.group.mediaTrackGroup, listOf(choice.trackIndex)))
+                player.trackSelectionParameters = builder.build()
+                Snackbar.make(playerView, "Legenda: ${choice.displayName}", 750).apply {
+                    anchorView = progressViewGroup
+                }.show()
+            } else if (choice.trackIndex == -1 && choice.folderSub == null && choice.onlineSub == null) {
+                val builder = player.trackSelectionParameters.buildUpon()
+                builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                player.trackSelectionParameters = builder.build()
+                Snackbar.make(playerView, getString(R.string.track_off), 750).apply {
+                    anchorView = progressViewGroup
+                }.show()
+            } else if (choice.folderSub != null) {
+                val sub = choice.folderSub
+                val isMatching = sub.matchesVideo(videoTitle)
+                Snackbar.make(playerView, "Carregando legenda: ${sub.name}...", 1000).apply {
+                    anchorView = progressViewGroup
+                }.show()
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val cached = viewModel.downloadSubtitle(sub, cacheDir)
+                    if (cached != null && cached.exists()) {
+                        withContext(Dispatchers.Main) {
+                            applyExternalSubtitle(cached, sub, isMatching = isMatching, forceSelect = true)
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            Snackbar.make(playerView, "Erro ao baixar legenda do Drive", 1500).apply {
+                                anchorView = progressViewGroup
+                            }.show()
+                        }
+                    }
+                }
+            } else if (choice.onlineSub != null) {
+                val onlineSub = choice.onlineSub
+                Snackbar.make(playerView, "Baixando legenda online: ${onlineSub.langName}...", 1200).apply {
+                    anchorView = progressViewGroup
+                }.show()
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val result = onlineSubtitleManager.get().downloadSubtitle(onlineSub, cacheDir, videoTitle)
+                    withContext(Dispatchers.Main) {
+                        result.onSuccess { cachedFile ->
+                            val virtualSub = SubtitleItem(
+                                id = "online_${onlineSub.id}",
+                                name = "${onlineSub.langName} [Online]"
+                            )
+                            applyExternalSubtitle(cachedFile, virtualSub, isMatching = true, forceSelect = true)
+                            Snackbar.make(playerView, "Legenda online ativada: ${onlineSub.langName}", 1500).apply {
+                                anchorView = progressViewGroup
+                            }.show()
+                        }.onFailure { err ->
+                            Snackbar.make(playerView, "Erro ao baixar legenda online: ${err.message}", 2000).apply {
+                                anchorView = progressViewGroup
+                            }.show()
                         }
                     }
                 }
             }
-            setPositiveButton("Tamanho") { _, _ ->
-                showSubtitleSizeDialog()
-            }
-            setNeutralButton("Sincronia") { _, _ ->
-                showSubtitleSyncDialog()
-            }
-            setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.dismiss() }
-            show()
         }
+
+        glassDialog.setActionButton("🔍 Buscar Legendas Online (PT-BR)") { d ->
+            d.showLoading(true)
+            lifecycleScope.launch(Dispatchers.IO) {
+                val onlineResults = try {
+                    onlineSubtitleManager.get().searchSubtitles(videoTitle, currentEpNumber.takeIf { it > 0 })
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error searching online subtitles", e)
+                    emptyList()
+                }
+
+                withContext(Dispatchers.Main) {
+                    d.showLoading(false)
+                    if (onlineResults.isEmpty()) {
+                        Snackbar.make(playerView, "Nenhuma legenda online encontrada", 2000).apply {
+                            anchorView = progressViewGroup
+                        }.show()
+                        return@withContext
+                    }
+
+                    val updatedChoices = choices.toMutableList()
+                    onlineResults.forEach { os ->
+                        val flag = if (os.isPortuguese) "🇧🇷 " else "🌐 "
+                        val name = "$flag${os.langName}"
+                        val subText = "Online • ${os.source}"
+                        updatedChoices.add(ExoSubChoice(null, -2, null, os, name, subText, false))
+                    }
+                    d.updateItems(buildMenuItems(updatedChoices))
+                    Snackbar.make(playerView, "${onlineResults.size} legendas encontradas online!", 1500).apply {
+                        anchorView = progressViewGroup
+                    }.show()
+                }
+            }
+        }
+
+        glassDialog.setFooterSecondary("Sincronia") {
+            showSubtitleSyncDialog()
+        }
+
+        glassDialog.setFooterPrimary("Tamanho") {
+            showSubtitleSizeDialog()
+        }
+
+        glassDialog.show()
     }
 
     private fun showSubtitleSizeDialog() {
@@ -1893,26 +2024,33 @@ class PlayerActivity : AppCompatActivity() {
             }
             val selectedIdx = sizeValues.indexOfFirst { kotlin.math.abs(it - savedSp) < 0.5f }.coerceAtLeast(1)
 
-            MaterialAlertDialogBuilder(this@PlayerActivity, R.style.ThemeOverlay_DriveStream_Dialog).apply {
-                setTitle("Tamanho da Legenda (Kodi)")
-                setSingleChoiceItems(sizes, selectedIdx) { dialog, which ->
-                    val chosenSp = sizeValues[which]
-                    playerView.subtitleView?.setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, chosenSp)
-                    lifecycleScope.launch {
-                        try {
-                            appSettings.get().saveSubtitleSize(chosenSp)
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Error saving subtitle size", e)
-                        }
-                    }
-                    dialog.dismiss()
-                    Snackbar.make(playerView, "Tamanho definido: ${sizes[which]}", 1000).apply {
-                        anchorView = progressViewGroup
-                    }.show()
-                }
-                setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.dismiss() }
-                show()
+            val items = sizes.mapIndexed { idx, label ->
+                GlassMenuItem(
+                    id = "size_$idx",
+                    title = label,
+                    isSelected = idx == selectedIdx,
+                    tag = sizeValues[idx]
+                )
             }
+
+            PlayerGlassMenuDialog(
+                context = this@PlayerActivity,
+                title = "Tamanho da Legenda",
+                items = items
+            ) { selected ->
+                val chosenSp = selected.tag as? Float ?: 20f
+                playerView.subtitleView?.setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, chosenSp)
+                lifecycleScope.launch {
+                    try {
+                        appSettings.get().saveSubtitleSize(chosenSp)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Error saving subtitle size", e)
+                    }
+                }
+                Snackbar.make(playerView, "Tamanho definido: ${selected.title}", 1000).apply {
+                    anchorView = progressViewGroup
+                }.show()
+            }.show()
         }
     }
 
@@ -1930,33 +2068,40 @@ class PlayerActivity : AppCompatActivity() {
         val selectedIdx = offsets.indexOfFirst { it == currentSubtitleOffsetMs }.takeIf { it >= 0 } ?: 3
 
         val title = if (currentSubtitleOffsetMs != 0L) {
-            "Sincronia de Legenda (Atual: ${if (currentSubtitleOffsetMs > 0) "+" else ""}${currentSubtitleOffsetMs}ms)"
+            "Sincronia de Legenda (${if (currentSubtitleOffsetMs > 0) "+" else ""}${currentSubtitleOffsetMs}ms)"
         } else {
             "Sincronia de Legenda (0ms)"
         }
 
-        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog).apply {
-            setTitle(title)
-            setSingleChoiceItems(options, selectedIdx) { dialog, which ->
-                val chosenOffset = offsets[which]
-                currentSubtitleOffsetMs = chosenOffset
-                dialog.dismiss()
-
-                val activeSub = activeExternalSubItem
-                val activeFile = activeExternalSubFile
-
-                if (activeSub != null && activeFile != null && activeFile.exists()) {
-                    applyExternalSubtitle(activeFile, activeSub, isMatching = true, forceSelect = true)
-                } else {
-                    val sign = if (chosenOffset > 0) "+" else ""
-                    Snackbar.make(playerView, "Offset definido para ${sign}${chosenOffset}ms (aplicável a legendas do Drive)", 2000).apply {
-                        anchorView = progressViewGroup
-                    }.show()
-                }
-            }
-            setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.dismiss() }
-            show()
+        val items = options.mapIndexed { idx, label ->
+            GlassMenuItem(
+                id = "sync_$idx",
+                title = label,
+                isSelected = idx == selectedIdx,
+                tag = offsets[idx]
+            )
         }
+
+        PlayerGlassMenuDialog(
+            context = this,
+            title = title,
+            items = items
+        ) { selected ->
+            val chosenOffset = selected.tag as? Long ?: 0L
+            currentSubtitleOffsetMs = chosenOffset
+
+            val activeSub = activeExternalSubItem
+            val activeFile = activeExternalSubFile
+
+            if (activeSub != null && activeFile != null && activeFile.exists()) {
+                applyExternalSubtitle(activeFile, activeSub, isMatching = true, forceSelect = true)
+            } else {
+                val sign = if (chosenOffset > 0) "+" else ""
+                Snackbar.make(playerView, "Offset definido para ${sign}${chosenOffset}ms (aplicável a legendas do Drive/Online)", 2000).apply {
+                    anchorView = progressViewGroup
+                }.show()
+            }
+        }.show()
     }
 
     private fun toggleKodiInfoHud() {
@@ -2055,28 +2200,33 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun showChapterDialog() {
         if (parsedChapters.isNotEmpty()) {
-            val chapterNames = parsedChapters.map { ch ->
-                val min = (ch.startTimeMs / 1000) / 60
-                val sec = (ch.startTimeMs / 1000) % 60
-                String.format(Locale.getDefault(), "[%02d:%02d] %s", min, sec, ch.title)
-            }.toTypedArray()
-
             val currentPos = if (::player.isInitialized) player.currentPosition else 0L
             val currentIndex = parsedChapters.indexOfLast { currentPos >= it.startTimeMs }.coerceAtLeast(0)
 
-            MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog).apply {
-                setTitle(getString(R.string.chapters))
-                setSingleChoiceItems(chapterNames, currentIndex) { dialog, which ->
-                    val targetChapter = parsedChapters[which]
-                    seekTo(targetChapter.startTimeMs)
-                    dialog.dismiss()
-                    Snackbar.make(playerView, "Capítulo: ${targetChapter.title}", 750).apply {
-                        anchorView = progressViewGroup
-                    }.show()
-                }
-                setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.dismiss() }
-                show()
+            val items = parsedChapters.mapIndexed { idx, ch ->
+                val min = (ch.startTimeMs / 1000) / 60
+                val sec = (ch.startTimeMs / 1000) % 60
+                val timeStr = String.format(Locale.getDefault(), "%02d:%02d", min, sec)
+                GlassMenuItem(
+                    id = "chapter_$idx",
+                    title = ch.title,
+                    subtitle = timeStr,
+                    isSelected = idx == currentIndex,
+                    tag = ch
+                )
             }
+
+            PlayerGlassMenuDialog(
+                context = this,
+                title = getString(R.string.chapters),
+                items = items
+            ) { selected ->
+                val targetChapter = selected.tag as? MatroskaChapterParser.ParsedChapter ?: return@PlayerGlassMenuDialog
+                seekTo(targetChapter.startTimeMs)
+                Snackbar.make(playerView, "Capítulo: ${targetChapter.title}", 750).apply {
+                    anchorView = progressViewGroup
+                }.show()
+            }.show()
             return
         }
 
