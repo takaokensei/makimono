@@ -224,12 +224,16 @@ sealed class FilesViewHolder(
 
                 tvGridFileName.text = cleanTitle
 
-                // Extract episode count or display size/anime
+                // Extract episode count or display size
                 val epRegex = Regex("""(\d+)\s*(?:eps?|episodes?|cap[íi]tulos?|epis[óo]dios?)""", RegexOption.IGNORE_CASE)
                 val epMatch = epRegex.find(item.name)
                 val epTag = epMatch?.let { "${it.groupValues[1]} Ep" }
 
-                tvGridFileSize.text = epTag ?: item.humanSize ?: if (isFolder) "ANIME" else ""
+                val sizeText = epTag ?: if (!isFolder) item.humanSize else null
+                tvGridFileSize.apply {
+                    isVisible = !sizeText.isNullOrBlank()
+                    text = sizeText
+                }
 
                 // Extract resolution and codec tags from original filename
                 val upperName = item.name.uppercase()
@@ -257,7 +261,8 @@ sealed class FilesViewHolder(
                 }
 
                 tvGridTypeBadge.apply {
-                    isVisible = resTag == null && codecTag == null
+                    // Show type badge (e.g. ANIME)
+                    isVisible = isFolder || (resTag == null && codecTag == null)
                     text = when {
                         isFolder -> "ANIME"
                         isVideo -> "VÍDEO"
@@ -273,7 +278,7 @@ sealed class FilesViewHolder(
                 btnGridFolder.apply {
                     isVisible = isFolder
                     setOnClickListener {
-                        filesAdapter.onClickListener.invoke(item)
+                        filesAdapter.onLongClickListener.invoke(item)
                     }
                 }
 

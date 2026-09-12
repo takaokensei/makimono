@@ -46,16 +46,19 @@ class HomeFragment : BaseFragment() {
     private val animeAdapter by lazy {
         FilesAdapter(
             onClickListener = { file ->
-                handleFileOnClick(file)
+                // Quick 1-click (1 toque rápido): iniciar/retomar anime no último episódio!
+                handleQuickPlay(file)
             },
             onStarClickListener = { file, star ->
                 // Star toggled
             },
             onLongClickListener = { file ->
-                handleFileOnClick(file)
+                // Long press (segurar o botão): abrir pasta para navegar episódios!
+                handleOpenFolder(file)
             },
             onPlayClickListener = { file ->
-                handleFileOnPlayClick(file)
+                // Botão play central: iniciar imediatamente!
+                handleQuickPlay(file)
             }
         )
     }
@@ -208,6 +211,10 @@ class HomeFragment : BaseFragment() {
 
     private fun selectTab(tab: String) {
         currentTab = tab
+        val showShelf = tab == "Início" && viewModel.recentWatches.value.isNotEmpty()
+        binding.tvShelfLabel.visibility = if (showShelf) View.VISIBLE else View.GONE
+        binding.rvContinueWatchingShelf.visibility = if (showShelf) View.VISIBLE else View.GONE
+
         binding.apply {
             val normalBg = R.drawable.rail_item_focus_bg
             val activeBg = R.drawable.nav_item_active_bg
@@ -276,39 +283,36 @@ class HomeFragment : BaseFragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.recentWatches.collect { items ->
-                    val hasItems = items.isNotEmpty()
-                    binding.tvShelfLabel.visibility = if (hasItems) View.VISIBLE else View.GONE
-                    binding.rvContinueWatchingShelf.visibility = if (hasItems) View.VISIBLE else View.GONE
+                    val showShelf = items.isNotEmpty() && currentTab == "Início"
+                    binding.tvShelfLabel.visibility = if (showShelf) View.VISIBLE else View.GONE
+                    binding.rvContinueWatchingShelf.visibility = if (showShelf) View.VISIBLE else View.GONE
                     continueWatchingAdapter.submitList(items)
                 }
             }
         }
     }
 
-    private fun handleFileOnPlayClick(file: DriveFile) {
+    private fun handleQuickPlay(file: DriveFile) {
         if (file.isVideoFile || file.isShortcutVideo) {
             val target = if (file.isShortcut && file.shortcutDetails.targetId != null) {
                 file.copy(id = file.shortcutDetails.targetId)
             } else file
             launchVideoPlayer(target)
         } else if (file.isFolder || file.isShortcutFolder) {
-            val folderId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
-                file.shortcutDetails.targetId
-            } else file.id
-            android.widget.Toast.makeText(context, "Buscando episódio...", android.widget.Toast.LENGTH_SHORT).show()
-            viewModel.getFirstEpisodeInFolder(folderId) { video ->
+            android.widget.Toast.makeText(context, "Iniciando ${file.name}...", android.widget.Toast.LENGTH_SHORT).show()
+            viewModel.getResumeOrFirstEpisode(file) { video ->
                 if (video != null) {
                     launchVideoPlayer(video)
                 } else {
-                    handleFileOnClick(file)
+                    handleOpenFolder(file)
                 }
             }
         } else {
-            handleFileOnClick(file)
+            handleOpenFolder(file)
         }
     }
 
-    private fun handleFileOnClick(file: DriveFile) {
+    private fun handleOpenFolder(file: DriveFile) {
         val isFolder = file.isFolder || file.isShortcutFolder
         if (isFolder) {
             val folderId = if (file.isShortcut) file.shortcutDetails.targetId ?: file.id else file.id

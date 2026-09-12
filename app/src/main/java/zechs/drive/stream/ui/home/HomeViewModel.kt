@@ -280,9 +280,21 @@ class HomeViewModel @Inject constructor(
 
                     if (response is Resource.Success && response.data != null) {
                         val rawFiles = response.data.files.map { it.toDriveFile() }
+                        // Hide non-video / non-folder files (such as folder.ico, .apk, .ini, etc.)
+                        val animeFiles = rawFiles.filter { file ->
+                            val isMediaOrFolder = file.isFolder || file.isShortcutFolder || file.isVideoFile || file.isShortcutVideo
+                            val nameLower = file.name.lowercase()
+                            isMediaOrFolder &&
+                                    !nameLower.endsWith(".ico") &&
+                                    !nameLower.endsWith(".apk") &&
+                                    !nameLower.endsWith(".exe") &&
+                                    !nameLower.endsWith(".ini") &&
+                                    !nameLower.endsWith(".txt") &&
+                                    !nameLower.startsWith(".")
+                        }
                         val allMeta = folderMetadataRepository.getAllMetadata().associateBy { it.folderId }
 
-                        val mappedFiles = rawFiles.map { file ->
+                        val mappedFiles = animeFiles.map { file ->
                             val targetId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
                                 file.shortcutDetails.targetId
                             } else file.id
@@ -348,44 +360,95 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun getFirstEpisodeInFolder(folderId: String, onResult: (DriveFile?) -> Unit) = viewModelScope.launch(Dispatchers.IO) {
+    fun getResumeOrFirstEpisode(folder: DriveFile, onResult: (DriveFile?) -> Unit) = viewModelScope.launch(Dispatchers.IO) {
         try {
+            val folderId = if (folder.isShortcut && folder.shortcutDetails.targetId != null) {
+                folder.shortcutDetails.targetId
+            } else folder.id
+
+            val cleanAnimeName = AnimePosterResolver.cleanAnimeTitle(folder.name).trim().lowercase()
+
+            // 1. Check local watch history to see if an episode of this anime was started and can be resumed
+            val recentWatches = watchListRepository.getRecentWatches(100)
+            val matchedWatch = recentWatches.firstOrNull { watch ->
+                val watchNameClean = AnimePosterResolver.cleanAnimeTitle(watch.name).lowercase()
+                watchNameClean.contains(cleanAnimeName) || cleanAnimeName.contains(watchNameClean)
+            }
+
+            if (matchedWatch != null && !matchedWatch.hasFinished()) {
+                Log.d(TAG, "Resuming last watched episode for ${folder.name}: ${matchedWatch.name} (id: ${matchedWatch.videoId})")
+                val resumeFile = DriveFile(
+                    id = matchedWatch.videoId,
+                    name = matchedWatch.name,
+                    size = null,
+                    mimeType = "video/mp4",
+                    iconLink = null,
+                    thumbnailLink = matchedWatch.thumbnailLink,
+                    shortcutDetails = zechs.drive.stream.data.model.ShortcutDetails(),
+                    starred = zechs.drive.stream.data.model.Starred.UNSTARRED
+                )
+                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                    onResult(resumeFile)
+                }
+                return@launch
+            }
+
+            // 2. Query the anime folder to find video files
             val response = driveRepository.get().getFiles(
                 query = "'$folderId' in parents and trashed=false",
                 pageToken = null,
-                pageSize = 50
+                pageSize = 100
             )
             if (response is Resource.Success && response.data != null) {
                 val files = response.data.files.map { it.toDriveFile() }
-                val firstVideo = files.firstOrNull { it.isVideoFile || it.isShortcutVideo }
-                if (firstVideo != null) {
-                    val targetVideo = if (firstVideo.isShortcut && firstVideo.shortcutDetails.targetId != null) {
-                        firstVideo.copy(id = firstVideo.shortcutDetails.targetId)
-                    } else firstVideo
+                val videos = files.filter { it.isVideoFile || it.isShortcutVideo }.sortedBy { it.name }
+
+                if (videos.isNotEmpty()) {
+                    // Check if any video in this folder was in progress
+                    val watchMap = recentWatches.associateBy { it.videoId }
+                    val inProgressVideo = videos.firstOrNull { v ->
+                        val targetId = if (v.isShortcut && v.shortcutDetails.targetId != null) v.shortcutDetails.targetId else v.id
+                        val w = watchMap[targetId]
+                        w != null && !w.hasFinished()
+                    }
+
+                    val chosenVideo = inProgressVideo ?: videos.first()
+                    val targetVideo = if (chosenVideo.isShortcut && chosenVideo.shortcutDetails.targetId != null) {
+                        chosenVideo.copy(id = chosenVideo.shortcutDetails.targetId)
+                    } else chosenVideo
+
                     kotlinx.coroutines.withContext(Dispatchers.Main) {
                         onResult(targetVideo)
                     }
                     return@launch
                 }
 
-                // If no video at root, check first subfolder (e.g. Season 1)
-                val firstSubFolder = files.firstOrNull { it.isFolder || it.isShortcutFolder }
-                if (firstSubFolder != null) {
-                    val subFolderId = if (firstSubFolder.isShortcut && firstSubFolder.shortcutDetails.targetId != null) {
-                        firstSubFolder.shortcutDetails.targetId
-                    } else firstSubFolder.id
+                // If no video in root, check subfolders (e.g. Season 1)
+                val subFolders = files.filter { it.isFolder || it.isShortcutFolder }.sortedBy { it.name }
+                for (subFolder in subFolders) {
+                    val subFolderId = if (subFolder.isShortcut && subFolder.shortcutDetails.targetId != null) {
+                        subFolder.shortcutDetails.targetId
+                    } else subFolder.id
                     val subResponse = driveRepository.get().getFiles(
                         query = "'$subFolderId' in parents and trashed=false",
                         pageToken = null,
-                        pageSize = 50
+                        pageSize = 100
                     )
                     if (subResponse is Resource.Success && subResponse.data != null) {
                         val subFiles = subResponse.data.files.map { it.toDriveFile() }
-                        val subVideo = subFiles.firstOrNull { it.isVideoFile || it.isShortcutVideo }
-                        if (subVideo != null) {
-                            val targetVideo = if (subVideo.isShortcut && subVideo.shortcutDetails.targetId != null) {
-                                subVideo.copy(id = subVideo.shortcutDetails.targetId)
-                            } else subVideo
+                        val subVideos = subFiles.filter { it.isVideoFile || it.isShortcutVideo }.sortedBy { it.name }
+                        if (subVideos.isNotEmpty()) {
+                            val watchMap = recentWatches.associateBy { it.videoId }
+                            val inProgressSubVideo = subVideos.firstOrNull { v ->
+                                val targetId = if (v.isShortcut && v.shortcutDetails.targetId != null) v.shortcutDetails.targetId else v.id
+                                val w = watchMap[targetId]
+                                w != null && !w.hasFinished()
+                            }
+                            val chosenSub = inProgressSubVideo ?: subVideos.first()
+                            val targetVideo = if (chosenSub.isShortcut && chosenSub.shortcutDetails.targetId != null) {
+                                chosenSub.copy(id = chosenSub.shortcutDetails.targetId)
+                            } else chosenSub
+
                             kotlinx.coroutines.withContext(Dispatchers.Main) {
                                 onResult(targetVideo)
                             }
@@ -395,7 +458,7 @@ class HomeViewModel @Inject constructor(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting first episode", e)
+            Log.e(TAG, "Error resolving episode to play", e)
         }
         kotlinx.coroutines.withContext(Dispatchers.Main) {
             onResult(null)
