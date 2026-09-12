@@ -16,11 +16,14 @@ class StarredShelfAdapter(
     private val onClick: (DriveFile) -> Unit
 ) : ListAdapter<DriveFile, StarredShelfAdapter.ViewHolder>(DiffCallback()) {
 
+    var onFocusItemListener: ((View) -> Unit)? = null
+    var onDpadLeftListener: ((View) -> Boolean)? = null
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemStarredShelfBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
         )
-        return ViewHolder(binding)
+        return ViewHolder(binding, this)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
@@ -28,7 +31,8 @@ class StarredShelfAdapter(
     }
 
     class ViewHolder(
-        private val binding: ItemStarredShelfBinding
+        private val binding: ItemStarredShelfBinding,
+        private val adapter: StarredShelfAdapter
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(file: DriveFile, onClick: (DriveFile) -> Unit) {
@@ -79,10 +83,20 @@ class StarredShelfAdapter(
 
             binding.cardStarredItem.setOnFocusChangeListener { v, hasFocus ->
                 if (hasFocus) {
+                    adapter.onFocusItemListener?.invoke(v)
                     v.animate().scaleX(1.05f).scaleY(1.05f).translationZ(12f).setDuration(150L).start()
                 } else {
                     v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(150L).start()
                 }
+            }
+
+            binding.cardStarredItem.setOnKeyListener { v, keyCode, event ->
+                if (event.action == android.view.KeyEvent.ACTION_DOWN && keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+                    if (bindingAdapterPosition == 0 && adapter.onDpadLeftListener?.invoke(v) == true) {
+                        return@setOnKeyListener true
+                    }
+                }
+                false
             }
         }
     }

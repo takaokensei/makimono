@@ -56,6 +56,7 @@ import zechs.drive.stream.ui.player.PlayerGestureHelper
 import zechs.drive.stream.ui.player.PlayerGestureCallback
 import zechs.drive.stream.ui.player.PlayerGlassMenuDialog
 import zechs.drive.stream.ui.player.GlassMenuItem
+import zechs.drive.stream.ui.player.PlayerEpisodeDrawerDialog
 import zechs.drive.stream.utils.OnlineSubtitleManager
 import zechs.drive.stream.utils.OnlineSubtitle
 import zechs.drive.stream.utils.SavedSubtitle
@@ -305,6 +306,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             btnSkipIntroBack.setOnClickListener { skipRelative(-90) }
             btnAudio.setOnClickListener { pickAudio() }
             btnSubtitle.setOnClickListener { pickSub() }
+            btnEpisodes.setOnClickListener { showEpisodesDrawer() }
             btnChapter.setOnClickListener { pickChapter() }
             btnSpeed.setOnClickListener { pickSpeed() }
             btnResize.setOnClickListener { player.cycleScale() }
@@ -1635,6 +1637,38 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
 
         playMedia()
         val parsed = EpisodeParser.parse(next.title)
+        configSnackbar("Iniciando: ${parsed.cleanTitle}")
+    }
+
+    private fun showEpisodesDrawer() {
+        val showName = EpisodeParser.parse(currentTitle).showTitle.ifBlank { currentTitle }
+        PlayerEpisodeDrawerDialog(
+            activity = this,
+            showTitle = showName,
+            currentPlayingFileId = currentFileId,
+            playlist = playlist
+        ) { selectedEpisode ->
+            playPlaylistItemDirectly(selectedEpisode)
+        }.show()
+    }
+
+    private fun playPlaylistItemDirectly(item: PlaylistItem) {
+        if (item.fileId == currentFileId) return
+        countdownJob?.cancel()
+        isNextEpisodeCardShowing = false
+        binding.nextEpisodeCard.root.visibility = View.GONE
+
+        saveProgress()
+
+        currentFileId = item.fileId
+        currentTitle = item.title
+        currentThumbnailLink = item.thumbnailLink
+        nextEpisodeCanceled = false
+        addedSubtitleFileIds.clear()
+        updateNextEpisode()
+
+        playMedia()
+        val parsed = EpisodeParser.parse(item.title)
         configSnackbar("Iniciando: ${parsed.cleanTitle}")
     }
 

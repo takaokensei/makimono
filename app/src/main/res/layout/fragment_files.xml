@@ -4,7 +4,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/colorBgBase">
+    android:background="?attr/colorBgBase"
+    android:clipChildren="false"
+    android:clipToPadding="false">
 
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appBarLayout"
@@ -122,12 +124,73 @@
 
         </LinearLayout>
 
+        <!-- Season / Arc Selector Header Row (Netflix / Crunchyroll replica) -->
+        <LinearLayout
+            android:id="@+id/seasonSelectorRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <TextView
+                android:id="@+id/tvSectionEpisodios"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="@font/inter"
+                android:text="Episódios"
+                android:textColor="?attr/colorTextPrimary"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <!-- Season Selector Pill / Dropdown Button -->
+            <LinearLayout
+                android:id="@+id/btnSeasonSelector"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:background="@drawable/bg_season_selector"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="14dp"
+                android:paddingEnd="10dp">
+
+                <TextView
+                    android:id="@+id/tvSelectedSeason"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/inter"
+                    android:textColor="?attr/colorTextPrimary"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    tools:text="Egghead Arc" />
+
+                <ImageView
+                    android:id="@+id/ivSeasonDropdownArrow"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_marginStart="4dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_arrow_drop_down_24"
+                    app:tint="?attr/colorAccentPrimary" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvList"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:clipChildren="false"
         android:clipToPadding="false"
         android:paddingStart="@dimen/tv_overscan_margin"
         android:paddingTop="8dp"

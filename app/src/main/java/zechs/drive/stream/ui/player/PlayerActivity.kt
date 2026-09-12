@@ -165,6 +165,7 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var btnNextEp: ImageButton
     private lateinit var btnAudio: View
     private lateinit var btnSubtitle: View
+    private lateinit var btnEpisodes: View
     private lateinit var btnChapter: View
     private lateinit var btnResize: View
     private lateinit var btnInfo: View
@@ -255,6 +256,7 @@ class PlayerActivity : AppCompatActivity() {
         btnNextEp = playerView.findViewById(R.id.btnNextEp)
         btnAudio = playerView.findViewById(R.id.btnAudio)
         btnSubtitle = playerView.findViewById(R.id.btnSubtitle)
+        btnEpisodes = playerView.findViewById(R.id.btnEpisodes)
         btnChapter = playerView.findViewById(R.id.btnChapter)
         btnResize = playerView.findViewById(R.id.btnResize)
         btnInfo = playerView.findViewById(R.id.btnInfo)
@@ -296,6 +298,10 @@ class PlayerActivity : AppCompatActivity() {
 
         btnSubtitle.setOnClickListener {
             showSubtitleTrackDialog()
+        }
+
+        btnEpisodes.setOnClickListener {
+            showEpisodesDrawer()
         }
 
         btnChapter.setOnClickListener {
@@ -1554,6 +1560,40 @@ class PlayerActivity : AppCompatActivity() {
 
         playMedia()
         val parsed = EpisodeParser.parse(prev.title)
+        Snackbar.make(playerView, "Iniciando: ${parsed.cleanTitle}", 1500).apply {
+            anchorView = progressViewGroup
+        }.show()
+    }
+
+    private fun showEpisodesDrawer() {
+        val showName = EpisodeParser.parse(currentTitle).showTitle.ifBlank { currentTitle }
+        PlayerEpisodeDrawerDialog(
+            activity = this,
+            showTitle = showName,
+            currentPlayingFileId = currentFileId,
+            playlist = playlist
+        ) { selectedEpisode ->
+            playPlaylistItemDirectly(selectedEpisode)
+        }.show()
+    }
+
+    private fun playPlaylistItemDirectly(item: PlaylistItem) {
+        if (item.fileId == currentFileId) return
+        countdownJob?.cancel()
+        isNextEpisodeCardShowing = false
+        binding.nextEpisodeCard.root.visibility = View.GONE
+
+        saveProgress()
+
+        currentFileId = item.fileId
+        currentTitle = item.title
+        currentThumbnailLink = item.thumbnailLink
+        nextEpisodeCanceled = false
+        addedSubtitleFileIds.clear()
+        updateNextEpisode()
+
+        playMedia()
+        val parsed = EpisodeParser.parse(item.title)
         Snackbar.make(playerView, "Iniciando: ${parsed.cleanTitle}", 1500).apply {
             anchorView = progressViewGroup
         }.show()

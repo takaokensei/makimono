@@ -234,6 +234,10 @@ class HomeFragment : BaseFragment() {
         val hasOverlay = binding.sidebarDimOverlay != null
 
         if (hasOverlay) {
+            binding.navRail.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+            binding.navRail.visibility = View.INVISIBLE
+            setNavItemsFocusable(false)
+
             // Retract sidebar off-screen by default
             binding.navRail.post {
                 val railWidth = binding.navRail.width.toFloat().coerceAtLeast(240f.dpToPx())
@@ -249,6 +253,16 @@ class HomeFragment : BaseFragment() {
         }
 
         binding.apply {
+            btnBrandLogo.setOnClickListener {
+                toggleSidebar()
+            }
+            btnBrandLogo.setOnKeyListener { _, keyCode, event ->
+                if (event.action == android.view.KeyEvent.ACTION_DOWN && keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+                    expandSidebar()
+                    true
+                } else false
+            }
+
             btnNavAnimes.setOnClickListener {
                 selectTab("Animes")
                 viewModel.filterStarred(false)
@@ -344,9 +358,27 @@ class HomeFragment : BaseFragment() {
         }
     }
 
+    private fun setNavItemsFocusable(enabled: Boolean) {
+        val navItems = listOfNotNull(
+            binding.btnNavInicio,
+            binding.btnNavAnimes,
+            binding.btnNavPastas,
+            binding.btnNavFavoritos,
+            binding.btnNavConfig
+        )
+        navItems.forEach { item ->
+            item.isFocusable = enabled
+            item.isFocusableInTouchMode = enabled
+        }
+    }
+
     private fun expandSidebar() {
         if (isSidebarExpanded || binding.sidebarDimOverlay == null) return
         isSidebarExpanded = true
+
+        binding.navRail.visibility = View.VISIBLE
+        binding.navRail.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+        setNavItemsFocusable(true)
 
         binding.sidebarDimOverlay?.apply {
             visibility = View.VISIBLE
@@ -381,6 +413,9 @@ class HomeFragment : BaseFragment() {
         if (!isSidebarExpanded || binding.sidebarDimOverlay == null) return
         isSidebarExpanded = false
 
+        binding.navRail.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+        setNavItemsFocusable(false)
+
         binding.sidebarDimOverlay?.apply {
             animate()
                 .alpha(0f)
@@ -395,6 +430,11 @@ class HomeFragment : BaseFragment() {
             .translationX(-railWidth)
             .setDuration(220L)
             .setInterpolator(android.view.animation.AccelerateInterpolator())
+            .withEndAction {
+                if (!isSidebarExpanded) {
+                    binding.navRail.visibility = View.INVISIBLE
+                }
+            }
             .start()
     }
 

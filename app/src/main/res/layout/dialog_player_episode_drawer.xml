@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="380dp"
+    android:layout_height="match_parent"
+    android:layout_gravity="end"
+    app:cardBackgroundColor="#E60A0F1D"
+    app:cardCornerRadius="0dp"
+    app:cardElevation="24dp"
+    app:strokeColor="#26FFFFFF"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp">
+
+            <ImageView
+                android:id="@+id/btnDrawerBack"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="8dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:contentDescription="Voltar às Temporadas"
+                android:focusable="true"
+                android:padding="8dp"
+                android:src="@drawable/ic_back_24"
+                android:visibility="gone"
+                app:tint="#F1F5F9"
+                tools:visibility="visible" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvDrawerTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/inter"
+                    android:maxLines="1"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    tools:text="One Piece" />
+
+                <TextView
+                    android:id="@+id/tvDrawerSubtitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/inter"
+                    android:maxLines="1"
+                    android:textColor="?attr/colorAccentPrimary"
+                    android:textSize="12sp"
+                    tools:text="Temporadas &amp; Arcos" />
+
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/btnDrawerClose"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="8dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:contentDescription="Fechar"
+                android:focusable="true"
+                android:padding="8dp"
+                android:src="@drawable/ic_close_24"
+                app:tint="#94A3B8" />
+
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#1AFFFFFF" />
+
+        <!-- Seasons / Arcs List -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvDrawerSeasons"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:paddingTop="8dp"
+            android:paddingBottom="16dp"
+            tools:listitem="@layout/item_player_drawer_season" />
+
+        <!-- Episodes List of Selected Arc -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvDrawerEpisodes"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:paddingTop="8dp"
+            android:paddingBottom="16dp"
+            android:visibility="gone"
+            tools:listitem="@layout/item_player_drawer_episode" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

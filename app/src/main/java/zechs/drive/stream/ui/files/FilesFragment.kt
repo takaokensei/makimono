@@ -40,7 +40,11 @@ import zechs.drive.stream.ui.files.adapter.FilesDataModel
 import zechs.drive.stream.ui.main.MainViewModel
 import zechs.drive.stream.ui.player.PlayerActivity
 import zechs.drive.stream.ui.player2.MPVActivity
+import zechs.drive.stream.ui.player.GlassMenuItem
+import zechs.drive.stream.ui.player.PlayerGlassMenuDialog
 import zechs.drive.stream.utils.EpisodeParser
+import zechs.drive.stream.utils.SeasonEpisodeGrouper
+import zechs.drive.stream.utils.SeasonGroup
 import zechs.drive.stream.utils.VideoPlayer
 import zechs.drive.stream.utils.state.Resource
 
@@ -66,6 +70,8 @@ class FilesFragment : BaseFragment() {
     private var isScrolling = false
     private var isGridMode = false
     private var allFilesList = listOf<FilesDataModel>()
+    private var availableSeasons: List<SeasonGroup> = emptyList()
+    private var selectedSeason: SeasonGroup? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -186,8 +192,47 @@ class FilesFragment : BaseFragment() {
         }
 
         allFilesList = files
+        availableSeasons = SeasonEpisodeGrouper.groupFiles(args.name, files)
+        if (availableSeasons.size > 1) {
+            binding.seasonSelectorRow.isVisible = true
+            selectedSeason = availableSeasons.firstOrNull()
+            binding.tvSelectedSeason.text = selectedSeason?.name ?: "Temporadas"
+            binding.btnSeasonSelector.setOnClickListener {
+                showSeasonSelectionDialog()
+            }
+        } else {
+            binding.seasonSelectorRow.isGone = true
+            selectedSeason = null
+        }
+
         val currentQuery = binding.etSearch.text?.toString()?.trim() ?: ""
         filterFiles(currentQuery)
+    }
+
+    private fun showSeasonSelectionDialog() {
+        if (availableSeasons.isEmpty()) return
+
+        val currentSelectedId = selectedSeason?.id ?: "season_all"
+        val items = availableSeasons.map { season ->
+            GlassMenuItem(
+                id = season.id,
+                title = season.name,
+                subtitle = season.subtitle,
+                isSelected = season.id == currentSelectedId,
+                tag = season
+            )
+        }
+
+        PlayerGlassMenuDialog(
+            context = requireContext(),
+            title = "Temporadas e Arcos",
+            items = items
+        ) { selected ->
+            val season = selected.tag as? SeasonGroup ?: return@PlayerGlassMenuDialog
+            selectedSeason = season
+            binding.tvSelectedSeason.text = season.name
+            filterFiles(binding.etSearch.text?.toString()?.trim() ?: "")
+        }.show()
     }
 
     private fun setupSearchAndLayoutToggle() {
@@ -244,10 +289,16 @@ class FilesFragment : BaseFragment() {
     }
 
     private fun filterFiles(query: String) {
-        val listToSubmit = if (query.isEmpty()) {
-            allFilesList.toMutableList()
+        val baseList = if (selectedSeason != null && selectedSeason?.id != "season_all" && selectedSeason?.fileItems?.isNotEmpty() == true) {
+            selectedSeason!!.fileItems
         } else {
-            allFilesList.filter { item ->
+            allFilesList
+        }
+
+        val listToSubmit = if (query.isEmpty()) {
+            baseList.toMutableList()
+        } else {
+            baseList.filter { item ->
                 when (item) {
                     is FilesDataModel.File -> item.driveFile.name.contains(query, ignoreCase = true)
                     else -> true

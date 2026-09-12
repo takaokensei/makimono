@@ -8,6 +8,7 @@
     android:layout_margin="6dp"
     android:clickable="true"
     android:focusable="true"
+    android:descendantFocusability="blocksDescendants"
     app:cardBackgroundColor="?attr/colorBgSurface"
     app:cardCornerRadius="16dp"
     app:cardElevation="0dp"
@@ -82,7 +83,7 @@
                     android:layout_height="32dp"
                     android:background="@drawable/glass_circle_button_bg"
                     android:contentDescription="Favoritar"
-                    android:focusable="true"
+                    android:focusable="false"
                     android:padding="6dp"
                     android:src="@drawable/ic_star_outline_24"
                     app:tint="?attr/colorTextPrimary" />

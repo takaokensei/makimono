@@ -10,12 +10,13 @@
     android:layout_marginBottom="4dp"
     android:clickable="true"
     android:focusable="true"
+    android:descendantFocusability="blocksDescendants"
     android:foreground="?android:attr/selectableItemBackground"
     app:cardBackgroundColor="@android:color/transparent"
     app:cardCornerRadius="16dp"
     app:cardElevation="0dp"
-    app:strokeColor="@android:color/transparent"
-    app:strokeWidth="0dp">
+    app:strokeColor="@color/shelf_card_stroke_color"
+    app:strokeWidth="2dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -159,7 +160,7 @@
             android:layout_height="40dp"
             android:background="?selectableItemBackgroundBorderless"
             android:contentDescription="Favoritar"
-            android:focusable="true"
+            android:focusable="false"
             android:padding="8dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
