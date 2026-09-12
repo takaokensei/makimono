@@ -20,6 +20,7 @@
     <string name="portrait">Portrait</string>
     <string name="landscape">Landscape</string>
     <string name="ok">OK</string>
+    <string name="go_back">Voltar</string>
     <string name="details">Details</string>
     <string name="retry">Retry</string>
     <string name="lock">Lock</string>

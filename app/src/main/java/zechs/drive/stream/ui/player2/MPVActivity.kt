@@ -176,6 +176,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         controller
             .playerToolbar
             .setNavigationOnClickListener { finish() }
+        controller
+            .btnBack
+            .setOnClickListener { finish() }
 
         currentFileId = intent.getStringExtra("fileId") ?: ""
         currentTitle = intent.getStringExtra("title") ?: ""
@@ -323,6 +326,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                 override fun isControllerVisible(): Boolean = controller.root.isVisible
                 override fun getTouchIgnoredViews(): List<View> = listOf(
                     controller.playerToolbar,
+                    controller.titleBlock,
                     controller.controlsScrollView,
                     controller.linearLayout2,
                     controller.mainControls,
@@ -820,6 +824,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         viewModel.getWatch(fileId)
 
         controller.playerToolbar.title = title
+        controller.tvPlayerTitle.text = parsed.showTitle.ifBlank { parsed.cleanTitle.ifBlank { title ?: "" } }
+        val epText = if (currentEpNumber > 0) "Episódio ${currentEpNumber.toString().padStart(2, '0')}" else ""
+        controller.tvPlayerMeta.text = epText
 
         val playUri = getStreamUrl(fileId)
         hasAutoSelectedMpvTracks = false
@@ -1169,30 +1176,24 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     private fun updateOrientation(newConfig: Configuration) {
         when (newConfig.orientation) {
             Configuration.ORIENTATION_PORTRAIT -> {
-                controller.btnRotate.apply {
-                    orientation = Orientation.PORTRAIT
-                    text = "Paisagem"
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        tooltipText = getString(R.string.landscape)
-                    }
-                    icon = ContextCompat.getDrawable(
-                        /* context */ this@MPVActivity,
-                        /* drawableId */ R.drawable.ic_landscape_24
-                    )
+                orientation = Orientation.PORTRAIT
+                controller.tvRotate.text = "Paisagem"
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    controller.btnRotate.tooltipText = getString(R.string.landscape)
                 }
+                controller.ivRotate.setImageDrawable(
+                    ContextCompat.getDrawable(this@MPVActivity, R.drawable.ic_landscape_24)
+                )
             }
             else -> {
-                controller.btnRotate.apply {
-                    orientation = Orientation.LANDSCAPE
-                    text = "Girar"
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        tooltipText = getString(R.string.portrait)
-                    }
-                    icon = ContextCompat.getDrawable(
-                        /* context */ this@MPVActivity,
-                        /* drawableId */ R.drawable.ic_portrait_24
-                    )
+                orientation = Orientation.LANDSCAPE
+                controller.tvRotate.text = "Girar"
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    controller.btnRotate.tooltipText = getString(R.string.portrait)
                 }
+                controller.ivRotate.setImageDrawable(
+                    ContextCompat.getDrawable(this@MPVActivity, R.drawable.ic_portrait_24)
+                )
             }
         }
     }
@@ -1217,6 +1218,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             skipIntroRow.visibility = View.GONE
             btnUnlock.visibility = View.VISIBLE
             playerToolbar.visibility = View.GONE
+            titleBlock.visibility = View.GONE
         }
         binding.netflixSkipRow.visibility = View.GONE
         binding.nextEpisodeCard.root.visibility = View.GONE
@@ -1225,7 +1227,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     private fun unlockControls() {
         controller.apply {
             btnUnlock.visibility = View.GONE
-            playerToolbar.visibility = View.VISIBLE
+            playerToolbar.visibility = View.GONE
+            titleBlock.visibility = View.VISIBLE
             controlsScrollView.visibility = View.VISIBLE
             mainControls.visibility = View.VISIBLE
             skipIntroRow.visibility = View.VISIBLE

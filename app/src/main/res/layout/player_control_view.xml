@@ -7,48 +7,117 @@
     android:layout_height="match_parent"
     android:background="@drawable/player_bottom_scrim">
 
-    <!-- Top Scrim Gradient for text contrast over bright scenes -->
+    <!-- Top Scrim Gradient -->
     <View
         android:id="@+id/topScrim"
         android:layout_width="match_parent"
-        android:layout_height="120dp"
+        android:layout_height="140dp"
         android:background="@drawable/top_scrim"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Top Bar: Back button, Title & Subtitle -->
+    <!-- Hidden MaterialToolbar for code compatibility -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/playerToolbar"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="@android:color/transparent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:navigationIcon="@drawable/ic_back_24"
-        app:navigationIconTint="#FFFFFFFF"
-        app:subtitleTextAppearance="@style/subtitleTextAppearance"
-        app:subtitleTextColor="?attr/colorTextSecondary"
-        app:titleTextAppearance="@style/titleTextAppearance"
-        app:titleTextColor="?attr/colorTextPrimary"
-        tools:subtitle="1080p • HEVC • Multi-Subs"
-        tools:title="Episódio - Título do Vídeo" />
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnUnlock"
-        style="@style/Widget.Material3.Button.TonalButton.Icon.Only"
+    <!-- Top-Left Title Block (Reference mockup: .title-block) -->
+    <LinearLayout
+        android:id="@+id/titleBlock"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
-        android:padding="14dp"
-        android:tooltipText="@string/unlock"
-        android:visibility="gone"
-        app:icon="@drawable/ic_unlock_24"
-        app:iconSize="24dp"
-        app:iconTint="#FFFFFFFF"
+        android:layout_marginStart="36dp"
+        android:layout_marginTop="28dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/playerToolbar"
-        tools:targetApi="o" />
+        app:layout_constraintTop_toTopOf="parent">
 
-    <!-- Center Playback Cluster (Symmetric Nordic Design, Mathematically Centered) -->
+        <!-- Back button -->
+        <ImageButton
+            android:id="@+id/btnBack"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginEnd="16dp"
+            android:background="@drawable/bg_player_center_seek"
+            android:contentDescription="@string/go_back"
+            android:padding="10dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_back_24"
+            app:tint="#FFFFFFFF" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Title: Bold cinematic anime title -->
+            <TextView
+                android:id="@+id/tvPlayerTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/inter"
+                android:shadowColor="#80000000"
+                android:shadowDx="0"
+                android:shadowDy="2"
+                android:shadowRadius="8"
+                android:textColor="#FFFFFFFF"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                tools:text="Teogonia" />
+
+            <!-- Meta: Episode and technical tags -->
+            <TextView
+                android:id="@+id/tvPlayerMeta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:fontFamily="@font/inter"
+                android:textColor="#D4D4D4"
+                android:textSize="14sp"
+                tools:text="Episódio 04 • 1080p HEVC EAC3" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Hidden compatibility buttons -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnUnlock"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnLock"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnPip"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSkipIntroBack"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Center Seek Controls (±10s) — Reference mockup: .center-controls -->
     <LinearLayout
         android:id="@+id/mainControls"
         android:layout_width="wrap_content"
@@ -61,382 +130,530 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.5">
 
-        <!-- Rewind 10s -->
-        <com.google.android.material.button.MaterialButton
+        <!-- Rewind 10s (Circular 48dp glass button) -->
+        <ImageButton
             android:id="@+id/exo_rew"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:layout_marginEnd="32dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="24dp"
+            android:background="@drawable/bg_player_center_seek"
             android:clickable="true"
             android:contentDescription="@string/rewind_10_seconds"
             android:focusable="true"
-            android:insetLeft="0dp"
-            android:insetTop="0dp"
-            android:insetRight="0dp"
-            android:insetBottom="0dp"
-            android:padding="0dp"
-            app:cornerRadius="28dp"
-            app:backgroundTint="@color/player_circle_bg_selector"
-            app:strokeWidth="1.5dp"
-            app:strokeColor="@color/player_rewffwd_stroke_selector"
-            app:icon="@drawable/ic_rewind_skip_24"
-            app:iconGravity="textStart"
-            app:iconPadding="0dp"
-            app:iconSize="30dp"
-            app:iconTint="#FFFFFFFF" />
+            android:padding="11dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_rewind_skip_24"
+            app:tint="#FFFFFFFF" />
 
-        <!-- Play / Pause Button (Enlarged with Accent Highlight) -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnPlayPause"
-            android:layout_width="76dp"
-            android:layout_height="76dp"
-            android:clickable="true"
-            android:contentDescription="Play/Pause"
-            android:focusable="true"
-            android:focusedByDefault="true"
-            android:insetLeft="0dp"
-            android:insetTop="0dp"
-            android:insetRight="0dp"
-            android:insetBottom="0dp"
-            android:padding="0dp"
-            app:cornerRadius="38dp"
-            app:backgroundTint="@color/player_circle_bg_selector"
-            app:strokeWidth="2dp"
-            app:strokeColor="@color/player_circle_stroke_selector"
-            app:elevation="4dp"
-            app:icon="@drawable/ic_pause_24"
-            app:iconGravity="textStart"
-            app:iconPadding="0dp"
-            app:iconSize="40dp"
-            app:iconTint="#FFFFFFFF" />
-
-        <!-- Fast Forward 10s -->
-        <com.google.android.material.button.MaterialButton
+        <!-- Fast Forward 10s (Circular 48dp glass button) -->
+        <ImageButton
             android:id="@+id/exo_ffwd"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:layout_marginStart="32dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_player_center_seek"
             android:clickable="true"
             android:contentDescription="@string/skip_10_seconds"
             android:focusable="true"
-            android:insetLeft="0dp"
-            android:insetTop="0dp"
-            android:insetRight="0dp"
-            android:insetBottom="0dp"
-            android:padding="0dp"
-            app:cornerRadius="28dp"
-            app:backgroundTint="@color/player_circle_bg_selector"
-            app:strokeWidth="1.5dp"
-            app:strokeColor="@color/player_rewffwd_stroke_selector"
-            app:icon="@drawable/ic_forward_skip_24"
-            app:iconGravity="textStart"
-            app:iconPadding="0dp"
-            app:iconSize="30dp"
-            app:iconTint="#FFFFFFFF" />
+            android:padding="11dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_forward_skip_24"
+            app:tint="#FFFFFFFF" />
 
     </LinearLayout>
 
-    <!-- Skip Intro Row: Positioned in Bottom-Right above timeline (Netflix/Crunchyroll standard) -->
+    <!-- Floating AniSkip Pill (Reference mockup: .aniskip-pill, centered at bottom ~15%) -->
+    <LinearLayout
+        android:id="@+id/aniskipPill"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/bg_aniskip_pill"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="18dp"
+        android:paddingBottom="6dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@+id/controlsScrollView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        tools:visibility="visible">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_check_cyan_circle" />
+
+        <TextView
+            android:id="@+id/tvAniSkipLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:fontFamily="@font/inter"
+            android:text="Abertura pulada (AniSkip)"
+            android:textColor="#FFFFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+    <!-- Floating Skip Intro Button (Reference mockup: .skip-btn, at bottom-right ~15%) -->
     <LinearLayout
         android:id="@+id/skipIntroRow"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="28dp"
-        android:layout_marginBottom="12dp"
+        android:layout_marginEnd="36dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/bg_skip_intro_cyan"
+        android:clickable="true"
+        android:focusable="true"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        app:layout_constraintBottom_toTopOf="@+id/linearLayout2"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <!-- -90s Pill (Neutral Glass) -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnSkipIntroBack"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:layout_marginEnd="10dp"
-            android:background="@drawable/glass_pill_button_bg"
-            android:clickable="true"
-            android:focusable="true"
-            android:fontFamily="@font/inter"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
-            android:text="-90s"
-            android:textColor="#FFFFFFFF"
-            android:textSize="12sp"
-            app:backgroundTint="@null"
-            app:icon="@drawable/ic_skip_previous_24"
-            app:iconGravity="textStart"
-            app:iconSize="16dp"
-            app:iconTint="#FFFFFFFF" />
-
-        <!-- Pular Abertura Pill (Solid Accent Primary Glass, NO EMOJIS) -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnSkipIntro"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:background="@drawable/glass_pill_accent_bg"
-            android:clickable="true"
-            android:focusable="true"
-            android:fontFamily="@font/inter"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:text="Pular Abertura"
-            android:textColor="#FFFFFFFF"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            app:backgroundTint="@null"
-            app:icon="@drawable/ic_skip_next_24"
-            app:iconGravity="textStart"
-            app:iconSize="16dp"
-            app:iconTint="#FFFFFFFF" />
-
-    </LinearLayout>
-
-    <!-- Timeline / Progress Bar -->
-    <LinearLayout
-        android:id="@+id/linearLayout2"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="28dp"
-        android:layout_marginEnd="28dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="8dp"
+        android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@+id/controlsScrollView"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
+        tools:visibility="visible">
 
-        <!-- Current position -->
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_skip_next_24"
+            app:tint="#67E8F9" />
+
         <TextView
-            android:id="@id/exo_position"
+            android:id="@+id/btnSkipIntro"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="12dp"
+            android:layout_marginStart="8dp"
             android:fontFamily="@font/inter"
-            android:textColor="#FFFFFFFF"
+            android:text="Pular Abertura"
+            android:textColor="#67E8F9"
             android:textSize="13sp"
-            tools:text="08:24" />
-
-        <!-- ExoPlayer TimeBar -->
-        <com.google.android.exoplayer2.ui.DefaultTimeBar
-            android:id="@id/exo_progress"
-            android:layout_width="0dp"
-            android:layout_height="28dp"
-            android:layout_weight="1"
-            app:played_color="?attr/colorAccentPrimary"
-            app:scrubber_color="?attr/colorAccentPrimary"
-            app:unplayed_color="#33FFFFFF" />
-
-        <!-- MPV SeekBar -->
-        <SeekBar
-            android:id="@+id/progressBar"
-            android:layout_width="0dp"
-            android:layout_height="28dp"
-            android:layout_weight="1"
-            android:progressTint="?attr/colorAccentPrimary"
-            android:thumbTint="?attr/colorAccentPrimary"
-            android:visibility="gone" />
-
-        <!-- Total duration -->
-        <TextView
-            android:id="@id/exo_duration"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:fontFamily="@font/inter"
-            android:textColor="?attr/colorTextSecondary"
-            android:textSize="13sp"
-            tools:text="24:30" />
+            android:textStyle="bold" />
 
     </LinearLayout>
 
-    <!-- Bottom Actions Bar: Unified Glass Panel -->
-    <HorizontalScrollView
+    <!-- Full-Width Bottom Bar Container (Reference mockup: .bottom-bar) -->
+    <!-- Named controlsScrollView for code compatibility with PlayerActivity -->
+    <LinearLayout
         android:id="@+id/controlsScrollView"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:layout_marginBottom="18dp"
+        android:background="@drawable/bg_player_bottom_panel"
+        android:clipChildren="false"
         android:clipToPadding="false"
-        android:scrollbars="none"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent">
+        android:orientation="vertical"
+        android:paddingStart="36dp"
+        android:paddingTop="18dp"
+        android:paddingEnd="36dp"
+        android:paddingBottom="16dp"
+        app:layout_constraintBottom_toBottomOf="parent">
 
+        <!-- ROW 1: Controls Row (.controls-row) -->
         <LinearLayout
-            android:id="@+id/linearLayout"
-            android:layout_width="wrap_content"
+            android:id="@+id/controlsRow"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/glass_panel_bg"
-            android:gravity="center"
-            android:orientation="horizontal"
-            android:paddingStart="12dp"
-            android:paddingTop="6dp"
-            android:paddingEnd="12dp"
-            android:paddingBottom="6dp">
+            android:layout_marginBottom="16dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-            <!-- Subtitles Button -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSubtitle"
+            <!-- LEFT GROUP: Actions (Legendas, Áudio, Velocidade, Capítulos, Resize) -->
+            <LinearLayout
                 android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:layout_marginStart="2dp"
-                android:layout_marginEnd="2dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:fontFamily="@font/inter"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:text="@string/subtitles"
-                android:textColor="?attr/colorTextPrimary"
-                android:textSize="12sp"
-                app:backgroundTint="@null"
-                app:icon="@drawable/ic_subtitles_24"
-                app:iconSize="16dp"
-                app:iconTint="?attr/colorAccentPrimary" />
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-            <!-- Audio Track Button -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnAudio"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:layout_marginStart="2dp"
-                android:layout_marginEnd="2dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:fontFamily="@font/inter"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:text="@string/audio"
-                android:textColor="?attr/colorTextPrimary"
-                android:textSize="12sp"
-                app:backgroundTint="@null"
-                app:icon="@drawable/ic_audio_24"
-                app:iconSize="16dp"
-                app:iconTint="?attr/colorAccentPrimary" />
+                <!-- 1. Legendas -->
+                <LinearLayout
+                    android:id="@+id/btnSubtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="16dp"
+                    android:background="@drawable/bg_player_action_vertical"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:paddingStart="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingEnd="10dp"
+                    android:paddingBottom="4dp">
 
-            <!-- Playback Speed Button -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSpeed"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:layout_marginStart="2dp"
-                android:layout_marginEnd="2dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:fontFamily="@font/inter"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:text="Velocidade"
-                android:textColor="?attr/colorTextPrimary"
-                android:textSize="12sp"
-                app:backgroundTint="@null"
-                app:icon="@drawable/ic_speed_24"
-                app:iconSize="16dp"
-                app:iconTint="?attr/colorAccentPrimary" />
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:contentDescription="@string/subtitles"
+                        android:src="@drawable/ic_subtitles_24"
+                        app:tint="#D4D4D4" />
 
-            <!-- Chapters Button -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnChapter"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:layout_marginStart="2dp"
-                android:layout_marginEnd="2dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:fontFamily="@font/inter"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:text="@string/chapters"
-                android:textColor="?attr/colorTextPrimary"
-                android:textSize="12sp"
-                app:backgroundTint="@null"
-                app:icon="@drawable/ic_chapter_24"
-                app:iconSize="16dp"
-                app:iconTint="?attr/colorAccentPrimary" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:fontFamily="@font/inter"
+                        android:text="Legendas"
+                        android:textColor="#D4D4D4"
+                        android:textSize="11sp" />
 
-            <!-- Resize Button -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnResize"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:layout_marginStart="2dp"
-                android:layout_marginEnd="2dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:fontFamily="@font/inter"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:text="@string/resize"
-                android:textColor="?attr/colorTextPrimary"
-                android:textSize="12sp"
-                app:backgroundTint="@null"
-                app:icon="@drawable/ic_resize_24"
-                app:iconSize="16dp"
-                app:iconTint="?attr/colorAccentPrimary" />
+                </LinearLayout>
 
-            <!-- Kodi Info Button -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnInfo"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:layout_marginStart="2dp"
-                android:layout_marginEnd="2dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:fontFamily="@font/inter"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:text="Info"
-                android:textColor="?attr/colorTextPrimary"
-                android:textSize="12sp"
-                app:backgroundTint="@null"
-                app:icon="@drawable/ic_info_24"
-                app:iconSize="16dp"
-                app:iconTint="?attr/colorAccentPrimary" />
+                <!-- 2. Áudio -->
+                <LinearLayout
+                    android:id="@+id/btnAudio"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="16dp"
+                    android:background="@drawable/bg_player_action_vertical"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:paddingStart="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingEnd="10dp"
+                    android:paddingBottom="4dp">
 
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:contentDescription="@string/audio"
+                        android:src="@drawable/ic_audio_24"
+                        app:tint="#D4D4D4" />
 
-            <!-- Hidden phone-only buttons (kept for code binding compatibility) -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnLock"
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:fontFamily="@font/inter"
+                        android:text="Áudio"
+                        android:textColor="#D4D4D4"
+                        android:textSize="11sp" />
+
+                </LinearLayout>
+
+                <!-- 3. Velocidade -->
+                <LinearLayout
+                    android:id="@+id/btnSpeed"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="16dp"
+                    android:background="@drawable/bg_player_action_vertical"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:paddingStart="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingEnd="10dp"
+                    android:paddingBottom="4dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:contentDescription="Velocidade"
+                        android:src="@drawable/ic_speed_24"
+                        app:tint="#D4D4D4" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:fontFamily="@font/inter"
+                        android:text="Velocidade"
+                        android:textColor="#D4D4D4"
+                        android:textSize="11sp" />
+
+                </LinearLayout>
+
+                <!-- 4. Capítulos -->
+                <LinearLayout
+                    android:id="@+id/btnChapter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="16dp"
+                    android:background="@drawable/bg_player_action_vertical"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:paddingStart="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingEnd="10dp"
+                    android:paddingBottom="4dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:contentDescription="@string/chapters"
+                        android:src="@drawable/ic_chapter_24"
+                        app:tint="#D4D4D4" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:fontFamily="@font/inter"
+                        android:text="Capítulos"
+                        android:textColor="#D4D4D4"
+                        android:textSize="11sp" />
+
+                </LinearLayout>
+
+                <!-- 5. Resize -->
+                <LinearLayout
+                    android:id="@+id/btnResize"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_player_action_vertical"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:paddingStart="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingEnd="10dp"
+                    android:paddingBottom="4dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:contentDescription="@string/resize"
+                        android:src="@drawable/ic_resize_24"
+                        app:tint="#D4D4D4" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:fontFamily="@font/inter"
+                        android:text="Resize"
+                        android:textColor="#D4D4D4"
+                        android:textSize="11sp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Spacer -->
+            <View
                 android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:visibility="gone" />
+                android:layout_height="1dp"
+                android:layout_weight="1" />
 
-            <!-- Rotate Screen Button (Mobile/Tablet) -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnRotate"
+            <!-- CENTER TRANSPORT GROUP: [ Anterior | Play/Pause | Próximo ] -->
+            <LinearLayout
                 android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:layout_marginStart="2dp"
-                android:layout_marginEnd="2dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:fontFamily="@font/inter"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:text="Girar"
-                android:textColor="?attr/colorTextPrimary"
-                android:textSize="12sp"
-                app:backgroundTint="@null"
-                app:icon="@drawable/ic_portrait_24"
-                app:iconSize="16dp"
-                app:iconTint="?attr/colorAccentPrimary" />
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="horizontal">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnPip"
+                <!-- Previous Episode -->
+                <ImageButton
+                    android:id="@+id/btnPrevEp"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:contentDescription="Episódio Anterior"
+                    android:focusable="true"
+                    android:padding="9dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_skip_previous_24"
+                    app:tint="#D4D4D4" />
+
+                <!-- Prominent Play / Pause Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnPlayPause"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:layout_marginStart="18dp"
+                    android:layout_marginEnd="18dp"
+                    android:clickable="true"
+                    android:contentDescription="Play/Pause"
+                    android:focusable="true"
+                    android:focusedByDefault="true"
+                    android:insetLeft="0dp"
+                    android:insetTop="0dp"
+                    android:insetRight="0dp"
+                    android:insetBottom="0dp"
+                    android:padding="0dp"
+                    app:backgroundTint="#26FFFFFF"
+                    app:cornerRadius="26dp"
+                    app:icon="@drawable/ic_pause_24"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconSize="32dp"
+                    app:iconTint="#FFFFFFFF"
+                    app:strokeColor="#4DFFFFFF"
+                    app:strokeWidth="1.5dp" />
+
+                <!-- Next Episode -->
+                <ImageButton
+                    android:id="@+id/btnNextEp"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:contentDescription="Próximo Episódio"
+                    android:focusable="true"
+                    android:padding="9dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_skip_next_24"
+                    app:tint="#D4D4D4" />
+
+            </LinearLayout>
+
+            <!-- Spacer -->
+            <View
                 android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:visibility="gone" />
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <!-- RIGHT GROUP: Girar & Info -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <!-- Girar -->
+                <LinearLayout
+                    android:id="@+id/btnRotate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="16dp"
+                    android:background="@drawable/bg_player_action_vertical"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:paddingStart="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingEnd="10dp"
+                    android:paddingBottom="4dp">
+
+                    <ImageView
+                        android:id="@+id/ivRotate"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:contentDescription="Girar Tela"
+                        android:src="@drawable/ic_portrait_24"
+                        app:tint="#D4D4D4" />
+
+                    <TextView
+                        android:id="@+id/tvRotate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:fontFamily="@font/inter"
+                        android:text="Girar"
+                        android:textColor="#D4D4D4"
+                        android:textSize="11sp" />
+
+                </LinearLayout>
+
+                <!-- Info -->
+                <LinearLayout
+                    android:id="@+id/btnInfo"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_player_action_vertical"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:paddingStart="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingEnd="10dp"
+                    android:paddingBottom="4dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:contentDescription="Informações Técnicas"
+                        android:src="@drawable/ic_info_24"
+                        app:tint="#D4D4D4" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:fontFamily="@font/inter"
+                        android:text="Info"
+                        android:textColor="#D4D4D4"
+                        android:textSize="11sp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
 
         </LinearLayout>
-    </HorizontalScrollView>
+
+        <!-- ROW 2: Scrub Row (.scrub-row) -->
+        <!-- Named linearLayout2 for code compatibility with PlayerActivity progressViewGroup -->
+        <LinearLayout
+            android:id="@+id/linearLayout2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!-- Current Position -->
+            <TextView
+                android:id="@id/exo_position"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="14dp"
+                android:fontFamily="@font/inter"
+                android:textColor="#D4D4D4"
+                android:textSize="13sp"
+                tools:text="06:24" />
+
+            <!-- ExoPlayer TimeBar: 6dp sleek bar with cyan played/scrubber -->
+            <com.google.android.exoplayer2.ui.DefaultTimeBar
+                android:id="@id/exo_progress"
+                android:layout_width="0dp"
+                android:layout_height="24dp"
+                android:layout_weight="1"
+                app:bar_height="6dp"
+                app:played_color="#22D3EE"
+                app:scrubber_color="#22D3EE"
+                app:scrubber_dragged_size="16dp"
+                app:scrubber_enabled_size="14dp"
+                app:unplayed_color="#33FFFFFF" />
+
+            <!-- MPV SeekBar fallback -->
+            <SeekBar
+                android:id="@+id/progressBar"
+                android:layout_width="0dp"
+                android:layout_height="24dp"
+                android:layout_weight="1"
+                android:progressTint="#22D3EE"
+                android:thumbTint="#22D3EE"
+                android:visibility="gone" />
+
+            <!-- Total Duration -->
+            <TextView
+                android:id="@id/exo_duration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:fontFamily="@font/inter"
+                android:textColor="#D4D4D4"
+                android:textSize="13sp"
+                tools:text="23:40" />
+
+        </LinearLayout>
+
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

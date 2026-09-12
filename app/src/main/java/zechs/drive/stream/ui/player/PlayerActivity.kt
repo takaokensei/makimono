@@ -15,7 +15,10 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.animation.AccelerateInterpolator
 import android.widget.HorizontalScrollView
+import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
@@ -147,23 +150,35 @@ class PlayerActivity : AppCompatActivity() {
 
     // Player views
     private lateinit var mainControlsRoot: LinearLayout
-    private lateinit var controlsScrollView: HorizontalScrollView
+    private lateinit var controlsScrollView: View
     private lateinit var progressViewGroup: LinearLayout
     private lateinit var toolbar: MaterialToolbar
+    private lateinit var titleBlock: View
+    private lateinit var btnBack: ImageButton
+    private lateinit var tvPlayerTitle: TextView
+    private lateinit var tvPlayerMeta: TextView
     private lateinit var btnPlayPause: MaterialButton
-    private lateinit var btnAudio: MaterialButton
-    private lateinit var btnSubtitle: MaterialButton
-    private lateinit var btnChapter: MaterialButton
-    private lateinit var btnResize: MaterialButton
-    private lateinit var btnInfo: MaterialButton
+    private lateinit var btnPrevEp: ImageButton
+    private lateinit var btnNextEp: ImageButton
+    private lateinit var btnAudio: View
+    private lateinit var btnSubtitle: View
+    private lateinit var btnChapter: View
+    private lateinit var btnResize: View
+    private lateinit var btnInfo: View
     private lateinit var btnPip: MaterialButton
-    private lateinit var btnSpeed: MaterialButton
-    private lateinit var btnRotate: MaterialButton
+    private lateinit var btnSpeed: View
+    private lateinit var btnRotate: View
+    private lateinit var ivRotate: ImageView
+    private lateinit var tvRotate: TextView
     private lateinit var btnLock: MaterialButton
     private lateinit var btnUnlock: MaterialButton
-    private lateinit var btnSkipIntro: MaterialButton
+    private lateinit var btnSkipIntro: TextView
     private lateinit var btnSkipIntroBack: MaterialButton
     private lateinit var skipIntroRow: LinearLayout
+    private lateinit var aniskipPill: LinearLayout
+    private lateinit var tvAniSkipLabel: TextView
+    private var prevEpisode: PlaylistItem? = null
+    private var aniskipPillJob: Job? = null
 
     // States
     private var onStopCalled = false
@@ -228,7 +243,13 @@ class PlayerActivity : AppCompatActivity() {
         controlsScrollView = playerView.findViewById(R.id.controlsScrollView)
         progressViewGroup = playerView.findViewById(R.id.linearLayout2)
         toolbar = playerView.findViewById(R.id.playerToolbar)
+        titleBlock = playerView.findViewById(R.id.titleBlock)
+        btnBack = playerView.findViewById(R.id.btnBack)
+        tvPlayerTitle = playerView.findViewById(R.id.tvPlayerTitle)
+        tvPlayerMeta = playerView.findViewById(R.id.tvPlayerMeta)
         btnPlayPause = playerView.findViewById(R.id.btnPlayPause)
+        btnPrevEp = playerView.findViewById(R.id.btnPrevEp)
+        btnNextEp = playerView.findViewById(R.id.btnNextEp)
         btnAudio = playerView.findViewById(R.id.btnAudio)
         btnSubtitle = playerView.findViewById(R.id.btnSubtitle)
         btnChapter = playerView.findViewById(R.id.btnChapter)
@@ -237,15 +258,33 @@ class PlayerActivity : AppCompatActivity() {
         btnPip = playerView.findViewById(R.id.btnPip)
         btnSpeed = playerView.findViewById(R.id.btnSpeed)
         btnRotate = playerView.findViewById(R.id.btnRotate)
+        ivRotate = playerView.findViewById(R.id.ivRotate)
+        tvRotate = playerView.findViewById(R.id.tvRotate)
         btnLock = playerView.findViewById(R.id.btnLock)
         btnUnlock = playerView.findViewById(R.id.btnUnlock)
         btnSkipIntro = playerView.findViewById(R.id.btnSkipIntro)
         btnSkipIntroBack = playerView.findViewById(R.id.btnSkipIntroBack)
         skipIntroRow = playerView.findViewById(R.id.skipIntroRow)
+        aniskipPill = playerView.findViewById(R.id.aniskipPill)
+        tvAniSkipLabel = playerView.findViewById(R.id.tvAniSkipLabel)
 
         // Back button
         toolbar.setNavigationOnClickListener {
             finish()
+        }
+        btnBack.setOnClickListener {
+            finish()
+        }
+
+        btnPrevEp.setOnClickListener {
+            playPrevEpisodeDirectly()
+        }
+        btnNextEp.setOnClickListener {
+            playNextEpisodeDirectly()
+        }
+
+        skipIntroRow.setOnClickListener {
+            performSkipIntroOrCredits()
         }
 
         btnAudio.setOnClickListener {
@@ -393,6 +432,7 @@ class PlayerActivity : AppCompatActivity() {
                 override fun isControllerVisible(): Boolean = playerView.isControllerVisible
                 override fun getTouchIgnoredViews(): List<View> = listOf(
                     toolbar,
+                    titleBlock,
                     controlsScrollView,
                     progressViewGroup,
                     mainControlsRoot,
@@ -475,13 +515,29 @@ class PlayerActivity : AppCompatActivity() {
     private fun updateNextEpisode() {
         if (playlist.isEmpty()) {
             nextEpisode = null
+            prevEpisode = null
+            if (::btnPrevEp.isInitialized) {
+                btnPrevEp.isEnabled = false
+                btnPrevEp.alpha = 0.35f
+                btnNextEp.isEnabled = false
+                btnNextEp.alpha = 0.35f
+            }
             return
         }
         val currentIndex = playlist.indexOfFirst { it.fileId == currentFileId }
         nextEpisode = if (currentIndex != -1 && currentIndex + 1 < playlist.size) {
             playlist[currentIndex + 1]
         } else null
-        Log.d(TAG, "updateNextEpisode: currentIndex=$currentIndex, nextEpisode=${nextEpisode?.title}")
+        prevEpisode = if (currentIndex > 0) {
+            playlist[currentIndex - 1]
+        } else null
+        if (::btnPrevEp.isInitialized) {
+            btnPrevEp.isEnabled = prevEpisode != null
+            btnPrevEp.alpha = if (prevEpisode != null) 1.0f else 0.35f
+            btnNextEp.isEnabled = nextEpisode != null
+            btnNextEp.alpha = if (nextEpisode != null) 1.0f else 0.35f
+        }
+        Log.d(TAG, "updateNextEpisode: currentIndex=$currentIndex, prevEpisode=${prevEpisode?.title}, nextEpisode=${nextEpisode?.title}")
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -543,6 +599,10 @@ class PlayerActivity : AppCompatActivity() {
                     }
                 }
 
+                val mediaTitle = player.mediaMetadata.title?.toString()
+                if (tvPlayerTitle.text.isNullOrEmpty() && !mediaTitle.isNullOrEmpty()) {
+                    tvPlayerTitle.text = mediaTitle
+                }
                 if (toolbar.title.isNullOrEmpty()) {
                     toolbar.title = player.mediaMetadata.title
                 }
@@ -552,6 +612,15 @@ class PlayerActivity : AppCompatActivity() {
                     toolbar.title = getString(R.string.unknown)
                 }
 
+                val epPrefix = if (currentEpNumber > 0) "Episódio ${currentEpNumber.toString().padStart(2, '0')}" else ""
+                val fullMeta = if (epPrefix.isNotEmpty() && subtitleText.isNotEmpty()) {
+                    "$epPrefix • $subtitleText"
+                } else if (epPrefix.isNotEmpty()) {
+                    epPrefix
+                } else {
+                    subtitleText
+                }
+                tvPlayerMeta.text = fullMeta
                 toolbar.subtitle = subtitleText
             }
         }
@@ -945,11 +1014,13 @@ class PlayerActivity : AppCompatActivity() {
         binding.nextEpisodeCard.root.visibility = View.GONE
         btnUnlock.visibility = View.VISIBLE
         toolbar.visibility = View.GONE
+        titleBlock.visibility = View.GONE
     }
 
     private fun unlockControls() {
         btnUnlock.visibility = View.GONE
-        toolbar.visibility = View.VISIBLE
+        toolbar.visibility = View.GONE
+        titleBlock.visibility = View.VISIBLE
         controlsScrollView.visibility = View.VISIBLE
         mainControlsRoot.visibility = View.VISIBLE
         skipIntroRow.visibility = View.VISIBLE
@@ -1004,6 +1075,9 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         toolbar.title = title
+        tvPlayerTitle.text = parsed.showTitle.ifBlank { parsed.cleanTitle.ifBlank { title ?: "" } }
+        val epText = if (currentEpNumber > 0) "Episódio ${currentEpNumber.toString().padStart(2, '0')}" else ""
+        tvPlayerMeta.text = epText
 
         playerView.apply {
             player = this@PlayerActivity.player
@@ -1396,6 +1470,43 @@ class PlayerActivity : AppCompatActivity() {
         }.show()
     }
 
+    private fun playPrevEpisodeDirectly() {
+        val prev = prevEpisode ?: return
+        countdownJob?.cancel()
+        isNextEpisodeCardShowing = false
+        binding.nextEpisodeCard.root.visibility = View.GONE
+
+        saveProgress()
+
+        currentFileId = prev.fileId
+        currentTitle = prev.title
+        currentThumbnailLink = prev.thumbnailLink
+        nextEpisodeCanceled = false
+        addedSubtitleFileIds.clear()
+        updateNextEpisode()
+
+        playMedia()
+        val parsed = EpisodeParser.parse(prev.title)
+        Snackbar.make(playerView, "Iniciando: ${parsed.cleanTitle}", 1500).apply {
+            anchorView = progressViewGroup
+        }.show()
+    }
+
+    private fun showAniSkipPill(label: String = "Abertura pulada (AniSkip)") {
+        if (!::aniskipPill.isInitialized) return
+        tvAniSkipLabel.text = label
+        aniskipPill.animate().cancel()
+        aniskipPill.alpha = 1f
+        aniskipPill.visibility = View.VISIBLE
+        aniskipPillJob?.cancel()
+        aniskipPillJob = lifecycleScope.launch {
+            delay(3000L)
+            aniskipPill.animate().alpha(0f).setDuration(300L).withEndAction {
+                aniskipPill.visibility = View.GONE
+            }.start()
+        }
+    }
+
     private fun mergeAniSkipChapters(aniSkipChapters: List<MatroskaChapterParser.ParsedChapter>) {
         if (aniSkipChapters.isEmpty()) return
         val existing = parsedChapters.toMutableList()
@@ -1447,6 +1558,7 @@ class PlayerActivity : AppCompatActivity() {
                     hasAutoSkippedCurrentInterval = true
                     player.seekTo(specialChapter.endTimeMs)
                     gestureHelper.showNotification("⏩ Abertura pulada automaticamente (AniSkip)")
+                    showAniSkipPill("Abertura pulada (AniSkip)")
                     return
                 }
             }
@@ -1590,28 +1702,30 @@ class PlayerActivity : AppCompatActivity() {
     private fun updateOrientation(newConfig: Configuration) {
         when (newConfig.orientation) {
             Configuration.ORIENTATION_PORTRAIT -> {
-                btnRotate.apply {
-                    orientation = Orientation.PORTRAIT
-                    text = "Paisagem"
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        tooltipText = getString(R.string.landscape)
-                    }
-                    icon = ContextCompat.getDrawable(
-                        /* context */ this@PlayerActivity,
-                        /* drawableId */ R.drawable.ic_landscape_24
+                orientation = Orientation.PORTRAIT
+                if (::tvRotate.isInitialized) {
+                    tvRotate.text = "Paisagem"
+                }
+                if (::btnRotate.isInitialized && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    btnRotate.tooltipText = getString(R.string.landscape)
+                }
+                if (::ivRotate.isInitialized) {
+                    ivRotate.setImageDrawable(
+                        ContextCompat.getDrawable(this@PlayerActivity, R.drawable.ic_landscape_24)
                     )
                 }
             }
             else -> {
-                btnRotate.apply {
-                    orientation = Orientation.LANDSCAPE
-                    text = "Girar"
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        tooltipText = getString(R.string.portrait)
-                    }
-                    icon = ContextCompat.getDrawable(
-                        /* context */ this@PlayerActivity,
-                        /* drawableId */ R.drawable.ic_portrait_24
+                orientation = Orientation.LANDSCAPE
+                if (::tvRotate.isInitialized) {
+                    tvRotate.text = "Girar"
+                }
+                if (::btnRotate.isInitialized && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    btnRotate.tooltipText = getString(R.string.portrait)
+                }
+                if (::ivRotate.isInitialized) {
+                    ivRotate.setImageDrawable(
+                        ContextCompat.getDrawable(this@PlayerActivity, R.drawable.ic_portrait_24)
                     )
                 }
             }
