@@ -104,6 +104,7 @@ class HomeFragment : BaseFragment() {
 
     private fun setupAnimeGrid() {
         val spanCount = if (isGridMode) getResponsiveSpanCount() else 1
+        animeAdapter.isGridMode = isGridMode
         binding.rvAnimeLibrary.layoutManager = GridLayoutManager(context, spanCount)
         binding.rvAnimeLibrary.adapter = animeAdapter
     }
@@ -128,6 +129,7 @@ class HomeFragment : BaseFragment() {
         gridBtn.setOnClickListener {
             if (!isGridMode) {
                 isGridMode = true
+                animeAdapter.isGridMode = true
                 gridBtn.setBackgroundResource(R.drawable.bg_segmented_active)
                 gridBtn.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
                 listBtn.background = null
@@ -139,6 +141,7 @@ class HomeFragment : BaseFragment() {
         listBtn.setOnClickListener {
             if (isGridMode) {
                 isGridMode = false
+                animeAdapter.isGridMode = false
                 listBtn.setBackgroundResource(R.drawable.bg_segmented_active)
                 listBtn.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
                 gridBtn.background = null
@@ -153,6 +156,9 @@ class HomeFragment : BaseFragment() {
             btnNavAnimes.setOnClickListener {
                 selectTab("Animes")
                 viewModel.filterStarred(false)
+                if (viewModel.animeLibrary.value.isEmpty()) {
+                    viewModel.loadAnimeLibrary(forceRefresh = true)
+                }
                 contentScrollView.scrollTo(0, 0)
             }
 

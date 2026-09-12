@@ -223,7 +223,13 @@ sealed class FilesViewHolder(
                 } else item.name
 
                 tvGridFileName.text = cleanTitle
-                tvGridFileSize.text = item.humanSize ?: if (isFolder) "Pasta" else ""
+
+                // Extract episode count or display size/anime
+                val epRegex = Regex("""(\d+)\s*(?:eps?|episodes?|cap[íi]tulos?|epis[óo]dios?)""", RegexOption.IGNORE_CASE)
+                val epMatch = epRegex.find(item.name)
+                val epTag = epMatch?.let { "${it.groupValues[1]} Ep" }
+
+                tvGridFileSize.text = epTag ?: item.humanSize ?: if (isFolder) "ANIME" else ""
 
                 // Extract resolution and codec tags from original filename
                 val upperName = item.name.uppercase()
@@ -253,7 +259,7 @@ sealed class FilesViewHolder(
                 tvGridTypeBadge.apply {
                     isVisible = resTag == null && codecTag == null
                     text = when {
-                        isFolder -> "PASTA"
+                        isFolder -> "ANIME"
                         isVideo -> "VÍDEO"
                         item.isSubtitleFile -> "LEGENDA"
                         else -> "ARQUIVO"

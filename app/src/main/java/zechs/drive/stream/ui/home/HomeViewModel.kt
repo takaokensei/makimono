@@ -89,19 +89,57 @@ class HomeViewModel @Inject constructor(
         }
 
         try {
-            val response = driveRepository.get().getFiles(
-                query = "name contains 'oneblacki' and mimeType = 'application/vnd.google-apps.folder' and trashed=false",
+            // 1. First priority: Exact match query for folder or shortcut named 'oneblacki'
+            val exactResponse = driveRepository.get().getFiles(
+                query = "name = 'oneblacki' and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut') and trashed=false",
                 pageToken = null,
-                pageSize = 5
+                pageSize = 10
+            )
+            if (exactResponse is Resource.Success && exactResponse.data != null && exactResponse.data.files.isNotEmpty()) {
+                val folder = exactResponse.data.files.firstOrNull {
+                    it.name.trim().equals("oneblacki", ignoreCase = true)
+                } ?: exactResponse.data.files.first()
+
+                val targetId = if (folder.shortcutDetails.targetId != null && folder.shortcutDetails.targetMimeType == "application/vnd.google-apps.folder") {
+                    folder.shortcutDetails.targetId
+                } else {
+                    folder.id
+                }
+                cachedOneBlackiId = targetId
+                Log.d(TAG, "Found exact oneblacki folder: id=$targetId, name=${folder.name}")
+                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                    onResult(targetId, folder.name)
+                }
+                return@launch
+            }
+
+            // 2. Second priority: Query contains 'oneblacki' with strict exclusion of '1oneblacki'
+            val response = driveRepository.get().getFiles(
+                query = "name contains 'oneblacki' and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut') and trashed=false",
+                pageToken = null,
+                pageSize = 50
             )
             if (response is Resource.Success && response.data != null) {
-                val folder = response.data.files.firstOrNull {
-                    it.name.contains("oneblacki", ignoreCase = true)
+                val files = response.data.files
+                val folder = files.firstOrNull {
+                    it.name.trim().equals("oneblacki", ignoreCase = true)
+                } ?: files.firstOrNull {
+                    it.name.trim().equals("one blacki", ignoreCase = true)
+                } ?: files.firstOrNull {
+                    val n = it.name.trim().lowercase()
+                    n.contains("oneblacki") && !n.contains("1oneblacki") && !n.startsWith("1")
                 }
+
                 if (folder != null) {
-                    cachedOneBlackiId = folder.id
+                    val targetId = if (folder.shortcutDetails.targetId != null && folder.shortcutDetails.targetMimeType == "application/vnd.google-apps.folder") {
+                        folder.shortcutDetails.targetId
+                    } else {
+                        folder.id
+                    }
+                    cachedOneBlackiId = targetId
+                    Log.d(TAG, "Found oneblacki folder (filtered): id=$targetId, name=${folder.name}")
                     kotlinx.coroutines.withContext(Dispatchers.Main) {
-                        onResult(folder.id, folder.name)
+                        onResult(targetId, folder.name)
                     }
                     return@launch
                 }
@@ -223,17 +261,17 @@ class HomeViewModel @Inject constructor(
     private val _isLoadingAnime = MutableStateFlow(false)
     val isLoadingAnime = _isLoadingAnime.asStateFlow()
 
-    fun loadAnimeLibrary() = viewModelScope.launch(Dispatchers.IO) {
+    fun loadAnimeLibrary(forceRefresh: Boolean = false) = viewModelScope.launch(Dispatchers.IO) {
+        if (forceRefresh) {
+            cachedOneBlackiId = null
+        }
         _isLoadingAnime.value = true
-        getOneBlackiFolder { folderId, _ ->
+        getOneBlackiFolder { folderId, folderName ->
             viewModelScope.launch(Dispatchers.IO) {
                 try {
-                    val query = if (folderId != null) {
-                        "'$folderId' in parents and trashed=false"
-                    } else {
-                        "name contains 'oneblacki' and trashed=false"
-                    }
-
+                    if (folderId != null) {
+                        Log.d(TAG, "Carregando catálogo de animes da pasta: $folderName ($folderId)")
+                        val query = "'$folderId' in parents and trashed=false"
                     val response = driveRepository.get().getFiles(
                         query = query,
                         pageToken = null,
@@ -245,7 +283,10 @@ class HomeViewModel @Inject constructor(
                         val allMeta = folderMetadataRepository.getAllMetadata().associateBy { it.folderId }
 
                         val mappedFiles = rawFiles.map { file ->
-                            val meta = allMeta[file.id]
+                            val targetId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
+                                file.shortcutDetails.targetId
+                            } else file.id
+                            val meta = allMeta[targetId] ?: allMeta[file.id]
                             if (meta?.posterUrl != null) {
                                 file.copy(posterUrl = meta.posterUrl)
                             } else file
@@ -262,7 +303,10 @@ class HomeViewModel @Inject constructor(
                             if (file.posterUrl.isNullOrBlank() && (file.isFolder || file.isShortcutFolder)) {
                                 val poster = animePosterResolver.resolvePoster(file.name)
                                 if (!poster.isNullOrBlank()) {
-                                    folderMetadataRepository.updatePosterUrl(file.id, file.name, poster)
+                                    val targetId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
+                                        file.shortcutDetails.targetId
+                                    } else file.id
+                                    folderMetadataRepository.updatePosterUrl(targetId, file.name, poster)
                                     updatedList[i] = file.copy(posterUrl = poster)
                                     _animeLibrary.value = updatedList.toList()
                                     _filteredAnimes.value = updatedList.toList()
@@ -272,6 +316,10 @@ class HomeViewModel @Inject constructor(
                     } else {
                         _isLoadingAnime.value = false
                     }
+                } else {
+                    Log.w(TAG, "Pasta 'oneblacki' não encontrada no Google Drive.")
+                    _isLoadingAnime.value = false
+                }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error loading anime library", e)
                     _isLoadingAnime.value = false

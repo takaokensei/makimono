@@ -53,7 +53,9 @@ class AnimePosterResolver @Inject constructor() {
      * seamlessly falls back to Kitsu API to ensure the user never gets an empty card.
      */
     suspend fun resolvePoster(folderName: String): String? = withContext(Dispatchers.IO) {
-        if (folderName.contains("oneblacki", ignoreCase = true)) {
+        val trimmed = folderName.trim()
+        if (trimmed.equals("oneblacki", ignoreCase = true) ||
+            (trimmed.contains("oneblacki", ignoreCase = true) && !trimmed.contains("1oneblacki", ignoreCase = true) && !trimmed.startsWith("1"))) {
             Log.d(TAG, "Using custom built-in cover for oneblacki")
             return@withContext "android.resource://zechs.drive.stream/drawable/oneblacki_cover"
         }

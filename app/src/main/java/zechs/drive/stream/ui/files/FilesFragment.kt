@@ -104,7 +104,9 @@ class FilesFragment : BaseFragment() {
             }
         }
 
-        viewModel.isCurrentFolderOneBlacki = args.name.contains("oneblacki", ignoreCase = true)
+        val folderName = args.name.trim()
+        viewModel.isCurrentFolderOneBlacki = folderName.equals("oneblacki", ignoreCase = true) ||
+                (folderName.contains("oneblacki", ignoreCase = true) && !folderName.contains("1oneblacki", ignoreCase = true) && !folderName.startsWith("1"))
 
         setupRecyclerView()
         setupSearchAndLayoutToggle()
