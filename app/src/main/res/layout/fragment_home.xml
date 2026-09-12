@@ -351,6 +351,60 @@
 
             </LinearLayout>
 
+            <!-- Empty State when Home has no continue watching items -->
+            <LinearLayout
+                android:id="@+id/layoutHomeEmpty"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="24dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <ImageView
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_play_24"
+                    app:tint="#22D3EE" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:fontFamily="@font/inter"
+                    android:text="Nenhum anime em andamento"
+                    android:textColor="#F1F5F9"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:fontFamily="@font/inter"
+                    android:text="Acesse a aba Animes no menu lateral para começar a assistir!"
+                    android:textColor="#94A3B8"
+                    android:textSize="13sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnExploreAnimes"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:backgroundTint="#1E293B"
+                    android:fontFamily="@font/inter"
+                    android:text="Explorar Catálogo de Animes"
+                    android:textColor="#22D3EE"
+                    android:textSize="13sp"
+                    app:cornerRadius="8dp"
+                    app:strokeColor="#22D3EE"
+                    app:strokeWidth="1dp" />
+
+            </LinearLayout>
+
         </FrameLayout>
 
         <!-- Dim Overlay behind expanded sidebar (giving that dim/blur effect over the animes) -->
@@ -379,12 +433,12 @@
             android:paddingBottom="16dp"
             android:translationZ="24dp">
 
-            <!-- 1. Início -->
+            <!-- 1. Início (Active by default) -->
             <LinearLayout
                 android:id="@+id/btnNavInicio"
                 android:layout_width="match_parent"
                 android:layout_height="44dp"
-                android:background="@drawable/rail_item_focus_bg"
+                android:background="@drawable/nav_item_active_bg"
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center_vertical"
@@ -393,11 +447,12 @@
                 android:paddingEnd="12dp">
 
                 <ImageView
+                    android:id="@+id/ivNavInicioIcon"
                     android:layout_width="18dp"
                     android:layout_height="18dp"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_home_24"
-                    app:tint="#7FA3D6" />
+                    app:tint="#FFFFFF" />
 
                 <TextView
                     android:id="@+id/tvNavInicio"
@@ -406,18 +461,19 @@
                     android:layout_marginStart="14dp"
                     android:fontFamily="@font/inter"
                     android:text="Início"
-                    android:textColor="#94A3B8"
-                    android:textSize="14sp" />
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
 
             </LinearLayout>
 
-            <!-- 2. Animes (Active by default) -->
+            <!-- 2. Animes -->
             <LinearLayout
                 android:id="@+id/btnNavAnimes"
                 android:layout_width="match_parent"
                 android:layout_height="44dp"
                 android:layout_marginTop="4dp"
-                android:background="@drawable/nav_item_active_bg"
+                android:background="@drawable/rail_item_focus_bg"
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center_vertical"
@@ -431,7 +487,7 @@
                     android:layout_height="18dp"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_play_24"
-                    app:tint="#FFFFFF" />
+                    app:tint="#7FA3D6" />
 
                 <TextView
                     android:id="@+id/tvNavAnimes"
@@ -440,9 +496,8 @@
                     android:layout_marginStart="14dp"
                     android:fontFamily="@font/inter"
                     android:text="Animes"
-                    android:textColor="#FFFFFF"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
+                    android:textColor="#94A3B8"
+                    android:textSize="14sp" />
 
             </LinearLayout>
 

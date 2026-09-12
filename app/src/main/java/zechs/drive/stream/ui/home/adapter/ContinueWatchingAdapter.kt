@@ -47,7 +47,18 @@ class ContinueWatchingAdapter(
             val remainingSec = (totalSec - watchedSec).coerceAtLeast(0)
             val remainingMin = ((remainingSec + 59) / 60).toInt()
 
-            binding.tvShelfItemTitle.text = watchItem.name
+            val parsed = zechs.drive.stream.utils.EpisodeParser.parse(watchItem.name)
+            binding.tvShelfItemTitle.text = parsed.showTitle.ifBlank { parsed.cleanTitle }
+
+            if (parsed.episodeLabel.isNotBlank()) {
+                binding.tvShelfItemEpisode.visibility = android.view.View.VISIBLE
+                binding.tvShelfItemEpisode.text = parsed.episodeLabel
+                binding.tvShelfItemDot.visibility = android.view.View.VISIBLE
+            } else {
+                binding.tvShelfItemEpisode.visibility = android.view.View.GONE
+                binding.tvShelfItemDot.visibility = android.view.View.GONE
+            }
+
             binding.tvShelfItemRemaining.text = if (remainingMin > 0) {
                 "$remainingMin min restante${if (remainingMin > 1) "s" else ""}"
             } else {

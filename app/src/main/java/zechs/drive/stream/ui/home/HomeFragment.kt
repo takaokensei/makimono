@@ -41,7 +41,7 @@ class HomeFragment : BaseFragment() {
     private val mainViewModel by activityViewModels<zechs.drive.stream.ui.main.MainViewModel>()
 
     private var isGridMode = true
-    private var currentTab = "Animes"
+    private var currentTab = "Início"
     private var isSidebarExpanded = false
     private var lastFocusedAnimeView: View? = null
 
@@ -115,10 +115,17 @@ class HomeFragment : BaseFragment() {
             if (count > 0) binding.rvContinueWatchingShelf.smoothScrollToPosition(count - 1)
         }
 
+        binding.btnExploreAnimes?.setOnClickListener {
+            selectTab("Animes")
+        }
+
         observeAnimeLibrary()
         observeRecentWatches()
         observeLogOutState()
         observeMpv()
+
+        // Set initial tab state to Início
+        selectTab("Início")
 
         // Load anime library immediately on opening
         viewModel.loadAnimeLibrary()
@@ -141,6 +148,9 @@ class HomeFragment : BaseFragment() {
         binding.etSearchAnime.doAfterTextChanged { editable ->
             val query = editable?.toString().orEmpty()
             binding.btnClearSearch.visibility = if (query.isNotBlank()) View.VISIBLE else View.GONE
+            if (query.isNotBlank() && currentTab == "Início") {
+                selectTab("Animes")
+            }
             viewModel.filterAnimes(query)
         }
 
@@ -414,11 +424,55 @@ class HomeFragment : BaseFragment() {
 
     private fun selectTab(tab: String) {
         currentTab = tab
-        val showShelf = viewModel.recentWatches.value.isNotEmpty()
-        binding.shelfHeaderRow?.visibility = if (showShelf) View.VISIBLE else View.GONE
-        binding.rvContinueWatchingShelf.visibility = if (showShelf) View.VISIBLE else View.GONE
+        val hasRecent = viewModel.recentWatches.value.isNotEmpty()
 
         binding.apply {
+            when (tab) {
+                "Início" -> {
+                    // Home: Shows ONLY Continuar Assistindo shelf (or clean empty state if none)
+                    // The main anime library grid is isolated to the "Animes" tab!
+                    shelfHeaderRow?.visibility = if (hasRecent) View.VISIBLE else View.GONE
+                    rvContinueWatchingShelf.visibility = if (hasRecent) View.VISIBLE else View.GONE
+                    layoutHomeEmpty?.visibility = if (hasRecent) View.GONE else View.VISIBLE
+                    rvAnimeLibrary.visibility = View.GONE
+                    layoutEmpty.visibility = View.GONE
+                    containerViewToggle?.visibility = View.GONE
+                    containerItemCount?.visibility = if (hasRecent) View.VISIBLE else View.GONE
+                    tvItemCount.text = "${viewModel.recentWatches.value.size} em andamento"
+                }
+                "Animes" -> {
+                    // Animes: Full library grid isolated here
+                    shelfHeaderRow?.visibility = View.GONE
+                    rvContinueWatchingShelf.visibility = View.GONE
+                    layoutHomeEmpty?.visibility = View.GONE
+                    rvAnimeLibrary.visibility = View.VISIBLE
+                    containerViewToggle?.visibility = View.VISIBLE
+                    containerItemCount?.visibility = View.VISIBLE
+                    val animesCount = viewModel.filteredAnimes.value.size
+                    tvItemCount.text = "$animesCount animes"
+                    val isEmpty = animesCount == 0 && !viewModel.isLoadingAnime.value
+                    layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
+                }
+                "Favoritos" -> {
+                    // Favoritos: Filtered library grid for starred animes
+                    shelfHeaderRow?.visibility = View.GONE
+                    rvContinueWatchingShelf.visibility = View.GONE
+                    layoutHomeEmpty?.visibility = View.GONE
+                    rvAnimeLibrary.visibility = View.VISIBLE
+                    containerViewToggle?.visibility = View.VISIBLE
+                    containerItemCount?.visibility = View.VISIBLE
+                    val favCount = viewModel.filteredAnimes.value.size
+                    tvItemCount.text = "$favCount favoritos"
+                    val isEmpty = favCount == 0 && !viewModel.isLoadingAnime.value
+                    layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
+                }
+                else -> {
+                    shelfHeaderRow?.visibility = View.GONE
+                    rvContinueWatchingShelf.visibility = View.GONE
+                    layoutHomeEmpty?.visibility = View.GONE
+                }
+            }
+
             val normalBg = R.drawable.rail_item_focus_bg
             val activeBg = R.drawable.nav_item_active_bg
             val normalTextColor = android.graphics.Color.parseColor("#94A3B8")
@@ -429,6 +483,7 @@ class HomeFragment : BaseFragment() {
             // Início
             btnNavInicio.setBackgroundResource(if (tab == "Início") activeBg else normalBg)
             tvNavInicio.setTextColor(if (tab == "Início") activeTextColor else normalTextColor)
+            ivNavInicioIcon?.imageTintList = android.content.res.ColorStateList.valueOf(if (tab == "Início") activeIconColor else normalIconColor)
 
             // Animes
             btnNavAnimes.setBackgroundResource(if (tab == "Animes") activeBg else normalBg)
@@ -480,9 +535,15 @@ class HomeFragment : BaseFragment() {
                     viewModel.filteredAnimes.collect { animes ->
                         val dataModels = animes.map { FilesDataModel.File(it) }
                         animeAdapter.submitList(dataModels)
-                        binding.tvItemCount.text = "${animes.size} animes"
-                        val isEmpty = animes.isEmpty() && !viewModel.isLoadingAnime.value
-                        binding.layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
+                        if (currentTab == "Animes") {
+                            binding.tvItemCount.text = "${animes.size} animes"
+                            val isEmpty = animes.isEmpty() && !viewModel.isLoadingAnime.value
+                            binding.layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
+                        } else if (currentTab == "Favoritos") {
+                            binding.tvItemCount.text = "${animes.size} favoritos"
+                            val isEmpty = animes.isEmpty() && !viewModel.isLoadingAnime.value
+                            binding.layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
+                        }
                     }
                 }
 
@@ -499,10 +560,15 @@ class HomeFragment : BaseFragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.recentWatches.collect { items ->
-                    val showShelf = items.isNotEmpty()
-                    binding.shelfHeaderRow?.visibility = if (showShelf) View.VISIBLE else View.GONE
-                    binding.rvContinueWatchingShelf.visibility = if (showShelf) View.VISIBLE else View.GONE
                     continueWatchingAdapter.submitList(items)
+                    if (currentTab == "Início") {
+                        val hasRecent = items.isNotEmpty()
+                        binding.shelfHeaderRow?.visibility = if (hasRecent) View.VISIBLE else View.GONE
+                        binding.rvContinueWatchingShelf.visibility = if (hasRecent) View.VISIBLE else View.GONE
+                        binding.layoutHomeEmpty?.visibility = if (hasRecent) View.GONE else View.VISIBLE
+                        binding.containerItemCount?.visibility = if (hasRecent) View.VISIBLE else View.GONE
+                        binding.tvItemCount.text = "${items.size} em andamento"
+                    }
                 }
             }
         }

@@ -9,16 +9,54 @@ object EpisodeParser {
         val showTitle: String,
         val season: Int? = null,
         val episode: Double? = null,
-        val cleanTitle: String
+        val cleanTitle: String,
+        val episodeLabel: String = "",
+        val episodeTitle: String? = null,
+        val isSpecial: Boolean = false
     )
 
-    private val RELEASE_GROUP_REGEX = Regex("^\\[[^\\]]+\\]\\s*")
-    private val BRACKETS_TAGS_REGEX = Regex("\\[[^\\]]*\\]|\\([^\\)]*\\)")
+    // Release group at start: [Judas], [Coalgirls]_, (HorribleSubs), [DB]
+    private val RELEASE_GROUP_REGEX = Regex("^(?:\\[[^\\]]+\\]|\\([^\\)]+\\))[\\s_.-]*")
+
+    // Hashes: [D82B2A34] or (D82B2A34)
+    private val HASH_REGEX = Regex("\\[[0-9A-Fa-f]{8}\\]|\\([0-9A-Fa-f]{8}\\)")
+
+    // Technical metadata tags in brackets or parentheses
+    private val BRACKETS_METADATA_REGEX = Regex(
+        "(?i)\\[(?:[0-9A-Fa-f]{8}|\\d{3,4}p|hevc|x26[45]|avc|h26[45]|bdrip|webrip|web-dl|bluray|aac|flac|opus|dts|10bit|dual[\\s_-]*audio|multi[\\s_-]*sub(?:title)?s?|remux).*?\\]"
+    )
+    private val PARENS_METADATA_REGEX = Regex(
+        "(?i)\\((?:[0-9A-Fa-f]{8}|\\d{3,4}p|\\d{3,4}x\\d{3,4}|hevc|x26[45]|avc|h26[45]|bdrip|webrip|web-dl|bluray|aac|flac|opus|dts|10bit|dual[\\s_-]*audio|multi[\\s_-]*sub(?:title)?s?|remux).*?\\)"
+    )
+
+    // Trailing bare quality tokens like 1080p, WEBRip, etc.
+    private val BARE_QUALITY_REGEX = Regex(
+        "(?i)\\b(?:1080p|720p|480p|2160p|4k|x264|x265|hevc|avc|h264|h265|webrip|web-dl|bluray|bdrip|aac|flac|opus|10bit)\\b.*$"
+    )
+
     private val EXTENSION_REGEX = Regex("\\.[a-zA-Z0-9]{2,4}$")
+
+    // S01S01 or Season 1 Special 1
+    private val SEASON_SPECIAL_REGEX = Pattern.compile(
+        "(?:s|season\\s*)(\\d{1,2})[\\s._-]*(?:s|sp|special|ova|oad)\\s*(\\d{1,4})",
+        Pattern.CASE_INSENSITIVE
+    )
 
     // S01E07 or s1e7
     private val SEASON_EPISODE_REGEX = Pattern.compile(
         "(?:s|season\\s*)(\\d{1,2})[\\s._-]*(?:e|ep|episode\\s*)(\\d{1,4}(?:\\.\\d)?)",
+        Pattern.CASE_INSENSITIVE
+    )
+
+    // Standalone Special / OVA
+    private val STANDALONE_SPECIAL_REGEX = Pattern.compile(
+        "(?:\\b|[_.-])(?:sp|special|ova|oad)\\s*(\\d{1,4})(?:\\b|[_.-])",
+        Pattern.CASE_INSENSITIVE
+    )
+
+    // " - 07" or " - 07v2"
+    private val DASH_EPISODE_REGEX = Pattern.compile(
+        "(?:\\s+-\\s+|\\s+-)(\\d{1,4}(?:\\.\\d)?)(?:v\\d+)?\\b",
         Pattern.CASE_INSENSITIVE
     )
 
@@ -28,76 +66,158 @@ object EpisodeParser {
         Pattern.CASE_INSENSITIVE
     )
 
-    // " - 07" or " - 07v2"
-    private val DASH_EPISODE_REGEX = Pattern.compile(
-        "\\s+-\\s+(\\d{1,4}(?:\\.\\d)?)(?:v\\d+)?(?:\\s+|$|\\[|\\()",
-        Pattern.CASE_INSENSITIVE
-    )
-
     fun parse(filename: String): ParsedEpisode {
-        var baseName = filename.replace(EXTENSION_REGEX, "").trim()
+        var base = filename.replace(EXTENSION_REGEX, "").trim()
+        base = base.replace(RELEASE_GROUP_REGEX, "")
+        base = base.replace(HASH_REGEX, "")
+        base = base.replace(BRACKETS_METADATA_REGEX, "")
+        base = base.replace(PARENS_METADATA_REGEX, "")
+        base = base.replace(BARE_QUALITY_REGEX, "").trim()
 
-        // 1. Check SxxExx
-        val seMatcher = SEASON_EPISODE_REGEX.matcher(baseName)
+        // Normalize underscores to spaces
+        base = base.replace(Regex("_+"), " ").trim()
+
+        // 1. Check SxxSxx (Special / OVA)
+        val specMatcher = SEASON_SPECIAL_REGEX.matcher(base)
+        if (specMatcher.find()) {
+            val season = specMatcher.group(1)?.toIntOrNull()
+            val specialNum = specMatcher.group(2)?.toIntOrNull() ?: 1
+            val titlePart = base.substring(0, specMatcher.start()).trim()
+            val showTitle = cleanTitleString(titlePart)
+            val spStr = String.format(Locale.ROOT, "%02d", specialNum)
+            val epLabel = "Especial $spStr"
+            val clean = if (showTitle.isNotBlank()) "$showTitle • $epLabel" else epLabel
+            return ParsedEpisode(
+                showTitle = showTitle,
+                season = season,
+                episode = specialNum.toDouble(),
+                cleanTitle = clean,
+                episodeLabel = epLabel,
+                isSpecial = true
+            )
+        }
+
+        // 2. Check SxxExx
+        val seMatcher = SEASON_EPISODE_REGEX.matcher(base)
         if (seMatcher.find()) {
             val season = seMatcher.group(1)?.toIntOrNull()
             val episode = seMatcher.group(2)?.toDoubleOrNull()
-            val titlePart = baseName.substring(0, seMatcher.start()).trim()
+            val titlePart = base.substring(0, seMatcher.start()).trim()
             val showTitle = cleanTitleString(titlePart)
-            val clean = formatDisplay(showTitle, season, episode)
-            return ParsedEpisode(showTitle, season, episode, clean)
+
+            val afterPart = base.substring(seMatcher.end()).trim()
+            val epTitle = cleanSubtitleString(afterPart)
+
+            val epStr = formatEpisodeNumber(episode)
+            val epLabel = if (season != null && season > 1) {
+                if (!epTitle.isNullOrBlank()) "S${String.format(Locale.ROOT, "%02d", season)}E$epStr: $epTitle"
+                else "S${String.format(Locale.ROOT, "%02d", season)}E$epStr"
+            } else {
+                if (!epTitle.isNullOrBlank()) "Ep. $epStr: $epTitle"
+                else "Ep. $epStr"
+            }
+
+            val clean = if (showTitle.isNotBlank()) "$showTitle • $epLabel" else epLabel
+            return ParsedEpisode(
+                showTitle = showTitle,
+                season = season,
+                episode = episode,
+                cleanTitle = clean,
+                episodeLabel = epLabel,
+                episodeTitle = epTitle
+            )
         }
 
-        // 2. Check " - 07"
-        val dashMatcher = DASH_EPISODE_REGEX.matcher(baseName)
+        // 3. Check standalone Special / OVA
+        val standaloneSpec = STANDALONE_SPECIAL_REGEX.matcher(base)
+        if (standaloneSpec.find()) {
+            val specialNum = standaloneSpec.group(1)?.toIntOrNull() ?: 1
+            val titlePart = base.substring(0, standaloneSpec.start()).trim()
+            val showTitle = cleanTitleString(titlePart)
+            val spStr = String.format(Locale.ROOT, "%02d", specialNum)
+            val epLabel = "Especial $spStr"
+            val clean = if (showTitle.isNotBlank()) "$showTitle • $epLabel" else epLabel
+            return ParsedEpisode(
+                showTitle = showTitle,
+                episode = specialNum.toDouble(),
+                cleanTitle = clean,
+                episodeLabel = epLabel,
+                isSpecial = true
+            )
+        }
+
+        // 4. Check dash episode (" - 07")
+        val dashMatcher = DASH_EPISODE_REGEX.matcher(base)
         if (dashMatcher.find()) {
             val episode = dashMatcher.group(1)?.toDoubleOrNull()
-            val titlePart = baseName.substring(0, dashMatcher.start()).trim()
+            val titlePart = base.substring(0, dashMatcher.start()).trim()
             val showTitle = cleanTitleString(titlePart)
-            val clean = formatDisplay(showTitle, null, episode)
-            return ParsedEpisode(showTitle, null, episode, clean)
+
+            val afterPart = base.substring(dashMatcher.end()).trim()
+            val epTitle = cleanSubtitleString(afterPart)
+
+            val epStr = formatEpisodeNumber(episode)
+            val epLabel = if (!epTitle.isNullOrBlank()) "Ep. $epStr: $epTitle" else "Ep. $epStr"
+            val clean = if (showTitle.isNotBlank()) "$showTitle • $epLabel" else epLabel
+            return ParsedEpisode(
+                showTitle = showTitle,
+                episode = episode,
+                cleanTitle = clean,
+                episodeLabel = epLabel,
+                episodeTitle = epTitle
+            )
         }
 
-        // 3. Check standalone "E07" / "EP 07"
-        val epMatcher = STANDALONE_EP_REGEX.matcher(baseName)
+        // 5. Check standalone "E07" / "EP 07"
+        val epMatcher = STANDALONE_EP_REGEX.matcher(base)
         if (epMatcher.find()) {
             val episode = epMatcher.group(1)?.toDoubleOrNull()
-            val titlePart = baseName.substring(0, epMatcher.start()).trim()
+            val titlePart = base.substring(0, epMatcher.start()).trim()
             val showTitle = cleanTitleString(titlePart)
-            val clean = formatDisplay(showTitle, null, episode)
-            return ParsedEpisode(showTitle, null, episode, clean)
+
+            val epStr = formatEpisodeNumber(episode)
+            val epLabel = "Ep. $epStr"
+            val clean = if (showTitle.isNotBlank()) "$showTitle • $epLabel" else epLabel
+            return ParsedEpisode(
+                showTitle = showTitle,
+                episode = episode,
+                cleanTitle = clean,
+                episodeLabel = epLabel
+            )
         }
 
-        val cleaned = cleanTitleString(baseName)
-        return ParsedEpisode(cleaned, null, null, cleaned.ifBlank { filename })
+        // 6. Fallback (Movie, OVA or clean single title)
+        val cleaned = cleanTitleString(base)
+        return ParsedEpisode(
+            showTitle = cleaned.ifBlank { filename },
+            cleanTitle = cleaned.ifBlank { filename },
+            episodeLabel = ""
+        )
+    }
+
+    private fun formatEpisodeNumber(episode: Double?): String {
+        if (episode == null) return "01"
+        return if (episode % 1.0 == 0.0) {
+            String.format(Locale.ROOT, "%02d", episode.toInt())
+        } else {
+            episode.toString()
+        }
     }
 
     private fun cleanTitleString(raw: String): String {
-        var result = raw.replace(RELEASE_GROUP_REGEX, "")
-        result = result.replace(BRACKETS_TAGS_REGEX, "")
+        var result = raw.replace(Regex("\\[[^\\]]*\\]|\\([^\\)]*\\)"), "")
+        result = result.replace(Regex("(?i)\\b(?:1080p|720p|480p|2160p|4k|x264|x265|hevc|avc|h264|h265|webrip|web-dl|bluray|bdrip|aac|flac|opus|10bit)\\b"), "")
         result = result.replace(Regex("[_.]+"), " ")
-        result = result.trim()
+        result = result.trim(' ', '-', '_', '.')
         return result
     }
 
-    private fun formatDisplay(showTitle: String, season: Int?, episode: Double?): String {
-        val epStr = if (episode != null) {
-            if (episode % 1.0 == 0.0) {
-                String.format(Locale.ROOT, "%02d", episode.toInt())
-            } else {
-                episode.toString()
-            }
-        } else null
-
-        return when {
-            showTitle.isNotBlank() && season != null && epStr != null ->
-                "$showTitle • S${season}E$epStr"
-            showTitle.isNotBlank() && epStr != null ->
-                "$showTitle • Ep. $epStr"
-            epStr != null ->
-                "Episódio $epStr"
-            else -> showTitle
+    private fun cleanSubtitleString(raw: String): String? {
+        var result = cleanTitleString(raw)
+        if (result.length > 28) {
+            result = result.substring(0, 28).trimEnd(' ', '-')
         }
+        return result.ifBlank { null }
     }
 
     /**
