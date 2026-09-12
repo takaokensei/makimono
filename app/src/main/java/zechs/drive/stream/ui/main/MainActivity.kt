@@ -87,12 +87,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
-        val shouldPlayVinheta = !hasPlayedVinheta && savedInstanceState == null
-        if (shouldPlayVinheta) {
-            splashScreen.setKeepOnScreenCondition { false }
-        } else {
-            splashScreen.setKeepOnScreenCondition { viewModel.isLoading.value }
-        }
+        // Always dismiss immediately — vinheta overlay or nav graph handles the "loading" UX.
+        // Keeping the splash alive causes the old round Torii icon to flash for ~1s before
+        // the vinheta video starts, which breaks the cinematic intro we want.
+        splashScreen.setKeepOnScreenCondition { false }
         splashScreen.setOnExitAnimationListener { splashScreenView ->
             splashScreenView.view.animate()
                 .alpha(0f)

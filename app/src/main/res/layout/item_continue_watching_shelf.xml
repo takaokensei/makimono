@@ -1,28 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Kodi Estuary "In progress" shelf card: a 16:9 preview photo (Google Drive's
-    auto-generated video-frame thumbnail) with a title + progress bar burned
-    into a scrim at the bottom, instead of the old icon-only glass card.
+    Crunchyroll-style "Continue Watching" shelf card:
+    - 16:9 thumbnail from Google Drive's auto-generated frame preview
+    - Gradient scrim at the bottom for text readability
+    - Episode title + "X min restantes" badge
+    - Cyan progress bar overlaid at bottom edge
 -->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/cardShelfItem"
-    android:layout_width="260dp"
-    android:layout_height="146dp"
-    android:layout_marginEnd="16dp"
+    android:layout_width="220dp"
+    android:layout_height="124dp"
+    android:layout_marginEnd="14dp"
     android:clickable="true"
     android:focusable="true"
-    app:cardBackgroundColor="?attr/colorBgSurface"
-    app:cardCornerRadius="12dp"
+    app:cardBackgroundColor="#1A1A1A"
+    app:cardCornerRadius="10dp"
     app:cardElevation="0dp"
-    app:strokeColor="@color/shelf_card_stroke_color"
-    app:strokeWidth="3dp">
+    app:strokeColor="#2A2A2A"
+    app:strokeWidth="1dp">
 
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
+        <!-- Thumbnail: Drive-generated video frame preview -->
         <ImageView
             android:id="@+id/ivShelfItemThumb"
             android:layout_width="match_parent"
@@ -31,19 +34,24 @@
             android:scaleType="centerCrop"
             tools:src="@drawable/glass_card_bg" />
 
+        <!-- Bottom scrim gradient for readability -->
         <View
             android:layout_width="match_parent"
-            android:layout_height="72dp"
+            android:layout_height="80dp"
             android:layout_gravity="bottom"
             android:background="@drawable/shelf_item_scrim" />
 
+        <!-- Text + badges overlay -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom"
             android:orientation="vertical"
-            android:padding="10dp">
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="10dp">
 
+            <!-- Episode title -->
             <TextView
                 android:id="@+id/tvShelfItemTitle"
                 android:layout_width="match_parent"
@@ -52,31 +60,43 @@
                 android:fontFamily="@font/inter"
                 android:maxLines="1"
                 android:textColor="#F0F0F0"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:textStyle="bold"
-                tools:text="Attack on Titan - Episódio 04" />
+                tools:text="Attack on Titan - Ep. 04" />
 
-            <TextView
-                android:id="@+id/tvShelfItemProgress"
-                android:layout_width="match_parent"
+            <!-- "X min restantes" badge row -->
+            <LinearLayout
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:fontFamily="@font/inter"
-                android:textColor="#A0A0A0"
-                android:textSize="11sp"
-                tools:text="14:20 / 24:00 (59%)" />
+                android:layout_marginTop="3dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-            <ProgressBar
-                android:id="@+id/pbShelfItemProgress"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="match_parent"
-                android:layout_height="4dp"
-                android:layout_marginTop="6dp"
-                android:max="100"
-                android:progress="60"
-                android:progressTint="#12A0C7" />
+                <TextView
+                    android:id="@+id/tvShelfItemRemaining"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/inter"
+                    android:textColor="#22D3EE"
+                    android:textSize="10sp"
+                    tools:text="9 min restantes" />
+
+            </LinearLayout>
 
         </LinearLayout>
+
+        <!-- Cyan progress bar pinned to bottom edge of card -->
+        <ProgressBar
+            android:id="@+id/pbShelfItemProgress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="3dp"
+            android:layout_gravity="bottom"
+            android:max="100"
+            android:progress="60"
+            android:progressTint="#22D3EE"
+            android:progressBackgroundTint="#33FFFFFF"
+            tools:progress="40" />
 
     </FrameLayout>
 

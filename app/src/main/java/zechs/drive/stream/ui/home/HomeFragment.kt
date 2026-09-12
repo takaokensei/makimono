@@ -104,7 +104,16 @@ class HomeFragment : BaseFragment() {
         setupBrandLogo()
         setupBackPressedHandling()
 
+        binding.rvContinueWatchingShelf.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(
+            requireContext(), androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false
+        )
         binding.rvContinueWatchingShelf.adapter = continueWatchingAdapter
+
+        // "VER HISTÓRICO" shows all watched items — for now scrolls the shelf to end
+        binding.tvShelfViewHistory?.setOnClickListener {
+            val count = continueWatchingAdapter.itemCount
+            if (count > 0) binding.rvContinueWatchingShelf.smoothScrollToPosition(count - 1)
+        }
 
         observeAnimeLibrary()
         observeRecentWatches()
@@ -405,8 +414,8 @@ class HomeFragment : BaseFragment() {
 
     private fun selectTab(tab: String) {
         currentTab = tab
-        val showShelf = tab == "Início" && viewModel.recentWatches.value.isNotEmpty()
-        binding.tvShelfLabel.visibility = if (showShelf) View.VISIBLE else View.GONE
+        val showShelf = viewModel.recentWatches.value.isNotEmpty()
+        binding.shelfHeaderRow?.visibility = if (showShelf) View.VISIBLE else View.GONE
         binding.rvContinueWatchingShelf.visibility = if (showShelf) View.VISIBLE else View.GONE
 
         binding.apply {
@@ -490,8 +499,8 @@ class HomeFragment : BaseFragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.recentWatches.collect { items ->
-                    val showShelf = items.isNotEmpty() && currentTab == "Início"
-                    binding.tvShelfLabel.visibility = if (showShelf) View.VISIBLE else View.GONE
+                    val showShelf = items.isNotEmpty()
+                    binding.shelfHeaderRow?.visibility = if (showShelf) View.VISIBLE else View.GONE
                     binding.rvContinueWatchingShelf.visibility = if (showShelf) View.VISIBLE else View.GONE
                     continueWatchingAdapter.submitList(items)
                 }

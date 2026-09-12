@@ -246,21 +246,42 @@
                     android:clipToPadding="false"
                     android:orientation="vertical">
 
-                    <!-- Optional Top Continue Watching Shelf (Only shown when available) -->
-                    <TextView
-                        android:id="@+id/tvShelfLabel"
-                        android:layout_width="wrap_content"
+                    <!-- Continue Watching section header (Crunchyroll-style) -->
+                    <LinearLayout
+                        android:id="@+id/shelfHeaderRow"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:layout_marginBottom="8dp"
-                        android:fontFamily="@font/inter"
-                        android:letterSpacing="0.08"
-                        android:text="CONTINUAR ASSISTINDO"
-                        android:textColor="#7DD3FC"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
+                        android:layout_marginBottom="10dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
                         android:visibility="gone"
-                        tools:visibility="visible" />
+                        tools:visibility="visible">
+
+                        <TextView
+                            android:id="@+id/tvShelfLabel"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/inter"
+                            android:letterSpacing="0.08"
+                            android:text="CONTINUAR ASSISTINDO"
+                            android:textColor="#7DD3FC"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvShelfViewHistory"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:fontFamily="@font/inter"
+                            android:text="VER HISTÓRICO ›"
+                            android:textColor="#22D3EE"
+                            android:textSize="11sp" />
+
+                    </LinearLayout>
 
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/rvContinueWatchingShelf"

@@ -10,14 +10,11 @@ import zechs.drive.stream.R
 import zechs.drive.stream.data.model.WatchList
 import zechs.drive.stream.databinding.ItemContinueWatchingShelfBinding
 import zechs.drive.stream.utils.GlideApp
-import zechs.mpv.utils.Utils
 
 /**
- * Backs the horizontal "Continuar assistindo" shelf on Home (Kodi Estuary's
- * "In progress" row). Each card shows the Google Drive-generated video-frame
- * thumbnail ([WatchList.thumbnailLink]) as a 16:9 preview photo, the same way
- * Estuary shows scraped fanart - no local scraping needed since Drive
- * generates the preview frame for us server-side.
+ * Backs the horizontal "Continuar assistindo" shelf on Home (Crunchyroll-style).
+ * Each card shows the Google Drive-generated video-frame thumbnail as a 16:9 preview,
+ * with a cyan progress bar and "X min restantes" badge — matching the cyan glass aesthetic.
  */
 class ContinueWatchingAdapter(
     private val onClick: (WatchList) -> Unit
@@ -43,12 +40,19 @@ class ContinueWatchingAdapter(
 
         fun bind(watchItem: WatchList, onClick: (WatchList) -> Unit, adapter: ContinueWatchingAdapter) {
             val progressPct = watchItem.watchProgress()
-            val currSec = (watchItem.watchedDuration / 1000).toInt()
-            val totalSec = (watchItem.totalDuration / 1000).toInt()
+
+            // Remaining time in minutes (ceil so "1 min restante" not "0 min restante")
+            val watchedSec = (watchItem.watchedDuration / 1000)
+            val totalSec = (watchItem.totalDuration / 1000)
+            val remainingSec = (totalSec - watchedSec).coerceAtLeast(0)
+            val remainingMin = ((remainingSec + 59) / 60).toInt()
 
             binding.tvShelfItemTitle.text = watchItem.name
-            binding.tvShelfItemProgress.text = "${Utils.prettyTime(currSec)} / " +
-                    "${Utils.prettyTime(totalSec)} ($progressPct%)"
+            binding.tvShelfItemRemaining.text = if (remainingMin > 0) {
+                "$remainingMin min restante${if (remainingMin > 1) "s" else ""}"
+            } else {
+                "Quase completo"
+            }
             binding.pbShelfItemProgress.progress = progressPct
 
             GlideApp.with(binding.ivShelfItemThumb)
