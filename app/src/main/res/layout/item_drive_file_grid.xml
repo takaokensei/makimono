@@ -62,7 +62,7 @@
             <!-- Deep dark gradient overlay at the bottom -->
             <View
                 android:layout_width="match_parent"
-                android:layout_height="140dp"
+                android:layout_height="90dp"
                 android:layout_gravity="bottom"
                 android:background="@drawable/shelf_item_scrim" />
 

@@ -17,6 +17,9 @@ import zechs.drive.stream.data.model.PlaylistItem
 import zechs.drive.stream.databinding.DialogPlayerEpisodeDrawerBinding
 import zechs.drive.stream.databinding.ItemPlayerDrawerEpisodeBinding
 import zechs.drive.stream.databinding.ItemPlayerDrawerSeasonBinding
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import zechs.drive.stream.data.remote.TenraiAnimeService
 import zechs.drive.stream.utils.EpisodeParser
 import zechs.drive.stream.utils.SeasonEpisodeGrouper
 import zechs.drive.stream.utils.SeasonGroup
@@ -26,6 +29,7 @@ class PlayerEpisodeDrawerDialog(
     private val showTitle: String,
     private val currentPlayingFileId: String?,
     private val playlist: List<PlaylistItem>,
+    private val tenraiService: TenraiAnimeService? = null,
     private val onEpisodeSelected: (PlaylistItem) -> Unit
 ) {
 
@@ -34,6 +38,7 @@ class PlayerEpisodeDrawerDialog(
 
     private var seasonGroups: List<SeasonGroup> = emptyList()
     private var activeGroup: SeasonGroup? = null
+    private var tenraiArcs: List<TenraiAnimeService.TenraiFranchiseArc> = emptyList()
 
     fun show() {
         if (playlist.isEmpty()) return
@@ -104,6 +109,65 @@ class PlayerEpisodeDrawerDialog(
         }
 
         d.show()
+
+        // Fetch official franchise relations and canonical episode titles via Tenrai API asynchronously
+        if (tenraiService != null) {
+            val lifecycleOwner = activity as? androidx.lifecycle.LifecycleOwner
+            lifecycleOwner?.lifecycleScope?.launch {
+                try {
+                    val arcs = tenraiService.resolveFranchiseArcs(cleanShow)
+                    if (arcs.isNotEmpty() && dialog?.isShowing == true) {
+                        applyTenraiArcs(arcs)
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.d("PlayerEpisodeDrawer", "Tenrai resolution error: ${e.message}")
+                }
+            }
+        }
+    }
+
+    private fun applyTenraiArcs(arcs: List<TenraiAnimeService.TenraiFranchiseArc>) {
+        tenraiArcs = arcs
+        val updatedGroups = seasonGroups.map { group ->
+            when {
+                group.id == "season_1" -> {
+                    val arc = arcs.firstOrNull { it.seasonNumber == 1 }
+                    if (arc != null) group.copy(name = "${arc.title} (Temporada 1)") else group
+                }
+                group.id == "season_2" -> {
+                    val arc = arcs.firstOrNull { it.seasonNumber == 2 }
+                    if (arc != null) group.copy(name = "${arc.title} (Temporada 2)") else group
+                }
+                group.id == "season_prologue" -> {
+                    val arc = arcs.firstOrNull { it.type.contains("Special", ignoreCase = true) || it.type.contains("OVA", ignoreCase = true) }
+                    if (arc != null) group.copy(name = arc.title) else group
+                }
+                group.id.startsWith("stem_") -> {
+                    val matchingArc = arcs.firstOrNull {
+                        it.title.contains(group.name, ignoreCase = true) || group.name.contains(it.title, ignoreCase = true)
+                    }
+                    if (matchingArc != null) group.copy(name = matchingArc.title) else group
+                }
+                else -> group
+            }
+        }
+        seasonGroups = updatedGroups
+
+        val currentGroup = seasonGroups.firstOrNull { group ->
+            group.id != "season_all" && group.playlistItems.any { it.fileId == currentPlayingFileId }
+        }
+
+        binding?.let { b ->
+            if (b.rvDrawerSeasons.isVisible) {
+                b.rvDrawerSeasons.adapter = SeasonsAdapter(seasonGroups, currentGroup) { group ->
+                    showEpisodesForGroup(group, showBackButton = true)
+                }
+            }
+            if (activeGroup != null && b.rvDrawerEpisodes.isVisible) {
+                val updatedActive = seasonGroups.firstOrNull { it.id == activeGroup?.id } ?: activeGroup!!
+                showEpisodesForGroup(updatedActive, showBackButton = seasonGroups.size > 1)
+            }
+        }
     }
 
     private fun navigateBackToSeasons() {
@@ -134,7 +198,15 @@ class PlayerEpisodeDrawerDialog(
             rvDrawerSeasons.visibility = View.GONE
             rvDrawerEpisodes.visibility = View.VISIBLE
 
-            val epsAdapter = EpisodesAdapter(group.playlistItems, currentPlayingFileId) { ep ->
+            // Find canonical episode titles from matching Tenrai arc
+            val matchingArc = when {
+                group.id == "season_1" -> tenraiArcs.firstOrNull { it.seasonNumber == 1 }
+                group.id == "season_2" -> tenraiArcs.firstOrNull { it.seasonNumber == 2 }
+                else -> tenraiArcs.firstOrNull { it.title.contains(group.name, ignoreCase = true) }
+            }
+            val titlesMap = matchingArc?.episodes ?: emptyMap()
+
+            val epsAdapter = EpisodesAdapter(group.playlistItems, currentPlayingFileId, titlesMap) { ep ->
                 dialog?.dismiss()
                 onEpisodeSelected(ep)
             }
@@ -198,6 +270,7 @@ class PlayerEpisodeDrawerDialog(
     private class EpisodesAdapter(
         private val items: List<PlaylistItem>,
         private val currentPlayingFileId: String?,
+        private val canonicalTitles: Map<Int, String> = emptyMap(),
         private val onSelected: (PlaylistItem) -> Unit
     ) : RecyclerView.Adapter<EpisodesAdapter.ViewHolder>() {
 
@@ -222,8 +295,12 @@ class PlayerEpisodeDrawerDialog(
             }
             holder.binding.tvEpNumberBadge.text = epBadgeStr
 
+            val epNum = parsed.episode?.toInt()
+            val officialTitle = if (epNum != null && !parsed.isSpecial) canonicalTitles[epNum] else null
+
             val titleText = when {
                 parsed.isSpecial -> parsed.episodeLabel
+                !officialTitle.isNullOrBlank() -> "Episódio $epBadgeStr - $officialTitle"
                 parsed.episodeTitle != null && parsed.episodeTitle.isNotBlank() -> {
                     "Episódio $epBadgeStr - ${parsed.episodeTitle}"
                 }

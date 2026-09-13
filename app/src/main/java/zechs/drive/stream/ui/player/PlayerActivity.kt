@@ -137,6 +137,9 @@ class PlayerActivity : AppCompatActivity() {
     @Inject
     lateinit var onlineSubtitleManager: Lazy<zechs.drive.stream.utils.OnlineSubtitleManager>
 
+    @Inject
+    lateinit var tenraiService: Lazy<zechs.drive.stream.data.remote.TenraiAnimeService>
+
     // View binding
     private lateinit var binding: ActivityPlayerBinding
 
@@ -275,10 +278,10 @@ class PlayerActivity : AppCompatActivity() {
 
         // Back button
         toolbar.setNavigationOnClickListener {
-            finish()
+            onBackPressedDispatcher.onBackPressed()
         }
         btnBack.setOnClickListener {
-            finish()
+            onBackPressedDispatcher.onBackPressed()
         }
 
         btnPrevEp.setOnClickListener {
@@ -1566,12 +1569,14 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun showEpisodesDrawer() {
-        val showName = EpisodeParser.parse(currentTitle).showTitle.ifBlank { currentTitle }
+        val seriesFromIntent = intent.getStringExtra("seriesTitle")?.takeIf { it.isNotBlank() }
+        val showName = seriesFromIntent ?: EpisodeParser.parse(currentTitle).showTitle.ifBlank { currentTitle }
         PlayerEpisodeDrawerDialog(
             activity = this,
             showTitle = showName,
             currentPlayingFileId = currentFileId,
-            playlist = playlist
+            playlist = playlist,
+            tenraiService = tenraiService.get()
         ) { selectedEpisode ->
             playPlaylistItemDirectly(selectedEpisode)
         }.show()

@@ -18,6 +18,13 @@ data class SeasonGroup(
 
 object SeasonEpisodeGrouper {
 
+    enum class ItemCategory(val priority: Int) {
+        STORY(1),
+        SPECIAL(2),
+        PROMO(3),
+        MUSIC(4)
+    }
+
     private data class CanonicalArc(
         val name: String,
         val startEp: Int,
@@ -92,6 +99,101 @@ object SeasonEpisodeGrouper {
         CanonicalArc("Eleição do 13º Presidente", 137, 148)
     )
 
+    fun categorize(title: String, parsed: EpisodeParser.ParsedEpisode): ItemCategory {
+        val badgeUpper = parsed.episodeBadge.uppercase(Locale.ROOT)
+        val labelUpper = parsed.episodeLabel.uppercase(Locale.ROOT)
+        val titleUpper = title.uppercase(Locale.ROOT)
+
+        // Music: OP, ED, NCOP, NCED, OST
+        if (badgeUpper in listOf("OP", "ED", "NCOP", "NCED", "OST") ||
+            labelUpper.contains("ABERTURA") || labelUpper.contains("ENCERRAMENTO") ||
+            titleUpper.contains("NCOP") || titleUpper.contains("NCED") ||
+            titleUpper.contains("OPENING") || titleUpper.contains("ENDING") ||
+            titleUpper.contains("THEME SONG")) {
+            return ItemCategory.MUSIC
+        }
+
+        // Promos: PV, CM, Teaser, Preview
+        if (badgeUpper in listOf("PV", "CM", "TEASER", "PREVIEW") ||
+            labelUpper.contains("PREVIEW") || labelUpper.contains("TEASER") || labelUpper.contains("COMERCIAL") ||
+            titleUpper.contains("TRAILER") || titleUpper.contains("PROMO")) {
+            return ItemCategory.PROMO
+        }
+
+        // Specials: SP, OVA, OAD, Special
+        if (parsed.isSpecial || badgeUpper in listOf("SP", "OVA", "OAD", "SPECIAL") ||
+            labelUpper.contains("ESPECIAL") || labelUpper.contains("SPECIAL") || labelUpper.contains("OVA") || labelUpper.contains("OAD") ||
+            titleUpper.contains("SPECIAL") || titleUpper.contains("OVA") || titleUpper.contains("OAD")) {
+            return ItemCategory.SPECIAL
+        }
+
+        return ItemCategory.STORY
+    }
+
+    /**
+     * Smart comparator for video files/episodes:
+     * 1. Story episodes first (ordered by Season, then Episode 1..N)
+     * 2. Specials & OVAs second (ordered by Season, then Special 1..N)
+     * 3. Promos / Previews third (PV 1..N)
+     * 4. Music / Openings & Endings last (OP 1..N, ED 1..N)
+     */
+    fun compareItems(
+        titleA: String, parsedA: EpisodeParser.ParsedEpisode,
+        titleB: String, parsedB: EpisodeParser.ParsedEpisode
+    ): Int {
+        val catA = categorize(titleA, parsedA)
+        val catB = categorize(titleB, parsedB)
+
+        if (catA != catB) {
+            return catA.priority.compareTo(catB.priority)
+        }
+
+        return when (catA) {
+            ItemCategory.STORY -> {
+                val seasonA = parsedA.season ?: 1
+                val seasonB = parsedB.season ?: 1
+                if (seasonA != seasonB) {
+                    seasonA.compareTo(seasonB)
+                } else {
+                    val epA = parsedA.episode ?: 0.0
+                    val epB = parsedB.episode ?: 0.0
+                    if (epA != epB) epA.compareTo(epB)
+                    else EpisodeParser.naturalCompare(titleA, titleB)
+                }
+            }
+            ItemCategory.SPECIAL -> {
+                val seasonA = parsedA.season ?: 0
+                val seasonB = parsedB.season ?: 0
+                if (seasonA != seasonB) {
+                    seasonA.compareTo(seasonB)
+                } else {
+                    val spA = parsedA.episode ?: 0.0
+                    val spB = parsedB.episode ?: 0.0
+                    if (spA != spB) spA.compareTo(spB)
+                    else EpisodeParser.naturalCompare(titleA, titleB)
+                }
+            }
+            ItemCategory.MUSIC -> {
+                val isOpA = parsedA.episodeBadge.equals("OP", ignoreCase = true) || titleA.contains("OP", ignoreCase = true)
+                val isOpB = parsedB.episodeBadge.equals("OP", ignoreCase = true) || titleB.contains("OP", ignoreCase = true)
+                if (isOpA && !isOpB) -1
+                else if (!isOpA && isOpB) 1
+                else {
+                    val numA = parsedA.episode ?: 0.0
+                    val numB = parsedB.episode ?: 0.0
+                    if (numA != numB) numA.compareTo(numB)
+                    else EpisodeParser.naturalCompare(titleA, titleB)
+                }
+            }
+            ItemCategory.PROMO -> {
+                val numA = parsedA.episode ?: 0.0
+                val numB = parsedB.episode ?: 0.0
+                if (numA != numB) numA.compareTo(numB)
+                else EpisodeParser.naturalCompare(titleA, titleB)
+            }
+        }
+    }
+
     /**
      * Group files in [FilesFragment] into Seasons / Arcs.
      */
@@ -104,7 +206,6 @@ object SeasonEpisodeGrouper {
         val videoItems = fileItems.filter { it.driveFile.isVideoFile || (it.driveFile.isShortcut && it.driveFile.isShortcutVideo) }
 
         if (folderItems.size >= 2 && videoItems.size <= 2) {
-            // Folder structure: User has subfolders per season/arc!
             val groups = mutableListOf<SeasonGroup>()
             folderItems.forEach { folderItem ->
                 val f = folderItem.driveFile
@@ -121,11 +222,16 @@ object SeasonEpisodeGrouper {
             return groups
         }
 
-        // If we have video items, group them
         if (videoItems.isNotEmpty()) {
             val showLower = showName.lowercase(Locale.ROOT)
 
-            // 2. Check canonical arcs for known anime
+            // Categorize and sort all items intelligently
+            val parsedFiles = videoItems.map { it to EpisodeParser.parse(it.driveFile.name) }
+            val sortedFiles = parsedFiles.sortedWith { a, b ->
+                compareItems(a.first.driveFile.name, a.second, b.first.driveFile.name, b.second)
+            }.map { it.first }
+
+            // 2. Canonical Arcs (One Piece, Bleach, Naruto, Hunter x Hunter)
             val canonicalArcs = when {
                 showLower.contains("one piece") -> ONE_PIECE_ARCS
                 showLower.contains("bleach") -> BLEACH_ARCS
@@ -137,75 +243,162 @@ object SeasonEpisodeGrouper {
             if (canonicalArcs != null) {
                 val arcGroups = groupFilesByCanonicalArcs(canonicalArcs, videoItems)
                 if (arcGroups.size > 1) {
-                    return addAllEpisodesOption(arcGroups, videoItems)
+                    return addAllEpisodesOption(arcGroups, sortedFiles)
                 }
             }
 
-            // 3. Check parsed season numbers (S01, S02, Temporada 1, etc.)
-            val parsedWithSeasons = videoItems.map { item ->
-                val parsed = EpisodeParser.parse(item.driveFile.name)
-                item to parsed
+            // 3. Separate categories: Story, Specials, Music, Promos
+            val storyFiles = mutableListOf<Pair<FilesDataModel.File, EpisodeParser.ParsedEpisode>>()
+            val specialFiles = mutableListOf<FilesDataModel.File>()
+            val musicFiles = mutableListOf<FilesDataModel.File>()
+            val promoFiles = mutableListOf<FilesDataModel.File>()
+
+            for ((item, parsed) in parsedFiles) {
+                when (categorize(item.driveFile.name, parsed)) {
+                    ItemCategory.STORY -> storyFiles.add(item to parsed)
+                    ItemCategory.SPECIAL -> specialFiles.add(item)
+                    ItemCategory.MUSIC -> musicFiles.add(item)
+                    ItemCategory.PROMO -> promoFiles.add(item)
+                }
             }
 
-            val seasonsFound = parsedWithSeasons
+            // Check seasons among STORY files only (ignore specials/music for season counting)
+            val seasonsFound = storyFiles
                 .mapNotNull { it.second.season }
                 .distinct()
                 .sorted()
 
+            // Check distinct sub-franchise titles in story files (e.g. Kajitsu, Meikyuu, Rakuen)
+            val distinctStems = extractDistinctSubStems(storyFiles.map { it.first.driveFile.name })
+
+            val groups = mutableListOf<SeasonGroup>()
+
             if (seasonsFound.size > 1) {
-                val groups = mutableListOf<SeasonGroup>()
                 for (s in seasonsFound) {
-                    val seasonItems = parsedWithSeasons
+                    val seasonItems = storyFiles
                         .filter { it.second.season == s }
                         .map { it.first }
-                        .sortedWith { a, b -> EpisodeParser.naturalCompare(a.driveFile.name, b.driveFile.name) }
+                        .sortedWith { a, b ->
+                            compareItems(a.driveFile.name, EpisodeParser.parse(a.driveFile.name), b.driveFile.name, EpisodeParser.parse(b.driveFile.name))
+                        }
 
-                    val seasonName = if (s == 0) "Especiais & OVAs" else "Temporada $s"
                     groups.add(
                         SeasonGroup(
                             id = "season_$s",
-                            name = seasonName,
+                            name = "Temporada $s",
                             subtitle = "${seasonItems.size} episódios",
                             fileItems = seasonItems
                         )
                     )
                 }
 
-                // Any files without season or specials
-                val unassigned = parsedWithSeasons
-                    .filter { it.second.season == null }
-                    .map { it.first }
+                // Any story files without an explicit season (e.g. Prologue, Movie)
+                val unassigned = storyFiles.filter { it.second.season == null }.map { it.first }
                 if (unassigned.isNotEmpty()) {
+                    val arcName = unassigned.firstOrNull()?.driveFile?.name?.let { extractArcOrPrequelName(it) } ?: "Prólogo / Extras"
                     groups.add(
                         SeasonGroup(
-                            id = "season_other",
-                            name = "Outros Episódios",
+                            id = "season_prologue",
+                            name = arcName,
                             subtitle = "${unassigned.size} episódios",
                             fileItems = unassigned
                         )
                     )
                 }
+            } else if (distinctStems.size > 1) {
+                // Franchise clustering based on distinct titles in files (e.g. Grisaia no Kajitsu vs Rakuen)
+                distinctStems.forEachIndexed { idx, stem ->
+                    val stemItems = storyFiles
+                        .filter { it.first.driveFile.name.contains(stem, ignoreCase = true) }
+                        .map { it.first }
+                        .sortedWith { a, b ->
+                            compareItems(a.driveFile.name, EpisodeParser.parse(a.driveFile.name), b.driveFile.name, EpisodeParser.parse(b.driveFile.name))
+                        }
 
-                return addAllEpisodesOption(groups, videoItems)
-            }
-
-            // 4. Batch grouping for long-running series without season tags (> 25 episodes)
-            if (videoItems.size > 25) {
-                val sorted = videoItems.sortedWith { a, b ->
-                    EpisodeParser.naturalCompare(a.driveFile.name, b.driveFile.name)
+                    if (stemItems.isNotEmpty()) {
+                        groups.add(
+                            SeasonGroup(
+                                id = "stem_$idx",
+                                name = cleanSeasonStemName(stem, idx + 1),
+                                subtitle = "${stemItems.size} episódios",
+                                fileItems = stemItems
+                            )
+                        )
+                    }
                 }
-                val batchGroups = groupFilesByBatches(sorted, batchSize = 25)
-                return addAllEpisodesOption(batchGroups, sorted)
             }
+
+            // Dedicated Group: Especiais & OVAs (if any specials exist)
+            if (specialFiles.isNotEmpty()) {
+                val sortedSpecials = specialFiles.sortedWith { a, b ->
+                    compareItems(a.driveFile.name, EpisodeParser.parse(a.driveFile.name), b.driveFile.name, EpisodeParser.parse(b.driveFile.name))
+                }
+                groups.add(
+                    SeasonGroup(
+                        id = "specials_ovas",
+                        name = "Especiais & OVAs",
+                        subtitle = "${sortedSpecials.size} episódios",
+                        fileItems = sortedSpecials
+                    )
+                )
+            }
+
+            // Dedicated Group: Aberturas & Encerramentos (if any OPs/EDs exist)
+            if (musicFiles.isNotEmpty()) {
+                val sortedMusic = musicFiles.sortedWith { a, b ->
+                    compareItems(a.driveFile.name, EpisodeParser.parse(a.driveFile.name), b.driveFile.name, EpisodeParser.parse(b.driveFile.name))
+                }
+                groups.add(
+                    SeasonGroup(
+                        id = "openings_endings",
+                        name = "Aberturas & Encerramentos",
+                        subtitle = "${sortedMusic.size} faixas",
+                        fileItems = sortedMusic
+                    )
+                )
+            }
+
+            // Dedicated Group: Trailers & Promos (if any PVs exist)
+            if (promoFiles.isNotEmpty()) {
+                val sortedPromos = promoFiles.sortedWith { a, b ->
+                    compareItems(a.driveFile.name, EpisodeParser.parse(a.driveFile.name), b.driveFile.name, EpisodeParser.parse(b.driveFile.name))
+                }
+                groups.add(
+                    SeasonGroup(
+                        id = "promos_trailers",
+                        name = "Trailers & Promos",
+                        subtitle = "${sortedPromos.size} vídeos",
+                        fileItems = sortedPromos
+                    )
+                )
+            }
+
+            if (groups.isNotEmpty()) {
+                return addAllEpisodesOption(groups, sortedFiles)
+            }
+
+            // Batch grouping (> 25 episodes)
+            if (videoItems.size > 25) {
+                val batchGroups = groupFilesByBatches(sortedFiles, batchSize = 25)
+                return addAllEpisodesOption(batchGroups, sortedFiles)
+            }
+
+            return listOf(
+                SeasonGroup(
+                    id = "season_all",
+                    name = "Todos os Episódios",
+                    subtitle = "${sortedFiles.size} episódios",
+                    fileItems = sortedFiles
+                )
+            )
         }
 
-        // Single season or no grouping needed
         return listOf(
             SeasonGroup(
                 id = "season_all",
                 name = "Todos os Episódios",
-                subtitle = "${videoItems.size} episódios",
-                fileItems = videoItems.ifEmpty { fileItems }
+                subtitle = "${fileItems.size} episódios",
+                fileItems = fileItems
             )
         )
     }
@@ -218,7 +411,13 @@ object SeasonEpisodeGrouper {
 
         val showLower = showName.lowercase(Locale.ROOT)
 
-        // 1. Canonical Arcs
+        // Categorize and sort all items intelligently
+        val parsedPlaylist = playlist.map { it to EpisodeParser.parse(it.title) }
+        val sortedPlaylist = parsedPlaylist.sortedWith { a, b ->
+            compareItems(a.first.title, a.second, b.first.title, b.second)
+        }.map { it.first }
+
+        // 1. Canonical Arcs (One Piece, Bleach, Naruto, Hunter x Hunter)
         val canonicalArcs = when {
             showLower.contains("one piece") || playlist.any { it.title.contains("one piece", ignoreCase = true) } -> ONE_PIECE_ARCS
             showLower.contains("bleach") || playlist.any { it.title.contains("bleach", ignoreCase = true) } -> BLEACH_ARCS
@@ -230,58 +429,176 @@ object SeasonEpisodeGrouper {
         if (canonicalArcs != null) {
             val arcGroups = groupPlaylistByCanonicalArcs(canonicalArcs, playlist)
             if (arcGroups.size > 1) {
-                return addAllPlaylistOption(arcGroups, playlist)
+                return addAllPlaylistOption(arcGroups, sortedPlaylist)
             }
         }
 
-        // 2. Parsed season numbers
-        val parsedList = playlist.map { item ->
-            val parsed = EpisodeParser.parse(item.title)
-            item to parsed
+        // 2. Separate categories: Story, Specials, Music, Promos
+        val storyItems = mutableListOf<Pair<PlaylistItem, EpisodeParser.ParsedEpisode>>()
+        val specialItems = mutableListOf<PlaylistItem>()
+        val musicItems = mutableListOf<PlaylistItem>()
+        val promoItems = mutableListOf<PlaylistItem>()
+
+        for ((item, parsed) in parsedPlaylist) {
+            when (categorize(item.title, parsed)) {
+                ItemCategory.STORY -> storyItems.add(item to parsed)
+                ItemCategory.SPECIAL -> specialItems.add(item)
+                ItemCategory.MUSIC -> musicItems.add(item)
+                ItemCategory.PROMO -> promoItems.add(item)
+            }
         }
 
-        val seasonsFound = parsedList
+        // Check seasons among STORY items only
+        val seasonsFound = storyItems
             .mapNotNull { it.second.season }
             .distinct()
             .sorted()
 
+        // Check distinct sub-franchise titles in story files
+        val distinctStems = extractDistinctSubStems(storyItems.map { it.first.title })
+
+        val groups = mutableListOf<SeasonGroup>()
+
         if (seasonsFound.size > 1) {
-            val groups = mutableListOf<SeasonGroup>()
             for (s in seasonsFound) {
-                val seasonItems = parsedList
+                val seasonItems = storyItems
                     .filter { it.second.season == s }
                     .map { it.first }
-                    .sortedWith { a, b -> EpisodeParser.naturalCompare(a.title, b.title) }
+                    .sortedWith { a, b ->
+                        compareItems(a.title, EpisodeParser.parse(a.title), b.title, EpisodeParser.parse(b.title))
+                    }
 
-                val seasonName = if (s == 0) "Especiais & OVAs" else "Temporada $s"
                 groups.add(
                     SeasonGroup(
                         id = "season_$s",
-                        name = seasonName,
+                        name = "Temporada $s",
                         subtitle = "${seasonItems.size} episódios",
                         playlistItems = seasonItems
                     )
                 )
             }
-            return addAllPlaylistOption(groups, playlist)
+
+            // Any story files without an explicit season
+            val unassigned = storyItems.filter { it.second.season == null }.map { it.first }
+            if (unassigned.isNotEmpty()) {
+                val arcName = unassigned.firstOrNull()?.title?.let { extractArcOrPrequelName(it) } ?: "Prólogo / Extras"
+                groups.add(
+                    SeasonGroup(
+                        id = "season_prologue",
+                        name = arcName,
+                        subtitle = "${unassigned.size} episódios",
+                        playlistItems = unassigned
+                    )
+                )
+            }
+        } else if (distinctStems.size > 1) {
+            distinctStems.forEachIndexed { idx, stem ->
+                val stemItems = storyItems
+                    .filter { it.first.title.contains(stem, ignoreCase = true) }
+                    .map { it.first }
+                    .sortedWith { a, b ->
+                        compareItems(a.title, EpisodeParser.parse(a.title), b.title, EpisodeParser.parse(b.title))
+                    }
+
+                if (stemItems.isNotEmpty()) {
+                    groups.add(
+                        SeasonGroup(
+                            id = "stem_$idx",
+                            name = cleanSeasonStemName(stem, idx + 1),
+                            subtitle = "${stemItems.size} episódios",
+                            playlistItems = stemItems
+                        )
+                    )
+                }
+            }
         }
 
-        // 3. Batch grouping (> 25 episodes)
+        // Dedicated Group: Especiais & OVAs
+        if (specialItems.isNotEmpty()) {
+            val sortedSpecials = specialItems.sortedWith { a, b ->
+                compareItems(a.title, EpisodeParser.parse(a.title), b.title, EpisodeParser.parse(b.title))
+            }
+            groups.add(
+                SeasonGroup(
+                    id = "specials_ovas",
+                    name = "Especiais & OVAs",
+                    subtitle = "${sortedSpecials.size} episódios",
+                    playlistItems = sortedSpecials
+                )
+            )
+        }
+
+        // Dedicated Group: Aberturas & Encerramentos
+        if (musicItems.isNotEmpty()) {
+            val sortedMusic = musicItems.sortedWith { a, b ->
+                compareItems(a.title, EpisodeParser.parse(a.title), b.title, EpisodeParser.parse(b.title))
+            }
+            groups.add(
+                SeasonGroup(
+                    id = "openings_endings",
+                    name = "Aberturas & Encerramentos",
+                    subtitle = "${sortedMusic.size} faixas",
+                    playlistItems = sortedMusic
+                )
+            )
+        }
+
+        // Dedicated Group: Trailers & Promos
+        if (promoItems.isNotEmpty()) {
+            val sortedPromos = promoItems.sortedWith { a, b ->
+                compareItems(a.title, EpisodeParser.parse(a.title), b.title, EpisodeParser.parse(b.title))
+            }
+            groups.add(
+                SeasonGroup(
+                    id = "promos_trailers",
+                    name = "Trailers & Promos",
+                    subtitle = "${sortedPromos.size} vídeos",
+                    playlistItems = sortedPromos
+                )
+            )
+        }
+
+        if (groups.isNotEmpty()) {
+            return addAllPlaylistOption(groups, sortedPlaylist)
+        }
+
         if (playlist.size > 25) {
-            val sorted = playlist.sortedWith { a, b -> EpisodeParser.naturalCompare(a.title, b.title) }
-            val batchGroups = groupPlaylistByBatches(sorted, batchSize = 25)
-            return addAllPlaylistOption(batchGroups, sorted)
+            val batchGroups = groupPlaylistByBatches(sortedPlaylist, batchSize = 25)
+            return addAllPlaylistOption(batchGroups, sortedPlaylist)
         }
 
-        // Single season
         return listOf(
             SeasonGroup(
                 id = "season_all",
                 name = "Todos os Episódios",
-                subtitle = "${playlist.size} episódios",
-                playlistItems = playlist
+                subtitle = "${sortedPlaylist.size} episódios",
+                playlistItems = sortedPlaylist
             )
         )
+    }
+
+    private fun extractDistinctSubStems(titles: List<String>): List<String> {
+        val candidates = mutableMapOf<String, Int>()
+        for (raw in titles) {
+            val clean = EpisodeParser.cleanShowTitle(raw)
+            if (clean.length > 3) {
+                candidates[clean] = (candidates[clean] ?: 0) + 1
+            }
+        }
+        return candidates.filter { it.value >= 1 }.keys.toList().sorted()
+    }
+
+    private fun cleanSeasonStemName(stem: String, fallbackNum: Int): String {
+        val clean = stem.replace(Regex("(?i)^(\\[.*?\\]|\\(.*?\\))"), "").trim()
+        return if (clean.isNotBlank()) clean else "Temporada $fallbackNum"
+    }
+
+    private fun extractArcOrPrequelName(rawTitle: String): String {
+        val parsed = EpisodeParser.parse(rawTitle)
+        if (parsed.showTitle.isNotBlank()) {
+            return parsed.showTitle
+        }
+        return "Prólogo / Meikyuu"
     }
 
     private fun groupFilesByCanonicalArcs(
@@ -295,7 +612,9 @@ object SeasonEpisodeGrouper {
             val arcItems = files.filter { item ->
                 val ep = EpisodeParser.parse(item.driveFile.name).episode?.toInt()
                 ep != null && ep in arc.startEp..arc.endEp
-            }.sortedWith { a, b -> EpisodeParser.naturalCompare(a.driveFile.name, b.driveFile.name) }
+            }.sortedWith { a, b ->
+                compareItems(a.driveFile.name, EpisodeParser.parse(a.driveFile.name), b.driveFile.name, EpisodeParser.parse(b.driveFile.name))
+            }
 
             if (arcItems.isNotEmpty()) {
                 matchedFiles.addAll(arcItems)
@@ -318,7 +637,9 @@ object SeasonEpisodeGrouper {
                     id = "arc_others",
                     name = "Outros Episódios",
                     subtitle = "${unmatched.size} episódios",
-                    fileItems = unmatched.sortedWith { a, b -> EpisodeParser.naturalCompare(a.driveFile.name, b.driveFile.name) }
+                    fileItems = unmatched.sortedWith { a, b ->
+                        compareItems(a.driveFile.name, EpisodeParser.parse(a.driveFile.name), b.driveFile.name, EpisodeParser.parse(b.driveFile.name))
+                    }
                 )
             )
         }
@@ -337,7 +658,9 @@ object SeasonEpisodeGrouper {
             val arcItems = playlist.filter { item ->
                 val ep = EpisodeParser.parse(item.title).episode?.toInt()
                 ep != null && ep in arc.startEp..arc.endEp
-            }.sortedWith { a, b -> EpisodeParser.naturalCompare(a.title, b.title) }
+            }.sortedWith { a, b ->
+                compareItems(a.title, EpisodeParser.parse(a.title), b.title, EpisodeParser.parse(b.title))
+            }
 
             if (arcItems.isNotEmpty()) {
                 matched.addAll(arcItems)
@@ -360,7 +683,9 @@ object SeasonEpisodeGrouper {
                     id = "arc_others",
                     name = "Outros Episódios",
                     subtitle = "${unmatched.size} episódios",
-                    playlistItems = unmatched.sortedWith { a, b -> EpisodeParser.naturalCompare(a.title, b.title) }
+                    playlistItems = unmatched.sortedWith { a, b ->
+                        compareItems(a.title, EpisodeParser.parse(a.title), b.title, EpisodeParser.parse(b.title))
+                    }
                 )
             )
         }

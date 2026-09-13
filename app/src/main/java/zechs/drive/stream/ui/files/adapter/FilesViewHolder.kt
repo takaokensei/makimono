@@ -232,6 +232,16 @@ sealed class FilesViewHolder(
                 val isVideo = item.isVideoFile || item.isShortcutVideo
                 val hasPoster = !item.posterUrl.isNullOrBlank()
 
+                // Dynamically set aspect ratio: 16:9 for video episodes, 2:3 for anime series poster cards
+                val params = framePosterContainer.layoutParams as? androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
+                if (params != null) {
+                    val targetRatio = if (isVideo && !hasPoster) "H,16:9" else "H,2:3"
+                    if (params.dimensionRatio != targetRatio) {
+                        params.dimensionRatio = targetRatio
+                        framePosterContainer.layoutParams = params
+                    }
+                }
+
                 // Clean anime title if folder or has poster, or clean episode filename if video/subtitle
                 val cleanTitle = when {
                     hasPoster || isFolder -> AnimePosterResolver.cleanAnimeTitle(item.name)
@@ -357,7 +367,12 @@ sealed class FilesViewHolder(
                     false
                 }
 
-                setStarred(item, item.starred)
+                if (isFolder) {
+                    setStarred(item, item.starred)
+                } else {
+                    btnGridStar.visibility = View.GONE
+                    gridStarLoading.visibility = View.GONE
+                }
             }
         }
     }

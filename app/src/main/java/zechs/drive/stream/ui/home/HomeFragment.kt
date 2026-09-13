@@ -664,7 +664,6 @@ class HomeFragment : BaseFragment() {
                     if (startPosition > 0L) {
                         putExtra("startPosition", startPosition)
                     }
-                    flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
                 }
                 startActivity(intent)
             }
@@ -686,7 +685,6 @@ class HomeFragment : BaseFragment() {
                     if (watchItem.watchedDuration > 0L) {
                         putExtra("startPosition", watchItem.watchedDuration)
                     }
-                    flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
                 }
                 startActivity(intent)
             }
@@ -707,7 +705,6 @@ class HomeFragment : BaseFragment() {
                             requireContext(),
                             zechs.drive.stream.ui.player2.MPVActivity::class.java
                         ).apply {
-                            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
                             putExtra("fileId", file.fileId)
                             putExtra("title", file.fileName)
                             putExtra("accessToken", file.accessToken)

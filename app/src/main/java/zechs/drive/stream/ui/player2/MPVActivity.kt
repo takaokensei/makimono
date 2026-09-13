@@ -128,6 +128,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     @Inject
     lateinit var appSettings: dagger.Lazy<AppSettings>
 
+    @Inject
+    lateinit var tenraiService: dagger.Lazy<zechs.drive.stream.data.remote.TenraiAnimeService>
+
     // States
     private var activityIsForeground = true
     private var userIsOperatingSeekbar = false
@@ -188,10 +191,10 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
 
         controller
             .playerToolbar
-            .setNavigationOnClickListener { finish() }
+            .setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
         controller
             .btnBack
-            .setOnClickListener { finish() }
+            .setOnClickListener { onBackPressedDispatcher.onBackPressed() }
 
         currentFileId = intent.getStringExtra("fileId") ?: ""
         currentTitle = intent.getStringExtra("title") ?: ""
@@ -1641,12 +1644,14 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     }
 
     private fun showEpisodesDrawer() {
-        val showName = EpisodeParser.parse(currentTitle).showTitle.ifBlank { currentTitle }
+        val seriesFromIntent = intent.getStringExtra("seriesTitle")?.takeIf { it.isNotBlank() }
+        val showName = seriesFromIntent ?: EpisodeParser.parse(currentTitle).showTitle.ifBlank { currentTitle }
         PlayerEpisodeDrawerDialog(
             activity = this,
             showTitle = showName,
             currentPlayingFileId = currentFileId,
-            playlist = playlist
+            playlist = playlist,
+            tenraiService = tenraiService.get()
         ) { selectedEpisode ->
             playPlaylistItemDirectly(selectedEpisode)
         }.show()

@@ -66,6 +66,9 @@ class FilesFragment : BaseFragment() {
 
     private val args by navArgs<FilesFragmentArgs>()
 
+    @javax.inject.Inject
+    lateinit var tenraiService: dagger.Lazy<zechs.drive.stream.data.remote.TenraiAnimeService>
+
     private var isLoading = false
     private var isScrolling = false
     private var isGridMode = false
@@ -200,6 +203,36 @@ class FilesFragment : BaseFragment() {
             binding.btnSeasonSelector.setOnClickListener {
                 showSeasonSelectionDialog()
             }
+
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    val arcs = tenraiService.get().resolveFranchiseArcs(args.name)
+                    if (arcs.isNotEmpty() && isAdded) {
+                        val updated = availableSeasons.map { group ->
+                            when {
+                                group.id == "season_1" -> {
+                                    val arc = arcs.firstOrNull { it.seasonNumber == 1 }
+                                    if (arc != null) group.copy(name = "${arc.title} (Temporada 1)") else group
+                                }
+                                group.id == "season_2" -> {
+                                    val arc = arcs.firstOrNull { it.seasonNumber == 2 }
+                                    if (arc != null) group.copy(name = "${arc.title} (Temporada 2)") else group
+                                }
+                                group.id == "season_prologue" -> {
+                                    val arc = arcs.firstOrNull { it.type.contains("Special", ignoreCase = true) || it.type.contains("OVA", ignoreCase = true) }
+                                    if (arc != null) group.copy(name = arc.title) else group
+                                }
+                                else -> group
+                            }
+                        }
+                        availableSeasons = updated
+                        if (selectedSeason != null) {
+                            selectedSeason = updated.firstOrNull { it.id == selectedSeason?.id } ?: selectedSeason
+                            binding.tvSelectedSeason.text = selectedSeason?.name ?: "Temporadas"
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
         } else {
             binding.seasonSelectorRow.isGone = true
             selectedSeason = null
@@ -262,13 +295,26 @@ class FilesFragment : BaseFragment() {
     }
 
     private fun updateLayoutMode() {
+        val hasVideoFiles = allFilesList.any {
+            it is FilesDataModel.File && (it.driveFile.isVideoFile || it.driveFile.isShortcutVideo)
+        }
         val screenWidthDp = resources.configuration.screenWidthDp
-        val spanCount = when {
-            screenWidthDp >= 1200 -> 6
-            screenWidthDp >= 900 -> 5
-            screenWidthDp >= 650 -> 4
-            screenWidthDp >= 420 -> 3
-            else -> 2
+        val spanCount = if (hasVideoFiles) {
+            when {
+                screenWidthDp >= 1200 -> 4
+                screenWidthDp >= 840 -> 3
+                screenWidthDp >= 600 -> 3
+                screenWidthDp >= 400 -> 2
+                else -> 1
+            }
+        } else {
+            when {
+                screenWidthDp >= 1200 -> 6
+                screenWidthDp >= 900 -> 5
+                screenWidthDp >= 650 -> 4
+                screenWidthDp >= 420 -> 3
+                else -> 2
+            }
         }
 
         if (isGridMode) {
@@ -509,7 +555,10 @@ class FilesFragment : BaseFragment() {
             } else null
         }
         val sorted = videoItems.sortedWith { a, b ->
-            EpisodeParser.naturalCompare(a.title, b.title)
+            SeasonEpisodeGrouper.compareItems(
+                a.title, EpisodeParser.parse(a.title),
+                b.title, EpisodeParser.parse(b.title)
+            )
         }
         return ArrayList(sorted)
     }
@@ -522,11 +571,11 @@ class FilesFragment : BaseFragment() {
         ).apply {
             putExtra("fileId", file.id)
             putExtra("title", file.name)
+            putExtra("seriesTitle", args.name)
             putExtra("thumbnailLink", file.thumbnailLink)
             putExtra("theme", mainViewModel.currentThemeIndex)
             putExtra("playlist", playlist)
             putExtra("subtitles", subtitles)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }.also { startActivity(it) }
     }
 
@@ -538,12 +587,12 @@ class FilesFragment : BaseFragment() {
         ).apply {
             putExtra("fileId", fileToken.fileId)
             putExtra("title", fileToken.fileName)
+            putExtra("seriesTitle", args.name)
             putExtra("accessToken", fileToken.accessToken)
             putExtra("thumbnailLink", fileToken.thumbnailLink)
             putExtra("theme", mainViewModel.currentThemeIndex)
             putExtra("playlist", playlist)
             putExtra("subtitles", subtitles)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }.also { startActivity(it) }
     }
 
