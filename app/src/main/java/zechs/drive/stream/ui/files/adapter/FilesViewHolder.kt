@@ -18,6 +18,7 @@ import zechs.drive.stream.data.remote.AnimePosterResolver
 import zechs.drive.stream.databinding.ItemDriveFileBinding
 import zechs.drive.stream.databinding.ItemDriveFileGridBinding
 import zechs.drive.stream.databinding.ItemLoadingBinding
+import zechs.drive.stream.utils.EpisodeParser
 import zechs.drive.stream.utils.GlideApp
 
 sealed class FilesViewHolder(
@@ -118,7 +119,10 @@ sealed class FilesViewHolder(
 
                 ivSharedBadge.isGone = !(item.isShortcut || item.isShortcutFolder || item.isShortcutVideo)
 
-                tvFileName.text = item.name
+                val displayName = if (isVideo || item.isSubtitleFile) {
+                    EpisodeParser.cleanEpisodeFileName(item.name)
+                } else item.name
+                tvFileName.text = displayName
 
                 val tvFileSizeTAG = "tvFileSize"
 
@@ -228,10 +232,12 @@ sealed class FilesViewHolder(
                 val isVideo = item.isVideoFile || item.isShortcutVideo
                 val hasPoster = !item.posterUrl.isNullOrBlank()
 
-                // Clean anime title if folder or has poster
-                val cleanTitle = if (hasPoster || isFolder) {
-                    AnimePosterResolver.cleanAnimeTitle(item.name)
-                } else item.name
+                // Clean anime title if folder or has poster, or clean episode filename if video/subtitle
+                val cleanTitle = when {
+                    hasPoster || isFolder -> AnimePosterResolver.cleanAnimeTitle(item.name)
+                    isVideo || item.isSubtitleFile -> EpisodeParser.cleanEpisodeFileName(item.name)
+                    else -> item.name
+                }
 
                 tvGridFileName.text = cleanTitle
 

@@ -1,21 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?attr/colorBgBase"
-    android:clipChildren="false"
-    android:clipToPadding="false">
+    android:orientation="vertical">
 
-    <com.google.android.material.appbar.AppBarLayout
+    <!-- Sticky Top Header: Toolbar + Search Bar + Season/Arc Selector -->
+    <LinearLayout
         android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="top"
-        android:backgroundTint="?attr/colorBgSurface"
-        android:elevation="0dp"
-        app:elevation="0dp">
+        android:background="?attr/colorBgSurface"
+        android:elevation="6dp"
+        android:orientation="vertical">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
@@ -184,32 +183,42 @@
 
         </LinearLayout>
 
-    </com.google.android.material.appbar.AppBarLayout>
+    </LinearLayout>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvList"
+    <!-- Main Content Area: RecyclerView + Loading + Error -->
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:clipChildren="false"
-        android:clipToPadding="false"
-        android:paddingStart="@dimen/tv_overscan_margin"
-        android:paddingTop="8dp"
-        android:paddingEnd="@dimen/tv_overscan_margin"
-        android:paddingBottom="@dimen/tv_overscan_margin_vertical"
-        app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior" />
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
-    <ProgressBar
-        android:id="@+id/loading"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:elevation="24dp"
-        android:visibility="invisible"
-        tools:visibility="visible" />
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvList"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:paddingStart="@dimen/tv_overscan_margin"
+            android:paddingTop="8dp"
+            android:paddingEnd="@dimen/tv_overscan_margin"
+            android:paddingBottom="@dimen/tv_overscan_margin_vertical" />
 
-    <include
-        android:id="@+id/error"
-        layout="@layout/error_layout"
-        android:visibility="gone" />
+        <ProgressBar
+            android:id="@+id/loading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:elevation="24dp"
+            android:visibility="invisible"
+            tools:visibility="visible" />
 
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+        <include
+            android:id="@+id/error"
+            layout="@layout/error_layout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone" />
+
+    </FrameLayout>
+
+</LinearLayout>

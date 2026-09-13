@@ -54,12 +54,13 @@ class PlayerEpisodeDrawerDialog(
             setWindowAnimations(android.R.style.Animation_Translucent)
         }
 
-        drawerBinding.tvDrawerTitle.text = showTitle.ifBlank { "Episódios" }
+        val cleanShow = EpisodeParser.cleanShowTitle(showTitle).ifBlank { "Episódios" }
+        drawerBinding.tvDrawerTitle.text = cleanShow
         drawerBinding.btnDrawerClose.setOnClickListener {
             d.dismiss()
         }
 
-        seasonGroups = SeasonEpisodeGrouper.groupPlaylist(showTitle, playlist)
+        seasonGroups = SeasonEpisodeGrouper.groupPlaylist(cleanShow, playlist)
 
         // Find which arc contains the currently playing episode
         val currentGroup = seasonGroups.firstOrNull { group ->
@@ -212,19 +213,31 @@ class PlayerEpisodeDrawerDialog(
             val parsed = EpisodeParser.parse(item.title)
             val isPlaying = item.fileId == currentPlayingFileId
 
-            val epNumStr = parsed.episode?.let { ep ->
-                if (ep % 1.0 == 0.0) ep.toInt().toString() else ep.toString()
-            } ?: (position + 1).toString()
-
-            holder.binding.tvEpNumberBadge.text = epNumStr
-
-            val titleText = if (parsed.episodeTitle != null && parsed.episodeTitle.isNotBlank()) {
-                "Episódio $epNumStr - ${parsed.episodeTitle}"
+            val epBadgeStr = if (parsed.isSpecial && parsed.episodeBadge.isNotBlank()) {
+                parsed.episodeBadge
             } else {
-                "Episódio $epNumStr"
+                parsed.episode?.let { ep ->
+                    if (ep % 1.0 == 0.0) ep.toInt().toString() else ep.toString()
+                } ?: (position + 1).toString()
+            }
+            holder.binding.tvEpNumberBadge.text = epBadgeStr
+
+            val titleText = when {
+                parsed.isSpecial -> parsed.episodeLabel
+                parsed.episodeTitle != null && parsed.episodeTitle.isNotBlank() -> {
+                    "Episódio $epBadgeStr - ${parsed.episodeTitle}"
+                }
+                else -> "Episódio $epBadgeStr"
             }
             holder.binding.tvEpTitle.text = titleText
-            holder.binding.tvEpSubtitle.text = item.title
+
+            val techTags = EpisodeParser.extractCleanTechnicalTags(item.title)
+            if (!techTags.isNullOrBlank()) {
+                holder.binding.tvEpSubtitle.visibility = View.VISIBLE
+                holder.binding.tvEpSubtitle.text = techTags
+            } else {
+                holder.binding.tvEpSubtitle.visibility = View.GONE
+            }
 
             if (isPlaying) {
                 holder.binding.ivPlayingBadge.visibility = View.VISIBLE
