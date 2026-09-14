@@ -20,6 +20,7 @@ import zechs.drive.stream.databinding.ItemDriveFileGridBinding
 import zechs.drive.stream.databinding.ItemLoadingBinding
 import zechs.drive.stream.utils.EpisodeParser
 import zechs.drive.stream.utils.GlideApp
+import zechs.drive.stream.utils.MediaImageLoader
 
 sealed class FilesViewHolder(
     binding: ViewBinding
@@ -95,13 +96,7 @@ sealed class FilesViewHolder(
                     iconContainer.visibility = View.GONE
                     ivListPlayOverlay.isVisible = isVideo
 
-                    GlideApp.with(ivVideoThumb)
-                        .load(displayThumb)
-                        .centerCrop()
-                        .diskCacheStrategy(DiskCacheStrategy.DATA)
-                        .placeholder(R.drawable.home_hero_gradient)
-                        .error(R.drawable.home_hero_gradient)
-                        .into(ivVideoThumb)
+                    MediaImageLoader.card(ivVideoThumb, displayThumb)
                 } else {
                     cardVideoThumb.visibility = View.GONE
                     iconContainer.visibility = View.VISIBLE
@@ -310,13 +305,11 @@ sealed class FilesViewHolder(
                     ivGridFallbackIcon.isGone = true
                     ivGridThumb.isGone = false
 
-                    GlideApp.with(ivGridThumb)
-                        .load(displayThumb)
-                        .centerCrop()
-                        .diskCacheStrategy(DiskCacheStrategy.DATA)
-                        .placeholder(R.drawable.home_hero_gradient)
-                        .error(R.drawable.home_hero_gradient)
-                        .into(ivGridThumb)
+                    if (isVideo && !hasPoster) {
+                        MediaImageLoader.card(ivGridThumb, displayThumb)
+                    } else {
+                        MediaImageLoader.poster(ivGridThumb, displayThumb)
+                    }
                 } else {
                     ivGridThumb.isGone = true
                     gridBgFallback.isGone = false

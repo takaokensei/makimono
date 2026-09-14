@@ -15,8 +15,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
+import zechs.drive.stream.utils.MediaImageLoader
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -46,6 +45,7 @@ class SeriesDetailFragment : BaseFragment() {
 
     private lateinit var seasonAdapter: SeriesDetailSeasonAdapter
     private lateinit var episodeAdapter: SeriesDetailEpisodeAdapter
+    private var hasRestoredInitialFocus = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -62,7 +62,15 @@ class SeriesDetailFragment : BaseFragment() {
         setupTopHeader()
         setupAdapters()
         setupFocusAnimations()
+        binding.btnRetry.setOnClickListener {
+            viewModel.loadSeriesDetails(
+                folderId = args.folderId,
+                seriesTitle = args.name,
+                initialPoster = args.posterUrl
+            )
+        }
         observeUiState()
+        hasRestoredInitialFocus = false
 
         viewModel.loadSeriesDetails(
             folderId = args.folderId,
@@ -124,17 +132,27 @@ class SeriesDetailFragment : BaseFragment() {
                         is SeriesDetailUiState.Loading -> {
                             binding.pbLoading.visibility = View.VISIBLE
                             binding.tvEmptyEpisodes.visibility = View.GONE
+                            binding.btnRetry.visibility = View.GONE
+                            binding.tvRomajiTitle.text = state.seriesTitle.ifBlank { args.name }
+                            binding.tvEnglishSubtitle.text = state.seriesTitle.ifBlank { args.name }
+                                .uppercase(Locale.ROOT)
+                            state.posterUrl?.let { poster ->
+                                MediaImageLoader.poster(binding.ivSeriesPosterCard, poster)
+                                MediaImageLoader.backdrop(binding.ivHeroBackdrop, poster)
+                            }
                         }
 
                         is SeriesDetailUiState.Error -> {
                             binding.pbLoading.visibility = View.GONE
                             binding.tvEmptyEpisodes.visibility = View.VISIBLE
                             binding.tvEmptyEpisodes.text = state.message
+                            binding.btnRetry.visibility = View.VISIBLE
                         }
 
                         is SeriesDetailUiState.Success -> {
                             binding.pbLoading.visibility = View.GONE
                             binding.tvEmptyEpisodes.visibility = View.GONE
+                            binding.btnRetry.visibility = View.GONE
                             bindSeriesData(state)
                         }
                     }
@@ -145,23 +163,18 @@ class SeriesDetailFragment : BaseFragment() {
 
     private fun bindSeriesData(state: SeriesDetailUiState.Success) {
         // 1. Sharp Poster Card (Featured Carousel - Card Variant)
-        val sharpPoster = state.aniListMetadata?.posterUrl ?: state.animeEntry?.imageUrl ?: args.posterUrl
+        val sharpPoster = state.aniListMetadata?.posterUrl
+            ?: state.animeEntry?.imageUrl
+            ?: state.fallbackPosterUrl
+            ?: args.posterUrl
         if (sharpPoster != null) {
-            Glide.with(this)
-                .load(sharpPoster)
-                .centerCrop()
-                .diskCacheStrategy(DiskCacheStrategy.DATA)
-                .into(binding.ivSeriesPosterCard)
+            MediaImageLoader.poster(binding.ivSeriesPosterCard, sharpPoster)
         }
 
         // Ambient Backdrop (Banner or subtle ambient poster)
-        val bannerOrBackdrop = state.aniListMetadata?.bannerUrl ?: sharpPoster
+        val bannerOrBackdrop = state.aniListMetadata?.bannerUrl ?: state.fallbackPosterUrl ?: sharpPoster
         if (bannerOrBackdrop != null) {
-            Glide.with(this)
-                .load(bannerOrBackdrop)
-                .centerCrop()
-                .diskCacheStrategy(DiskCacheStrategy.DATA)
-                .into(binding.ivHeroBackdrop)
+            MediaImageLoader.backdrop(binding.ivHeroBackdrop, bannerOrBackdrop)
         }
 
         // Dynamic Color Gradient Tint from AniList dominant color
@@ -277,8 +290,11 @@ class SeriesDetailFragment : BaseFragment() {
             binding.tvEmptyEpisodes.visibility = View.GONE
         }
 
-        // Default D-pad focus to primary action button
-        binding.btnPrimaryAction.requestFocus()
+        // Do not steal focus again when the metadata enrichment state arrives.
+        if (!hasRestoredInitialFocus) {
+            hasRestoredInitialFocus = true
+            binding.btnPrimaryAction.post { binding.btnPrimaryAction.requestFocus() }
+        }
     }
 
     private fun updateFavoriteButton(isStarred: Boolean) {

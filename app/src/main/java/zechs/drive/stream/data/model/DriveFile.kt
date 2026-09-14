@@ -1,6 +1,7 @@
 package zechs.drive.stream.data.model
 
 import androidx.annotation.Keep
+import zechs.drive.stream.utils.ThumbnailUrl
 import zechs.drive.stream.utils.util.Converter
 
 @Keep
@@ -44,11 +45,7 @@ data class DriveFile(
      * the longest side). Bump it up so 16:9 preview cards on TV don't look
      * blurry, the same way [iconLink128] upsizes the file-type icon.
      */
-    val thumbnailLarge = thumbnailLink?.let {
-        if (it.contains(Regex("=s\\d+"))) {
-            it.replace(Regex("=s\\d+"), "=s600")
-        } else {
-            "$it=s600"
-        }
-    }
+    val thumbnailMedium = ThumbnailUrl.medium(thumbnailLink)
+
+    val thumbnailLarge = ThumbnailUrl.large(thumbnailLink)
 }

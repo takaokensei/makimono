@@ -184,3 +184,28 @@ Arquivos:
 - Reescrita do player ExoPlayer/MPV, do parser de episódios ou da integração MAL.
 - Download e armazenamento local de fanart; o app deve usar URLs do Drive e os
   posters já resolvidos, com cache do Glide.
+
+## Segunda passagem: acabamento e performance
+
+Esta passagem não aumenta o tamanho do código artificialmente. O objetivo é
+reduzir trabalho repetido, deixar a UI responsiva e concentrar decisões visuais
+em superfícies glassmorphism com hierarquia Swiss: grade disciplinada, títulos
+curtos, contraste alto e foco ciano inequívoco.
+
+- `MediaImageLoader.kt`: centraliza placeholder, cache automático, decode limitado,
+  thumbnail progressiva e crossfade curto para cards, posters e backdrops.
+- `ThumbnailUrl.kt`: normaliza apenas formatos conhecidos de thumbnail do Drive;
+  URLs externas desconhecidas não recebem sufixos inválidos.
+- `DriveRepository.kt`: adiciona paginação limitada e segura para não truncar
+  bibliotecas grandes no primeiro lote.
+- `SeriesDetailViewModel.kt`: publica primeiro o shell baseado nos arquivos locais
+  e no Drive, depois enriquece com AniList/Tenrai sem bloquear a primeira pintura.
+- `layout-land/fragment_series_detail.xml`: composição TV compacta, com hero
+  dimensionado para deixar temporadas e títulos de episódios visíveis no primeiro
+  viewport.
+- `layout-land/fragment_settings.xml`: configurações TV com linhas glass, foco
+  previsível e hierarquia visual consistente.
+- Cards de episódio agora usam uma única `MaterialCardView` com clipping e foco
+  próprios, evitando thumbnail quadrada dentro de fundo arredondado.
+- A tela de detalhes tem retry explícito para falhas de rede e preserva o foco
+  inicial durante a atualização assíncrona de metadados.

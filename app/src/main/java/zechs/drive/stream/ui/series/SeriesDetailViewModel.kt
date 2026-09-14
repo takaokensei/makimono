@@ -31,7 +31,11 @@ import java.util.Locale
 import javax.inject.Inject
 
 sealed class SeriesDetailUiState {
-    object Loading : SeriesDetailUiState()
+    data class Loading(
+        val folderId: String,
+        val seriesTitle: String,
+        val posterUrl: String? = null
+    ) : SeriesDetailUiState()
     data class Success(
         val folderId: String,
         val seriesTitle: String,
@@ -42,6 +46,7 @@ sealed class SeriesDetailUiState {
         val continueWatchingItem: SeriesEpisodeItem?,
         val continueWatchingSubtitle: String,
         val isStarred: Boolean,
+        val fallbackPosterUrl: String? = null,
         val qualityBadge: String = "1080p",
         val audioBadge: String = "Dual Áudio PT-BR / JA",
         val subtitleBadge: String = "Multi Subs"
@@ -62,7 +67,7 @@ class SeriesDetailViewModel @Inject constructor(
         private const val TAG = "SeriesDetailVM"
     }
 
-    private val _uiState = MutableStateFlow<SeriesDetailUiState>(SeriesDetailUiState.Loading)
+    private val _uiState = MutableStateFlow<SeriesDetailUiState>(SeriesDetailUiState.Loading("", ""))
     val uiState: StateFlow<SeriesDetailUiState> = _uiState.asStateFlow()
 
     private var allSeasonGroups = listOf<SeasonGroup>()
@@ -76,7 +81,7 @@ class SeriesDetailViewModel @Inject constructor(
     fun loadSeriesDetails(folderId: String, seriesTitle: String, initialPoster: String? = null) {
         currentFolderId = folderId
         currentSeriesTitle = seriesTitle
-        _uiState.value = SeriesDetailUiState.Loading
+        _uiState.value = SeriesDetailUiState.Loading(folderId, seriesTitle, initialPoster)
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -118,18 +123,10 @@ class SeriesDetailViewModel @Inject constructor(
                     return@launch
                 }
 
-                val (fetchedAnime, fetchedArcs) = tenraiDeferred.await()
-                val aniListMeta = aniListDeferred.await()
-                animeEntry = fetchedAnime
-                franchiseArcs = fetchedArcs
-
-                // Prioritize AniList high-res poster (extraLarge 460x650), then Tenrai/MAL
-                val finalPoster = aniListMeta?.posterUrl ?: fetchedAnime?.imageUrl ?: initialPoster
-                if (finalPoster != null) {
-                    folderMetadataRepository.updatePosterUrl(folderId, seriesTitle, finalPoster)
-                }
-
-                // 3. Batch query watch history for progress
+                // Publish the Drive-backed shell immediately. Metadata enrichment can
+                // arrive later without keeping the detail screen blank.
+                val cachedPoster = initialPoster
+                    ?: folderMetadataRepository.getMetadata(folderId)?.posterUrl
                 val videoIds = driveFiles.map { it.id }
                 val watchList = watchListDao.getWatches(videoIds)
                 val watchMap = watchList.associateBy { it.videoId }
@@ -137,67 +134,58 @@ class SeriesDetailViewModel @Inject constructor(
                 // Check folder star status
                 isFolderStarred = driveFiles.firstOrNull()?.starred == zechs.drive.stream.data.model.Starred.STARRED
 
-                // 4. Map DriveFiles to SeriesEpisodeItem with canonical names & progress
-                allEpisodeItems = driveFiles.map { file ->
-                    mapToEpisodeItem(file, watchMap[file.id], fetchedArcs)
-                }
-
-                // 5. Group using SeasonEpisodeGrouper
-                val fileModels = driveFiles.map { FilesDataModel.File(it) }
-                allSeasonGroups = SeasonEpisodeGrouper.groupFiles(seriesTitle, fileModels)
-
-                // 6. Build SeasonTab list
-                val tabs = mutableListOf<SeasonTab>()
-                allSeasonGroups.forEachIndexed { index, group ->
-                    val icon = when {
-                        group.id == "season_all" -> R.drawable.ic_list_view_24
-                        group.id.startsWith("season_") -> R.drawable.ic_play_24
-                        group.id.contains("special", true) -> R.drawable.ic_star_filled_24
-                        group.id.contains("music", true) || group.id.contains("opening", true) -> R.drawable.ic_audio_24
-                        else -> null
-                    }
-                    tabs.add(
-                        SeasonTab(
-                            id = group.id,
-                            title = group.name,
-                            iconRes = icon,
-                            isSelected = index == 0
-                        )
-                    )
-                }
-
-                // 7. Calculate "Continuar Assistindo" item & remaining time
-                val continueItem = determineContinueWatchingItem(allEpisodeItems)
-                val continueSubtitle = continueItem?.let { item ->
-                    val epText = item.episodeNumber?.let { "Ep. $it" } ?: "Ep. 01"
-                    if (item.watchedDuration > 0 && item.totalDuration > item.watchedDuration) {
-                        val remainingSec = (item.totalDuration - item.watchedDuration) / 1000
-                        val min = remainingSec / 60
-                        val sec = remainingSec % 60
-                        "$epText • ${String.format(Locale.ROOT, "%02d:%02d", min, sec)} restante"
-                    } else {
-                        "$epText • Iniciar reprodução"
-                    }
-                } ?: "Ep. 01 • Iniciar reprodução"
-
-                // Filter initial episodes for first tab
-                val initialEpisodes = getEpisodesForGroup(allSeasonGroups.firstOrNull())
-
+                animeEntry = null
+                franchiseArcs = emptyList()
+                val shellState = buildSuccessState(
+                    folderId = folderId,
+                    seriesTitle = seriesTitle,
+                    driveFiles = driveFiles,
+                    watchMap = watchMap,
+                    fetchedAnime = null,
+                    aniListMeta = null,
+                    arcs = emptyList(),
+                    fallbackPosterUrl = cachedPoster
+                )
                 withContext(Dispatchers.Main) {
-                    _uiState.value = SeriesDetailUiState.Success(
-                        folderId = folderId,
-                        seriesTitle = seriesTitle,
-                        animeEntry = fetchedAnime,
-                        aniListMetadata = aniListMeta,
-                        seasonTabs = tabs,
-                        currentEpisodes = initialEpisodes,
-                        continueWatchingItem = continueItem,
-                        continueWatchingSubtitle = continueSubtitle,
-                        isStarred = isFolderStarred,
-                        qualityBadge = detectQuality(driveFiles),
-                        audioBadge = detectAudio(driveFiles),
-                        subtitleBadge = "Multi Subs"
-                    )
+                    _uiState.value = shellState
+                }
+
+                val (fetchedAnime, fetchedArcs) = tenraiDeferred.await()
+                val aniListMeta = aniListDeferred.await()
+                animeEntry = fetchedAnime
+                franchiseArcs = fetchedArcs
+
+                // Prioritize AniList high-res poster (extraLarge 460x650), then Tenrai/MAL
+                val finalPoster = aniListMeta?.posterUrl
+                    ?: fetchedAnime?.imageUrl
+                    ?: initialPoster
+                    ?: cachedPoster
+                if (!finalPoster.isNullOrBlank()) {
+                    folderMetadataRepository.updatePosterUrl(folderId, seriesTitle, finalPoster)
+                }
+
+                val enrichedState = buildSuccessState(
+                    folderId = folderId,
+                    seriesTitle = seriesTitle,
+                    driveFiles = driveFiles,
+                    watchMap = watchMap,
+                    fetchedAnime = fetchedAnime,
+                    aniListMeta = aniListMeta,
+                    arcs = fetchedArcs,
+                    fallbackPosterUrl = finalPoster
+                )
+                withContext(Dispatchers.Main) {
+                    val previous = _uiState.value as? SeriesDetailUiState.Success
+                    val selectedId = previous?.seasonTabs?.firstOrNull { it.isSelected }?.id
+                    if (selectedId == null) {
+                        _uiState.value = enrichedState
+                    } else {
+                        val selectedGroup = allSeasonGroups.firstOrNull { it.id == selectedId }
+                        _uiState.value = enrichedState.copy(
+                            seasonTabs = enrichedState.seasonTabs.map { it.copy(isSelected = it.id == selectedId) },
+                            currentEpisodes = getEpisodesForGroup(selectedGroup)
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading series details", e)
@@ -208,17 +196,76 @@ class SeriesDetailViewModel @Inject constructor(
         }
     }
 
+    private fun buildSuccessState(
+        folderId: String,
+        seriesTitle: String,
+        driveFiles: List<DriveFile>,
+        watchMap: Map<String, WatchList>,
+        fetchedAnime: TenraiAnimeService.TenraiAnimeEntry?,
+        aniListMeta: AnimeMetadata?,
+        arcs: List<TenraiAnimeService.TenraiFranchiseArc>,
+        fallbackPosterUrl: String?
+    ): SeriesDetailUiState.Success {
+        allEpisodeItems = driveFiles.map { file ->
+            mapToEpisodeItem(file, watchMap[file.id], arcs)
+        }
+
+        val fileModels = driveFiles.map { FilesDataModel.File(it) }
+        allSeasonGroups = SeasonEpisodeGrouper.groupFiles(seriesTitle, fileModels)
+        val tabs = allSeasonGroups.mapIndexed { index, group ->
+            val icon = when {
+                group.id == "season_all" -> R.drawable.ic_list_view_24
+                group.id.startsWith("season_") -> R.drawable.ic_play_24
+                group.id.contains("special", true) -> R.drawable.ic_star_filled_24
+                group.id.contains("music", true) || group.id.contains("opening", true) -> R.drawable.ic_audio_24
+                else -> null
+            }
+            SeasonTab(
+                id = group.id,
+                title = group.name,
+                iconRes = icon,
+                isSelected = index == 0
+            )
+        }
+
+        val continueItem = determineContinueWatchingItem(allEpisodeItems)
+        val continueSubtitle = continueItem?.let { item ->
+            val epText = item.episodeNumber?.let { "Ep. $it" } ?: "Ep. 01"
+            if (item.watchedDuration > 0 && item.totalDuration > item.watchedDuration) {
+                val remainingSec = (item.totalDuration - item.watchedDuration) / 1000
+                "$epText • ${String.format(Locale.ROOT, "%02d:%02d", remainingSec / 60, remainingSec % 60)} restante"
+            } else {
+                "$epText • Iniciar reprodução"
+            }
+        } ?: "Ep. 01 • Iniciar reprodução"
+
+        return SeriesDetailUiState.Success(
+            folderId = folderId,
+            seriesTitle = seriesTitle,
+            animeEntry = fetchedAnime,
+            aniListMetadata = aniListMeta,
+            seasonTabs = tabs,
+            currentEpisodes = getEpisodesForGroup(allSeasonGroups.firstOrNull()),
+            continueWatchingItem = continueItem,
+            continueWatchingSubtitle = continueSubtitle,
+            isStarred = isFolderStarred,
+            fallbackPosterUrl = fallbackPosterUrl,
+            qualityBadge = detectQuality(driveFiles),
+            audioBadge = detectAudio(driveFiles),
+            subtitleBadge = "Multi Subs"
+        )
+    }
+
     private suspend fun fetchAllDriveVideos(folderId: String): List<DriveFile> {
-        val directRes = driveRepository.getFiles(
+        val directRes = driveRepository.getAllFiles(
             query = "'$folderId' in parents and trashed = false",
-            pageToken = null,
             pageSize = 100
         )
-        if (directRes !is Resource.Success || directRes.data?.files.isNullOrEmpty()) {
+        if (directRes !is Resource.Success || directRes.data.isNullOrEmpty()) {
             return emptyList()
         }
 
-        val items = directRes.data!!.files.map { it.toDriveFile() }
+        val items = directRes.data.map { it.toDriveFile() }
         val videoFiles = items.filter { it.isVideoFile || (it.isShortcut && it.isShortcutVideo) }.toMutableList()
         val subfolders = items.filter { it.isFolder || it.isShortcutFolder }
 
@@ -226,13 +273,12 @@ class SeriesDetailViewModel @Inject constructor(
         if (subfolders.isNotEmpty() && videoFiles.size <= 2) {
             for (sub in subfolders) {
                 val subId = if (sub.isShortcut) sub.shortcutDetails.targetId ?: sub.id else sub.id
-                val subRes = driveRepository.getFiles(
+                val subRes = driveRepository.getAllFiles(
                     query = "'$subId' in parents and trashed = false",
-                    pageToken = null,
                     pageSize = 100
                 )
-                if (subRes is Resource.Success && !subRes.data?.files.isNullOrEmpty()) {
-                    val subVideos = subRes.data!!.files.map { it.toDriveFile() }
+                if (subRes is Resource.Success && !subRes.data.isNullOrEmpty()) {
+                    val subVideos = subRes.data.map { it.toDriveFile() }
                         .filter { it.isVideoFile || (it.isShortcut && it.isShortcutVideo) }
                     videoFiles.addAll(subVideos)
                 }

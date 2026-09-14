@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.graphics.Color
 import android.widget.LinearLayout
+import android.content.res.Configuration
 import androidx.core.content.ContextCompat
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
@@ -79,6 +80,40 @@ class SettingsFragment : BaseFragment() {
         setupCheckForUpdates()
         setupMalIntegration()
         setupPlaybackExperience()
+        setupTvFocus()
+    }
+
+    private fun setupTvFocus() {
+        if (resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE) return
+
+        val rows = listOf(
+            binding.settingSelectProfile,
+            binding.settingSelectTheme,
+            binding.settingDefaultPlayer,
+            binding.settingCheckForUpdate,
+            binding.settingMalAccount,
+            binding.settingMalSyncToggle,
+            binding.settingAutoSkipToggle,
+            binding.settingGesturesToggle
+        )
+
+        rows.forEachIndexed { index, row ->
+            row.setOnFocusChangeListener { view, hasFocus ->
+                view.animate()
+                    .scaleX(if (hasFocus) 1.015f else 1f)
+                    .scaleY(if (hasFocus) 1.015f else 1f)
+                    .translationZ(if (hasFocus) 6f else 0f)
+                    .setDuration(120L)
+                    .start()
+            }
+            row.nextFocusUpId = rows.getOrNull(index - 1)?.id ?: binding.toolbar.id
+            row.nextFocusDownId = rows.getOrNull(index + 1)?.id ?: row.id
+        }
+
+        binding.switchMalSync.isFocusable = false
+        binding.switchAutoSkip.isFocusable = false
+        binding.switchGestures.isFocusable = false
+        binding.settingSelectProfile.post { binding.settingSelectProfile.requestFocus() }
     }
 
     private fun setupUserProfileSection() {
@@ -372,8 +407,8 @@ class SettingsFragment : BaseFragment() {
         ).show()
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
+    override fun onDestroyView() {
+        super.onDestroyView()
         _binding = null
     }
 

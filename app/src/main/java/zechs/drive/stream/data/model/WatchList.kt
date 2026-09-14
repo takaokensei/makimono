@@ -3,6 +3,7 @@ package zechs.drive.stream.data.model
 import androidx.annotation.Keep
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import zechs.drive.stream.utils.ThumbnailUrl
 
 @Keep
 @Entity(tableName = "watch_list")
@@ -30,11 +31,6 @@ data class WatchList(
 
 /** Upgrade old low-resolution Drive thumbnails before loading them on TV. */
 val WatchList.thumbnailLarge: String?
-    get() = thumbnailLink?.let {
-        if (it.contains(Regex("=s\\d+"))) {
-            it.replace(Regex("=s\\d+"), "=s600")
-        } else {
-            "$it=s600"
-        }
-    }
+    get() = ThumbnailUrl.large(thumbnailLink)
+
 

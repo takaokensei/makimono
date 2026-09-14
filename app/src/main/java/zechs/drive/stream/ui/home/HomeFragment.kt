@@ -27,6 +27,7 @@ import zechs.drive.stream.ui.files.adapter.FilesAdapter
 import zechs.drive.stream.ui.files.adapter.FilesDataModel
 import zechs.drive.stream.ui.home.adapter.ContinueWatchingAdapter
 import zechs.drive.stream.utils.GlideApp
+import zechs.drive.stream.utils.MediaImageLoader
 import zechs.drive.stream.utils.ProfileManager
 import zechs.drive.stream.utils.ext.navigateSafe
 import javax.inject.Inject
@@ -143,7 +144,15 @@ class HomeFragment : BaseFragment() {
 
     private fun getResponsiveSpanCount(): Int {
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        return if (isLandscape) 5 else 2
+        if (!isLandscape) return 2
+
+        val density = resources.displayMetrics.density
+        val railWidth = (240f * density).toInt()
+        val safeMargins = (64f * density).toInt()
+        val minimumCardWidth = (220f * density).toInt()
+        val usableWidth = (resources.displayMetrics.widthPixels - railWidth - safeMargins)
+            .coerceAtLeast(minimumCardWidth * 3)
+        return (usableWidth / minimumCardWidth).coerceIn(3, 6)
     }
 
     private fun setupAnimeGrid() {
@@ -393,7 +402,14 @@ class HomeFragment : BaseFragment() {
             binding.rvAnimeLibrary.visibility == View.VISIBLE -> binding.rvAnimeLibrary
             else -> binding.contentScrollView
         }
-        target?.requestFocus()
+        if (target === binding.rvAnimeLibrary) {
+            binding.rvAnimeLibrary.post {
+                binding.rvAnimeLibrary.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus()
+                    ?: binding.rvAnimeLibrary.requestFocus()
+            }
+        } else {
+            target?.requestFocus()
+        }
     }
 
     private fun setNavItemsFocusable(enabled: Boolean) {
@@ -733,8 +749,13 @@ class HomeFragment : BaseFragment() {
                             binding.tvFeaturedJapaneseTitle?.visibility = View.GONE
                         }
 
-                        if (!featured.synopsis.isNullOrBlank()) {
-                            binding.tvFeaturedSynopsis?.text = featured.synopsis
+                        val cleanSynopsis = featured.synopsis
+                            ?.replace(Regex("<br\\s*/?>", RegexOption.IGNORE_CASE), " ")
+                            ?.replace(Regex("<[^>]+>"), "")
+                            ?.replace(Regex("\\s+"), " ")
+                            ?.trim()
+                        if (!cleanSynopsis.isNullOrBlank()) {
+                            binding.tvFeaturedSynopsis?.text = cleanSynopsis
                             binding.tvFeaturedSynopsis?.visibility = View.VISIBLE
                         } else {
                             binding.tvFeaturedSynopsis?.visibility = View.GONE
@@ -763,11 +784,7 @@ class HomeFragment : BaseFragment() {
                         val imgToLoad = featured.backdropUrl ?: featured.posterUrl
                         if (!imgToLoad.isNullOrBlank()) {
                             binding.ivFeaturedBackdrop?.let { iv ->
-                                GlideApp.with(iv)
-                                    .load(imgToLoad)
-                                    .centerCrop()
-                                    .diskCacheStrategy(DiskCacheStrategy.DATA)
-                                    .into(iv)
+                                MediaImageLoader.backdrop(iv, imgToLoad)
                             }
                         }
 

@@ -5,12 +5,10 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import zechs.drive.stream.R
 import zechs.drive.stream.data.model.WatchList
 import zechs.drive.stream.data.model.thumbnailLarge
 import zechs.drive.stream.databinding.ItemContinueWatchingShelfBinding
-import zechs.drive.stream.utils.GlideApp
+import zechs.drive.stream.utils.MediaImageLoader
 
 /**
  * Backs the horizontal "Continuar assistindo" shelf on Home (Crunchyroll-style).
@@ -80,13 +78,10 @@ class ContinueWatchingAdapter(
             }
             binding.pbShelfItemProgress.progress = progressPct
 
-            GlideApp.with(binding.ivShelfItemThumb)
-                .load(watchItem.thumbnailLarge ?: watchItem.thumbnailLink)
-                .centerCrop()
-                .diskCacheStrategy(DiskCacheStrategy.DATA)
-                .placeholder(R.drawable.glass_card_bg)
-                .error(R.drawable.glass_card_bg)
-                .into(binding.ivShelfItemThumb)
+            MediaImageLoader.card(
+                binding.ivShelfItemThumb,
+                watchItem.thumbnailLarge ?: watchItem.thumbnailLink
+            )
 
             binding.cardShelfItem.setOnClickListener { onClick(watchItem) }
 

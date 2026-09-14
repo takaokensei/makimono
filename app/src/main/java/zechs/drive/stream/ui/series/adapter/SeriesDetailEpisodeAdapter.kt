@@ -6,11 +6,9 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import zechs.drive.stream.R
 import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.databinding.ItemSeriesEpisodeCardBinding
+import zechs.drive.stream.utils.MediaImageLoader
 
 data class SeriesEpisodeItem(
     val file: DriveFile,
@@ -84,13 +82,7 @@ class SeriesDetailEpisodeAdapter(
             }
 
             val thumbUrl = item.file.thumbnailLarge ?: item.file.thumbnailLink ?: item.file.posterUrl
-            Glide.with(binding.ivEpisodeThumb)
-                .load(thumbUrl)
-                .centerCrop()
-                .diskCacheStrategy(DiskCacheStrategy.DATA)
-                .placeholder(R.drawable.glass_card_bg)
-                .error(R.drawable.glass_card_bg)
-                .into(binding.ivEpisodeThumb)
+            MediaImageLoader.card(binding.ivEpisodeThumb, thumbUrl)
         }
     }
 

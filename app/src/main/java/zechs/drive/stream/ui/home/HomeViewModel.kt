@@ -169,13 +169,12 @@ class HomeViewModel @Inject constructor(
 
     fun getStarredFiles() = viewModelScope.launch(Dispatchers.IO) {
         try {
-            val response = driveRepository.get().getFiles(
+            val response = driveRepository.get().getAllFiles(
                 query = "starred=true and trashed=false",
-                pageToken = null,
                 pageSize = 25
             )
             if (response is Resource.Success && response.data != null) {
-                val rawFiles = response.data.files.map { it.toDriveFile() }
+                val rawFiles = response.data.map { it.toDriveFile() }
 
                 // 1. Get cached metadata from local Room database
                 val allMeta = folderMetadataRepository.getAllMetadata().associateBy { it.folderId }
@@ -286,14 +285,13 @@ class HomeViewModel @Inject constructor(
                     if (folderId != null) {
                         Log.d(TAG, "Carregando catálogo de animes da pasta: $folderName ($folderId)")
                         val query = "'$folderId' in parents and trashed=false"
-                    val response = driveRepository.get().getFiles(
+                    val response = driveRepository.get().getAllFiles(
                         query = query,
-                        pageToken = null,
                         pageSize = 100
                     )
 
                     if (response is Resource.Success && response.data != null) {
-                        val rawFiles = response.data.files.map { it.toDriveFile() }
+                        val rawFiles = response.data.map { it.toDriveFile() }
                         // Hide non-video / non-folder files (such as folder.ico, .apk, .ini, etc.)
                         val animeFiles = rawFiles.filter { file ->
                             val isMediaOrFolder = file.isFolder || file.isShortcutFolder || file.isVideoFile || file.isShortcutVideo

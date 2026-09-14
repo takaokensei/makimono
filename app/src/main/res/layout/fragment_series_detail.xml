@@ -696,6 +696,22 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/rvSeasonTabs" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRetry"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Tentar novamente"
+            android:textColor="?attr/colorTextPrimary"
+            android:visibility="gone"
+            app:backgroundTint="?attr/colorBgSurface"
+            app:cornerRadius="18dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvEmptyEpisodes"
+            app:strokeColor="?attr/colorAccentPrimary"
+            app:strokeWidth="1dp" />
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.core.widget.NestedScrollView>

@@ -5,23 +5,26 @@
         <selector>
             <item android:state_focused="true">
                 <shape android:shape="rectangle">
-                    <corners android:radius="10dp" />
-                    <solid android:color="?attr/colorBorderGlass" />
+                    <corners android:radius="14dp" />
+                    <solid android:color="?attr/colorBgGlass" />
                     <stroke
-                        android:width="1dp"
+                        android:width="2dp"
                         android:color="?attr/colorAccentPrimary" />
                 </shape>
             </item>
             <item android:state_pressed="true">
                 <shape android:shape="rectangle">
-                    <corners android:radius="10dp" />
-                    <solid android:color="?attr/colorBorderGlass" />
+                    <corners android:radius="14dp" />
+                    <solid android:color="?attr/colorBgGlass" />
                 </shape>
             </item>
             <item>
                 <shape android:shape="rectangle">
-                    <corners android:radius="10dp" />
-                    <solid android:color="@android:color/transparent" />
+                    <corners android:radius="14dp" />
+                    <solid android:color="?attr/colorBgGlass" />
+                    <stroke
+                        android:width="1dp"
+                        android:color="?attr/colorBorderGlass" />
                 </shape>
             </item>
         </selector>

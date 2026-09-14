@@ -6,11 +6,10 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.load.engine.DiskCacheStrategy
 import zechs.drive.stream.R
 import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.databinding.ItemStarredShelfBinding
-import zechs.drive.stream.utils.GlideApp
+import zechs.drive.stream.utils.MediaImageLoader
 
 class StarredShelfAdapter(
     private val onClick: (DriveFile) -> Unit
@@ -60,13 +59,7 @@ class StarredShelfAdapter(
                 binding.ivWatermarkIcon.visibility = View.GONE
                 binding.ivStarredThumb.visibility = View.VISIBLE
 
-                GlideApp.with(binding.ivStarredThumb)
-                    .load(displayImage)
-                    .centerCrop()
-                    .diskCacheStrategy(DiskCacheStrategy.DATA)
-                    .placeholder(R.drawable.home_hero_gradient)
-                    .error(R.drawable.home_hero_gradient)
-                    .into(binding.ivStarredThumb)
+                MediaImageLoader.poster(binding.ivStarredThumb, displayImage)
             } else if (isFolder) {
                 binding.folderBgView.visibility = View.VISIBLE
                 binding.ivWatermarkIcon.setImageResource(R.drawable.ic_folder_24)

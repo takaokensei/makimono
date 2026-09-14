@@ -50,6 +50,30 @@ class DriveRepository @Inject constructor(
         }
     }
 
+    /** Fetches every page while keeping the existing single-page API intact. */
+    suspend fun getAllFiles(
+        query: String,
+        pageSize: Int = 100,
+        maxPages: Int = 25
+    ): Resource<List<File>> {
+        val collected = mutableListOf<File>()
+        var pageToken: String? = null
+
+        repeat(maxPages) {
+            when (val response = getFiles(query, pageToken, pageSize)) {
+                is Resource.Success -> {
+                    collected += response.data?.files.orEmpty()
+                    pageToken = response.data?.nextPageToken
+                    if (pageToken.isNullOrBlank()) return Resource.Success(collected)
+                }
+                is Resource.Error -> return Resource.Error(response.message ?: "Falha ao listar arquivos")
+                is Resource.Loading -> Unit
+            }
+        }
+
+        return Resource.Success(collected)
+    }
+
     suspend fun getDrives(
         pageToken: String?,
         pageSize: Int,
