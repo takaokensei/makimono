@@ -169,8 +169,12 @@ class HomeFragment : BaseFragment() {
 
         binding.etSearchAnime.setOnKeyListener { _, keyCode, event ->
             if (event.action == android.view.KeyEvent.ACTION_DOWN && keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
-                if (binding.etSearchAnime.selectionStart == 0 && binding.sidebarDimOverlay != null) {
-                    expandSidebar()
+                if (binding.etSearchAnime.selectionStart == 0) {
+                    if (isCollapsibleRail()) {
+                        expandSidebar()
+                    } else {
+                        focusCurrentNavItem()
+                    }
                     true
                 } else false
             } else false
@@ -240,7 +244,7 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun setupSidebarNavigation() {
-        val hasOverlay = binding.sidebarDimOverlay != null
+        val hasOverlay = isCollapsibleRail()
 
         if (hasOverlay) {
             binding.navRail.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
@@ -259,15 +263,22 @@ class HomeFragment : BaseFragment() {
                     collapseSidebar()
                 }
             }
+        } else {
+            // On TV the rail stays visible. This gives the D-pad a stable
+            // left boundary instead of making navigation depend on an overlay animation.
+            binding.navRail.visibility = View.VISIBLE
+            binding.navRail.translationX = 0f
+            binding.navRail.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+            setNavItemsFocusable(true)
         }
 
         binding.apply {
             btnBrandLogo.setOnClickListener {
-                toggleSidebar()
+                if (hasOverlay) toggleSidebar() else focusCurrentNavItem()
             }
             btnBrandLogo.setOnKeyListener { _, keyCode, event ->
                 if (event.action == android.view.KeyEvent.ACTION_DOWN && keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
-                    expandSidebar()
+                    if (hasOverlay) expandSidebar() else focusCurrentNavItem()
                     true
                 } else false
             }
@@ -327,14 +338,12 @@ class HomeFragment : BaseFragment() {
                     }
                 }
 
-                if (hasOverlay) {
-                    item.setOnKeyListener { _, keyCode, event ->
-                        if (event.action == android.view.KeyEvent.ACTION_DOWN && keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) {
-                            collapseSidebar()
-                            lastFocusedAnimeView?.requestFocus() ?: binding.rvAnimeLibrary.requestFocus()
-                            true
-                        } else false
-                    }
+                item.setOnKeyListener { _, keyCode, event ->
+                    if (event.action == android.view.KeyEvent.ACTION_DOWN && keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) {
+                        if (hasOverlay) collapseSidebar()
+                        focusContent()
+                        true
+                    } else false
                 }
             }
         }
@@ -345,13 +354,11 @@ class HomeFragment : BaseFragment() {
         }
 
         animeAdapter.onDpadLeftListener = { itemView ->
-            if (hasOverlay) {
-                val pos = binding.rvAnimeLibrary.getChildAdapterPosition(itemView)
-                val spanCount = (binding.rvAnimeLibrary.layoutManager as? GridLayoutManager)?.spanCount ?: 1
-                if (pos != androidx.recyclerview.widget.RecyclerView.NO_POSITION && pos % spanCount == 0) {
-                    expandSidebar()
-                    true
-                } else false
+            val pos = binding.rvAnimeLibrary.getChildAdapterPosition(itemView)
+            val spanCount = (binding.rvAnimeLibrary.layoutManager as? GridLayoutManager)?.spanCount ?: 1
+            if (pos != androidx.recyclerview.widget.RecyclerView.NO_POSITION && pos % spanCount == 0) {
+                if (hasOverlay) expandSidebar() else focusCurrentNavItem()
+                true
             } else false
         }
 
@@ -360,11 +367,33 @@ class HomeFragment : BaseFragment() {
         }
 
         continueWatchingAdapter.onDpadLeftListener = {
-            if (hasOverlay) {
-                expandSidebar()
-                true
-            } else false
+            if (hasOverlay) expandSidebar() else focusCurrentNavItem()
+            true
         }
+    }
+
+    private fun isCollapsibleRail(): Boolean =
+        binding.sidebarDimOverlay?.visibility == View.VISIBLE
+
+    private fun focusCurrentNavItem() {
+        val target = when (currentTab) {
+            "Animes" -> binding.btnNavAnimes
+            "Pastas" -> binding.btnNavPastas
+            "Favoritos" -> binding.btnNavFavoritos
+            "Configurações" -> binding.btnNavConfig
+            else -> binding.btnNavInicio
+        }
+        target.requestFocus()
+    }
+
+    private fun focusContent() {
+        val target = when {
+            binding.featuredHeroContainer?.visibility == View.VISIBLE -> binding.btnFeaturedPlay
+            binding.rvContinueWatchingShelf.visibility == View.VISIBLE && continueWatchingAdapter.itemCount > 0 -> binding.rvContinueWatchingShelf
+            binding.rvAnimeLibrary.visibility == View.VISIBLE -> binding.rvAnimeLibrary
+            else -> binding.contentScrollView
+        }
+        target?.requestFocus()
     }
 
     private fun setNavItemsFocusable(enabled: Boolean) {
@@ -469,7 +498,7 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun setupHeroAndProfile() {
-        val hasOverlay = binding.sidebarDimOverlay != null
+        val hasOverlay = isCollapsibleRail()
 
         binding.btnFeaturedPlay?.setOnFocusChangeListener { v, hasFocus ->
             if (hasFocus) {
@@ -484,8 +513,10 @@ class HomeFragment : BaseFragment() {
             if (event.action == android.view.KeyEvent.ACTION_DOWN && keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
                 if (hasOverlay) {
                     expandSidebar()
-                    true
-                } else false
+                } else {
+                    focusCurrentNavItem()
+                }
+                true
             } else false
         }
 
@@ -607,16 +638,12 @@ class HomeFragment : BaseFragment() {
 
     private fun setupBrandLogo() {
         binding.btnBrandLogo.setOnClickListener {
-            if (binding.sidebarDimOverlay != null) {
-                toggleSidebar()
-            }
+            if (isCollapsibleRail()) toggleSidebar() else focusCurrentNavItem()
         }
         binding.btnBrandLogo.setOnKeyListener { _, keyCode, event ->
             if (event.action == android.view.KeyEvent.ACTION_DOWN && keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
-                if (binding.sidebarDimOverlay != null) {
-                    expandSidebar()
-                    true
-                } else false
+                if (isCollapsibleRail()) expandSidebar() else focusCurrentNavItem()
+                true
             } else false
         }
         binding.btnBrandLogo.setOnLongClickListener {

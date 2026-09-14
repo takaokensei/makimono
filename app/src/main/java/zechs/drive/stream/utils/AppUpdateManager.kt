@@ -44,6 +44,12 @@ class AppUpdateManager @Inject constructor(
             val request = Request.Builder()
                 .url(asset.browserDownloadUrl)
                 .header("Accept", "application/octet-stream")
+                .apply {
+                    val token = zechs.drive.stream.BuildConfig.GITHUB_API_TOKEN.trim()
+                    if (token.isNotBlank()) {
+                        header("Authorization", "Bearer $token")
+                    }
+                }
                 .build()
 
             val response = okHttpClient.newCall(request).execute()

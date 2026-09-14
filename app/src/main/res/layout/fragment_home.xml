@@ -50,9 +50,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:fontFamily="@font/inter"
-                android:text="Anime"
+                android:letterSpacing="0.08"
+                android:text="MAKIMONO"
                 android:textColor="#FFFFFF"
-                android:textSize="18sp"
+                android:textSize="19sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -60,9 +61,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
                 android:fontFamily="@font/inter"
-                android:text="Library"
-                android:textColor="#7DD3FC"
-                android:textSize="18sp" />
+                android:text="MEDIA"
+                android:textColor="#12A0C7"
+                android:textSize="19sp" />
 
         </LinearLayout>
 
@@ -96,7 +97,7 @@
                 android:layout_weight="1"
                 android:background="@null"
                 android:fontFamily="@font/inter"
-                android:hint="Filtrar arquivos ou pastas"
+                android:hint="Pesquisar na biblioteca"
                 android:imeOptions="actionSearch"
                 android:inputType="text"
                 android:maxLines="1"
@@ -252,7 +253,7 @@
 
     </LinearLayout>
 
-    <!-- MAIN WORKSPACE: FULL POSTER GRID + OVERLAY RETRACTABLE SIDEBAR -->
+    <!-- MAIN WORKSPACE: FULL POSTER GRID + PERSISTENT TV NAVIGATION RAIL -->
     <FrameLayout
         android:id="@+id/workspaceContainer"
         android:layout_width="match_parent"
@@ -268,7 +269,7 @@
             android:layout_height="match_parent"
             android:clipChildren="false"
             android:clipToPadding="false"
-            android:paddingStart="24dp"
+            android:paddingStart="@dimen/tv_nav_rail_width"
             android:paddingEnd="24dp"
             android:paddingBottom="8dp">
 
@@ -536,7 +537,7 @@
                         android:clipChildren="false"
                         android:clipToPadding="false"
                         android:descendantFocusability="afterDescendants"
-                        android:focusable="false"
+                        android:focusable="true"
                         android:orientation="horizontal"
                         android:visibility="gone"
                         tools:visibility="visible" />
@@ -549,7 +550,7 @@
                         android:clipChildren="false"
                         android:clipToPadding="false"
                         android:descendantFocusability="afterDescendants"
-                        android:focusable="false"
+                        android:focusable="true"
                         android:nestedScrollingEnabled="false" />
 
                 </LinearLayout>
@@ -663,26 +664,27 @@
             android:focusable="false"
             android:visibility="gone" />
 
-        <!-- Left Retractable Floating Sidebar Navigation Rail -->
+        <!-- Left persistent TV navigation rail -->
         <LinearLayout
             android:id="@+id/navRail"
-            android:layout_width="220dp"
+            android:layout_width="@dimen/tv_nav_rail_width"
             android:layout_height="match_parent"
             android:layout_gravity="start"
             android:background="@drawable/bg_sidebar_panel"
             android:elevation="24dp"
             android:orientation="vertical"
-            android:paddingStart="20dp"
+            android:paddingStart="16dp"
             android:paddingTop="16dp"
             android:paddingEnd="16dp"
             android:paddingBottom="16dp"
-            android:translationZ="24dp">
+            android:translationZ="24dp"
+            android:visibility="visible">
 
             <!-- 1. Início (Active by default) -->
             <LinearLayout
                 android:id="@+id/btnNavInicio"
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
+                android:layout_height="@dimen/tv_nav_item_height"
                 android:background="@drawable/nav_item_active_bg"
                 android:clickable="true"
                 android:focusable="true"
@@ -693,8 +695,8 @@
 
                 <ImageView
                     android:id="@+id/ivNavInicioIcon"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
+                    android:layout_width="@dimen/tv_nav_icon_size"
+                    android:layout_height="@dimen/tv_nav_icon_size"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_home_24"
                     app:tint="#FFFFFF" />
@@ -707,7 +709,7 @@
                     android:fontFamily="@font/inter"
                     android:text="Início"
                     android:textColor="#FFFFFF"
-                    android:textSize="14sp"
+                    android:textSize="16sp"
                     android:textStyle="bold" />
 
             </LinearLayout>
@@ -716,7 +718,7 @@
             <LinearLayout
                 android:id="@+id/btnNavAnimes"
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
+                android:layout_height="@dimen/tv_nav_item_height"
                 android:layout_marginTop="4dp"
                 android:background="@drawable/rail_item_focus_bg"
                 android:clickable="true"
@@ -728,8 +730,8 @@
 
                 <ImageView
                     android:id="@+id/ivNavAnimesIcon"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
+                    android:layout_width="@dimen/tv_nav_icon_size"
+                    android:layout_height="@dimen/tv_nav_icon_size"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_play_24"
                     app:tint="#7FA3D6" />
@@ -742,7 +744,7 @@
                     android:fontFamily="@font/inter"
                     android:text="Animes"
                     android:textColor="#94A3B8"
-                    android:textSize="14sp" />
+                    android:textSize="16sp" />
 
             </LinearLayout>
 
@@ -750,7 +752,7 @@
             <LinearLayout
                 android:id="@+id/btnNavPastas"
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
+                android:layout_height="@dimen/tv_nav_item_height"
                 android:layout_marginTop="4dp"
                 android:background="@drawable/rail_item_focus_bg"
                 android:clickable="true"
@@ -761,8 +763,8 @@
                 android:paddingEnd="12dp">
 
                 <ImageView
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
+                    android:layout_width="@dimen/tv_nav_icon_size"
+                    android:layout_height="@dimen/tv_nav_icon_size"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_folder_24"
                     app:tint="#7FA3D6" />
@@ -775,7 +777,7 @@
                     android:fontFamily="@font/inter"
                     android:text="Pastas"
                     android:textColor="#94A3B8"
-                    android:textSize="14sp" />
+                    android:textSize="16sp" />
 
             </LinearLayout>
 
@@ -783,7 +785,7 @@
             <LinearLayout
                 android:id="@+id/btnNavFavoritos"
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
+                android:layout_height="@dimen/tv_nav_item_height"
                 android:layout_marginTop="4dp"
                 android:background="@drawable/rail_item_focus_bg"
                 android:clickable="true"
@@ -795,8 +797,8 @@
 
                 <ImageView
                     android:id="@+id/ivNavFavoritosIcon"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
+                    android:layout_width="@dimen/tv_nav_icon_size"
+                    android:layout_height="@dimen/tv_nav_icon_size"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_star_filled_24"
                     app:tint="#7FA3D6" />
@@ -809,7 +811,7 @@
                     android:fontFamily="@font/inter"
                     android:text="Favoritos"
                     android:textColor="#94A3B8"
-                    android:textSize="14sp" />
+                    android:textSize="16sp" />
 
             </LinearLayout>
 
@@ -817,7 +819,7 @@
             <LinearLayout
                 android:id="@+id/btnNavConfig"
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
+                android:layout_height="@dimen/tv_nav_item_height"
                 android:layout_marginTop="4dp"
                 android:background="@drawable/rail_item_focus_bg"
                 android:clickable="true"
@@ -828,8 +830,8 @@
                 android:paddingEnd="12dp">
 
                 <ImageView
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
+                    android:layout_width="@dimen/tv_nav_icon_size"
+                    android:layout_height="@dimen/tv_nav_icon_size"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_settings_24"
                     app:tint="#7FA3D6" />
@@ -842,7 +844,7 @@
                     android:fontFamily="@font/inter"
                     android:text="Configurações"
                     android:textColor="#94A3B8"
-                    android:textSize="14sp" />
+                    android:textSize="16sp" />
 
             </LinearLayout>
 

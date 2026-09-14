@@ -9,4 +9,9 @@
     -->
     <dimen name="tv_overscan_margin">24dp</dimen>
     <dimen name="tv_overscan_margin_vertical">24dp</dimen>
+    <dimen name="tv_nav_rail_width">240dp</dimen>
+    <dimen name="tv_nav_item_height">56dp</dimen>
+    <dimen name="tv_nav_icon_size">32dp</dimen>
+    <dimen name="tv_shelf_card_width">300dp</dimen>
+    <dimen name="tv_shelf_card_height">169dp</dimen>
 </resources>

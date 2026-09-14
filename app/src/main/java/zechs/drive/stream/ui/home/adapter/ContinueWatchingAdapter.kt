@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import zechs.drive.stream.R
 import zechs.drive.stream.data.model.WatchList
+import zechs.drive.stream.data.model.thumbnailLarge
 import zechs.drive.stream.databinding.ItemContinueWatchingShelfBinding
 import zechs.drive.stream.utils.GlideApp
 
@@ -80,7 +81,7 @@ class ContinueWatchingAdapter(
             binding.pbShelfItemProgress.progress = progressPct
 
             GlideApp.with(binding.ivShelfItemThumb)
-                .load(watchItem.thumbnailLink)
+                .load(watchItem.thumbnailLarge ?: watchItem.thumbnailLink)
                 .centerCrop()
                 .diskCacheStrategy(DiskCacheStrategy.DATA)
                 .placeholder(R.drawable.glass_card_bg)

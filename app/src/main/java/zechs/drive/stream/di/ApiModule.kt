@@ -154,10 +154,9 @@ object ApiModule {
     @Provides
     @Singleton
     fun provideGithubRepository(
-        githubApi: Lazy<GithubApi>,
-        @Named("OkHttpClient") client: OkHttpClient
+        githubApi: Lazy<GithubApi>
     ): GithubRepository {
-        return GithubRepository(githubApi, client)
+        return GithubRepository(githubApi)
     }
 
     @Provides

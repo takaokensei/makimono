@@ -45,8 +45,8 @@ class AppSettings @Inject constructor(
             Log.d(TAG, "fetchTheme: $appTheme")
             appTheme
         } catch (e: Exception) {
-            Log.e(TAG, "fetchTheme error, fallback to Tokyo Night", e)
-            AppTheme.TOKYO_NIGHT
+            Log.e(TAG, "fetchTheme error, fallback to Kodi Estuary", e)
+            AppTheme.KODI_ESTUARY
         }
     }
 
@@ -169,8 +169,8 @@ enum class AppTheme(
     );
 
     companion object {
-        fun fromValue(value: Int): AppTheme = entries.find { it.value == value } ?: TOKYO_NIGHT
-        fun fromText(text: String?): AppTheme = entries.find { it.text.equals(text, ignoreCase = true) } ?: TOKYO_NIGHT
+        fun fromValue(value: Int): AppTheme = entries.find { it.value == value } ?: KODI_ESTUARY
+        fun fromText(text: String?): AppTheme = entries.find { it.text.equals(text, ignoreCase = true) } ?: KODI_ESTUARY
     }
 }
 

@@ -16,13 +16,25 @@ data class WatchList(
 ) {
 
     fun watchProgress(): Int {
-        val progress = ((watchedDuration.toDouble() / totalDuration) * 100)
-        return progress.toInt()
+        if (totalDuration <= 0L) return 0
+        return ((watchedDuration.toDouble() / totalDuration) * 100)
+            .toInt()
+            .coerceIn(0, 100)
     }
 
     /*
-     * If video is watched more than 95% then we can say its watched
+     * If video is watched at least 95% then we can say it is watched.
      */
-    fun hasFinished() = watchProgress() > 95
+    fun hasFinished() = watchProgress() >= 95
 }
+
+/** Upgrade old low-resolution Drive thumbnails before loading them on TV. */
+val WatchList.thumbnailLarge: String?
+    get() = thumbnailLink?.let {
+        if (it.contains(Regex("=s\\d+"))) {
+            it.replace(Regex("=s\\d+"), "=s600")
+        } else {
+            "$it=s600"
+        }
+    }
 

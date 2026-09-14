@@ -70,7 +70,9 @@ class MainActivity : AppCompatActivity() {
     private val viewModel by viewModels<MainViewModel>()
     private lateinit var binding: ActivityMainBinding
     private lateinit var navController: NavController
-    private var currentAppliedTheme: AppTheme? = null
+    // The splash theme is Kodi Estuary, so the first persisted theme can be
+    // compared against it without flashing Tokyo Night during startup.
+    private var currentAppliedTheme: AppTheme? = AppTheme.KODI_ESTUARY
     private var updateDialog: AlertDialog? = null
     private var progressDialog: AlertDialog? = null
     private var progressBinding: DialogUpdateProgressBinding? = null

@@ -10,16 +10,17 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/cardShelfItem"
-    android:layout_width="220dp"
-    android:layout_height="124dp"
-    android:layout_marginEnd="14dp"
+    android:layout_width="@dimen/tv_shelf_card_width"
+    android:layout_height="@dimen/tv_shelf_card_height"
+    android:layout_marginEnd="16dp"
     android:clickable="true"
     android:focusable="true"
+    android:foreground="@drawable/shelf_item_focus_border"
     app:cardBackgroundColor="?attr/colorBgSurface"
-    app:cardCornerRadius="10dp"
+    app:cardCornerRadius="8dp"
     app:cardElevation="0dp"
     app:strokeColor="@color/shelf_card_stroke_color"
-    app:strokeWidth="2.5dp">
+    app:strokeWidth="0dp">
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -37,7 +38,7 @@
         <!-- Bottom scrim gradient for readability -->
         <View
             android:layout_width="match_parent"
-            android:layout_height="80dp"
+            android:layout_height="104dp"
             android:layout_gravity="bottom"
             android:background="@drawable/shelf_item_scrim" />
 
@@ -54,8 +55,8 @@
 
             <ImageView
                 android:id="@+id/ivPlayBadge"
-                android:layout_width="22dp"
-                android:layout_height="22dp"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
                 android:background="@drawable/glass_circle_button_bg"
                 android:contentDescription="@null"
                 android:padding="5dp"
@@ -78,7 +79,7 @@
                 android:paddingEnd="6dp"
                 android:paddingBottom="2dp"
                 android:textColor="#E2E8F0"
-                android:textSize="10sp"
+                android:textSize="12sp"
                 android:textStyle="bold"
                 tools:text="T2: Ep. 03" />
 
@@ -103,7 +104,7 @@
                 android:fontFamily="@font/inter"
                 android:maxLines="1"
                 android:textColor="#F0F0F0"
-                android:textSize="12sp"
+                android:textSize="14sp"
                 android:textStyle="bold"
                 tools:text="Attack on Titan - Ep. 04" />
 
@@ -121,7 +122,7 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/inter"
                     android:textColor="#CBD5E1"
-                    android:textSize="10sp"
+                    android:textSize="12sp"
                     tools:text="Ep. 04" />
 
                 <TextView
@@ -131,7 +132,7 @@
                     android:fontFamily="@font/inter"
                     android:text=" • "
                     android:textColor="#64748B"
-                    android:textSize="10sp" />
+                    android:textSize="12sp" />
 
                 <TextView
                     android:id="@+id/tvShelfItemRemaining"
@@ -139,7 +140,7 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/inter"
                     android:textColor="?attr/colorAccentPrimary"
-                    android:textSize="10sp"
+                    android:textSize="12sp"
                     android:textStyle="bold"
                     tools:text="9 min restantes" />
 
@@ -152,7 +153,7 @@
             android:id="@+id/pbShelfItemProgress"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
-            android:layout_height="3dp"
+            android:layout_height="4dp"
             android:layout_gravity="bottom"
             android:max="100"
             android:progress="60"

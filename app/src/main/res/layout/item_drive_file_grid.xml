@@ -9,11 +9,12 @@
     android:clickable="true"
     android:focusable="true"
     android:descendantFocusability="blocksDescendants"
+    android:foreground="@drawable/shelf_item_focus_border"
     app:cardBackgroundColor="?attr/colorBgSurface"
     app:cardCornerRadius="16dp"
     app:cardElevation="0dp"
     app:strokeColor="@color/shelf_card_stroke_color"
-    app:strokeWidth="2dp">
+    app:strokeWidth="0dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
