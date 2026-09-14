@@ -17,6 +17,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import zechs.drive.stream.R
 import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.data.model.WatchList
@@ -25,7 +26,10 @@ import zechs.drive.stream.ui.BaseFragment
 import zechs.drive.stream.ui.files.adapter.FilesAdapter
 import zechs.drive.stream.ui.files.adapter.FilesDataModel
 import zechs.drive.stream.ui.home.adapter.ContinueWatchingAdapter
+import zechs.drive.stream.utils.GlideApp
+import zechs.drive.stream.utils.ProfileManager
 import zechs.drive.stream.utils.ext.navigateSafe
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class HomeFragment : BaseFragment() {
@@ -39,6 +43,9 @@ class HomeFragment : BaseFragment() {
 
     private val viewModel by activityViewModels<HomeViewModel>()
     private val mainViewModel by activityViewModels<zechs.drive.stream.ui.main.MainViewModel>()
+
+    @Inject
+    lateinit var profileManager: zechs.drive.stream.utils.ProfileManager
 
     private var isGridMode = true
     private var currentTab = "Início"
@@ -103,6 +110,7 @@ class HomeFragment : BaseFragment() {
         setupSidebarNavigation()
         setupBrandLogo()
         setupBackPressedHandling()
+        setupHeroAndProfile()
 
         binding.rvContinueWatchingShelf.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(
             requireContext(), androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false
@@ -121,6 +129,7 @@ class HomeFragment : BaseFragment() {
 
         observeAnimeLibrary()
         observeRecentWatches()
+        observeFeaturedAnime()
         observeLogOutState()
         observeMpv()
 
@@ -459,6 +468,59 @@ class HomeFragment : BaseFragment() {
         )
     }
 
+    private fun setupHeroAndProfile() {
+        val hasOverlay = binding.sidebarDimOverlay != null
+
+        binding.btnFeaturedPlay?.setOnFocusChangeListener { v, hasFocus ->
+            if (hasFocus) {
+                lastFocusedAnimeView = v
+                v.animate().scaleX(1.05f).scaleY(1.05f).translationZ(8f).setDuration(120L).start()
+            } else {
+                v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(120L).start()
+            }
+        }
+
+        binding.btnFeaturedPlay?.setOnKeyListener { _, keyCode, event ->
+            if (event.action == android.view.KeyEvent.ACTION_DOWN && keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+                if (hasOverlay) {
+                    expandSidebar()
+                    true
+                } else false
+            } else false
+        }
+
+        binding.btnFeaturedInfo?.setOnFocusChangeListener { v, hasFocus ->
+            if (hasFocus) {
+                lastFocusedAnimeView = v
+                v.animate().scaleX(1.05f).scaleY(1.05f).translationZ(8f).setDuration(120L).start()
+            } else {
+                v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(120L).start()
+            }
+        }
+
+        binding.userProfilePill?.setOnFocusChangeListener { v, hasFocus ->
+            if (hasFocus) {
+                v.animate().scaleX(1.05f).scaleY(1.05f).translationZ(6f).setDuration(120L).start()
+            } else {
+                v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(120L).start()
+            }
+        }
+
+        binding.userProfilePill?.setOnClickListener {
+            findNavController().navigateSafe(R.id.action_homeFragment_to_profileSelectionFragment)
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                profileManager.activeProfileFlow.collect { profile ->
+                    binding.tvUserName?.text = profile.name
+                    val avatarRes = profileManager.getAvatarDrawableRes(profile.avatarResName)
+                    binding.ivUserAvatar?.setImageResource(avatarRes)
+                }
+            }
+        }
+    }
+
     private fun Float.dpToPx(): Float =
         this * resources.displayMetrics.density
 
@@ -469,11 +531,12 @@ class HomeFragment : BaseFragment() {
         binding.apply {
             when (tab) {
                 "Início" -> {
-                    // Home: Shows ONLY Continuar Assistindo shelf (or clean empty state if none)
-                    // The main anime library grid is isolated to the "Animes" tab!
+                    // Home: Shows Featured Spotlight Hero + Continuar Assistindo shelf
+                    val hasFeatured = viewModel.featuredAnime.value != null
+                    featuredHeroContainer?.visibility = if (hasFeatured) View.VISIBLE else View.GONE
                     shelfHeaderRow?.visibility = if (hasRecent) View.VISIBLE else View.GONE
                     rvContinueWatchingShelf.visibility = if (hasRecent) View.VISIBLE else View.GONE
-                    layoutHomeEmpty?.visibility = if (hasRecent) View.GONE else View.VISIBLE
+                    layoutHomeEmpty?.visibility = if (!hasRecent && !hasFeatured) View.VISIBLE else View.GONE
                     rvAnimeLibrary.visibility = View.GONE
                     layoutEmpty.visibility = View.GONE
                     containerViewToggle?.visibility = View.GONE
@@ -481,7 +544,7 @@ class HomeFragment : BaseFragment() {
                     tvItemCount.text = "${viewModel.recentWatches.value.size} em andamento"
                 }
                 "Animes" -> {
-                    // Animes: Full library grid isolated here
+                    featuredHeroContainer?.visibility = View.GONE
                     shelfHeaderRow?.visibility = View.GONE
                     rvContinueWatchingShelf.visibility = View.GONE
                     layoutHomeEmpty?.visibility = View.GONE
@@ -494,7 +557,7 @@ class HomeFragment : BaseFragment() {
                     layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
                 }
                 "Favoritos" -> {
-                    // Favoritos: Filtered library grid for starred animes
+                    featuredHeroContainer?.visibility = View.GONE
                     shelfHeaderRow?.visibility = View.GONE
                     rvContinueWatchingShelf.visibility = View.GONE
                     layoutHomeEmpty?.visibility = View.GONE
@@ -507,6 +570,7 @@ class HomeFragment : BaseFragment() {
                     layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
                 }
                 else -> {
+                    featuredHeroContainer?.visibility = View.GONE
                     shelfHeaderRow?.visibility = View.GONE
                     rvContinueWatchingShelf.visibility = View.GONE
                     layoutHomeEmpty?.visibility = View.GONE
@@ -603,11 +667,107 @@ class HomeFragment : BaseFragment() {
                     continueWatchingAdapter.submitList(items)
                     if (currentTab == "Início") {
                         val hasRecent = items.isNotEmpty()
+                        val hasFeatured = viewModel.featuredAnime.value != null
                         binding.shelfHeaderRow?.visibility = if (hasRecent) View.VISIBLE else View.GONE
                         binding.rvContinueWatchingShelf.visibility = if (hasRecent) View.VISIBLE else View.GONE
-                        binding.layoutHomeEmpty?.visibility = if (hasRecent) View.GONE else View.VISIBLE
+                        binding.layoutHomeEmpty?.visibility = if (!hasRecent && !hasFeatured) View.VISIBLE else View.GONE
                         binding.containerItemCount?.visibility = if (hasRecent) View.VISIBLE else View.GONE
                         binding.tvItemCount.text = "${items.size} em andamento"
+                    }
+                }
+            }
+        }
+    }
+
+    private fun observeFeaturedAnime() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.featuredAnime.collect { featured ->
+                    if (featured != null) {
+                        if (currentTab == "Início") {
+                            binding.featuredHeroContainer?.visibility = View.VISIBLE
+                            binding.layoutHomeEmpty?.visibility = View.GONE
+                        }
+                        binding.tvFeaturedTitle?.text = featured.title
+
+                        if (!featured.titleJapanese.isNullOrBlank()) {
+                            binding.tvFeaturedJapaneseTitle?.text = featured.titleJapanese
+                            binding.tvFeaturedJapaneseTitle?.visibility = View.VISIBLE
+                        } else {
+                            binding.tvFeaturedJapaneseTitle?.visibility = View.GONE
+                        }
+
+                        if (!featured.synopsis.isNullOrBlank()) {
+                            binding.tvFeaturedSynopsis?.text = featured.synopsis
+                            binding.tvFeaturedSynopsis?.visibility = View.VISIBLE
+                        } else {
+                            binding.tvFeaturedSynopsis?.visibility = View.GONE
+                        }
+
+                        // Dynamic genre pills
+                        binding.layoutFeaturedGenres?.removeAllViews()
+                        featured.genres.take(4).forEach { genreName ->
+                            val pill = android.widget.TextView(requireContext()).apply {
+                                text = genreName
+                                textSize = 10f
+                                setTextColor(android.graphics.Color.parseColor("#94A3B8"))
+                                setBackgroundResource(R.drawable.tag_genre_pill_bg)
+                                setPadding(18, 6, 18, 6)
+                                val params = android.widget.LinearLayout.LayoutParams(
+                                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                                ).apply {
+                                    marginEnd = 12
+                                }
+                                layoutParams = params
+                            }
+                            binding.layoutFeaturedGenres?.addView(pill)
+                        }
+
+                        val imgToLoad = featured.backdropUrl ?: featured.posterUrl
+                        if (!imgToLoad.isNullOrBlank()) {
+                            binding.ivFeaturedBackdrop?.let { iv ->
+                                GlideApp.with(iv)
+                                    .load(imgToLoad)
+                                    .centerCrop()
+                                    .diskCacheStrategy(DiskCacheStrategy.DATA)
+                                    .into(iv)
+                            }
+                        }
+
+                        binding.btnFeaturedPlay?.setOnClickListener {
+                            val file = viewModel.animeLibrary.value.firstOrNull {
+                                it.id == featured.folderId || it.shortcutDetails.targetId == featured.folderId
+                            }
+                            if (file != null) {
+                                handleQuickPlay(file)
+                            } else {
+                                val folderFile = DriveFile(
+                                    id = featured.folderId,
+                                    name = featured.title,
+                                    size = null,
+                                    mimeType = "application/vnd.google-apps.folder",
+                                    iconLink = null,
+                                    thumbnailLink = featured.posterUrl,
+                                    shortcutDetails = zechs.drive.stream.data.model.ShortcutDetails(),
+                                    starred = zechs.drive.stream.data.model.Starred.UNSTARRED
+                                )
+                                handleQuickPlay(folderFile)
+                            }
+                        }
+
+                        binding.btnFeaturedInfo?.setOnClickListener {
+                            val action = HomeFragmentDirections.actionHomeFragmentToSeriesDetailFragment(
+                                name = featured.title,
+                                folderId = featured.folderId,
+                                posterUrl = featured.posterUrl ?: featured.backdropUrl
+                            )
+                            findNavController().navigateSafe(action)
+                        }
+                    } else {
+                        if (currentTab == "Início") {
+                            binding.featuredHeroContainer?.visibility = View.GONE
+                        }
                     }
                 }
             }
@@ -639,9 +799,10 @@ class HomeFragment : BaseFragment() {
         if (isFolder) {
             val folderId = if (file.isShortcut) file.shortcutDetails.targetId ?: file.id else file.id
             viewModel.recordFolderOpened(folderId, file.name)
-            val action = HomeFragmentDirections.actionHomeFragmentToFilesFragment(
+            val action = HomeFragmentDirections.actionHomeFragmentToSeriesDetailFragment(
                 name = file.name,
-                query = "'$folderId' in parents and trashed = false"
+                folderId = folderId,
+                posterUrl = file.posterUrl ?: file.thumbnailLarge ?: file.thumbnailLink
             )
             findNavController().navigateSafe(action)
         } else if (file.isVideoFile || file.isShortcutVideo) {

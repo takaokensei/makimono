@@ -51,6 +51,9 @@ class SettingsFragment : BaseFragment() {
     @Inject
     lateinit var malSessionManager: MalSessionManager
 
+    @Inject
+    lateinit var profileManager: zechs.drive.stream.utils.ProfileManager
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -70,11 +73,28 @@ class SettingsFragment : BaseFragment() {
             findNavController().navigateUp()
         }
 
+        setupUserProfileSection()
         setupThemeMenu()
         setupDefaultPlayerMenu()
         setupCheckForUpdates()
         setupMalIntegration()
         setupPlaybackExperience()
+    }
+
+    private fun setupUserProfileSection() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                profileManager.activeProfileFlow.collect { profile ->
+                    binding.tvCurrentProfileName.text = "Perfil ativo: ${profile.name}"
+                    val avatarRes = profileManager.getAvatarDrawableRes(profile.avatarResName)
+                    binding.ivSettingProfileAvatar.setImageResource(avatarRes)
+                }
+            }
+        }
+
+        binding.settingSelectProfile.setOnClickListener {
+            findNavController().navigate(R.id.action_settingsFragment_to_profileSelectionFragment)
+        }
     }
 
     private fun setupThemeMenu() {

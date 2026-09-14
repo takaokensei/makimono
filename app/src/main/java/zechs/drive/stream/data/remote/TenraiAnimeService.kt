@@ -24,10 +24,16 @@ class TenraiAnimeService @Inject constructor() {
         val malId: Int,
         val title: String,
         val titleEnglish: String?,
+        val titleJapanese: String? = null,
         val type: String?,
         val episodes: Int?,
         val year: Int?,
-        val imageUrl: String?
+        val imageUrl: String?,
+        val score: Double? = null,
+        val rating: String? = null,
+        val status: String? = null,
+        val synopsis: String? = null,
+        val genres: List<String> = emptyList()
     )
 
     data class TenraiRelationEntry(
@@ -107,14 +113,34 @@ class TenraiAnimeService @Inject constructor() {
                     val imgUrl = jpg?.optString("large_image_url")?.takeIf { it.isNotBlank() && it != "null" }
                         ?: jpg?.optString("image_url")?.takeIf { it.isNotBlank() && it != "null" }
 
+                    val titleJapanese = item.optString("title_japanese").takeIf { it.isNotBlank() && it != "null" }
+                    val score = item.optDouble("score").takeIf { !it.isNaN() && it > 0.0 }
+                    val rating = item.optString("rating").takeIf { it.isNotBlank() && it != "null" }
+                    val status = item.optString("status").takeIf { it.isNotBlank() && it != "null" }
+                    val synopsis = item.optString("synopsis").takeIf { it.isNotBlank() && it != "null" }
+                    val genresArray = item.optJSONArray("genres")
+                    val genreList = mutableListOf<String>()
+                    if (genresArray != null) {
+                        for (g in 0 until genresArray.length()) {
+                            val gName = genresArray.getJSONObject(g).optString("name")
+                            if (gName.isNotBlank()) genreList.add(gName)
+                        }
+                    }
+
                     val entry = TenraiAnimeEntry(
                         malId = malId,
                         title = title,
                         titleEnglish = titleEnglish,
+                        titleJapanese = titleJapanese,
                         type = type,
                         episodes = eps,
                         year = year,
-                        imageUrl = imgUrl
+                        imageUrl = imgUrl,
+                        score = score,
+                        rating = rating,
+                        status = status,
+                        synopsis = synopsis,
+                        genres = genreList
                     )
                     results.add(entry)
                     animeDetailsCache[malId] = entry
@@ -317,14 +343,34 @@ class TenraiAnimeService @Inject constructor() {
                 val imgUrl = jpg?.optString("large_image_url")?.takeIf { it.isNotBlank() && it != "null" }
                     ?: jpg?.optString("image_url")?.takeIf { it.isNotBlank() && it != "null" }
 
+                val titleJapanese = item.optString("title_japanese").takeIf { it.isNotBlank() && it != "null" }
+                val score = item.optDouble("score").takeIf { !it.isNaN() && it > 0.0 }
+                val rating = item.optString("rating").takeIf { it.isNotBlank() && it != "null" }
+                val status = item.optString("status").takeIf { it.isNotBlank() && it != "null" }
+                val synopsis = item.optString("synopsis").takeIf { it.isNotBlank() && it != "null" }
+                val genresArray = item.optJSONArray("genres")
+                val genreList = mutableListOf<String>()
+                if (genresArray != null) {
+                    for (g in 0 until genresArray.length()) {
+                        val gName = genresArray.getJSONObject(g).optString("name")
+                        if (gName.isNotBlank()) genreList.add(gName)
+                    }
+                }
+
                 val entry = TenraiAnimeEntry(
                     malId = malId,
                     title = title,
                     titleEnglish = titleEnglish,
+                    titleJapanese = titleJapanese,
                     type = type,
                     episodes = eps,
                     year = year,
-                    imageUrl = imgUrl
+                    imageUrl = imgUrl,
+                    score = score,
+                    rating = rating,
+                    status = status,
+                    synopsis = synopsis,
+                    genres = genreList
                 )
                 animeDetailsCache[malId] = entry
                 entry
@@ -334,4 +380,6 @@ class TenraiAnimeService @Inject constructor() {
             null
         }
     }
+
+    suspend fun getAnimeDetails(malId: Int): TenraiAnimeEntry? = fetchAnimeDetails(malId)
 }

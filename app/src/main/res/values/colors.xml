@@ -88,4 +88,9 @@
     <color name="cardFocusedStroke">#7AA2F7</color>
     <color name="playerButtonBgDefault">#261F2335</color>
     <color name="playerButtonBgFocused">#7AA2F7</color>
+
+    <!-- Design Tokens for Series Detail -->
+    <color name="amber_500">#FBBF24</color>
+    <color name="rose_600">#E11D48</color>
+    <color name="cyan_400">#22D3EE</color>
 </resources>

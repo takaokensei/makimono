@@ -50,6 +50,19 @@ class ContinueWatchingAdapter(
             val parsed = zechs.drive.stream.utils.EpisodeParser.parse(watchItem.name)
             binding.tvShelfItemTitle.text = parsed.showTitle.ifBlank { parsed.cleanTitle }
 
+            val epBadgeText = when {
+                parsed.season != null && parsed.episode != null -> {
+                    "T${parsed.season}: Ep. ${String.format(java.util.Locale.ROOT, "%02d", parsed.episode.toInt())}"
+                }
+                parsed.episode != null -> {
+                    "Ep. ${String.format(java.util.Locale.ROOT, "%02d", parsed.episode.toInt())}"
+                }
+                parsed.isSpecial -> "Especial"
+                parsed.episodeLabel.isNotBlank() -> parsed.episodeLabel
+                else -> "Assistir"
+            }
+            binding.tvEpisodeTopBadge.text = epBadgeText
+
             if (parsed.episodeLabel.isNotBlank()) {
                 binding.tvShelfItemEpisode.visibility = android.view.View.VISIBLE
                 binding.tvShelfItemEpisode.text = parsed.episodeLabel

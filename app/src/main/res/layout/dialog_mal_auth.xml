@@ -10,17 +10,17 @@
     <!-- Top Bar -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="64dp"
         android:background="?attr/colorBgBase"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="16dp"
+        android:paddingStart="20dp"
         android:paddingEnd="16dp">
 
         <ImageView
             android:id="@+id/ivDialogIcon"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
             android:layout_marginEnd="12dp"
             android:src="@drawable/ic_unlock_24"
             app:tint="?attr/colorAccentPrimary" />
@@ -33,27 +33,52 @@
             android:fontFamily="@font/inter"
             android:text="Conectar MyAnimeList na TV"
             android:textColor="?attr/colorTextPrimary"
-            android:textSize="16sp"
+            android:textSize="17sp"
             android:textStyle="bold" />
 
+        <!-- Mode Selectors -->
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnToggleMode"
+            android:id="@+id/btnModeBrowser"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginEnd="6dp"
+            android:text="🌐 Navegador TV"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            app:cornerRadius="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnModeQr"
             style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:text="Navegador Interno"
-            android:textColor="?attr/colorAccentPrimary"
-            android:textSize="12sp" />
+            android:layout_height="40dp"
+            android:layout_marginEnd="6dp"
+            android:text="📱 QR Code"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            app:cornerRadius="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnModeManual"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginEnd="12dp"
+            android:text="⌨️ Código Manual"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            app:cornerRadius="8dp" />
 
         <ImageView
             android:id="@+id/btnCloseAuth"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:background="?selectableItemBackgroundBorderless"
             android:clickable="true"
             android:contentDescription="Fechar"
             android:focusable="true"
+            android:padding="4dp"
             android:src="@drawable/ic_delete_24"
             app:tint="?attr/colorTextSecondary" />
 
@@ -68,12 +93,74 @@
         app:indicatorColor="?attr/colorAccentPrimary"
         app:trackColor="?attr/colorBgGlass" />
 
-    <!-- Container 1: QR Code TV Mode -->
+    <!-- Container 1: TV Internal Browser Mode (Primary on TV) -->
+    <LinearLayout
+        android:id="@+id/layoutWebMode"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:visibility="visible">
+
+        <!-- Browser Control Strip -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:background="#151722"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnWebBack"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="← Voltar"
+                android:textColor="?attr/colorTextSecondary"
+                android:textSize="12sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnWebReload"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginStart="8dp"
+                android:text="⟳ Recarregar"
+                android:textColor="?attr/colorTextSecondary"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/tvWebHint"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_weight="1"
+                android:fontFamily="@font/inter"
+                android:text="Faça login no MyAnimeList e autorize a conexão com a TV."
+                android:textColor="?attr/colorTextSecondary"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+
+        <WebView
+            android:id="@+id/webViewAuth"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+
+    </LinearLayout>
+
+    <!-- Container 2: QR Code TV Mode -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/layoutQrMode"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:visibility="gone">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -93,8 +180,8 @@
 
                 <ImageView
                     android:id="@+id/ivMalQrCode"
-                    android:layout_width="240dp"
-                    android:layout_height="240dp"
+                    android:layout_width="220dp"
+                    android:layout_height="220dp"
                     android:layout_gravity="center"
                     android:padding="8dp"
                     android:scaleType="fitCenter"
@@ -107,7 +194,7 @@
                 android:id="@+id/tvInstructionsTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="16dp"
                 android:fontFamily="@font/inter"
                 android:text="1. Aponte a câmera do celular para o QR Code"
                 android:textColor="?attr/colorTextPrimary"
@@ -118,12 +205,25 @@
                 android:id="@+id/tvServerUrl"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="4dp"
                 android:fontFamily="@font/inter"
-                android:text="Ou acesse no navegador: http://192.168.1.xxx:1420/mal"
+                android:text="Ou acesse: http://192.168.1.xxx:1420/mal"
                 android:textColor="?attr/colorAccentPrimary"
                 android:textSize="14sp"
                 android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvEmulatorNotice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:fontFamily="@font/inter"
+                android:gravity="center"
+                android:maxWidth="520dp"
+                android:text="💡 No emulador/PC host: Use a aba 'Navegador TV' acima ou acesse http://localhost:1420/mal no computador."
+                android:textColor="#F39C12"
+                android:textSize="12sp"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/tvStep2"
@@ -163,7 +263,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/inter"
-                    android:text="Aguardando autorização no celular..."
+                    android:text="Aguardando autorização..."
                     android:textColor="?attr/colorTextPrimary"
                     android:textSize="13sp"
                     android:textStyle="bold" />
@@ -174,19 +274,106 @@
 
     </androidx.core.widget.NestedScrollView>
 
-    <!-- Container 2: WebView Mode (Optional fallback) -->
-    <LinearLayout
-        android:id="@+id/layoutWebMode"
+    <!-- Container 3: Direct Manual Entry Mode -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/layoutManualMode"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
         android:visibility="gone">
 
-        <WebView
-            android:id="@+id/webViewAuth"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="32dp">
 
-    </LinearLayout>
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="560dp"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="?attr/colorBgBase"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="6dp"
+                app:strokeColor="?attr/colorBgGlass"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="24dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/inter"
+                        android:text="Entrada Manual de Código ou Token"
+                        android:textColor="?attr/colorTextPrimary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:fontFamily="@font/inter"
+                        android:text="Cole aqui o link retornado (ex: http://127.0.0.1:1420/auth/callback?code=...), o código OAuth isolado ou um Access Token do MyAnimeList:"
+                        android:textColor="?attr/colorTextSecondary"
+                        android:textSize="13sp" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilManualInput"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:hint="Código OAuth, URL ou Access Token"
+                        app:boxStrokeColor="?attr/colorAccentPrimary"
+                        app:hintTextColor="?attr/colorAccentPrimary">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etManualInput"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/inter"
+                            android:inputType="textUri|textMultiLine"
+                            android:maxLines="3"
+                            android:textColor="?attr/colorTextPrimary"
+                            android:textSize="13sp" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSubmitManual"
+                        style="@style/Widget.Material3.Button"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="20dp"
+                        android:backgroundTint="?attr/colorAccentPrimary"
+                        android:text="Validar e Conectar MyAnimeList"
+                        android:textColor="#0E0D14"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        app:cornerRadius="10dp" />
+
+                    <TextView
+                        android:id="@+id/tvManualError"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:fontFamily="@font/inter"
+                        android:textColor="#F7768E"
+                        android:textSize="13sp"
+                        android:visibility="gone" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
 
 </LinearLayout>

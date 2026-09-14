@@ -24,6 +24,9 @@ interface WatchListDao {
     @Query("SELECT * FROM `watch_list` ORDER BY id DESC LIMIT :limit")
     suspend fun getRecentWatches(limit: Int): List<WatchList>
 
+    @Query("SELECT * FROM `watch_list` WHERE videoId IN (:videoIds)")
+    suspend fun getWatches(videoIds: List<String>): List<WatchList>
+
     @Delete
     suspend fun deleteWatch(watch: WatchList)
 

@@ -11,12 +11,16 @@ import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.ViewGroup
+import android.webkit.CookieManager
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.*
 import org.json.JSONObject
@@ -62,7 +66,14 @@ class MalAuthDialog(
     private var serverSocket: ServerSocket? = null
     @Volatile
     private var isAuthCompleted = false
-    private var isQrMode = true
+
+    private enum class Mode {
+        BROWSER,
+        QR,
+        MANUAL
+    }
+
+    private var currentMode = Mode.BROWSER
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         _binding = DialogMalAuthBinding.inflate(layoutInflater)
@@ -71,21 +82,14 @@ class MalAuthDialog(
             dismiss()
         }
 
-        val uiModeManager = requireContext().getSystemService(Context.UI_MODE_SERVICE) as? UiModeManager
-        val isTv = uiModeManager?.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION ||
-                requireContext().packageManager.hasSystemFeature("android.software.leanback")
+        binding.btnModeBrowser.setOnClickListener { switchMode(Mode.BROWSER) }
+        binding.btnModeQr.setOnClickListener { switchMode(Mode.QR) }
+        binding.btnModeManual.setOnClickListener { switchMode(Mode.MANUAL) }
 
-        // Default to QR mode on TV or by default, allow switching
-        isQrMode = true
-        updateModeUi()
-
-        binding.btnToggleMode.setOnClickListener {
-            isQrMode = !isQrMode
-            updateModeUi()
-        }
-
+        switchMode(Mode.BROWSER)
         setupQrMode()
         setupWebView()
+        setupManualMode()
         startTvMalServer()
 
         return MaterialAlertDialogBuilder(requireContext())
@@ -93,17 +97,40 @@ class MalAuthDialog(
             .create()
     }
 
-    private fun updateModeUi() {
-        binding.layoutQrMode.isVisible = isQrMode
-        binding.layoutWebMode.isVisible = !isQrMode
-        binding.btnToggleMode.text = if (isQrMode) "Navegador Interno" else "📱 QR Code (TV)"
+    private fun switchMode(mode: Mode) {
+        currentMode = mode
+        binding.layoutWebMode.isVisible = (mode == Mode.BROWSER)
+        binding.layoutQrMode.isVisible = (mode == Mode.QR)
+        binding.layoutManualMode.isVisible = (mode == Mode.MANUAL)
+
+        updateTabButtonStyle(binding.btnModeBrowser, mode == Mode.BROWSER)
+        updateTabButtonStyle(binding.btnModeQr, mode == Mode.QR)
+        updateTabButtonStyle(binding.btnModeManual, mode == Mode.MANUAL)
+    }
+
+    private fun updateTabButtonStyle(button: MaterialButton, isSelected: Boolean) {
+        if (isSelected) {
+            button.setBackgroundColor(Color.parseColor("#7AA2F7"))
+            button.setTextColor(Color.parseColor("#0E0D14"))
+        } else {
+            button.setBackgroundColor(Color.TRANSPARENT)
+            button.setTextColor(Color.parseColor("#C0CAF5"))
+        }
     }
 
     private fun setupQrMode() {
         val localIp = NetworkUtils.getLocalIpAddress() ?: "127.0.0.1"
-        val serverUrl = "http://$localIp:${Constants.MAL_REDIRECT_PORT}/mal"
+        val isEmulator = NetworkUtils.isEmulatorAddress(localIp)
 
-        binding.tvServerUrl.text = "Ou acesse no celular: $serverUrl"
+        val serverUrl = if (isEmulator) {
+            binding.tvEmulatorNotice.isVisible = true
+            "http://127.0.0.1:${Constants.MAL_REDIRECT_PORT}/mal"
+        } else {
+            binding.tvEmulatorNotice.isVisible = false
+            "http://$localIp:${Constants.MAL_REDIRECT_PORT}/mal"
+        }
+
+        binding.tvServerUrl.text = "Ou acesse no navegador: $serverUrl"
 
         val qrBitmap = QRCodeGenerator.generateBitmap(
             content = serverUrl,
@@ -119,10 +146,26 @@ class MalAuthDialog(
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
+        val cookieManager = CookieManager.getInstance()
+        cookieManager.setAcceptCookie(true)
+        cookieManager.setAcceptThirdPartyCookies(binding.webViewAuth, true)
+
         binding.webViewAuth.apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
+            settings.databaseEnabled = true
+            settings.useWideViewPort = true
+            settings.loadWithOverviewMode = true
+            settings.javaScriptCanOpenWindowsAutomatically = true
+            settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             settings.userAgentString = "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36"
+
+            webChromeClient = object : WebChromeClient() {
+                override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                    binding.progressBarAuth.progress = newProgress
+                    binding.progressBarAuth.isVisible = newProgress in 1..99
+                }
+            }
 
             webViewClient = object : WebViewClient() {
                 override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
@@ -149,6 +192,16 @@ class MalAuthDialog(
             }
         }
 
+        binding.btnWebBack.setOnClickListener {
+            if (binding.webViewAuth.canGoBack()) {
+                binding.webViewAuth.goBack()
+            }
+        }
+
+        binding.btnWebReload.setOnClickListener {
+            binding.webViewAuth.reload()
+        }
+
         val authUrl = Uri.parse(Constants.MAL_OAUTH_BASE_URL + "v1/oauth2/authorize")
             .buildUpon()
             .appendQueryParameter("response_type", "code")
@@ -162,10 +215,48 @@ class MalAuthDialog(
         binding.webViewAuth.loadUrl(authUrl)
     }
 
+    private fun setupManualMode() {
+        binding.btnSubmitManual.setOnClickListener {
+            val input = binding.etManualInput.text?.toString()?.trim() ?: ""
+            binding.tvManualError.isVisible = false
+
+            if (input.isBlank()) {
+                binding.tvManualError.text = "Por favor, cole o código, URL ou token."
+                binding.tvManualError.isVisible = true
+                return@setOnClickListener
+            }
+
+            // 1. If user pasted a callback URL or code parameter
+            val extractedCode = extractCode(input)
+            if (extractedCode.isNotBlank() && (extractedCode.length in 20..150) && !extractedCode.contains(" ")) {
+                isAuthCompleted = true
+                handleCode(extractedCode)
+                return@setOnClickListener
+            }
+
+            // 2. If user pasted an access token directly
+            if (input.length > 50 && !input.contains("?") && !input.contains("&")) {
+                isAuthCompleted = true
+                val tokenResponse = MalTokenResponse(
+                    tokenType = "Bearer",
+                    expiresIn = 2592000L,
+                    accessToken = input,
+                    refreshToken = ""
+                )
+                handleTokens(tokenResponse, null)
+                return@setOnClickListener
+            }
+
+            binding.tvManualError.text = "Formato não reconhecido. Certifique-se de colar a URL ou código retornado."
+            binding.tvManualError.isVisible = true
+        }
+    }
+
     private fun checkCallbackUrl(url: String): Boolean {
         if (url.startsWith("http://127.0.0.1:1420/auth/callback") ||
             url.startsWith("http://127.0.0.1:1421/auth/callback") ||
-            url.contains("/auth/callback")
+            url.contains("/auth/callback") ||
+            url.contains("code=")
         ) {
             val uri = Uri.parse(url)
             val code = uri.getQueryParameter("code")

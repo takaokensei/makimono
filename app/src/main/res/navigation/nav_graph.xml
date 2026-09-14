@@ -3,7 +3,24 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph.xml"
-    app:startDestination="@id/homeFragment">
+    app:startDestination="@id/profileSelectionFragment">
+
+    <fragment
+        android:id="@+id/profileSelectionFragment"
+        android:name="zechs.drive.stream.ui.profile.ProfileSelectionFragment"
+        android:label="ProfileSelectionFragment"
+        tools:layout="@layout/fragment_profile_selection">
+        <action
+            android:id="@+id/action_profileSelectionFragment_to_homeFragment"
+            app:destination="@id/homeFragment"
+            app:enterAnim="@android:anim/fade_in"
+            app:exitAnim="@android:anim/fade_out"
+            app:popUpTo="@id/profileSelectionFragment"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_profileSelectionFragment_to_settingsFragment"
+            app:destination="@id/settingsFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/filesFragment"
@@ -20,6 +37,9 @@
         <action
             android:id="@+id/action_filesFragment_self"
             app:destination="@id/filesFragment" />
+        <action
+            android:id="@+id/action_filesFragment_to_seriesDetailFragment"
+            app:destination="@id/seriesDetailFragment" />
     </fragment>
 
     <fragment
@@ -49,11 +69,42 @@
         <action
             android:id="@+id/action_homeFragment_to_settingsFragment"
             app:destination="@id/settingsFragment" />
+        <action
+            android:id="@+id/action_homeFragment_to_seriesDetailFragment"
+            app:destination="@id/seriesDetailFragment" />
+        <action
+            android:id="@+id/action_homeFragment_to_profileSelectionFragment"
+            app:destination="@id/profileSelectionFragment" />
     </fragment>
 
     <fragment
         android:id="@+id/settingsFragment"
         android:name="zechs.drive.stream.ui.settings.SettingsFragment"
-        android:label="SettingsFragment" />
+        android:label="SettingsFragment">
+        <action
+            android:id="@+id/action_settingsFragment_to_profileSelectionFragment"
+            app:destination="@id/profileSelectionFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/seriesDetailFragment"
+        android:name="zechs.drive.stream.ui.series.SeriesDetailFragment"
+        android:label="SeriesDetailFragment"
+        tools:layout="@layout/fragment_series_detail">
+        <argument
+            android:name="name"
+            app:argType="string" />
+        <argument
+            android:name="folderId"
+            app:argType="string" />
+        <argument
+            android:name="posterUrl"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <action
+            android:id="@+id/action_seriesDetailFragment_to_filesFragment"
+            app:destination="@id/filesFragment" />
+    </fragment>
 
 </navigation>

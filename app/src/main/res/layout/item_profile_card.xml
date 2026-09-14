@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/cardProfileRoot"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="20dp"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <FrameLayout
+        android:id="@+id/avatarContainer"
+        android:layout_width="136dp"
+        android:layout_height="136dp"
+        android:background="@drawable/item_profile_avatar_ring"
+        android:padding="4dp">
+
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/ivProfileAvatar"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
+            tools:src="@drawable/avatar_caua" />
+
+        <ImageView
+            android:id="@+id/ivAddIcon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_add_24"
+            android:visibility="gone"
+            app:tint="#00C0FF" />
+
+        <View
+            android:id="@+id/badgeStatusTick"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="8dp"
+            android:background="@drawable/glass_circle_button_bg"
+            android:backgroundTint="#FBBF24"
+            android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/ivEditBadge"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center"
+            android:background="@drawable/glass_circle_button_bg"
+            android:backgroundTint="#B30E0D14"
+            android:padding="6dp"
+            android:src="@drawable/ic_edit_24"
+            android:visibility="gone"
+            app:tint="#00C0FF" />
+
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/tvProfileName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:fontFamily="@font/inter"
+        android:gravity="center"
+        android:maxWidth="140dp"
+        android:maxLines="1"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        tools:text="Cauã" />
+
+</LinearLayout>

@@ -1,0 +1,142 @@
+package zechs.drive.stream.utils
+
+import android.content.Context
+import android.content.SharedPreferences
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import org.json.JSONArray
+import org.json.JSONObject
+import zechs.drive.stream.R
+import zechs.drive.stream.data.model.UserProfile
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class ProfileManager @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
+
+    companion object {
+        private const val PREFS_NAME = "makimono_profiles_prefs"
+        private const val KEY_PROFILES = "profiles_list"
+        private const val KEY_ACTIVE_ID = "active_profile_id"
+
+        val DEFAULT_PROFILES = listOf(
+            UserProfile(id = "caua", name = "Cauã", avatarResName = "avatar_caua", isDefault = true),
+            UserProfile(id = "anime", name = "Anime", avatarResName = "avatar_anime", isDefault = false)
+        )
+    }
+
+    private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    private val _profilesFlow = MutableStateFlow<List<UserProfile>>(loadProfiles())
+    val profilesFlow = _profilesFlow.asStateFlow()
+
+    private val _activeProfileFlow = MutableStateFlow<UserProfile>(loadActiveProfile())
+    val activeProfileFlow = _activeProfileFlow.asStateFlow()
+
+    private fun loadProfiles(): List<UserProfile> {
+        val raw = prefs.getString(KEY_PROFILES, null)
+        if (raw.isNullOrBlank()) {
+            saveProfilesInternal(DEFAULT_PROFILES)
+            return DEFAULT_PROFILES
+        }
+        return try {
+            val jsonArray = JSONArray(raw)
+            val list = mutableListOf<UserProfile>()
+            for (i in 0 until jsonArray.length()) {
+                val obj = jsonArray.getJSONObject(i)
+                list.add(
+                    UserProfile(
+                        id = obj.getString("id"),
+                        name = obj.getString("name"),
+                        avatarResName = obj.optString("avatarResName", "avatar_caua"),
+                        isDefault = obj.optBoolean("isDefault", false),
+                        createdAt = obj.optLong("createdAt", System.currentTimeMillis())
+                    )
+                )
+            }
+            if (list.isEmpty()) DEFAULT_PROFILES else list
+        } catch (_: Exception) {
+            DEFAULT_PROFILES
+        }
+    }
+
+    private fun loadActiveProfile(): UserProfile {
+        val activeId = prefs.getString(KEY_ACTIVE_ID, null)
+        val profiles = loadProfiles()
+        return profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull() ?: DEFAULT_PROFILES.first()
+    }
+
+    private fun saveProfilesInternal(profiles: List<UserProfile>) {
+        val jsonArray = JSONArray()
+        for (p in profiles) {
+            val obj = JSONObject().apply {
+                put("id", p.id)
+                put("name", p.name)
+                put("avatarResName", p.avatarResName)
+                put("isDefault", p.isDefault)
+                put("createdAt", p.createdAt)
+            }
+            jsonArray.put(obj)
+        }
+        prefs.edit().putString(KEY_PROFILES, jsonArray.toString()).apply()
+    }
+
+    fun getProfiles(): List<UserProfile> = _profilesFlow.value
+
+    fun getActiveProfile(): UserProfile = _activeProfileFlow.value
+
+    fun setActiveProfile(id: String) {
+        val profile = getProfiles().firstOrNull { it.id == id } ?: return
+        prefs.edit().putString(KEY_ACTIVE_ID, id).apply()
+        _activeProfileFlow.value = profile
+    }
+
+    fun addProfile(name: String, avatarResName: String): UserProfile {
+        val id = UUID.randomUUID().toString().take(8)
+        val newProfile = UserProfile(
+            id = id,
+            name = name.trim(),
+            avatarResName = avatarResName,
+            isDefault = false
+        )
+        val updated = _profilesFlow.value + newProfile
+        saveProfilesInternal(updated)
+        _profilesFlow.value = updated
+        return newProfile
+    }
+
+    fun updateProfile(id: String, newName: String, newAvatar: String) {
+        val updated = _profilesFlow.value.map {
+            if (it.id == id) it.copy(name = newName.trim(), avatarResName = newAvatar) else it
+        }
+        saveProfilesInternal(updated)
+        _profilesFlow.value = updated
+        if (_activeProfileFlow.value.id == id) {
+            _activeProfileFlow.value = updated.first { it.id == id }
+        }
+    }
+
+    fun deleteProfile(id: String): Boolean {
+        val current = _profilesFlow.value
+        if (current.size <= 1) return false
+        val updated = current.filterNot { it.id == id }
+        saveProfilesInternal(updated)
+        _profilesFlow.value = updated
+        if (_activeProfileFlow.value.id == id) {
+            setActiveProfile(updated.first().id)
+        }
+        return true
+    }
+
+    fun getAvatarDrawableRes(avatarName: String?): Int {
+        return when (avatarName) {
+            "avatar_caua" -> R.drawable.avatar_caua
+            "avatar_anime" -> R.drawable.avatar_anime
+            else -> R.drawable.avatar_caua
+        }
+    }
+}

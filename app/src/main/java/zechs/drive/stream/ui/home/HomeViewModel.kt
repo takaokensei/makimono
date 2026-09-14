@@ -28,7 +28,8 @@ class HomeViewModel @Inject constructor(
     private val driveRepository: Lazy<DriveRepository>,
     private val watchListRepository: WatchListRepository,
     private val folderMetadataRepository: zechs.drive.stream.data.repository.FolderMetadataRepository,
-    private val animePosterResolver: zechs.drive.stream.data.remote.AnimePosterResolver
+    private val animePosterResolver: zechs.drive.stream.data.remote.AnimePosterResolver,
+    private val tenraiAnimeService: zechs.drive.stream.data.remote.TenraiAnimeService
 ) : ViewModel() {
 
     companion object {
@@ -50,6 +51,19 @@ class HomeViewModel @Inject constructor(
 
     private val _starredFiles = MutableStateFlow<List<DriveFile>>(emptyList())
     val starredFiles = _starredFiles.asStateFlow()
+
+    data class FeaturedAnime(
+        val title: String,
+        val titleJapanese: String? = null,
+        val synopsis: String? = null,
+        val genres: List<String> = emptyList(),
+        val backdropUrl: String? = null,
+        val folderId: String,
+        val posterUrl: String? = null
+    )
+
+    private val _featuredAnime = MutableStateFlow<FeaturedAnime?>(null)
+    val featuredAnime = _featuredAnime.asStateFlow()
 
     data class FileToken(
         val fileId: String,
@@ -307,6 +321,7 @@ class HomeViewModel @Inject constructor(
                         _animeLibrary.value = mappedFiles
                         _filteredAnimes.value = mappedFiles
                         _isLoadingAnime.value = false
+                        resolveFeaturedSpotlight(mappedFiles)
 
                         // Asynchronously resolve posters for items missing them
                         val updatedList = mappedFiles.toMutableList()
@@ -337,6 +352,58 @@ class HomeViewModel @Inject constructor(
                     _isLoadingAnime.value = false
                 }
             }
+        }
+    }
+
+    private fun resolveFeaturedSpotlight(files: List<DriveFile>) = viewModelScope.launch(Dispatchers.IO) {
+        val folders = files.filter { it.isFolder || it.isShortcutFolder }
+        if (folders.isEmpty()) return@launch
+
+        // Prefer starred anime, or the first folder
+        val chosenFolder = folders.firstOrNull { it.starred == zechs.drive.stream.data.model.Starred.STARRED }
+            ?: folders.first()
+
+        val cleanTitle = AnimePosterResolver.cleanAnimeTitle(chosenFolder.name)
+        val targetId = if (chosenFolder.isShortcut && chosenFolder.shortcutDetails.targetId != null) {
+            chosenFolder.shortcutDetails.targetId
+        } else chosenFolder.id
+
+        try {
+            val results = tenraiAnimeService.searchAnime(cleanTitle)
+            val entry = results.firstOrNull()
+
+            if (entry != null) {
+                _featuredAnime.value = FeaturedAnime(
+                    title = entry.titleEnglish ?: entry.title,
+                    titleJapanese = entry.titleJapanese,
+                    synopsis = entry.synopsis,
+                    genres = entry.genres,
+                    backdropUrl = entry.imageUrl,
+                    folderId = targetId,
+                    posterUrl = chosenFolder.posterUrl ?: entry.imageUrl
+                )
+            } else {
+                _featuredAnime.value = FeaturedAnime(
+                    title = chosenFolder.name,
+                    titleJapanese = null,
+                    synopsis = "Assista a esta incrível série disponível na sua biblioteca.",
+                    genres = emptyList(),
+                    backdropUrl = chosenFolder.posterUrl,
+                    folderId = targetId,
+                    posterUrl = chosenFolder.posterUrl
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error resolving featured spotlight", e)
+            _featuredAnime.value = FeaturedAnime(
+                title = chosenFolder.name,
+                titleJapanese = null,
+                synopsis = null,
+                genres = emptyList(),
+                backdropUrl = chosenFolder.posterUrl,
+                folderId = targetId,
+                posterUrl = chosenFolder.posterUrl
+            )
         }
     }
 

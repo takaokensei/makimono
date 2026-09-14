@@ -41,6 +41,49 @@
             android:layout_gravity="bottom"
             android:background="@drawable/shelf_item_scrim" />
 
+        <!-- Top badge row: floating mini play icon + episode pill badge (Figma 21:4) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="8dp">
+
+            <ImageView
+                android:id="@+id/ivPlayBadge"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:background="@drawable/glass_circle_button_bg"
+                android:contentDescription="@null"
+                android:padding="5dp"
+                android:src="@drawable/ic_play_24"
+                app:tint="#22D3EE" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/tvEpisodeTopBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/tag_genre_pill_bg"
+                android:fontFamily="@font/inter"
+                android:paddingStart="6dp"
+                android:paddingTop="2dp"
+                android:paddingEnd="6dp"
+                android:paddingBottom="2dp"
+                android:textColor="#E2E8F0"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                tools:text="T2: Ep. 03" />
+
+        </LinearLayout>
+
         <!-- Text + badges overlay -->
         <LinearLayout
             android:layout_width="match_parent"

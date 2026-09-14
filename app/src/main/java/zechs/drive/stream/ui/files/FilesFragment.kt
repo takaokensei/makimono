@@ -437,11 +437,24 @@ class FilesFragment : BaseFragment() {
         Log.d(TAG, file.toString())
         if (file.isFolder && !file.isShortcut) {
             viewModel.recordFolderOpened(file.id, file.name)
-            val action = FilesFragmentDirections.actionFilesFragmentSelf(
-                name = file.name,
-                query = "'${file.id}' in parents and trashed=false"
-            )
-            findNavController().navigate(action)
+            val isDriveRoot = args.name == getString(R.string.my_drive) ||
+                    args.name == getString(R.string.shared_drives) ||
+                    args.name == getString(R.string.shared_with_me) ||
+                    args.name.equals("Root", ignoreCase = true)
+            if (isDriveRoot) {
+                val action = FilesFragmentDirections.actionFilesFragmentToSeriesDetailFragment(
+                    name = file.name,
+                    folderId = file.id,
+                    posterUrl = file.posterUrl ?: file.thumbnailLarge ?: file.thumbnailLink
+                )
+                findNavController().navigate(action)
+            } else {
+                val action = FilesFragmentDirections.actionFilesFragmentSelf(
+                    name = file.name,
+                    query = "'${file.id}' in parents and trashed=false"
+                )
+                findNavController().navigate(action)
+            }
         } else if (file.isVideoFile) {
             launchVideoPlayer(file)
         } else if (file.isSubtitleFile) {
@@ -450,11 +463,24 @@ class FilesFragment : BaseFragment() {
             if (file.isShortcutFolder) {
                 val targetId = file.shortcutDetails.targetId!!
                 viewModel.recordFolderOpened(targetId, file.name)
-                val action = FilesFragmentDirections.actionFilesFragmentSelf(
-                    name = file.name,
-                    query = "'$targetId' in parents and trashed=false"
-                )
-                findNavController().navigate(action)
+                val isDriveRoot = args.name == getString(R.string.my_drive) ||
+                        args.name == getString(R.string.shared_drives) ||
+                        args.name == getString(R.string.shared_with_me) ||
+                        args.name.equals("Root", ignoreCase = true)
+                if (isDriveRoot) {
+                    val action = FilesFragmentDirections.actionFilesFragmentToSeriesDetailFragment(
+                        name = file.name,
+                        folderId = targetId,
+                        posterUrl = file.posterUrl ?: file.thumbnailLarge ?: file.thumbnailLink
+                    )
+                    findNavController().navigate(action)
+                } else {
+                    val action = FilesFragmentDirections.actionFilesFragmentSelf(
+                        name = file.name,
+                        query = "'$targetId' in parents and trashed=false"
+                    )
+                    findNavController().navigate(action)
+                }
             } else if (file.isShortcutVideo) {
                 val videoShortcutFile = file.copy(id = file.shortcutDetails.targetId!!)
                 launchVideoPlayer(videoShortcutFile)
