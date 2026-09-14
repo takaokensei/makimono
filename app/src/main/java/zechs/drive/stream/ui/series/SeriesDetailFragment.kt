@@ -2,6 +2,7 @@ package zechs.drive.stream.ui.series
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -143,18 +144,49 @@ class SeriesDetailFragment : BaseFragment() {
     }
 
     private fun bindSeriesData(state: SeriesDetailUiState.Success) {
-        // 1. Hero Backdrop
-        val backdropUrl = state.animeEntry?.imageUrl ?: args.posterUrl
-        if (backdropUrl != null) {
+        // 1. Sharp Poster Card (Featured Carousel - Card Variant)
+        val sharpPoster = state.aniListMetadata?.posterUrl ?: state.animeEntry?.imageUrl ?: args.posterUrl
+        if (sharpPoster != null) {
             Glide.with(this)
-                .load(backdropUrl)
+                .load(sharpPoster)
+                .centerCrop()
+                .diskCacheStrategy(DiskCacheStrategy.DATA)
+                .into(binding.ivSeriesPosterCard)
+        }
+
+        // Ambient Backdrop (Banner or subtle ambient poster)
+        val bannerOrBackdrop = state.aniListMetadata?.bannerUrl ?: sharpPoster
+        if (bannerOrBackdrop != null) {
+            Glide.with(this)
+                .load(bannerOrBackdrop)
                 .centerCrop()
                 .diskCacheStrategy(DiskCacheStrategy.DATA)
                 .into(binding.ivHeroBackdrop)
         }
 
+        // Dynamic Color Gradient Tint from AniList dominant color
+        val dominantHex = state.aniListMetadata?.dominantColor
+        if (!dominantHex.isNullOrBlank()) {
+            try {
+                val parsedColor = android.graphics.Color.parseColor(dominantHex)
+                val tintColor = android.graphics.Color.argb(
+                    75,
+                    android.graphics.Color.red(parsedColor),
+                    android.graphics.Color.green(parsedColor),
+                    android.graphics.Color.blue(parsedColor)
+                )
+                val gradient = android.graphics.drawable.GradientDrawable(
+                    android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                    intArrayOf(tintColor, android.graphics.Color.TRANSPARENT)
+                )
+                binding.viewDynamicColorTint.background = gradient
+            } catch (e: Exception) {
+                Log.w("SeriesDetail", "Could not parse dominant color: $dominantHex")
+            }
+        }
+
         // 2. Titles Block
-        val japaneseTitle = state.animeEntry?.titleJapanese
+        val japaneseTitle = state.aniListMetadata?.titleNative ?: state.animeEntry?.titleJapanese
         if (!japaneseTitle.isNullOrBlank()) {
             binding.tvJapaneseTitle.visibility = View.VISIBLE
             binding.tvJapaneseTitle.text = japaneseTitle
@@ -162,28 +194,47 @@ class SeriesDetailFragment : BaseFragment() {
             binding.tvJapaneseTitle.visibility = View.GONE
         }
 
-        val canonicalTitle = state.animeEntry?.title?.takeIf { it.isNotBlank() } ?: state.seriesTitle
+        val canonicalTitle = state.aniListMetadata?.titleRomaji
+            ?: state.animeEntry?.title?.takeIf { it.isNotBlank() }
+            ?: state.seriesTitle
         binding.tvRomajiTitle.text = canonicalTitle
 
-        val englishSubtitle = state.animeEntry?.titleEnglish ?: canonicalTitle
+        val englishSubtitle = state.aniListMetadata?.titleEnglish
+            ?: state.animeEntry?.titleEnglish
+            ?: canonicalTitle
         binding.tvEnglishSubtitle.text = englishSubtitle.uppercase(Locale.ROOT)
 
         // 3. Meta Row 1
         binding.tvAgeRating.text = formatRating(state.animeEntry?.rating)
-        binding.tvReleaseYear.text = state.animeEntry?.year?.toString() ?: "2015"
+        val releaseYear = state.aniListMetadata?.year ?: state.animeEntry?.year ?: 2015
+        binding.tvReleaseYear.text = releaseYear.toString()
         binding.tvSeriesStatus.text = if (state.animeEntry?.status?.contains("Finished", true) == true) {
             "Completo"
         } else {
             "Em Exibição"
         }
 
-        val score = state.animeEntry?.score?.let { String.format(Locale.US, "%.1f", it) } ?: "8.2"
+        val scoreVal = state.aniListMetadata?.score ?: state.animeEntry?.score
+        val score = scoreVal?.let { String.format(Locale.US, "%.1f", it) } ?: "8.2"
         binding.tvMalScore.text = score
 
         // 4. Meta Row 2 (Tech Specs)
         binding.tvQualityBadge.text = state.qualityBadge
         binding.tvAudioTrackBadge.text = state.audioBadge
         binding.tvSubtitleBadge.text = state.subtitleBadge
+
+        // 5. Synopsis
+        val rawSynopsis = state.aniListMetadata?.synopsis ?: state.animeEntry?.synopsis
+        if (!rawSynopsis.isNullOrBlank()) {
+            val cleanSynopsis = rawSynopsis
+                .replace(Regex("<br\\s*/?>"), " ")
+                .replace(Regex("<.*?>"), "")
+                .trim()
+            binding.tvSynopsis.visibility = View.VISIBLE
+            binding.tvSynopsis.text = cleanSynopsis
+        } else {
+            binding.tvSynopsis.visibility = View.GONE
+        }
 
         // 5. Action Buttons
         binding.tvPrimaryActionSubtitle.text = state.continueWatchingSubtitle

@@ -658,7 +658,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:alpha="0"
-            android:background="#CC020617"
+            android:background="#66020617"
             android:clickable="true"
             android:focusable="false"
             android:visibility="gone" />

@@ -17,17 +17,28 @@
         android:clipToPadding="false"
         android:paddingBottom="40dp">
 
-        <!-- 1. Hero Backdrop Image -->
+        <!-- 1. Hero Backdrop Image (Subtle ambient layer) -->
         <ImageView
             android:id="@+id/ivHeroBackdrop"
             android:layout_width="0dp"
-            android:layout_height="520dp"
+            android:layout_height="480dp"
+            android:alpha="0.22"
             android:contentDescription="@null"
             android:scaleType="centerCrop"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:src="@drawable/bg_anime_library" />
+
+        <!-- Dynamic Tint Gradient Overlay for coverImage.color -->
+        <View
+            android:id="@+id/viewDynamicColorTint"
+            android:layout_width="0dp"
+            android:layout_height="480dp"
+            android:background="@drawable/series_detail_hero_scrim"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <!-- 2. Bottom Scrim Gradient (Transparent -> #0B0E14) -->
         <View
@@ -149,18 +160,49 @@
 
         </LinearLayout>
 
-        <!-- 5. Hero Content Block (Title, Metadata, Actions) -->
+        <!-- 5. Hero Card Variant Container (Sharp 2:3 Poster Card on Left + Content on Right) -->
         <LinearLayout
             android:id="@+id/heroContentBlock"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="40dp"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="16dp"
             android:layout_marginEnd="40dp"
-            android:orientation="vertical"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/topHeaderBar">
+
+            <!-- Hero Poster Card (Sharp 2:3 Portrait Poster) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardSeriesPoster"
+                android:layout_width="190dp"
+                android:layout_height="285dp"
+                android:clickable="false"
+                android:focusable="false"
+                app:cardBackgroundColor="#1E293B"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="10dp"
+                app:strokeColor="#3338BDF8"
+                app:strokeWidth="1.5dp">
+
+                <ImageView
+                    android:id="@+id/ivSeriesPosterCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@null"
+                    android:scaleType="centerCrop"
+                    tools:src="@drawable/kodi_primary_bg" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Hero Text Details & Actions -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="32dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
             <!-- Japanese Kanji Title -->
             <TextView
@@ -411,6 +453,20 @@
 
             </LinearLayout>
 
+            <!-- Synopsis -->
+            <TextView
+                android:id="@+id/tvSynopsis"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:ellipsize="end"
+                android:fontFamily="sans-serif"
+                android:lineSpacingExtra="3dp"
+                android:maxLines="3"
+                android:textColor="#94A3B8"
+                android:textSize="12.5sp"
+                tools:text="Após ser atacada por um vampiro e sobreviver, Koyomi Araragi se vê envolvido com diversas garotas ligadas a excentricidades sobrenaturais..." />
+
             <!-- Actions Row: Continue Watch / Play | Trailer | Favorite | Watched -->
             <LinearLayout
                 android:id="@+id/actionsRow"
@@ -571,6 +627,8 @@
                 </LinearLayout>
 
             </LinearLayout>
+
+        </LinearLayout>
 
         </LinearLayout>
 

@@ -171,7 +171,7 @@ class FilesFragment : BaseFragment() {
         Log.d(TAG, "onSuccess(files=${files.size})")
         val fileCount = files.count { it is FilesDataModel.File }
         binding.containerItemCount.isVisible = fileCount > 0
-        binding.tvItemCount.text = "$fileCount itens"
+        binding.tvItemCount.text = if (fileCount == 1) "1 item" else "$fileCount itens"
 
         if (!viewModel.hasLoaded) {
             doTransition(MaterialFadeThrough())
@@ -353,7 +353,7 @@ class FilesFragment : BaseFragment() {
         }
         val count = listToSubmit.count { it is FilesDataModel.File }
         binding.containerItemCount.isVisible = count > 0
-        binding.tvItemCount.text = "$count itens"
+        binding.tvItemCount.text = if (count == 1) "1 item" else "$count itens"
         filesAdapter.submitList(listToSubmit)
     }
 

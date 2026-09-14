@@ -15,6 +15,7 @@ import zechs.drive.stream.R
 import zechs.drive.stream.data.local.WatchListDao
 import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.data.model.WatchList
+import zechs.drive.stream.data.remote.AnimeMetadata
 import zechs.drive.stream.data.remote.AnimePosterResolver
 import zechs.drive.stream.data.remote.TenraiAnimeService
 import zechs.drive.stream.data.repository.DriveRepository
@@ -35,6 +36,7 @@ sealed class SeriesDetailUiState {
         val folderId: String,
         val seriesTitle: String,
         val animeEntry: TenraiAnimeService.TenraiAnimeEntry?,
+        val aniListMetadata: AnimeMetadata? = null,
         val seasonTabs: List<SeasonTab>,
         val currentEpisodes: List<SeriesEpisodeItem>,
         val continueWatchingItem: SeriesEpisodeItem?,
@@ -81,7 +83,7 @@ class SeriesDetailViewModel @Inject constructor(
                 // Record folder opened for Home screen Recents / Continue
                 folderMetadataRepository.recordFolderOpened(folderId, seriesTitle)
 
-                // 1. Concurrently fetch Tenrai metadata
+                // 1. Concurrently fetch Tenrai metadata & AniList high-res metadata
                 val tenraiDeferred = async {
                     try {
                         val searchResults = tenraiAnimeService.searchAnime(seriesTitle)
@@ -98,6 +100,15 @@ class SeriesDetailViewModel @Inject constructor(
                     }
                 }
 
+                val aniListDeferred = async {
+                    try {
+                        animePosterResolver.resolveMetadata(seriesTitle)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "AniList metadata fetch error: ${e.message}")
+                        null
+                    }
+                }
+
                 // 2. Fetch Drive files in folder
                 val driveFiles = fetchAllDriveVideos(folderId)
                 if (driveFiles.isEmpty()) {
@@ -108,11 +119,12 @@ class SeriesDetailViewModel @Inject constructor(
                 }
 
                 val (fetchedAnime, fetchedArcs) = tenraiDeferred.await()
+                val aniListMeta = aniListDeferred.await()
                 animeEntry = fetchedAnime
                 franchiseArcs = fetchedArcs
 
-                // If poster URL exists in Tenrai and not recorded yet, update local cache
-                val finalPoster = fetchedAnime?.imageUrl ?: initialPoster
+                // Prioritize AniList high-res poster (extraLarge 460x650), then Tenrai/MAL
+                val finalPoster = aniListMeta?.posterUrl ?: fetchedAnime?.imageUrl ?: initialPoster
                 if (finalPoster != null) {
                     folderMetadataRepository.updatePosterUrl(folderId, seriesTitle, finalPoster)
                 }
@@ -176,6 +188,7 @@ class SeriesDetailViewModel @Inject constructor(
                         folderId = folderId,
                         seriesTitle = seriesTitle,
                         animeEntry = fetchedAnime,
+                        aniListMetadata = aniListMeta,
                         seasonTabs = tabs,
                         currentEpisodes = initialEpisodes,
                         continueWatchingItem = continueItem,
@@ -321,7 +334,11 @@ class SeriesDetailViewModel @Inject constructor(
 
     private fun getEpisodesForGroup(group: SeasonGroup?): List<SeriesEpisodeItem> {
         if (group == null || group.id == "season_all") {
-            return allEpisodeItems
+            val nonMusicEpisodes = allEpisodeItems.filter { item ->
+                val parsed = EpisodeParser.parse(item.file.name)
+                SeasonEpisodeGrouper.categorize(item.file.name, parsed) != SeasonEpisodeGrouper.ItemCategory.MUSIC
+            }
+            return if (nonMusicEpisodes.isNotEmpty()) nonMusicEpisodes else allEpisodeItems
         }
         val groupFileIds = group.fileItems.mapNotNull {
             (it as? FilesDataModel.File)?.driveFile?.id

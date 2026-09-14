@@ -369,10 +369,21 @@ class HomeViewModel @Inject constructor(
         } else chosenFolder.id
 
         try {
-            val results = tenraiAnimeService.searchAnime(cleanTitle)
+            val aniListMeta = animePosterResolver.resolveMetadata(cleanTitle)
+            val results = if (aniListMeta == null) tenraiAnimeService.searchAnime(cleanTitle) else emptyList()
             val entry = results.firstOrNull()
 
-            if (entry != null) {
+            if (aniListMeta != null) {
+                _featuredAnime.value = FeaturedAnime(
+                    title = aniListMeta.titleRomaji ?: cleanTitle,
+                    titleJapanese = aniListMeta.titleNative,
+                    synopsis = aniListMeta.synopsis ?: "Assista a esta incrível série disponível na sua biblioteca.",
+                    genres = aniListMeta.genres,
+                    backdropUrl = aniListMeta.bannerUrl ?: aniListMeta.posterUrl,
+                    folderId = targetId,
+                    posterUrl = aniListMeta.posterUrl ?: chosenFolder.posterUrl
+                )
+            } else if (entry != null) {
                 _featuredAnime.value = FeaturedAnime(
                     title = entry.titleEnglish ?: entry.title,
                     titleJapanese = entry.titleJapanese,
