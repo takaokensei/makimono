@@ -87,6 +87,25 @@ class MalSessionManager @Inject constructor(
         _isSyncEnabledFlow.value = false
     }
 
+    fun getClientId(): String {
+        val custom = prefs.getString(KEY_CLIENT_ID, null)
+        if (!custom.isNullOrBlank()) return custom
+        return zechs.drive.stream.BuildConfig.MAL_CLIENT_ID
+    }
+
+    fun getClientSecret(): String {
+        val custom = prefs.getString(KEY_CLIENT_SECRET, null)
+        if (!custom.isNullOrBlank()) return custom
+        return zechs.drive.stream.BuildConfig.MAL_CLIENT_SECRET
+    }
+
+    fun saveClientCredentials(clientId: String, clientSecret: String) {
+        prefs.edit()
+            .putString(KEY_CLIENT_ID, clientId.trim())
+            .putString(KEY_CLIENT_SECRET, clientSecret.trim())
+            .apply()
+    }
+
     companion object {
         private const val KEY_ACCESS_TOKEN = "mal_access_token"
         private const val KEY_REFRESH_TOKEN = "mal_refresh_token"
@@ -97,5 +116,7 @@ class MalSessionManager @Inject constructor(
         private const val KEY_SYNC_ENABLED = "mal_sync_enabled"
         private const val KEY_AUTO_SKIP_ENABLED = "auto_skip_enabled"
         private const val KEY_GESTURES_ENABLED = "gestures_enabled"
+        private const val KEY_CLIENT_ID = "custom_mal_client_id"
+        private const val KEY_CLIENT_SECRET = "custom_mal_client_secret"
     }
 }

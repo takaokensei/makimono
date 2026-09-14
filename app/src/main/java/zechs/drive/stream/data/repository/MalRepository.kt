@@ -32,7 +32,7 @@ class MalRepository @Inject constructor(
         return Uri.parse(Constants.MAL_OAUTH_BASE_URL + "v1/oauth2/authorize")
             .buildUpon()
             .appendQueryParameter("response_type", "code")
-            .appendQueryParameter("client_id", Constants.MAL_CLIENT_ID)
+            .appendQueryParameter("client_id", sessionManager.getClientId())
             .appendQueryParameter("code_challenge", codeVerifier)
             .appendQueryParameter("code_challenge_method", "plain")
             .appendQueryParameter("redirect_uri", Constants.MAL_REDIRECT_URI)
@@ -44,8 +44,8 @@ class MalRepository @Inject constructor(
         try {
             Log.d(TAG, "Exchanging code for MAL token with verifier")
             val response = malApi.get().exchangeToken(
-                clientId = Constants.MAL_CLIENT_ID,
-                clientSecret = Constants.MAL_CLIENT_SECRET,
+                clientId = sessionManager.getClientId(),
+                clientSecret = sessionManager.getClientSecret(),
                 code = code,
                 codeVerifier = codeVerifier,
                 redirectUri = Constants.MAL_REDIRECT_URI
@@ -78,8 +78,8 @@ class MalRepository @Inject constructor(
         try {
             Log.d(TAG, "Refreshing expired MAL token...")
             val response = malApi.get().refreshToken(
-                clientId = Constants.MAL_CLIENT_ID,
-                clientSecret = Constants.MAL_CLIENT_SECRET,
+                clientId = sessionManager.getClientId(),
+                clientSecret = sessionManager.getClientSecret(),
                 refreshToken = refreshToken
             )
             if (response.isSuccessful && response.body() != null) {
@@ -118,7 +118,7 @@ class MalRepository @Inject constructor(
 
             val token = ensureValidToken()
             val authHeader = if (token != null) "Bearer $token" else null
-            val clientIdHeader = if (authHeader == null) Constants.MAL_CLIENT_ID else null
+            val clientIdHeader = if (authHeader == null) sessionManager.getClientId() else null
 
             Log.d(TAG, "Searching MAL for: '$clean' (auth=${authHeader != null})")
             val response = malApi.get().searchAnime(
