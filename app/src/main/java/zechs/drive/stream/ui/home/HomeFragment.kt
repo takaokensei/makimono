@@ -562,17 +562,18 @@ class HomeFragment : BaseFragment() {
         binding.apply {
             when (tab) {
                 "Início" -> {
-                    // Home: Shows Featured Spotlight Hero + Continuar Assistindo shelf
+                    // TV Home: spotlight + one resume shelf + the actual library.
                     val hasFeatured = viewModel.featuredAnime.value != null
+                    val hasLibrary = viewModel.animeLibrary.value.isNotEmpty()
                     featuredHeroContainer?.visibility = if (hasFeatured) View.VISIBLE else View.GONE
                     shelfHeaderRow?.visibility = if (hasRecent) View.VISIBLE else View.GONE
                     rvContinueWatchingShelf.visibility = if (hasRecent) View.VISIBLE else View.GONE
-                    layoutHomeEmpty?.visibility = if (!hasRecent && !hasFeatured) View.VISIBLE else View.GONE
-                    rvAnimeLibrary.visibility = View.GONE
+                    layoutHomeEmpty?.visibility = if (!hasRecent && !hasFeatured && !hasLibrary) View.VISIBLE else View.GONE
+                    rvAnimeLibrary.visibility = View.VISIBLE
                     layoutEmpty.visibility = View.GONE
                     containerViewToggle?.visibility = View.GONE
-                    containerItemCount?.visibility = if (hasRecent) View.VISIBLE else View.GONE
-                    tvItemCount.text = "${viewModel.recentWatches.value.size} em andamento"
+                    containerItemCount.visibility = if (hasLibrary) View.VISIBLE else View.GONE
+                    tvItemCount.text = "${viewModel.animeLibrary.value.size} títulos"
                 }
                 "Animes" -> {
                     featuredHeroContainer?.visibility = View.GONE
@@ -581,7 +582,7 @@ class HomeFragment : BaseFragment() {
                     layoutHomeEmpty?.visibility = View.GONE
                     rvAnimeLibrary.visibility = View.VISIBLE
                     containerViewToggle?.visibility = View.VISIBLE
-                    containerItemCount?.visibility = View.VISIBLE
+                    containerItemCount.visibility = View.VISIBLE
                     val animesCount = viewModel.filteredAnimes.value.size
                     tvItemCount.text = "$animesCount animes"
                     val isEmpty = animesCount == 0 && !viewModel.isLoadingAnime.value
@@ -594,7 +595,7 @@ class HomeFragment : BaseFragment() {
                     layoutHomeEmpty?.visibility = View.GONE
                     rvAnimeLibrary.visibility = View.VISIBLE
                     containerViewToggle?.visibility = View.VISIBLE
-                    containerItemCount?.visibility = View.VISIBLE
+                    containerItemCount.visibility = View.VISIBLE
                     val favCount = viewModel.filteredAnimes.value.size
                     tvItemCount.text = "$favCount favoritos"
                     val isEmpty = favCount == 0 && !viewModel.isLoadingAnime.value
@@ -674,6 +675,13 @@ class HomeFragment : BaseFragment() {
                             binding.tvItemCount.text = "${animes.size} favoritos"
                             val isEmpty = animes.isEmpty() && !viewModel.isLoadingAnime.value
                             binding.layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
+                        } else if (currentTab == "Início") {
+                            binding.rvAnimeLibrary.visibility = View.VISIBLE
+                            binding.tvItemCount.text = "${animes.size} títulos"
+                            binding.containerItemCount.visibility = if (animes.isNotEmpty()) View.VISIBLE else View.GONE
+                            val hasRecent = viewModel.recentWatches.value.isNotEmpty()
+                            val hasFeatured = viewModel.featuredAnime.value != null
+                            binding.layoutHomeEmpty?.visibility = if (animes.isEmpty() && !hasRecent && !hasFeatured && !viewModel.isLoadingAnime.value) View.VISIBLE else View.GONE
                         }
                     }
                 }
@@ -695,11 +703,12 @@ class HomeFragment : BaseFragment() {
                     if (currentTab == "Início") {
                         val hasRecent = items.isNotEmpty()
                         val hasFeatured = viewModel.featuredAnime.value != null
+                        val hasLibrary = viewModel.animeLibrary.value.isNotEmpty()
                         binding.shelfHeaderRow?.visibility = if (hasRecent) View.VISIBLE else View.GONE
                         binding.rvContinueWatchingShelf.visibility = if (hasRecent) View.VISIBLE else View.GONE
-                        binding.layoutHomeEmpty?.visibility = if (!hasRecent && !hasFeatured) View.VISIBLE else View.GONE
-                        binding.containerItemCount?.visibility = if (hasRecent) View.VISIBLE else View.GONE
-                        binding.tvItemCount.text = "${items.size} em andamento"
+                        binding.layoutHomeEmpty?.visibility = if (!hasRecent && !hasFeatured && !hasLibrary) View.VISIBLE else View.GONE
+                        binding.containerItemCount.visibility = if (hasLibrary) View.VISIBLE else View.GONE
+                        binding.tvItemCount.text = "${viewModel.animeLibrary.value.size} títulos"
                     }
                 }
             }
@@ -794,6 +803,9 @@ class HomeFragment : BaseFragment() {
                     } else {
                         if (currentTab == "Início") {
                             binding.featuredHeroContainer?.visibility = View.GONE
+                            val hasRecent = viewModel.recentWatches.value.isNotEmpty()
+                            val hasLibrary = viewModel.animeLibrary.value.isNotEmpty()
+                            binding.layoutHomeEmpty?.visibility = if (!hasRecent && !hasLibrary) View.VISIBLE else View.GONE
                         }
                     }
                 }

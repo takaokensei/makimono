@@ -103,9 +103,13 @@ Arquivos:
   rail opaco, seleção ciano e foco com contraste de TV.
 - `dimens.xml`: centraliza 240dp de rail, item de 56dp, ícone de 32dp e cards
   de 300x169dp.
-- `fragment_home.xml`: amplia o rail para 240dp, mantém-no visível no layout TV,
-  desloca o conteúdo para não ficar atrás do menu, aumenta os ícones e troca a
-  marca visual para `MAKIMONO MEDIA`.
+- `layout-land/fragment_home.xml`: define a composição dedicada de TV, com rail
+  persistente de 240dp, cabeçalho de biblioteca, busca, hero opcional, uma única
+  prateleira de retomadas e catálogo visível na Home.
+- `fragment_home.xml` e `layout-port/fragment_home.xml`: continuam como
+  fallback para telas não-TV, sem depender da composição horizontal de 10 pés.
+- O rail de TV desloca o conteúdo para não ficar atrás do menu, aumenta os
+  ícones e troca a marca visual para `MAKIMONO MEDIA`.
 
 ### 3. Conteúdo e foco
 
@@ -116,6 +120,9 @@ Arquivos:
 - `HomeFragment.kt`: rail persistente no modo TV, navegação direita para o
   conteúdo e esquerda de volta para o item de menu correspondente. O layout
   retrátil continua compatível com variantes que realmente exibirem overlay.
+- A Home TV exibe a biblioteca diretamente no primeiro painel, mantém apenas
+  uma prateleira de “Continuar assistindo” e atualiza hero, contagem e estado
+  vazio conforme os flows de biblioteca, histórico e destaque.
 - `ContinueWatchingAdapter.kt`: escolhe a thumbnail ampliada do histórico.
 - `shelf_colors.xml`: define o recurso de cor usado pelos cards que já referiam
   `shelf_card_stroke_color`.

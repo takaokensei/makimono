@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import zechs.drive.stream.BuildConfig
 import zechs.drive.stream.data.model.ReleaseAsset
 import java.io.File
 import java.io.FileOutputStream
@@ -45,7 +46,7 @@ class AppUpdateManager @Inject constructor(
                 .url(asset.browserDownloadUrl)
                 .header("Accept", "application/octet-stream")
                 .apply {
-                    val token = zechs.drive.stream.BuildConfig.GITHUB_API_TOKEN.trim()
+                    val token = BuildConfig.GITHUB_API_TOKEN.trim()
                     if (token.isNotBlank()) {
                         header("Authorization", "Bearer $token")
                     }
