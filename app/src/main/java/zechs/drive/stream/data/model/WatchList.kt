@@ -32,5 +32,3 @@ data class WatchList(
 /** Upgrade old low-resolution Drive thumbnails before loading them on TV. */
 val WatchList.thumbnailLarge: String?
     get() = ThumbnailUrl.large(thumbnailLink)
-
-
