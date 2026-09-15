@@ -943,6 +943,16 @@ class PlayerActivity : AppCompatActivity() {
                     return true
                 }
 
+                KeyEvent.KEYCODE_MEDIA_NEXT -> {
+                    playNextEpisodeDirectly()
+                    return true
+                }
+
+                KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
+                    playPrevEpisodeDirectly()
+                    return true
+                }
+
                 KeyEvent.KEYCODE_INFO,
                 KeyEvent.KEYCODE_GUIDE,
                 KeyEvent.KEYCODE_WINDOW -> {

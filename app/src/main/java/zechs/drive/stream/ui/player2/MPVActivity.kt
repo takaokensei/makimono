@@ -148,6 +148,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     private var currentAccessToken: String = ""
     private var playlist = mutableListOf<PlaylistItem>()
     private var nextEpisode: PlaylistItem? = null
+    private var prevEpisode: PlaylistItem? = null
     private var nextEpisodeCanceled = false
     private var isNextEpisodeCardShowing = false
     private var countdownJob: Job? = null
@@ -303,6 +304,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
 
             // init onClick listeners
             btnPlayPause.setOnClickListener { player.cyclePause() }
+            btnPrevEp.setOnClickListener { playPrevEpisodeDirectly() }
+            btnNextEp.setOnClickListener { playNextEpisodeDirectly() }
             exoFfwd.setOnClickListener { skipForward() }
             exoRew.setOnClickListener { rewindBackward() }
             btnSkipIntro.setOnClickListener { performSkipIntroOrCredits() }
@@ -404,13 +407,29 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     private fun updateNextEpisode() {
         if (playlist.isEmpty()) {
             nextEpisode = null
+            prevEpisode = null
+            if (::controller.isInitialized) {
+                controller.btnPrevEp.isEnabled = false
+                controller.btnPrevEp.alpha = 0.35f
+                controller.btnNextEp.isEnabled = false
+                controller.btnNextEp.alpha = 0.35f
+            }
             return
         }
         val currentIndex = playlist.indexOfFirst { it.fileId == currentFileId }
         nextEpisode = if (currentIndex != -1 && currentIndex + 1 < playlist.size) {
             playlist[currentIndex + 1]
         } else null
-        Log.d(TAG, "updateNextEpisode: currentIndex=$currentIndex, nextEpisode=${nextEpisode?.title}")
+        prevEpisode = if (currentIndex > 0) {
+            playlist[currentIndex - 1]
+        } else null
+        if (::controller.isInitialized) {
+            controller.btnPrevEp.isEnabled = prevEpisode != null
+            controller.btnPrevEp.alpha = if (prevEpisode != null) 1.0f else 0.35f
+            controller.btnNextEp.isEnabled = nextEpisode != null
+            controller.btnNextEp.alpha = if (nextEpisode != null) 1.0f else 0.35f
+        }
+        Log.d(TAG, "updateNextEpisode: currentIndex=$currentIndex, prevEpisode=${prevEpisode?.title}, nextEpisode=${nextEpisode?.title}")
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
@@ -486,6 +505,16 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                 KeyEvent.KEYCODE_PAGE_DOWN -> {
                     skipRelative(90)
                     configSnackbar("⏩ +90s Pular Abertura", 750)
+                    return true
+                }
+
+                KeyEvent.KEYCODE_MEDIA_NEXT -> {
+                    playNextEpisodeDirectly()
+                    return true
+                }
+
+                KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
+                    playPrevEpisodeDirectly()
                     return true
                 }
 
@@ -1640,6 +1669,26 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
 
         playMedia()
         val parsed = EpisodeParser.parse(next.title)
+        configSnackbar("Iniciando: ${parsed.cleanTitle}")
+    }
+
+    private fun playPrevEpisodeDirectly() {
+        val prev = prevEpisode ?: return
+        countdownJob?.cancel()
+        isNextEpisodeCardShowing = false
+        binding.nextEpisodeCard.root.visibility = View.GONE
+
+        saveProgress()
+
+        currentFileId = prev.fileId
+        currentTitle = prev.title
+        currentThumbnailLink = prev.thumbnailLink
+        nextEpisodeCanceled = false
+        addedSubtitleFileIds.clear()
+        updateNextEpisode()
+
+        playMedia()
+        val parsed = EpisodeParser.parse(prev.title)
         configSnackbar("Iniciando: ${parsed.cleanTitle}")
     }
 

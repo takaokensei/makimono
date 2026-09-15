@@ -1,4 +1,4 @@
-﻿package zechs.drive.stream.ui.player
+package zechs.drive.stream.ui.player
 
 import android.app.AlertDialog
 import android.content.Context
@@ -143,6 +143,11 @@ class PlayerGlassMenuDialog(
         }
 
         dialog?.show()
+        dialogBinding.rvDialogItems.post {
+            val targetPos = if (selectedIndex >= 0) selectedIndex else 0
+            val targetHolder = dialogBinding.rvDialogItems.findViewHolderForAdapterPosition(targetPos)
+            targetHolder?.itemView?.requestFocus() ?: dialogBinding.rvDialogItems.requestFocus()
+        }
         return this
     }
 

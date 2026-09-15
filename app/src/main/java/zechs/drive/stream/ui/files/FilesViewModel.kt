@@ -325,9 +325,7 @@ class FilesViewModel @Inject constructor(
             updateFileState(Starred.LOADING)
 
             if (starred) {
-                val targetId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
-                    file.shortcutDetails.targetId!!
-                } else file.id
+                val targetId = (if (file.isShortcut) file.shortcutDetails.targetId else null) ?: file.id
                 folderMetadataRepository.recordFolderOpened(targetId, file.name)
             }
 
@@ -346,9 +344,7 @@ class FilesViewModel @Inject constructor(
                         if (starred) Starred.STARRED else Starred.UNSTARRED
                     )
                     if (starred) {
-                        val targetId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
-                            file.shortcutDetails.targetId!!
-                        } else file.id
+                        val targetId = (if (file.isShortcut) file.shortcutDetails.targetId else null) ?: file.id
                         folderMetadataRepository.recordFolderOpened(targetId, file.name)
                     }
                 }

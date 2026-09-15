@@ -409,7 +409,6 @@ class SeriesDetailViewModel @Inject constructor(
 
     fun markSeasonWatched() = viewModelScope.launch(Dispatchers.IO) {
         val currentState = _uiState.value as? SeriesDetailUiState.Success ?: return@launch
-        val now = System.currentTimeMillis()
 
         currentState.currentEpisodes.forEach { item ->
             val watch = WatchList(

@@ -299,7 +299,6 @@ class PlayerGestureHelper(
                     else -> Unit
                 }
 
-                val wasDragging = dragMode != DragMode.NONE
                 dragMode = DragMode.NONE
                 isGestureActive = false
                 return true

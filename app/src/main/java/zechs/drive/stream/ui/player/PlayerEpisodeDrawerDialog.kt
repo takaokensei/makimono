@@ -218,7 +218,11 @@ class PlayerEpisodeDrawerDialog(
             if (playingIndex >= 0) {
                 rvDrawerEpisodes.scrollToPosition(playingIndex)
             }
-            rvDrawerEpisodes.requestFocus()
+            rvDrawerEpisodes.post {
+                val targetPos = if (playingIndex >= 0) playingIndex else 0
+                val targetHolder = rvDrawerEpisodes.findViewHolderForAdapterPosition(targetPos)
+                targetHolder?.itemView?.requestFocus() ?: rvDrawerEpisodes.requestFocus()
+            }
         }
     }
 
