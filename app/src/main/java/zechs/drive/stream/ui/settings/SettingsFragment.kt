@@ -55,6 +55,9 @@ class SettingsFragment : BaseFragment() {
     @Inject
     lateinit var profileManager: zechs.drive.stream.utils.ProfileManager
 
+    @Inject
+    lateinit var appSettings: zechs.drive.stream.utils.AppSettings
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -77,6 +80,8 @@ class SettingsFragment : BaseFragment() {
         setupUserProfileSection()
         setupThemeMenu()
         setupDefaultPlayerMenu()
+        setupSubtitleSizeSetting()
+        setupStorageAndCacheSetting()
         setupCheckForUpdates()
         setupMalIntegration()
         setupPlaybackExperience()
@@ -90,6 +95,8 @@ class SettingsFragment : BaseFragment() {
             binding.settingSelectProfile,
             binding.settingSelectTheme,
             binding.settingDefaultPlayer,
+            binding.settingSubtitleSize,
+            binding.settingClearCache,
             binding.settingCheckForUpdate,
             binding.settingMalAccount,
             binding.settingMalSyncToggle,
@@ -196,6 +203,147 @@ class SettingsFragment : BaseFragment() {
                 }
             }.also { it.show() }
         }
+    }
+
+    private fun setupSubtitleSizeSetting() {
+        val sizes = arrayOf(
+            "Pequeno (16sp)",
+            "Médio (20sp - Padrão)",
+            "Grande (24sp)",
+            "Extra Grande (28sp)"
+        )
+        val sizeValues = floatArrayOf(16f, 20f, 24f, 28f)
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val savedSp = try {
+                appSettings.fetchSubtitleSize()
+            } catch (e: Exception) {
+                20f
+            }
+            val label = when {
+                savedSp <= 16.5f -> "Pequeno (16sp)"
+                savedSp <= 20.5f -> "Médio (20sp - Padrão)"
+                savedSp <= 24.5f -> "Grande (24sp)"
+                else -> "Extra Grande (28sp)"
+            }
+            binding.tvSubtitleSizeValue.text = label
+        }
+
+        binding.settingSubtitleSize.setOnClickListener {
+            viewLifecycleOwner.lifecycleScope.launch {
+                val savedSp = try {
+                    appSettings.fetchSubtitleSize()
+                } catch (e: Exception) {
+                    20f
+                }
+                val currentIdx = sizeValues.indexOfFirst { kotlin.math.abs(it - savedSp) < 0.5f }.coerceAtLeast(1)
+
+                MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+                    .setTitle("Tamanho da Legenda Padrão")
+                    .setSingleChoiceItems(sizes, currentIdx) { dialog, which ->
+                        val chosenSp = sizeValues[which]
+                        binding.tvSubtitleSizeValue.text = sizes[which]
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            try {
+                                appSettings.saveSubtitleSize(chosenSp)
+                                showSnackBar("Tamanho de legenda definido: ${sizes[which]}")
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error saving subtitle size", e)
+                            }
+                        }
+                        dialog.dismiss()
+                    }
+                    .setNegativeButton("Cancelar") { dialog, _ -> dialog.dismiss() }
+                    .show()
+            }
+        }
+    }
+
+    private fun setupStorageAndCacheSetting() {
+        fun updateCacheDisplay() {
+            viewLifecycleOwner.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                val sizeBytes = calculateTotalCacheBytes()
+                val sizeMb = sizeBytes / (1024.0 * 1024.0)
+                val displayStr = if (sizeMb < 0.1) {
+                    "Cache limpo (< 100 KB)"
+                } else {
+                    String.format(java.util.Locale.ROOT, "%.1f MB em cache (Posters, capas e legendas)", sizeMb)
+                }
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    binding.tvCacheSizeValue.text = displayStr
+                }
+            }
+        }
+
+        updateCacheDisplay()
+
+        binding.settingClearCache.setOnClickListener {
+            MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+                .setTitle("Limpar Cache de Mídia e Legendas?")
+                .setMessage("Isso liberará espaço em disco removendo miniaturas temporárias e legendas baixadas. Seus perfis, favoritos e histórico de reprodução NÃO serão apagados.")
+                .setPositiveButton("Limpar") { dialog, _ ->
+                    dialog.dismiss()
+                    showSnackBar("Limpando cache...")
+                    viewLifecycleOwner.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                        try {
+                            // 1. Clear Glide disk cache
+                            com.bumptech.glide.Glide.get(requireContext().applicationContext).clearDiskCache()
+
+                            // 2. Clear temp subtitle files
+                            val subDir = java.io.File(requireContext().filesDir, "subtitles")
+                            if (subDir.exists()) {
+                                subDir.deleteRecursively()
+                            }
+                            val subCache = java.io.File(requireContext().cacheDir, "subtitles")
+                            if (subCache.exists()) {
+                                subCache.deleteRecursively()
+                            }
+
+                            // 3. Clear app general cache
+                            requireContext().cacheDir.listFiles()?.forEach { file ->
+                                file.deleteRecursively()
+                            }
+                            requireContext().externalCacheDir?.listFiles()?.forEach { file ->
+                                file.deleteRecursively()
+                            }
+
+                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                com.bumptech.glide.Glide.get(requireContext().applicationContext).clearMemory()
+                                updateCacheDisplay()
+                                showSnackBar("Cache limpo com sucesso! Espaço liberado.")
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error clearing cache", e)
+                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                showSnackBar("Erro ao limpar cache: ${e.message}")
+                            }
+                        }
+                    }
+                }
+                .setNegativeButton("Cancelar") { dialog, _ -> dialog.dismiss() }
+                .show()
+        }
+    }
+
+    private fun calculateTotalCacheBytes(): Long {
+        var total = 0L
+        fun addDir(file: java.io.File?) {
+            if (file == null || !file.exists()) return
+            if (file.isDirectory) {
+                file.listFiles()?.forEach { addDir(it) }
+            } else {
+                total += file.length()
+            }
+        }
+
+        try {
+            addDir(requireContext().cacheDir)
+            addDir(requireContext().externalCacheDir)
+            addDir(java.io.File(requireContext().filesDir, "subtitles"))
+        } catch (e: Exception) {
+            Log.w(TAG, "Error calculating cache size", e)
+        }
+        return total
     }
 
     private fun setupCheckForUpdates() {

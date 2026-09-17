@@ -1,5 +1,8 @@
 package zechs.drive.stream.ui.series
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -7,6 +10,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
@@ -97,9 +101,14 @@ class SeriesDetailFragment : BaseFragment() {
         }
         binding.rvSeasonTabs.adapter = seasonAdapter
 
-        episodeAdapter = SeriesDetailEpisodeAdapter { episodeItem ->
-            playEpisode(episodeItem)
-        }
+        episodeAdapter = SeriesDetailEpisodeAdapter(
+            onEpisodeClick = { episodeItem ->
+                playEpisode(episodeItem)
+            },
+            onEpisodeLongClick = { episodeItem ->
+                showEpisodeContextMenu(episodeItem)
+            }
+        )
         binding.rvEpisodes.adapter = episodeAdapter
     }
 
@@ -263,7 +272,17 @@ class SeriesDetailFragment : BaseFragment() {
             if (promoItem != null) {
                 playEpisode(promoItem)
             } else {
-                Toast.makeText(requireContext(), "Trailer não disponível nesta pasta", Toast.LENGTH_SHORT).show()
+                val trailerUrl = state.aniListMetadata?.trailerUrl
+                if (!trailerUrl.isNullOrBlank()) {
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(trailerUrl))
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        Toast.makeText(requireContext(), "Não foi possível abrir o trailer", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(requireContext(), "Trailer não disponível nesta pasta", Toast.LENGTH_SHORT).show()
+                }
             }
         }
 
@@ -313,7 +332,53 @@ class SeriesDetailFragment : BaseFragment() {
         }
     }
 
-    private fun playEpisode(item: SeriesEpisodeItem) {
+    private fun showEpisodeContextMenu(item: SeriesEpisodeItem) {
+        val options = mutableListOf<String>()
+        val actions = mutableListOf<() -> Unit>()
+
+        if (item.progressPercent in 1..94) {
+            options.add("Continuar assistindo (${item.progressPercent}%)")
+            actions.add { playEpisode(item, startFromBeginning = false) }
+
+            options.add("Assistir do início (0:00)")
+            actions.add { playEpisode(item, startFromBeginning = true) }
+
+            options.add("Marcar como assistido (100%)")
+            actions.add { viewModel.setEpisodeWatched(item.file, true) }
+
+            options.add("Limpar progresso")
+            actions.add { viewModel.resetEpisodeProgress(item.file) }
+        } else if (item.progressPercent >= 95) {
+            options.add("Assistir novamente (do início)")
+            actions.add { playEpisode(item, startFromBeginning = true) }
+
+            options.add("Marcar como não assistido")
+            actions.add { viewModel.setEpisodeWatched(item.file, false) }
+        } else {
+            options.add("Assistir episódio")
+            actions.add { playEpisode(item, startFromBeginning = false) }
+
+            options.add("Marcar como assistido")
+            actions.add { viewModel.setEpisodeWatched(item.file, true) }
+        }
+
+        options.add("Copiar nome do arquivo")
+        actions.add {
+            val cm = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+            cm?.setPrimaryClip(ClipData.newPlainText("Arquivo", item.file.name))
+            Toast.makeText(requireContext(), "Nome do arquivo copiado!", Toast.LENGTH_SHORT).show()
+        }
+
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+            .setTitle(item.displayTitle)
+            .setItems(options.toTypedArray()) { dialog, which ->
+                dialog.dismiss()
+                actions.getOrNull(which)?.invoke()
+            }
+            .show()
+    }
+
+    private fun playEpisode(item: SeriesEpisodeItem, startFromBeginning: Boolean = false) {
         val currentState = viewModel.uiState.value as? SeriesDetailUiState.Success ?: return
 
         // Build playlist from current episodes
@@ -328,6 +393,13 @@ class SeriesDetailFragment : BaseFragment() {
         val file = item.file
         val fileId = file.id
         val thumb = file.thumbnailLarge ?: file.thumbnailLink ?: file.posterUrl
+        val startPos = if (startFromBeginning) {
+            0L
+        } else if (item.progressPercent in 1..94) {
+            item.watchedDuration
+        } else {
+            -1L
+        }
 
         when (mainViewModel.currentPlayerIndex) {
             VideoPlayer.EXO_PLAYER -> {
@@ -338,7 +410,7 @@ class SeriesDetailFragment : BaseFragment() {
                     putExtra("thumbnailLink", thumb)
                     putExtra("theme", mainViewModel.currentThemeIndex)
                     putExtra("playlist", playlist)
-                    putExtra("startPosition", if (item.progressPercent in 1..94) item.watchedDuration else -1L)
+                    putExtra("startPosition", startPos)
                 }
                 startActivity(intent)
             }
@@ -351,7 +423,7 @@ class SeriesDetailFragment : BaseFragment() {
                     putExtra("thumbnailLink", thumb)
                     putExtra("theme", mainViewModel.currentThemeIndex)
                     putExtra("playlist", playlist)
-                    putExtra("startPosition", if (item.progressPercent in 1..94) item.watchedDuration else -1L)
+                    putExtra("startPosition", startPos)
                 }
                 startActivity(intent)
             }

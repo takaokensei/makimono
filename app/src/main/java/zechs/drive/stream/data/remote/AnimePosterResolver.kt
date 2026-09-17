@@ -24,7 +24,8 @@ data class AnimeMetadata(
     val synopsis: String? = null,
     val score: Float? = null,
     val year: Int? = null,
-    val genres: List<String> = emptyList()
+    val genres: List<String> = emptyList(),
+    val trailerUrl: String? = null
 )
 
 @Singleton
@@ -55,6 +56,10 @@ class AnimePosterResolver @Inject constructor() {
                 genres
                 averageScore
                 seasonYear
+                trailer {
+                  id
+                  site
+                }
               }
             }
         """
@@ -198,6 +203,13 @@ class AnimePosterResolver @Inject constructor() {
                     }
                 }
 
+                val trailerObj = media.optJSONObject("trailer")
+                val trailerSite = trailerObj?.optString("site")
+                val trailerId = trailerObj?.optString("id")
+                val trailerUrl = if (trailerSite.equals("youtube", ignoreCase = true) && !trailerId.isNullOrBlank()) {
+                    "https://www.youtube.com/watch?v=$trailerId"
+                } else null
+
                 AnimeMetadata(
                     posterUrl = extraLarge ?: large,
                     bannerUrl = banner,
@@ -208,7 +220,8 @@ class AnimePosterResolver @Inject constructor() {
                     synopsis = desc,
                     score = avgScore,
                     year = year,
-                    genres = genresList
+                    genres = genresList,
+                    trailerUrl = trailerUrl
                 )
             }
         } catch (e: Exception) {
@@ -260,6 +273,8 @@ class AnimePosterResolver @Inject constructor() {
                     }
                 }
 
+                val trailerUrl = anime.optJSONObject("trailer")?.optString("url")?.takeIf { it.isNotBlank() && it != "null" }
+
                 AnimeMetadata(
                     posterUrl = posterUrl,
                     titleRomaji = title,
@@ -268,7 +283,8 @@ class AnimePosterResolver @Inject constructor() {
                     synopsis = synopsis,
                     score = score,
                     year = year,
-                    genres = genresList
+                    genres = genresList,
+                    trailerUrl = trailerUrl
                 )
             }
         } catch (e: Exception) {
@@ -314,6 +330,8 @@ class AnimePosterResolver @Inject constructor() {
                 val jaJp = titles?.optString("ja_jp")?.takeIf { it.isNotBlank() && it != "null" }
                 val synopsis = attributes.optString("synopsis").takeIf { it.isNotBlank() && it != "null" }
                 val score = attributes.optString("averageRating").toFloatOrNull()?.let { it / 10.0f }
+                val ytId = attributes.optString("youtubeVideoId").takeIf { it.isNotBlank() && it != "null" }
+                val trailerUrl = ytId?.let { "https://www.youtube.com/watch?v=$it" }
 
                 AnimeMetadata(
                     posterUrl = posterUrl,
@@ -322,7 +340,8 @@ class AnimePosterResolver @Inject constructor() {
                     titleEnglish = en,
                     titleNative = jaJp,
                     synopsis = synopsis,
-                    score = score
+                    score = score,
+                    trailerUrl = trailerUrl
                 )
             }
         } catch (e: Exception) {

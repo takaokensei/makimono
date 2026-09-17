@@ -1214,7 +1214,7 @@ class PlayerActivity : AppCompatActivity() {
             }
 
             val passedStartMs = intent.getLongExtra("startPosition", -1L)
-            val effectiveStartMs = startAtPositionMs ?: if (passedStartMs > 5_000L) passedStartMs else null
+            val effectiveStartMs = startAtPositionMs ?: if (passedStartMs >= 0L) passedStartMs else null
 
             player.apply {
                 removeListener(playerListener)

@@ -30,4 +30,7 @@ interface WatchListDao {
     @Delete
     suspend fun deleteWatch(watch: WatchList)
 
+    @Query("DELETE FROM `watch_list` WHERE videoId = :videoId")
+    suspend fun deleteWatchByVideoId(videoId: String)
+
 }

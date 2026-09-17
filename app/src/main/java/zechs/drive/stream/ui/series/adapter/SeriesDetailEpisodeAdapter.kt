@@ -22,7 +22,8 @@ data class SeriesEpisodeItem(
 )
 
 class SeriesDetailEpisodeAdapter(
-    private val onEpisodeClick: (SeriesEpisodeItem) -> Unit
+    private val onEpisodeClick: (SeriesEpisodeItem) -> Unit,
+    private val onEpisodeLongClick: ((SeriesEpisodeItem) -> Unit)? = null
 ) : ListAdapter<SeriesEpisodeItem, SeriesDetailEpisodeAdapter.EpisodeViewHolder>(DiffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): EpisodeViewHolder {
@@ -45,6 +46,16 @@ class SeriesDetailEpisodeAdapter(
                 val position = bindingAdapterPosition
                 if (position != RecyclerView.NO_POSITION) {
                     onEpisodeClick(getItem(position))
+                }
+            }
+
+            binding.cardEpisodeItem.setOnLongClickListener {
+                val position = bindingAdapterPosition
+                if (position != RecyclerView.NO_POSITION && onEpisodeLongClick != null) {
+                    onEpisodeLongClick.invoke(getItem(position))
+                    true
+                } else {
+                    false
                 }
             }
 

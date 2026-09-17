@@ -21,6 +21,7 @@ class ContinueWatchingAdapter(
 
     var onDpadLeftListener: ((android.view.View) -> Boolean)? = null
     var onFocusItemListener: ((android.view.View) -> Unit)? = null
+    var onLongClickListener: ((WatchList) -> Unit)? = null
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemContinueWatchingShelfBinding.inflate(
@@ -84,6 +85,11 @@ class ContinueWatchingAdapter(
             )
 
             binding.cardShelfItem.setOnClickListener { onClick(watchItem) }
+
+            binding.cardShelfItem.setOnLongClickListener {
+                adapter.onLongClickListener?.invoke(watchItem)
+                true
+            }
 
             binding.cardShelfItem.setOnFocusChangeListener { v, hasFocus ->
                 if (hasFocus) {

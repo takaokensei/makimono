@@ -84,6 +84,31 @@ class HomeViewModel @Inject constructor(
         _recentWatches.value = watchListRepository.getRecentWatches(limit)
     }
 
+    fun removeWatchItem(watchItem: WatchList) = viewModelScope.launch(Dispatchers.IO) {
+        try {
+            watchListRepository.deleteWatch(watchItem)
+            val updated = _recentWatches.value.filter { it.videoId != watchItem.videoId }
+            _recentWatches.value = updated
+        } catch (e: Exception) {
+            Log.e(TAG, "Error removing watch item", e)
+        }
+    }
+
+    fun markWatchItemFinished(watchItem: WatchList) = viewModelScope.launch(Dispatchers.IO) {
+        try {
+            val duration = if (watchItem.totalDuration > 0L) watchItem.totalDuration else 24 * 60 * 1000L
+            val finished = watchItem.copy(
+                watchedDuration = duration,
+                totalDuration = duration
+            )
+            watchListRepository.insertWatch(finished)
+            val updated = _recentWatches.value.filter { it.videoId != watchItem.videoId }
+            _recentWatches.value = updated
+        } catch (e: Exception) {
+            Log.e(TAG, "Error marking watch item finished", e)
+        }
+    }
+
     fun recordFolderOpened(folderId: String, folderName: String) = viewModelScope.launch(Dispatchers.IO) {
         try {
             folderMetadataRepository.recordFolderOpened(folderId, folderName)

@@ -85,8 +85,14 @@ class HomeFragment : BaseFragment() {
         )
     }
 
+    private var pendingMpvStartPosition: Long? = null
+
     private val continueWatchingAdapter = ContinueWatchingAdapter { watchItem ->
         playWatchItem(watchItem)
+    }.apply {
+        onLongClickListener = { watchItem ->
+            showContinueWatchingContextMenu(watchItem)
+        }
     }
 
     override fun onCreateView(
@@ -891,7 +897,39 @@ class HomeFragment : BaseFragment() {
         }
     }
 
-    private fun playWatchItem(watchItem: WatchList) {
+    private fun showContinueWatchingContextMenu(watchItem: WatchList) {
+        val parsed = zechs.drive.stream.utils.EpisodeParser.parse(watchItem.name)
+        val title = parsed.showTitle.ifBlank { parsed.cleanTitle }
+
+        val options = arrayOf(
+            "Continuar assistindo (${watchItem.watchProgress()}%)",
+            "Assistir do início (0:00)",
+            "Marcar como concluído",
+            "Remover de Continuar Assistindo"
+        )
+
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+            .setTitle(title)
+            .setItems(options) { dialog, which ->
+                dialog.dismiss()
+                when (which) {
+                    0 -> playWatchItem(watchItem, startFromBeginning = false)
+                    1 -> playWatchItem(watchItem, startFromBeginning = true)
+                    2 -> {
+                        viewModel.markWatchItemFinished(watchItem)
+                        com.google.android.material.snackbar.Snackbar.make(binding.root, "Episódio marcado como concluído", 1500).show()
+                    }
+                    3 -> {
+                        viewModel.removeWatchItem(watchItem)
+                        com.google.android.material.snackbar.Snackbar.make(binding.root, "Item removido de Continuar Assistindo", 1500).show()
+                    }
+                }
+            }
+            .show()
+    }
+
+    private fun playWatchItem(watchItem: WatchList, startFromBeginning: Boolean = false) {
+        val startPos = if (startFromBeginning) 0L else if (watchItem.watchedDuration > 0L) watchItem.watchedDuration else -1L
         when (mainViewModel.currentPlayerIndex) {
             zechs.drive.stream.utils.VideoPlayer.EXO_PLAYER -> {
                 val intent = android.content.Intent(requireContext(), zechs.drive.stream.ui.player.PlayerActivity::class.java).apply {
@@ -899,14 +937,13 @@ class HomeFragment : BaseFragment() {
                     putExtra("title", watchItem.name)
                     putExtra("thumbnailLink", watchItem.thumbnailLink)
                     putExtra("theme", mainViewModel.currentThemeIndex)
-                    if (watchItem.watchedDuration > 0L) {
-                        putExtra("startPosition", watchItem.watchedDuration)
-                    }
+                    putExtra("startPosition", startPos)
                 }
                 startActivity(intent)
             }
             zechs.drive.stream.utils.VideoPlayer.MPV -> {
                 android.widget.Toast.makeText(requireContext(), "Iniciando MPV Player...", android.widget.Toast.LENGTH_SHORT).show()
+                pendingMpvStartPosition = startPos
                 viewModel.fetchToken(watchItem.videoId, watchItem.name, watchItem.thumbnailLink)
             }
         }
@@ -925,7 +962,11 @@ class HomeFragment : BaseFragment() {
                             putExtra("fileId", file.fileId)
                             putExtra("title", file.fileName)
                             putExtra("accessToken", file.accessToken)
+                            pendingMpvStartPosition?.let { pos ->
+                                putExtra("startPosition", pos)
+                            }
                         }
+                        pendingMpvStartPosition = null
                         startActivity(intent)
                     }
                     is zechs.drive.stream.utils.state.Resource.Error -> {

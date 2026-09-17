@@ -425,6 +425,63 @@ class SeriesDetailViewModel @Inject constructor(
         loadSeriesDetails(currentFolderId, currentSeriesTitle)
     }
 
+    fun setEpisodeWatched(file: DriveFile, watched: Boolean) = viewModelScope.launch(Dispatchers.IO) {
+        val currentState = _uiState.value as? SeriesDetailUiState.Success ?: return@launch
+        try {
+            if (watched) {
+                val watch = WatchList(
+                    name = file.name,
+                    videoId = file.id,
+                    watchedDuration = 24 * 60 * 1000L,
+                    totalDuration = 24 * 60 * 1000L,
+                    thumbnailLink = file.thumbnailLarge ?: file.thumbnailLink ?: file.posterUrl
+                )
+                watchListDao.upsertWatch(watch)
+            } else {
+                watchListDao.deleteWatchByVideoId(file.id)
+            }
+
+            val updatedAll = allEpisodeItems.map { ep ->
+                if (ep.file.id == file.id) {
+                    if (watched) {
+                        ep.copy(progressPercent = 100, watchedDuration = 24 * 60 * 1000L, totalDuration = 24 * 60 * 1000L)
+                    } else {
+                        ep.copy(progressPercent = 0, watchedDuration = 0L, totalDuration = 0L)
+                    }
+                } else ep
+            }
+            allEpisodeItems = updatedAll
+
+            val selectedTabId = currentState.seasonTabs.firstOrNull { it.isSelected }?.id
+            val targetGroup = allSeasonGroups.firstOrNull { it.id == selectedTabId }
+            val filtered = getEpisodesForGroup(targetGroup)
+            val continueItem = determineContinueWatchingItem(allEpisodeItems)
+            val continueSubtitle = continueItem?.let { item ->
+                val epText = item.episodeNumber?.let { "Ep. $it" } ?: "Ep. 01"
+                if (item.watchedDuration > 0 && item.totalDuration > item.watchedDuration) {
+                    val remainingSec = (item.totalDuration - item.watchedDuration) / 1000
+                    "$epText • ${String.format(Locale.ROOT, "%02d:%02d", remainingSec / 60, remainingSec % 60)} restante"
+                } else {
+                    "$epText • Iniciar reprodução"
+                }
+            } ?: "Ep. 01 • Iniciar reprodução"
+
+            withContext(Dispatchers.Main) {
+                _uiState.value = currentState.copy(
+                    currentEpisodes = filtered,
+                    continueWatchingItem = continueItem,
+                    continueWatchingSubtitle = continueSubtitle
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting episode watched state", e)
+        }
+    }
+
+    fun resetEpisodeProgress(file: DriveFile) = viewModelScope.launch(Dispatchers.IO) {
+        setEpisodeWatched(file, false)
+    }
+
     private fun detectQuality(files: List<DriveFile>): String {
         return when {
             files.any { it.name.contains("2160p", ignoreCase = true) || it.name.contains("4k", ignoreCase = true) } -> "4K UHD"

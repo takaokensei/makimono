@@ -156,6 +156,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     private val addedSubtitleFileIds = mutableSetOf<String>()
     private var isFileLoaded = false
     private val pendingSubtitles = mutableListOf<Pair<java.io.File, SubtitleItem>>()
+    private var currentSubtitleDelayMs = 0L
+    private var currentAudioDelayMs = 0L
 
     // MAL Scrobble & Rating State
     private var currentMalAnime: MalAnimeNode? = null
@@ -950,8 +952,10 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         }
 
         val explicitStart = intent.getLongExtra("startPosition", -1L)
-        if (explicitStart > 0) {
-            resumeVideo(explicitStart)
+        if (explicitStart >= 0L) {
+            if (explicitStart > 0L) {
+                resumeVideo(explicitStart)
+            }
         } else {
             viewModel.getWatchPosition(fileId) { startPos ->
                 if (startPos > 5_000L) {
@@ -1125,12 +1129,72 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     }
 
     private fun pickAudio() {
-        selectTrack(
+        val tracks = player.tracks.getValue("audio")
+        val selectedMpvId = player.aid
+
+        val items = tracks.map { track ->
+            GlassMenuItem(
+                id = "track_${track.mpvId}",
+                title = track.name,
+                isSelected = track.mpvId == selectedMpvId,
+                tag = track.mpvId
+            )
+        }
+
+        PlayerGlassMenuDialog(
+            context = this,
             title = getString(R.string.select_audio),
-            type = "audio",
-            get = { player.aid },
-            set = { player.aid = it }
+            items = items
+        ) { selected ->
+            val trackId = selected.tag as? Int ?: return@PlayerGlassMenuDialog
+            player.aid = trackId
+            trackSwitchNotification { TrackData(trackId, "audio") }
+        }.setFooterSecondary("Sincronia") {
+            showAudioSyncDialog()
+        }.show()
+    }
+
+    private fun showAudioSyncDialog() {
+        val options = arrayOf(
+            "+1000 ms (Adiantar 1s)",
+            "+500 ms (Adiantar)",
+            "+250 ms (Adiantar)",
+            "+100 ms (Adiantar um pouco)",
+            "0 ms (Sincronizado)",
+            "-100 ms (Atrasar um pouco)",
+            "-250 ms (Atrasar)",
+            "-500 ms (Atrasar)",
+            "-1000 ms (Atrasar 1s)"
         )
+        val offsets = longArrayOf(1000L, 500L, 250L, 100L, 0L, -100L, -250L, -500L, -1000L)
+        val selectedIdx = offsets.indexOfFirst { it == currentAudioDelayMs }.takeIf { it >= 0 } ?: 4
+
+        val title = if (currentAudioDelayMs != 0L) {
+            "Sincronia de Áudio (${if (currentAudioDelayMs > 0) "+" else ""}${currentAudioDelayMs}ms)"
+        } else {
+            "Sincronia de Áudio (0ms)"
+        }
+
+        val items = options.mapIndexed { idx, label ->
+            GlassMenuItem(
+                id = "audio_sync_$idx",
+                title = label,
+                isSelected = idx == selectedIdx,
+                tag = offsets[idx]
+            )
+        }
+
+        PlayerGlassMenuDialog(
+            context = this,
+            title = title,
+            items = items
+        ) { selected ->
+            val chosenOffset = selected.tag as? Long ?: 0L
+            currentAudioDelayMs = chosenOffset
+            MPVLib.setPropertyDouble("audio-delay", chosenOffset / 1000.0)
+            val sign = if (chosenOffset > 0) "+" else ""
+            configSnackbar("Sincronia de áudio: ${sign}${chosenOffset}ms", 1500)
+        }.show()
     }
 
     private fun pickSub() {
@@ -1296,11 +1360,58 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             }
         }
 
+        glassDialog.setFooterSecondary("Sincronia") {
+            showSubtitleSyncDialog()
+        }
+
         glassDialog.setFooterPrimary("Tamanho") {
             showSubtitleSizeDialog()
         }
 
         glassDialog.show()
+    }
+
+    private fun showSubtitleSyncDialog() {
+        val options = arrayOf(
+            "+1000 ms (Adiantar 1s)",
+            "+500 ms (Adiantar)",
+            "+250 ms (Adiantar)",
+            "+100 ms (Adiantar um pouco)",
+            "0 ms (Sincronizado)",
+            "-100 ms (Atrasar um pouco)",
+            "-250 ms (Atrasar)",
+            "-500 ms (Atrasar)",
+            "-1000 ms (Atrasar 1s)"
+        )
+        val offsets = longArrayOf(1000L, 500L, 250L, 100L, 0L, -100L, -250L, -500L, -1000L)
+        val selectedIdx = offsets.indexOfFirst { it == currentSubtitleDelayMs }.takeIf { it >= 0 } ?: 4
+
+        val title = if (currentSubtitleDelayMs != 0L) {
+            "Sincronia de Legenda (${if (currentSubtitleDelayMs > 0) "+" else ""}${currentSubtitleDelayMs}ms)"
+        } else {
+            "Sincronia de Legenda (0ms)"
+        }
+
+        val items = options.mapIndexed { idx, label ->
+            GlassMenuItem(
+                id = "sub_sync_$idx",
+                title = label,
+                isSelected = idx == selectedIdx,
+                tag = offsets[idx]
+            )
+        }
+
+        PlayerGlassMenuDialog(
+            context = this,
+            title = title,
+            items = items
+        ) { selected ->
+            val chosenOffset = selected.tag as? Long ?: 0L
+            currentSubtitleDelayMs = chosenOffset
+            MPVLib.setPropertyDouble("sub-delay", chosenOffset / 1000.0)
+            val sign = if (chosenOffset > 0) "+" else ""
+            configSnackbar("Sincronia de legenda: ${sign}${chosenOffset}ms", 1500)
+        }.show()
     }
 
     private fun showSubtitleSizeDialog() {
