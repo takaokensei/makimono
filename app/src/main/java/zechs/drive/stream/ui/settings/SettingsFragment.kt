@@ -26,6 +26,7 @@ import zechs.drive.stream.databinding.FragmentSettingsBinding
 import zechs.drive.stream.ui.BaseFragment
 import zechs.drive.stream.ui.main.MainViewModel
 import zechs.drive.stream.utils.AppTheme
+import zechs.drive.stream.utils.VideoPlayer
 import zechs.drive.stream.utils.state.Resource
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -78,6 +79,7 @@ class SettingsFragment : BaseFragment() {
 
         setupUserProfileSection()
         setupThemeMenu()
+        setupDefaultPlayerMenu()
         setupSubtitleSizeSetting()
         setupStorageAndCacheSetting()
         setupCheckForUpdates()
@@ -92,6 +94,7 @@ class SettingsFragment : BaseFragment() {
         val rows = listOf(
             binding.settingSelectProfile,
             binding.settingSelectTheme,
+            binding.settingDefaultPlayer,
             binding.settingSubtitleSize,
             binding.settingClearCache,
             binding.settingCheckForUpdate,
@@ -175,6 +178,30 @@ class SettingsFragment : BaseFragment() {
             }
 
             dialog.show()
+        }
+    }
+
+    private fun setupDefaultPlayerMenu() {
+        val players = listOf(
+            getString(R.string.exoplayer),
+            getString(R.string.mpv)
+        )
+        binding.settingDefaultPlayer.setOnClickListener {
+            MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog).apply {
+                setTitle(getString(R.string.default_player))
+                setSingleChoiceItems(
+                    players.toTypedArray(),
+                    mainViewModel.currentPlayerIndex.value
+                ) { dialog, item ->
+                    val player = when (item) {
+                        VideoPlayer.EXO_PLAYER.value -> VideoPlayer.EXO_PLAYER
+                        VideoPlayer.MPV.value -> VideoPlayer.MPV
+                        else -> throw IllegalArgumentException("Unknown default player")
+                    }
+                    mainViewModel.setPlayer(player)
+                    dialog.dismiss()
+                }
+            }.also { it.show() }
         }
     }
 

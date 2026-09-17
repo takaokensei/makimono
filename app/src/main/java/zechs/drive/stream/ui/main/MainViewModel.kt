@@ -125,18 +125,18 @@ class MainViewModel @Inject constructor(
             val player = withTimeoutOrNull(1500L) {
                 appSettings.fetchPlayer()
             } ?: VideoPlayer.EXO_PLAYER
-            currentPlayerIndex = VideoPlayer.EXO_PLAYER
-            Log.d("MainViewModel", "Loaded default player: $currentPlayerIndex")
+            currentPlayerIndex = player
+            Log.d("MainViewModel", "Loaded default player: $player")
         } catch (e: Exception) {
             Log.e("MainViewModel", "getPlayer error", e)
         }
     }
 
     fun setPlayer(player: VideoPlayer) {
-        currentPlayerIndex = VideoPlayer.EXO_PLAYER
+        currentPlayerIndex = player
         viewModelScope.launch {
             try {
-                appSettings.savePlayer(VideoPlayer.EXO_PLAYER)
+                appSettings.savePlayer(player)
             } catch (e: Exception) {
                 Log.e("MainViewModel", "savePlayer error", e)
             }

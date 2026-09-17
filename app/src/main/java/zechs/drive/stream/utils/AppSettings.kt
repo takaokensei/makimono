@@ -53,13 +53,18 @@ class AppSettings @Inject constructor(
     suspend fun savePlayer(player: VideoPlayer) {
         val dataStoreKey = stringPreferencesKey(VIDEO_PLAYER)
         sessionStore.edit { settings ->
-            settings[dataStoreKey] = VideoPlayer.EXO_PLAYER.text
+            settings[dataStoreKey] = player.text
         }
-        Log.d(TAG, "savePlayer: ${VideoPlayer.EXO_PLAYER.text}")
+        Log.d(TAG, "savePlayer: ${player.text}")
     }
 
     suspend fun fetchPlayer(): VideoPlayer {
-        val videoPlayer = VideoPlayer.EXO_PLAYER
+        val dataStoreKey = stringPreferencesKey(VIDEO_PLAYER)
+        val preferences = sessionStore.data.first()
+        val videoPlayer = when (preferences[dataStoreKey]) {
+            VideoPlayer.MPV.text -> VideoPlayer.MPV
+            else -> VideoPlayer.EXO_PLAYER
+        }
         Log.d(TAG, "fetchPlayer: $videoPlayer")
         return videoPlayer
     }
