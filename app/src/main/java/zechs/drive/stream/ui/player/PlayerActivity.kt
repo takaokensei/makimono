@@ -2406,7 +2406,7 @@ class PlayerActivity : AppCompatActivity() {
             findForced@ for (group in textGroups) {
                 for (i in 0 until group.length) {
                     val format = group.getTrackFormat(i)
-                    if (format.id == targetStr || (format.label != null && format.label!!.contains("[Drive]"))) {
+                    if (format.id == targetStr || format.label?.contains("[Drive]") == true) {
                         bestSubGroup = group
                         bestSubIndex = i
                         bestSubScore = 999

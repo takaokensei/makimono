@@ -1,4 +1,4 @@
-﻿name: Makimono Release
+name: Makimono Release
 
 on:
   push:
@@ -54,6 +54,9 @@ jobs:
             echo "release.keyAlias=${{ secrets.RELEASE_KEY_ALIAS }}"
             echo "release.keyPassword=${{ secrets.RELEASE_KEY_PASSWORD }}"
           } >> local.properties
+
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest --no-daemon
 
       - name: Build Release APKs (Split & Universal)
         run: ./gradlew assembleRelease --no-daemon

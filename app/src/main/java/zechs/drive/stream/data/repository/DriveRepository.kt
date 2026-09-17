@@ -19,6 +19,13 @@ class DriveRepository @Inject constructor(
 
     companion object {
         private const val TAG = "DriveRepository"
+
+        /**
+         * Safety cap on pagination to prevent runaway API calls on very large shared drives.
+         * At the default page size of 100 this covers up to 2 500 files per query — well above
+         * any practical anime-streaming library while still bounding latency and quota usage.
+         */
+        const val MAX_PAGINATION_PAGES = 25
     }
 
     private suspend fun getOrFetchAccessToken(): String? {
@@ -54,7 +61,7 @@ class DriveRepository @Inject constructor(
     suspend fun getAllFiles(
         query: String,
         pageSize: Int = 100,
-        maxPages: Int = 25
+        maxPages: Int = MAX_PAGINATION_PAGES
     ): Resource<List<File>> {
         val collected = mutableListOf<File>()
         var pageToken: String? = null
