@@ -161,7 +161,7 @@ dependencies {
     kapt "com.squareup.moshi:moshi-kotlin-codegen:$moshi_version"
 
     // OkHttp
-    implementation(platform("com.squareup.okhttp3:okhttp-bom:4.9.3"))
+    implementation(platform("com.squareup.okhttp3:okhttp-bom:4.12.0"))
     implementation "com.squareup.okhttp3:okhttp"
     implementation "com.squareup.okhttp3:logging-interceptor"
 
@@ -189,7 +189,7 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.6.1"
 
     // Coroutines
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1"
 
     // Dagger hilt
     implementation "com.google.dagger:hilt-android:2.51.1"
@@ -199,8 +199,8 @@ dependencies {
     implementation "androidx.core:core-splashscreen:1.0.1"
 
     // Navigational Components
-    implementation "androidx.navigation:navigation-fragment-ktx:2.6.0"
-    implementation "androidx.navigation:navigation-ui-ktx:2.6.0"
+    implementation "androidx.navigation:navigation-fragment-ktx:2.8.7"
+    implementation "androidx.navigation:navigation-ui-ktx:2.8.7"
 
     //Kotlin
     implementation "androidx.core:core-ktx:1.10.1"
@@ -215,7 +215,7 @@ dependencies {
     testImplementation "junit:junit:4.13.2"
     testImplementation "io.mockk:mockk:1.13.11"
     testImplementation "app.cash.turbine:turbine:1.1.0"
-    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.1"
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1"
     testImplementation "androidx.arch.core:core-testing:2.2.0"
     androidTestImplementation "androidx.test.ext:junit:1.1.5"
     androidTestImplementation "androidx.test.espresso:espresso-core:3.5.1"
