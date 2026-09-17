@@ -55,11 +55,22 @@ jobs:
             echo "release.keyPassword=${{ secrets.RELEASE_KEY_PASSWORD }}"
           } >> local.properties
 
+      - name: Run lint checks
+        run: ./gradlew lintDebug --no-daemon
+
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest --no-daemon
 
       - name: Build Release APKs (Split & Universal)
         run: ./gradlew assembleRelease --no-daemon
+
+      - name: Verify APK signatures
+        run: |
+          for apk in app/build/outputs/apk/release/*.apk; do
+            echo "Verifying: $apk"
+            jarsigner -verify -verbose "$apk" | grep -E "(jar verified|WARNING)" || true
+            jarsigner -verify "$apk" && echo "OK: $apk" || (echo "FAIL: $apk is not properly signed" && exit 1)
+          done
 
       - name: Collect APKs and generate checksums
         id: collect_apks
