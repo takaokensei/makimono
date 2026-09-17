@@ -2,6 +2,9 @@ package zechs.drive.stream.utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,10 +18,26 @@ class MalSessionManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
 
-    private val prefs: SharedPreferences = context.getSharedPreferences(
-        "mal_session_prefs",
-        Context.MODE_PRIVATE
-    )
+    // MAL access/refresh tokens are long-lived OAuth credentials; store them in
+    // EncryptedSharedPreferences (AES256-GCM, key held in the Android Keystore)
+    // instead of plain SharedPreferences. Falls back to plain prefs if the
+    // Keystore is unavailable on a given device rather than crashing the app.
+    private val prefs: SharedPreferences = try {
+        val masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+
+        EncryptedSharedPreferences.create(
+            context,
+            PREFS_NAME,
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to create EncryptedSharedPreferences, falling back to plain prefs", e)
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    }
 
     private val _isSyncEnabledFlow = MutableStateFlow(isSyncEnabled())
     val isSyncEnabledFlow = _isSyncEnabledFlow.asStateFlow()
@@ -107,6 +126,8 @@ class MalSessionManager @Inject constructor(
     }
 
     companion object {
+        private const val TAG = "MalSessionManager"
+        private const val PREFS_NAME = "mal_session_prefs"
         private const val KEY_ACCESS_TOKEN = "mal_access_token"
         private const val KEY_REFRESH_TOKEN = "mal_refresh_token"
         private const val KEY_EXPIRES_AT = "mal_expires_at"

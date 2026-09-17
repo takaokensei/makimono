@@ -14,10 +14,12 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import zechs.drive.stream.BuildConfig
+import zechs.drive.stream.data.model.ChecksumAsset
 import zechs.drive.stream.data.model.ReleaseAsset
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Named
 import javax.inject.Singleton
@@ -107,6 +109,70 @@ class AppUpdateManager @Inject constructor(
             Result.failure(e)
         }
     }
+
+    /**
+     * Downloads the ".sha256" checksum asset published alongside an APK release
+     * asset, if the release workflow generated one. Returns null (not a failure)
+     * when no checksum asset exists, e.g. for releases published before this
+     * check was added — callers should treat null as "unverifiable", not
+     * "invalid".
+     */
+    suspend fun fetchExpectedChecksum(checksumAsset: ChecksumAsset): String? =
+        withContext(Dispatchers.IO) {
+            try {
+                val request = Request.Builder()
+                    .url(checksumAsset.browserDownloadUrl)
+                    .header("Accept", "application/octet-stream")
+                    .apply {
+                        val token = BuildConfig.GITHUB_API_TOKEN.trim()
+                        if (token.isNotBlank()) {
+                            header("Authorization", "Bearer $token")
+                        }
+                    }
+                    .build()
+
+                val response = okHttpClient.newCall(request).execute()
+                if (!response.isSuccessful) return@withContext null
+
+                // sha256sum output format is "<hex digest>  <filename>"
+                response.body?.string()
+                    ?.trim()
+                    ?.substringBefore(' ')
+                    ?.takeIf { it.length == 64 }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to fetch checksum asset, skipping verification", e)
+                null
+            }
+        }
+
+    /**
+     * Verifies [apkFile] against [expectedSha256Hex]. Computed locally so the
+     * downloaded APK is never trusted purely on the strength of an HTTPS
+     * transport; this catches a compromised release asset or a corrupted
+     * download that HTTPS alone would not.
+     */
+    suspend fun verifyChecksum(apkFile: File, expectedSha256Hex: String): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                val digest = MessageDigest.getInstance("SHA-256")
+                apkFile.inputStream().use { input ->
+                    val buffer = ByteArray(32768)
+                    var read: Int
+                    while (input.read(buffer).also { read = it } != -1) {
+                        digest.update(buffer, 0, read)
+                    }
+                }
+                val actual = digest.digest().joinToString("") { "%02x".format(it) }
+                val matches = actual.equals(expectedSha256Hex.trim(), ignoreCase = true)
+                if (!matches) {
+                    Log.e(TAG, "APK checksum mismatch: expected=$expectedSha256Hex actual=$actual")
+                }
+                matches
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to compute APK checksum", e)
+                false
+            }
+        }
 
     /**
      * Triggers the Android package installer to install the downloaded APK.

@@ -166,7 +166,30 @@ class MainViewModel @Inject constructor(
         }
 
         result.onSuccess { apkFile ->
-            _updateDownloadState.value = UpdateDownloadState.ReadyToInstall(apkFile)
+            val checksumAsset = release.findChecksumAsset(asset)
+            if (checksumAsset == null) {
+                // Release published without a .sha256 asset (e.g. older releases).
+                // Nothing to verify against; proceed as before.
+                _updateDownloadState.value = UpdateDownloadState.ReadyToInstall(apkFile)
+                return@onSuccess
+            }
+
+            val expected = appUpdateManager.fetchExpectedChecksum(checksumAsset)
+            if (expected == null) {
+                Log.w("MainViewModel", "Could not fetch expected checksum, installing unverified")
+                _updateDownloadState.value = UpdateDownloadState.ReadyToInstall(apkFile)
+                return@onSuccess
+            }
+
+            val verified = appUpdateManager.verifyChecksum(apkFile, expected)
+            if (verified) {
+                _updateDownloadState.value = UpdateDownloadState.ReadyToInstall(apkFile)
+            } else {
+                apkFile.delete()
+                _updateDownloadState.value = UpdateDownloadState.Failed(
+                    "Verificação de integridade falhou. O download foi descartado por segurança."
+                )
+            }
         }.onFailure { error ->
             _updateDownloadState.value = UpdateDownloadState.Failed(error.localizedMessage ?: "Falha ao baixar APK")
         }

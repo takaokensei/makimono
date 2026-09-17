@@ -924,7 +924,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             }
         }
 
-        Log.d(TAG, "MPVActivity(fileId=$fileId, title=$title, accessToken=$accessToken)")
+        Log.d(TAG, "MPVActivity(fileId=$fileId, title=$title, accessToken=${accessToken?.let { "len=${it.length}" } ?: "null"})")
 
         viewModel.getWatch(fileId)
 

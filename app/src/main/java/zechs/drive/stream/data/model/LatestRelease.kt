@@ -14,6 +14,13 @@ data class ReleaseAsset(
 )
 
 @Keep
+data class ChecksumAsset(
+    val name: String,
+    @Json(name = "browser_download_url")
+    val browserDownloadUrl: String
+)
+
+@Keep
 data class LatestRelease(
     val name: String,
     @Json(name = "tag_name")
@@ -55,6 +62,18 @@ data class LatestRelease(
         if (universalMatch != null) return universalMatch
 
         return apkAssets.firstOrNull()
+    }
+
+    /**
+     * Looks for a published "<apk-name>.sha256" text asset matching [apkAsset].
+     * Older releases (published before checksum generation was added to the
+     * release workflow) won't have one; callers must treat a null result as
+     * "verification unavailable", not as a failure.
+     */
+    fun findChecksumAsset(apkAsset: ReleaseAsset): ChecksumAsset? {
+        val checksumName = "${apkAsset.name}.sha256"
+        return assets.firstOrNull { it.name.equals(checksumName, ignoreCase = true) }
+            ?.let { ChecksumAsset(it.name, it.browserDownloadUrl) }
     }
 
 }

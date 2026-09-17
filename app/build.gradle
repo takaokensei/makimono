@@ -22,11 +22,32 @@ def githubApiToken = localProperties.getProperty("github.apiToken", "")
 
 // Release signing: optional dedicated keystore, configured via local.properties
 // (release.storeFile / release.storePassword / release.keyAlias / release.keyPassword).
-// When absent, release builds explicitly fall back to the debug key so the build
-// never fails silently, but this is logged as a warning rather than assumed.
+// When absent, local/personal release builds explicitly fall back to the debug
+// key so the build never fails silently on a developer machine.
+//
+// In CI, though, a silent fallback means a release could get published to
+// GitHub Releases signed with the well-known debug key without anyone
+// noticing. Gradle sets the "CI" project/env property to "true" on GitHub
+// Actions runners, so assembleRelease is made to fail loudly there instead,
+// forcing RELEASE_KEYSTORE_BASE64 (and friends) to be configured as repo
+// secrets before a real release can be published. Set -PallowDebugSigningInCi
+// (or the equivalent env var) if a debug-signed CI build is ever intentional.
 def releaseStoreFile = localProperties.getProperty("release.storeFile", "")
 def hasReleaseSigningConfig = !releaseStoreFile.isEmpty()
+def isCiEnv = System.getenv("CI") == "true" || System.getenv("GITHUB_ACTIONS") == "true"
+def allowDebugSigningInCi = project.hasProperty("allowDebugSigningInCi") ||
+        System.getenv("ALLOW_DEBUG_SIGNING_IN_CI") == "true"
+
 if (!hasReleaseSigningConfig) {
+    if (isCiEnv && !allowDebugSigningInCi) {
+        throw new GradleException(
+            "Refusing to build assembleRelease in CI without a release keystore. " +
+            "RELEASE_KEYSTORE_BASE64 / RELEASE_STORE_PASSWORD / RELEASE_KEY_ALIAS / " +
+            "RELEASE_KEY_PASSWORD must be configured as GitHub Actions secrets so " +
+            "published releases are never silently signed with the debug key. " +
+            "Pass -PallowDebugSigningInCi to override intentionally."
+        )
+    }
     logger.warn(
         "WARNING: No release.storeFile configured in local.properties. " +
         "Release build will be signed with the DEBUG key. " +
@@ -155,6 +176,9 @@ dependencies {
 
     // Datastore
     implementation "androidx.datastore:datastore-preferences:1.0.0"
+
+    // Encrypted SharedPreferences (MAL OAuth tokens)
+    implementation "androidx.security:security-crypto:1.1.0-alpha06"
 
     // Glide
     implementation "com.github.bumptech.glide:glide:4.13.2"
