@@ -2274,7 +2274,8 @@ class PlayerActivity : AppCompatActivity() {
             8 -> "Surround (7.1)"
             else -> "Estéreo"
         }
-        val sampleRate = if ((aFormat?.sampleRate ?: 0) > 0) "${(aFormat!!.sampleRate / 1000f)} kHz" else "48 kHz"
+        val sampleRateHz = aFormat?.sampleRate ?: 0
+        val sampleRate = if (sampleRateHz > 0) "${sampleRateHz / 1000f} kHz" else "48 kHz"
         binding.kodiInfoHud.tvHudAudioInfo.text = "$audioCodec • $channels ($sampleRate)"
 
         // 4. Subtitle Info
@@ -2623,8 +2624,12 @@ class PlayerActivity : AppCompatActivity() {
         val totalDuration = player.duration
         val watchProgress = (watchedDuration.toDouble() / totalDuration.toDouble()).toFloat() * 100
         if (watchProgress > 10) {
-            val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId")!! }
-            val title = currentTitle.ifBlank { intent.getStringExtra("title")!! }
+            val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") ?: "" }
+            val title = currentTitle.ifBlank { intent.getStringExtra("title") ?: "" }
+            if (fileId.isBlank()) {
+                Log.w(TAG, "saveProgress: no fileId available (neither state nor intent), skipping save")
+                return
+            }
             val thumbnailLink = currentThumbnailLink ?: intent.getStringExtra("thumbnailLink")
             viewModel.saveWatch(
                 name = title,

@@ -954,7 +954,7 @@ class HomeFragment : BaseFragment() {
             event.getContentIfNotHandled()?.let { resource ->
                 when (resource) {
                     is zechs.drive.stream.utils.state.Resource.Success -> {
-                        val file = resource.data!!
+                        val file = resource.data
                         val intent = android.content.Intent(
                             requireContext(),
                             zechs.drive.stream.ui.player2.MPVActivity::class.java

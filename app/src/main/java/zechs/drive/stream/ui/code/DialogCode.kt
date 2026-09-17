@@ -28,8 +28,18 @@ class DialogCode(
         val codeText = findViewById<TextInputLayout>(R.id.tf_code)
         val submitButton = findViewById<MaterialButton>(R.id.btn_submit)
 
+        // codeText.editText should always be present given dialog_code.xml, but
+        // this dialog is user-facing input, not something we want to crash on
+        // if the layout ever changes underneath it.
+        val editText = codeText.editText
+        if (editText == null) {
+            showToast(context.getString(R.string.please_enter_auth_url))
+            dismiss()
+            return
+        }
+
         submitButton.setOnClickListener {
-            val authCode = codeText.editText!!.text.toString()
+            val authCode = editText.text.toString()
 
             if (authCode.isEmpty()) {
                 showToast(context.getString(R.string.please_enter_auth_url))
@@ -39,9 +49,9 @@ class DialogCode(
 
         }
 
-        codeText.editText!!.requestFocus()
+        editText.requestFocus()
 
-        codeText.editText!!.onFocusChangeListener =
+        editText.onFocusChangeListener =
             View.OnFocusChangeListener { v, hasFocus ->
                 if (hasFocus) {
                     Keyboard.show(v)

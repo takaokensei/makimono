@@ -172,7 +172,7 @@ class MainActivity : AppCompatActivity() {
         viewModel.latest.observe(this) {
             when (it) {
                 is Resource.Success -> {
-                    val release = it.data!!
+                    val release = it.data
                     if (release.isLatest()) {
                         Log.d(TAG, "Already on latest version")
                     } else {
@@ -189,7 +189,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                is Resource.Error -> Log.d(TAG, it.message!!)
+                is Resource.Error -> Log.d(TAG, it.message)
                 else -> {}
             }
         }
@@ -332,9 +332,10 @@ class MainActivity : AppCompatActivity() {
     private fun showProgressDialog() {
         if (isFinishing || isDestroyed) return
         if (progressDialog == null) {
-            progressBinding = DialogUpdateProgressBinding.inflate(layoutInflater)
+            val binding = DialogUpdateProgressBinding.inflate(layoutInflater)
+            progressBinding = binding
             progressDialog = MaterialAlertDialogBuilder(this)
-                .setView(progressBinding!!.root)
+                .setView(binding.root)
                 .setCancelable(false)
                 .create()
         }

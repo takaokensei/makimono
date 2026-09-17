@@ -20,6 +20,22 @@ def malClientId = localProperties.getProperty("mal.clientId", "")
 def malClientSecret = localProperties.getProperty("mal.clientSecret", "")
 def githubApiToken = localProperties.getProperty("github.apiToken", "")
 
+// Release signing: optional dedicated keystore, configured via local.properties
+// (release.storeFile / release.storePassword / release.keyAlias / release.keyPassword).
+// When absent, release builds explicitly fall back to the debug key so the build
+// never fails silently, but this is logged as a warning rather than assumed.
+def releaseStoreFile = localProperties.getProperty("release.storeFile", "")
+def hasReleaseSigningConfig = !releaseStoreFile.isEmpty()
+if (!hasReleaseSigningConfig) {
+    logger.warn(
+        "WARNING: No release.storeFile configured in local.properties. " +
+        "Release build will be signed with the DEBUG key. " +
+        "This is fine for personal/local builds, but such an APK must not be " +
+        "distributed as if it were a production release. " +
+        "See local.properties.example for how to configure a real release keystore."
+    )
+}
+
 android {
 
     namespace "zechs.drive.stream"
@@ -49,11 +65,22 @@ android {
         buildConfigField "String", "GITHUB_API_TOKEN", "\"${githubApiToken}\""
     }
 
+    signingConfigs {
+        if (hasReleaseSigningConfig) {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword localProperties.getProperty("release.storePassword", "")
+                keyAlias localProperties.getProperty("release.keyAlias", "")
+                keyPassword localProperties.getProperty("release.keyPassword", "")
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled true
             shrinkResources true
-            signingConfig signingConfigs.debug
+            signingConfig hasReleaseSigningConfig ? signingConfigs.release : signingConfigs.debug
             proguardFiles getDefaultProguardFile(
                     "proguard-android-optimize.txt"
             ), "proguard-rules.pro"

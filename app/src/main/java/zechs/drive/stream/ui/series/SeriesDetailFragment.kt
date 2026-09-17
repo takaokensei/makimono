@@ -278,6 +278,7 @@ class SeriesDetailFragment : BaseFragment() {
                         val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(trailerUrl))
                         startActivity(intent)
                     } catch (e: Exception) {
+                        Log.w("SeriesDetail", "Could not open trailer url: $trailerUrl", e)
                         Toast.makeText(requireContext(), "Não foi possível abrir o trailer", Toast.LENGTH_SHORT).show()
                     }
                 } else {

@@ -50,13 +50,13 @@ class MalRepository @Inject constructor(
                 codeVerifier = codeVerifier,
                 redirectUri = Constants.MAL_REDIRECT_URI
             )
-            if (response.isSuccessful && response.body() != null) {
-                val token = response.body()!!
-                sessionManager.saveTokens(token)
+            val body = response.body()
+            if (response.isSuccessful && body != null) {
+                sessionManager.saveTokens(body)
                 sessionManager.setSyncEnabled(true)
                 // Fetch profile to personalize
                 fetchUserProfile()
-                Resource.Success(token)
+                Resource.Success(body)
             } else {
                 val err = response.errorBody()?.string() ?: "Erro desconhecido HTTP ${response.code()}"
                 Log.e(TAG, "Token exchange failed: $err")
@@ -82,11 +82,11 @@ class MalRepository @Inject constructor(
                 clientSecret = sessionManager.getClientSecret(),
                 refreshToken = refreshToken
             )
-            if (response.isSuccessful && response.body() != null) {
-                val newToken = response.body()!!
-                sessionManager.saveTokens(newToken)
+            val body = response.body()
+            if (response.isSuccessful && body != null) {
+                sessionManager.saveTokens(body)
                 Log.d(TAG, "MAL token refreshed successfully")
-                return@withContext newToken.accessToken
+                return@withContext body.accessToken
             } else {
                 Log.w(TAG, "Failed to refresh MAL token: ${response.code()}")
             }
@@ -100,10 +100,10 @@ class MalRepository @Inject constructor(
         val token = ensureValidToken() ?: return@withContext null
         try {
             val response = malApi.get().getCurrentUser("Bearer $token")
-            if (response.isSuccessful && response.body() != null) {
-                val user = response.body()!!
-                sessionManager.saveUserProfile(user)
-                return@withContext user
+            val body = response.body()
+            if (response.isSuccessful && body != null) {
+                sessionManager.saveUserProfile(body)
+                return@withContext body
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching user profile", e)
@@ -127,8 +127,9 @@ class MalRepository @Inject constructor(
                 authHeader = authHeader,
                 clientIdHeader = clientIdHeader
             )
-            if (response.isSuccessful && response.body() != null) {
-                val list = response.body()!!.data.map { it.node }
+            val body = response.body()
+            if (response.isSuccessful && body != null) {
+                val list = body.data.map { it.node }
                 Resource.Success(list)
             } else {
                 Resource.Error("Erro na busca do MAL: ${response.code()}")
@@ -160,9 +161,10 @@ class MalRepository @Inject constructor(
                 status = "watching",
                 numWatchedEpisodes = episodeNumber
             )
-            if (response.isSuccessful && response.body() != null) {
+            val body = response.body()
+            if (response.isSuccessful && body != null) {
                 Log.d(TAG, "Successfully scrobbled episode $episodeNumber to MAL!")
-                Resource.Success(response.body()!!)
+                Resource.Success(body)
             } else {
                 val err = response.errorBody()?.string() ?: "HTTP ${response.code()}"
                 Log.w(TAG, "Failed to scrobble: $err")
@@ -189,9 +191,10 @@ class MalRepository @Inject constructor(
                 numWatchedEpisodes = if (totalEpisodes > 0) totalEpisodes else null,
                 score = score
             )
-            if (response.isSuccessful && response.body() != null) {
+            val body = response.body()
+            if (response.isSuccessful && body != null) {
                 Log.d(TAG, "Successfully completed anime with score $score on MAL!")
-                Resource.Success(response.body()!!)
+                Resource.Success(body)
             } else {
                 val err = response.errorBody()?.string() ?: "HTTP ${response.code()}"
                 Resource.Error("Falha ao finalizar anime no MAL: $err")

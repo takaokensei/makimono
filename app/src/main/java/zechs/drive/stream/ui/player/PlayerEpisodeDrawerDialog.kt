@@ -163,8 +163,10 @@ class PlayerEpisodeDrawerDialog(
                     showEpisodesForGroup(group, showBackButton = true)
                 }
             }
-            if (activeGroup != null && b.rvDrawerEpisodes.isVisible) {
-                val updatedActive = seasonGroups.firstOrNull { it.id == activeGroup?.id } ?: activeGroup!!
+            val currentActiveGroup = activeGroup
+            if (currentActiveGroup != null && b.rvDrawerEpisodes.isVisible) {
+                val updatedActive = seasonGroups.firstOrNull { it.id == currentActiveGroup.id }
+                    ?: currentActiveGroup
                 showEpisodesForGroup(updatedActive, showBackButton = seasonGroups.size > 1)
             }
         }

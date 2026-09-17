@@ -60,10 +60,15 @@ class SignInFragment : BaseFragment() {
             if (!updateClient()) {
                 return@setOnClickListener
             }
-            Log.d(TAG, "Auth url: ${viewModel.client!!.authUrl()}")
+            val client = viewModel.client
+            if (client == null) {
+                Log.e(TAG, "signInText click: client is null after updateClient() returned true")
+                return@setOnClickListener
+            }
+            Log.d(TAG, "Auth url: ${client.authUrl()}")
 
             Intent().setAction(Intent.ACTION_VIEW)
-                .setData(viewModel.client!!.authUrl())
+                .setData(client.authUrl())
                 .also { startActivity(it) }
         }
 
@@ -87,9 +92,9 @@ class SignInFragment : BaseFragment() {
                 }.show()
         }
 
-        binding.clientId.editText!!.hideKeyboardWhenOffFocus()
-        binding.clientSecret.editText!!.hideKeyboardWhenOffFocus()
-        binding.redirectUri.editText!!.hideKeyboardWhenOffFocus()
+        binding.clientId.editText?.hideKeyboardWhenOffFocus()
+        binding.clientSecret.editText?.hideKeyboardWhenOffFocus()
+        binding.redirectUri.editText?.hideKeyboardWhenOffFocus()
 
         if (binding.clientId.editText?.text.isNullOrEmpty()) {
             binding.clientId.editText?.setText(zechs.drive.stream.utils.util.Constants.DEFAULT_CLIENT_ID)
@@ -120,7 +125,7 @@ class SignInFragment : BaseFragment() {
                     isLoading(false)
                     Snackbar.make(
                         binding.root,
-                        response.message!!,
+                        response.message,
                         Snackbar.LENGTH_LONG
                     ).show()
                 }

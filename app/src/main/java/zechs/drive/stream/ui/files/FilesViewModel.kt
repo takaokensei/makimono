@@ -52,8 +52,8 @@ class FilesViewModel @Inject constructor(
                 pageToken = null,
                 pageSize = 10
             )
-            if (res is Resource.Success && !res.data?.files.isNullOrEmpty()) {
-                val videoFiles = res.data!!.files.map { it.toDriveFile() }
+            if (res is Resource.Success && res.data.files.isNotEmpty()) {
+                val videoFiles = res.data.files.map { it.toDriveFile() }
                     .sortedWith { a, b -> zechs.drive.stream.utils.EpisodeParser.naturalCompare(a.name, b.name) }
                 val firstEp = videoFiles.firstOrNull()
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
@@ -128,7 +128,7 @@ class FilesViewModel @Inject constructor(
 
         when (filesResponse) {
             is Resource.Success -> {
-                val files = filesResponse.data!!
+                val files = filesResponse.data
 
                 Log.d(TAG, files.toString())
 
@@ -145,7 +145,7 @@ class FilesViewModel @Inject constructor(
             }
             is Resource.Error -> {
                 _filesList.postValue(
-                    Resource.Error(message = filesResponse.message!!)
+                    Resource.Error(message = filesResponse.message)
                 )
             }
             else -> {}
@@ -160,7 +160,7 @@ class FilesViewModel @Inject constructor(
 
         when (drivesResponse) {
             is Resource.Success -> {
-                val teamDrives = drivesResponse.data!!
+                val teamDrives = drivesResponse.data
 
                 Log.d(TAG, teamDrives.toString())
 
@@ -175,7 +175,7 @@ class FilesViewModel @Inject constructor(
                 postSuccess(filesDataModel, sharedDrives)
             }
             is Resource.Error -> {
-                _filesList.postValue(Resource.Error(drivesResponse.message!!))
+                _filesList.postValue(Resource.Error(drivesResponse.message))
             }
             else -> {}
         }
@@ -185,15 +185,16 @@ class FilesViewModel @Inject constructor(
         filesDataModel: MutableList<FilesDataModel>,
         filesList: List<FilesDataModel.File>
     ) {
-        response = if (response == null) {
+        val existing = response
+        val updated: MutableList<FilesDataModel> = if (existing == null) {
             filesDataModel.addAll(filesList)
             filesDataModel
         } else {
             // append new list of files
-            response!!.addAll(filesList)
+            existing.addAll(filesList)
 
             // return new list and remove all Loading
-            response!!.filter {
+            existing.filter {
                 it != FilesDataModel.Loading
             }.toMutableList()
         }
@@ -201,20 +202,23 @@ class FilesViewModel @Inject constructor(
         // before submitting add Loading
         // if list is not at last page
         if (!isLastPage) {
-            response!!.add(FilesDataModel.Loading)
+            updated.add(FilesDataModel.Loading)
         }
+
+        response = updated
 
         if (isCurrentFolderOneBlacki) {
             attachCachedPostersAndResolveMissing()
         } else {
-            _filesList.postValue(Resource.Success(response!!))
+            _filesList.postValue(Resource.Success(updated))
         }
     }
 
     private fun attachCachedPostersAndResolveMissing() = viewModelScope.launch(Dispatchers.IO) {
         try {
             val allMeta = folderMetadataRepository.getAllMetadata().associateBy { it.folderId }
-            response?.let { list ->
+            val list = response
+            if (list != null) {
                 for (i in list.indices) {
                     val item = list[i]
                     if (item is FilesDataModel.File) {
@@ -230,12 +234,18 @@ class FilesViewModel @Inject constructor(
                     }
                 }
             }
-            _filesList.postValue(Resource.Success(response!!.toList()))
+            val snapshot = response
+            if (snapshot != null) {
+                _filesList.postValue(Resource.Success(snapshot.toList()))
+            }
 
             resolveMissingOneBlackiPosters()
         } catch (e: Exception) {
             Log.e(TAG, "Error attaching cached posters in oneblacki", e)
-            _filesList.postValue(Resource.Success(response!!))
+            val fallback = response
+            if (fallback != null) {
+                _filesList.postValue(Resource.Success(fallback))
+            }
         }
     }
 
@@ -283,14 +293,14 @@ class FilesViewModel @Inject constructor(
                 val fileToken = FileToken(
                     fileId = file.id,
                     fileName = file.name,
-                    accessToken = tokenResponse.data!!.accessToken,
+                    accessToken = tokenResponse.data.accessToken,
                     thumbnailLink = file.thumbnailLink
                 )
                 _token.postValue(Event(Resource.Success(fileToken)))
             }
             is Resource.Error -> {
                 _token.postValue(
-                    Event(Resource.Error(tokenResponse.message!!))
+                    Event(Resource.Error(tokenResponse.message))
                 )
             }
             else -> {}
@@ -306,18 +316,18 @@ class FilesViewModel @Inject constructor(
         starred: Boolean
     ) = viewModelScope.launch(Dispatchers.IO) {
         fun updateFileState(starredStarred: Starred) {
-            response?.indexOfFirst {
+            val list = response
+            val index = list?.indexOfFirst {
                 if (it is FilesDataModel.File) {
                     it.driveFile.id == file.id
                 } else false
-            }?.let { index ->
-                if (index != -1) {
-                    val newFile = FilesDataModel.File(
-                        file.copy(starred = starredStarred)
-                    )
-                    response!![index] = newFile
-                    _filesList.postValue(Resource.Success(response!!))
-                }
+            } ?: -1
+            if (list != null && index != -1) {
+                val newFile = FilesDataModel.File(
+                    file.copy(starred = starredStarred)
+                )
+                list[index] = newFile
+                _filesList.postValue(Resource.Success(list))
             }
         }
 
@@ -335,7 +345,7 @@ class FilesViewModel @Inject constructor(
             )
             when (update) {
                 is Resource.Error -> {
-                    _fileUpdate.emit(update.message!!)
+                    _fileUpdate.emit(update.message)
                     updateFileState(if (starred) Starred.UNSTARRED else Starred.STARRED)
                 }
                 is Resource.Success -> {

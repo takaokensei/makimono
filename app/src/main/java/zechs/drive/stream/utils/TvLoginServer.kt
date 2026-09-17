@@ -37,7 +37,8 @@ class TvLoginServer(
         private set
 
     fun start(scope: CoroutineScope): Boolean {
-        if (serverSocket != null && !serverSocket!!.isClosed) {
+        val existingSocket = serverSocket
+        if (existingSocket != null && !existingSocket.isClosed) {
             Log.d(TAG, "Server already running on port $boundPort")
             return true
         }
@@ -64,14 +65,19 @@ class TvLoginServer(
         Log.i(TAG, "TV Login Server listening on port $boundPort")
 
         serverJob = scope.launch(Dispatchers.IO) {
-            while (isActive && serverSocket != null && !serverSocket!!.isClosed) {
+            while (isActive) {
+                // Capture into a local val so a concurrent stop() nulling out
+                // `serverSocket` from another thread can't race us between
+                // the null/closed check and actually using the socket.
+                val activeSocket = serverSocket ?: break
+                if (activeSocket.isClosed) break
                 try {
-                    val clientSocket = serverSocket!!.accept()
+                    val clientSocket = activeSocket.accept()
                     launch(Dispatchers.IO) {
                         handleClient(clientSocket)
                     }
                 } catch (e: Exception) {
-                    if (!isActive || serverSocket?.isClosed == true) break
+                    if (!isActive || activeSocket.isClosed) break
                     Log.e(TAG, "Error accepting client", e)
                 }
             }

@@ -270,7 +270,7 @@ class HomeViewModel @Inject constructor(
                 val fileToken = FileToken(
                     fileId = fileId,
                     fileName = fileName,
-                    accessToken = tokenResponse.data!!.accessToken,
+                    accessToken = tokenResponse.data.accessToken,
                     thumbnailLink = thumbnailLink
                 )
                 _token.postValue(Event(Resource.Success(fileToken)))

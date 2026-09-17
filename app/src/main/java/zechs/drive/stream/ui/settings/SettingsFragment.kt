@@ -385,7 +385,7 @@ class SettingsFragment : BaseFragment() {
 
                 is Resource.Success -> {
                     isChecking(false)
-                    val release = state.data!!
+                    val release = state.data
                     if (release.isLatest() && isUserClick) {
                         showSnackBar("You are already on the latest version")
                     }
@@ -520,6 +520,7 @@ class SettingsFragment : BaseFragment() {
                     }
                 }
             } catch (e: Exception) {
+                Log.e(TAG, "Error transferring MAL login to TV", e)
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     showSnackBar("Erro ao transferir: ${e.message}")
                 }

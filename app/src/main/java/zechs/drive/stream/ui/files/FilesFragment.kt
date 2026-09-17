@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.AbsListView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.view.isGone
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
@@ -335,8 +336,9 @@ class FilesFragment : BaseFragment() {
     }
 
     private fun filterFiles(query: String) {
-        val baseList = if (selectedSeason != null && selectedSeason?.id != "season_all" && selectedSeason?.fileItems?.isNotEmpty() == true) {
-            selectedSeason!!.fileItems
+        val season = selectedSeason
+        val baseList = if (season != null && season.id != "season_all" && season.fileItems.isNotEmpty()) {
+            season.fileItems
         } else {
             allFilesList
         }
@@ -461,7 +463,15 @@ class FilesFragment : BaseFragment() {
             handleSubtitleFileClick(file)
         } else if (file.isShortcut) {
             if (file.isShortcutFolder) {
-                val targetId = file.shortcutDetails.targetId!!
+                val targetId = file.shortcutDetails.targetId
+                if (targetId == null) {
+                    Toast.makeText(
+                        requireContext(),
+                        getString(R.string.broken_shortcut_error),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return
+                }
                 viewModel.recordFolderOpened(targetId, file.name)
                 val isDriveRoot = args.name == getString(R.string.my_drive) ||
                         args.name == getString(R.string.shared_drives) ||
@@ -482,7 +492,16 @@ class FilesFragment : BaseFragment() {
                     findNavController().navigate(action)
                 }
             } else if (file.isShortcutVideo) {
-                val videoShortcutFile = file.copy(id = file.shortcutDetails.targetId!!)
+                val targetId = file.shortcutDetails.targetId
+                if (targetId == null) {
+                    Toast.makeText(
+                        requireContext(),
+                        getString(R.string.broken_shortcut_error),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return
+                }
+                val videoShortcutFile = file.copy(id = targetId)
                 launchVideoPlayer(videoShortcutFile)
             }
         }
@@ -541,11 +560,11 @@ class FilesFragment : BaseFragment() {
             event.getContentIfNotHandled()?.let { res ->
                 when (res) {
                     is Resource.Success -> {
-                        launchMpv(res.data!!)
+                        launchMpv(res.data)
                     }
 
                     is Resource.Error -> {
-                        showSnackBar(res.message!!)
+                        showSnackBar(res.message)
                     }
 
                     else -> {}

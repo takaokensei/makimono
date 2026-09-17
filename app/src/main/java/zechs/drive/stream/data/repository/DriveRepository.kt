@@ -182,9 +182,8 @@ class DriveRepository @Inject constructor(
     }
 
     private inline fun <reified T> doOnError(e: Exception): Resource<T> {
-        e.printStackTrace()
+        Log.e(TAG, "Drive API call failed: ${e.message}", e)
         val error = e.message ?: "An unknown error occurred."
-        Log.d(TAG, error)
         return Resource.Error(error)
     }
 
@@ -287,9 +286,10 @@ class DriveRepository @Inject constructor(
         val accessToken = getOrFetchAccessToken() ?: return null
         return try {
             val response = driveApi.downloadFile("Bearer $accessToken", sub.id)
-            if (response.isSuccessful && response.body() != null) {
+            val body = response.body()
+            if (response.isSuccessful && body != null) {
                 destFile.parentFile?.mkdirs()
-                response.body()!!.byteStream().use { input ->
+                body.byteStream().use { input ->
                     destFile.outputStream().use { output ->
                         input.copyTo(output)
                     }
