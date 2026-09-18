@@ -206,6 +206,11 @@ dependencies {
     implementation "com.google.dagger:hilt-android:2.51.1"
     kapt "com.google.dagger:hilt-compiler:2.51.1"
 
+    // WorkManager with Hilt integration — FEAT-05 new-episode background checks
+    implementation "androidx.work:work-runtime-ktx:2.9.0"
+    implementation "androidx.hilt:hilt-work:1.2.0"
+    kapt "androidx.hilt:hilt-compiler:1.2.0"
+
     // Splash
     implementation "androidx.core:core-splashscreen:1.0.1"
 

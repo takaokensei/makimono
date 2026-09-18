@@ -553,6 +553,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
     private fun setupGlobalSearchPipeline() {
         viewModelScope.launch {
             _searchQuery

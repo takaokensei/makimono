@@ -13,9 +13,10 @@ import zechs.drive.stream.data.model.WatchQueueItem
         FolderMetadata::class,
         FavoriteFolder::class,
         WatchQueueItem::class,
-        CatalogEntry::class
+        CatalogEntry::class,
+        FollowedFolder::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class WatchListDatabase : RoomDatabase() {
@@ -25,6 +26,7 @@ abstract class WatchListDatabase : RoomDatabase() {
     abstract fun getFavoriteDao(): FavoriteDao
     abstract fun getWatchQueueDao(): WatchQueueDao
     abstract fun getCatalogDao(): CatalogDao
+    abstract fun getFollowedFolderDao(): FollowedFolderDao
 
     companion object {
         /**
@@ -138,6 +140,29 @@ abstract class WatchListDatabase : RoomDatabase() {
                         PRIMARY KEY(`id`)
                     )
                     """.trimIndent()
+                )
+            }
+        }
+
+        /**
+         * v5 -> v6: FEAT-05 — Creates followed_folder table for periodic new-episode checks.
+         */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `followed_folder` (
+                        `profileId` TEXT NOT NULL,
+                        `folderId` TEXT NOT NULL,
+                        `folderName` TEXT NOT NULL,
+                        `lastKnownCount` INTEGER NOT NULL DEFAULT 0,
+                        `followedAt` INTEGER NOT NULL DEFAULT 0,
+                        PRIMARY KEY(`profileId`, `folderId`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_followed_folder_profileId` ON `followed_folder` (`profileId`)"
                 )
             }
         }

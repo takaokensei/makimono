@@ -9,12 +9,14 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import zechs.drive.stream.data.local.CatalogDao
 import zechs.drive.stream.data.local.FavoriteDao
+import zechs.drive.stream.data.local.FollowedFolderDao
 import zechs.drive.stream.data.local.FolderMetadataDao
 import zechs.drive.stream.data.local.WatchListDao
 import zechs.drive.stream.data.local.WatchListDatabase
 import zechs.drive.stream.data.local.WatchQueueDao
 import zechs.drive.stream.data.repository.CatalogRepository
 import zechs.drive.stream.data.repository.FavoriteRepository
+import zechs.drive.stream.data.repository.FollowedFolderRepository
 import zechs.drive.stream.data.repository.FolderMetadataRepository
 import zechs.drive.stream.data.repository.WatchListRepository
 import zechs.drive.stream.data.repository.WatchQueueRepository
@@ -40,7 +42,8 @@ object DatabaseModule {
             WatchListDatabase.MIGRATION_1_2,
             WatchListDatabase.MIGRATION_2_3,
             WatchListDatabase.MIGRATION_3_4,
-            WatchListDatabase.MIGRATION_4_5
+            WatchListDatabase.MIGRATION_4_5,
+            WatchListDatabase.MIGRATION_5_6
         )
         .build()
 
@@ -116,5 +119,18 @@ object DatabaseModule {
     fun provideCatalogRepository(
         catalogDao: CatalogDao
     ) = CatalogRepository(catalogDao)
+
+    @Singleton
+    @Provides
+    fun provideFollowedFolderDao(
+        db: WatchListDatabase
+    ): FollowedFolderDao = db.getFollowedFolderDao()
+
+    @Singleton
+    @Provides
+    fun provideFollowedFolderRepository(
+        followedFolderDao: FollowedFolderDao,
+        profileManager: ProfileManager
+    ) = FollowedFolderRepository(followedFolderDao, profileManager)
 
 }

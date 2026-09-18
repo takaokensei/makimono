@@ -56,5 +56,17 @@ class RoomMigrationTest {
             db.execSQL(match { it.contains("CREATE TABLE IF NOT EXISTS `favorite_folder_new`") })
         }
     }
-}
 
+    @Test
+    fun migration_5_6_createsFollowedFolderTable() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+        WatchListDatabase.MIGRATION_5_6.migrate(db)
+
+        verify(exactly = 1) {
+            db.execSQL(match { it.contains("CREATE TABLE IF NOT EXISTS `followed_folder`") })
+        }
+        verify(exactly = 1) {
+            db.execSQL(match { it.contains("CREATE INDEX IF NOT EXISTS `index_followed_folder_profileId`") })
+        }
+    }
+}

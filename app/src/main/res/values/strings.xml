@@ -96,4 +96,16 @@
     <string name="file_name_copied">Nome do arquivo copiado!</string>
     <string name="mal_anime_completed">MAL: Anime marcado como Completo! (Nota: %1$d/10)</string>
     <string name="mal_save_score_error">MAL: Erro ao salvar avaliação: %1$s</string>
+
+    <!-- FEAT-05: New-episode notification strings -->
+    <string name="notif_channel_new_episodes_name">Novos Episódios</string>
+    <string name="notif_channel_new_episodes_desc">Notificações quando novas pastas/episódios aparecem nas suas séries seguidas</string>
+    <string name="notif_new_episodes_title">Novidade em %1$s</string>
+    <plurals name="notif_new_episodes_body">
+        <item quantity="one">%1$d novo episódio disponível</item>
+        <item quantity="other">%1$d novos episódios disponíveis</item>
+    </plurals>
+    <string name="action_follow">Seguir série</string>
+    <string name="action_unfollow">Deixar de seguir</string>
+    <string name="following_series">Seguindo</string>
 </resources>
