@@ -286,9 +286,9 @@ object EpisodeParser {
     }
 
     private fun formatBadgeNumber(episode: Double?): String {
-        if (episode == null) return "1"
+        if (episode == null) return "01"
         return if (episode % 1.0 == 0.0) {
-            episode.toInt().toString()
+            String.format(Locale.ROOT, "%02d", episode.toInt())
         } else {
             episode.toString()
         }

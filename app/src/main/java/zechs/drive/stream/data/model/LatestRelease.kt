@@ -45,14 +45,17 @@ data class LatestRelease(
         val apkAssets = assets.filter { it.name.endsWith(".apk", ignoreCase = true) }
         if (apkAssets.isEmpty()) return null
 
-        val primaryAbi = if (Build.SUPPORTED_ABIS.isNotEmpty()) Build.SUPPORTED_ABIS[0] else ""
+        val supportedAbis = Build.SUPPORTED_ABIS ?: emptyArray()
+        val primaryAbi = supportedAbis.firstOrNull() ?: ""
 
         // 1. Try matching device's primary ABI
-        val abiMatch = apkAssets.firstOrNull { it.name.contains(primaryAbi, ignoreCase = true) }
-        if (abiMatch != null) return abiMatch
+        if (primaryAbi.isNotBlank()) {
+            val abiMatch = apkAssets.firstOrNull { it.name.contains(primaryAbi, ignoreCase = true) }
+            if (abiMatch != null) return abiMatch
+        }
 
         // 2. Try any supported ABI in preference order
-        for (abi in Build.SUPPORTED_ABIS) {
+        for (abi in supportedAbis) {
             val match = apkAssets.firstOrNull { it.name.contains(abi, ignoreCase = true) }
             if (match != null) return match
         }

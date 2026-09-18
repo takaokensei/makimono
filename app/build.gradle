@@ -131,6 +131,10 @@ android {
         buildConfig true
     }
 
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
+
     lintOptions {
         checkReleaseBuilds false
         abortOnError false
