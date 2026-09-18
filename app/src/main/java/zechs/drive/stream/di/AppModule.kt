@@ -26,8 +26,9 @@ object AppModule {
     @Provides
     fun provideSessionDataStore(
         @ApplicationContext appContext: Context,
-        gson: Gson
-    ): SessionManager = SessionManager(appContext, gson)
+        gson: Gson,
+        secretStore: zechs.drive.stream.utils.EncryptedSessionStore
+    ): SessionManager = SessionManager(appContext, gson, secretStore)
 
     @Singleton
     @Provides
