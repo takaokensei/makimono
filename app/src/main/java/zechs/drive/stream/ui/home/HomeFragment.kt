@@ -52,6 +52,7 @@ class HomeFragment : BaseFragment() {
     private var currentTab = "Início"
     private var isSidebarExpanded = false
     private var lastFocusedAnimeView: View? = null
+    private var lastFocusedItemId: String? = null
 
     private val voiceSearchLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
@@ -368,9 +369,23 @@ class HomeFragment : BaseFragment() {
             }
         }
 
+        // Wire up mobile bottom navigation bar
+        binding.bottomNavInicio?.setOnClickListener { binding.btnNavInicio.performClick() }
+        binding.bottomNavAnimes?.setOnClickListener { binding.btnNavAnimes.performClick() }
+        binding.bottomNavPastas?.setOnClickListener { binding.btnNavPastas.performClick() }
+        binding.bottomNavFavoritos?.setOnClickListener { binding.btnNavFavoritos.performClick() }
+        binding.bottomNavConfig?.setOnClickListener { binding.btnNavConfig.performClick() }
+
         // Setup D-pad Left on anime adapter to expand sidebar when on leftmost column
         animeAdapter.onFocusItemListener = { v ->
             lastFocusedAnimeView = v
+            val pos = binding.rvAnimeLibrary.getChildAdapterPosition(v)
+            if (pos != androidx.recyclerview.widget.RecyclerView.NO_POSITION && pos < animeAdapter.currentList.size) {
+                val item = animeAdapter.currentList[pos]
+                if (item is FilesDataModel.File) {
+                    lastFocusedItemId = item.driveFile.id
+                }
+            }
         }
 
         animeAdapter.onDpadLeftListener = { itemView ->
@@ -393,7 +408,20 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun isCollapsibleRail(): Boolean =
-        binding.sidebarDimOverlay != null
+        resources.getBoolean(R.bool.is_collapsible_rail)
+
+    override fun onResume() {
+        super.onResume()
+        if (!isCollapsibleRail()) {
+            // Restore stable focus on TV resume
+            val focusedView = lastFocusedAnimeView
+            if (focusedView != null && focusedView.isAttachedToWindow) {
+                focusedView.requestFocus()
+            } else {
+                focusContent()
+            }
+        }
+    }
 
     private fun focusCurrentNavItem() {
         val target = when (currentTab) {
@@ -661,6 +689,22 @@ class HomeFragment : BaseFragment() {
             btnNavFavoritos.setBackgroundResource(if (tab == "Favoritos") activeBg else normalBg)
             tvNavFavoritos.setTextColor(if (tab == "Favoritos") activeTextColor else normalTextColor)
             ivNavFavoritosIcon.imageTintList = android.content.res.ColorStateList.valueOf(if (tab == "Favoritos") activeIconColor else normalIconColor)
+
+            // Mobile Bottom Navigation Bar state
+            val bottomActiveColor = android.graphics.Color.parseColor("#22D3EE")
+            val bottomInactiveColor = android.graphics.Color.parseColor("#64748B")
+
+            ivBottomNavInicio?.imageTintList = android.content.res.ColorStateList.valueOf(if (tab == "Início") bottomActiveColor else bottomInactiveColor)
+            tvBottomNavInicio?.setTextColor(if (tab == "Início") bottomActiveColor else bottomInactiveColor)
+
+            ivBottomNavAnimes?.imageTintList = android.content.res.ColorStateList.valueOf(if (tab == "Animes") bottomActiveColor else bottomInactiveColor)
+            tvBottomNavAnimes?.setTextColor(if (tab == "Animes") bottomActiveColor else bottomInactiveColor)
+
+            ivBottomNavPastas?.imageTintList = android.content.res.ColorStateList.valueOf(if (tab == "Pastas") bottomActiveColor else bottomInactiveColor)
+            tvBottomNavPastas?.setTextColor(if (tab == "Pastas") bottomActiveColor else bottomInactiveColor)
+
+            ivBottomNavFavoritos?.imageTintList = android.content.res.ColorStateList.valueOf(if (tab == "Favoritos") bottomActiveColor else bottomInactiveColor)
+            tvBottomNavFavoritos?.setTextColor(if (tab == "Favoritos") bottomActiveColor else bottomInactiveColor)
         }
     }
 

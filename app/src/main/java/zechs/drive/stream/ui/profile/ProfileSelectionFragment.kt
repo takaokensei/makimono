@@ -9,6 +9,7 @@ import android.widget.RadioGroup
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.core.view.doOnPreDraw
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -97,10 +98,13 @@ class ProfileSelectionFragment : BaseFragment() {
                     }
                     items.add(ProfileUiModel.AddProfileItem)
                     profilesAdapter.submitList(items) {
-                        binding.rvProfiles.postDelayed({
-                            val firstChild = binding.rvProfiles.layoutManager?.findViewByPosition(0)
-                            firstChild?.requestFocus()
-                        }, 200L)
+                        binding.rvProfiles.doOnPreDraw {
+                            val targetPos = items.indexOfFirst {
+                                it is ProfileUiModel.ProfileItem && it.isActive
+                            }.takeIf { it != -1 } ?: 0
+                            val child = binding.rvProfiles.layoutManager?.findViewByPosition(targetPos)
+                            child?.requestFocus()
+                        }
                     }
                 }
             }

@@ -890,11 +890,4 @@
 
     </LinearLayout>
 
-    <!-- Kept as an invisible compatibility hook for variants with a collapsible rail. -->
-    <View
-        android:id="@+id/sidebarDimOverlay"
-        android:layout_width="1dp"
-        android:layout_height="1dp"
-        android:visibility="gone" />
-
 </FrameLayout>
