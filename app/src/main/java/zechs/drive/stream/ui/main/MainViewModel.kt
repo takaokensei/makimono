@@ -6,6 +6,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -67,6 +68,7 @@ class MainViewModel @Inject constructor(
                     _hasLoggedIn.value = status
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.e("MainViewModel", "Login init error", e)
             } finally {
                 delay(150L)
@@ -103,6 +105,7 @@ class MainViewModel @Inject constructor(
                 _theme.emit(fetchTheme)
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e("MainViewModel", "getTheme error", e)
         }
     }
@@ -113,6 +116,7 @@ class MainViewModel @Inject constructor(
             currentThemeIndex = theme.value
             _theme.emit(theme)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e("MainViewModel", "setTheme error", e)
         }
     }
@@ -128,6 +132,7 @@ class MainViewModel @Inject constructor(
             currentPlayerIndex = player
             Log.d("MainViewModel", "Loaded default player: $player")
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e("MainViewModel", "getPlayer error", e)
         }
     }
@@ -138,6 +143,7 @@ class MainViewModel @Inject constructor(
             try {
                 appSettings.savePlayer(player)
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.e("MainViewModel", "savePlayer error", e)
             }
         }

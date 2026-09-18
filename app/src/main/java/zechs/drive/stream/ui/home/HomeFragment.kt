@@ -222,7 +222,7 @@ class HomeFragment : BaseFragment() {
         } catch (e: android.content.ActivityNotFoundException) {
             android.widget.Toast.makeText(
                 context,
-                "Pesquisa por voz não suportada neste dispositivo",
+                getString(R.string.voice_search_not_supported),
                 android.widget.Toast.LENGTH_SHORT
             ).show()
         }
@@ -891,7 +891,7 @@ class HomeFragment : BaseFragment() {
                 startActivity(intent)
             }
             zechs.drive.stream.utils.VideoPlayer.MPV -> {
-                android.widget.Toast.makeText(requireContext(), "Iniciando MPV Player...", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(requireContext(), getString(R.string.starting_mpv), android.widget.Toast.LENGTH_SHORT).show()
                 viewModel.fetchToken(fileId, file.name, thumb)
             }
         }
@@ -942,7 +942,7 @@ class HomeFragment : BaseFragment() {
                 startActivity(intent)
             }
             zechs.drive.stream.utils.VideoPlayer.MPV -> {
-                android.widget.Toast.makeText(requireContext(), "Iniciando MPV Player...", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(requireContext(), getString(R.string.starting_mpv), android.widget.Toast.LENGTH_SHORT).show()
                 pendingMpvStartPosition = startPos
                 viewModel.fetchToken(watchItem.videoId, watchItem.name, watchItem.thumbnailLink)
             }

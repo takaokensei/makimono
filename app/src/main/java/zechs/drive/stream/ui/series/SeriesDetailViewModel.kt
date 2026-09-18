@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -100,6 +101,7 @@ class SeriesDetailViewModel @Inject constructor(
                         val arcs = tenraiAnimeService.resolveFranchiseArcs(seriesTitle)
                         details to arcs
                     } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         Log.w(TAG, "Tenrai fetch error: ${e.message}")
                         null to emptyList()
                     }
@@ -109,6 +111,7 @@ class SeriesDetailViewModel @Inject constructor(
                     try {
                         animePosterResolver.resolveMetadata(seriesTitle)
                     } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         Log.w(TAG, "AniList metadata fetch error: ${e.message}")
                         null
                     }
@@ -188,6 +191,7 @@ class SeriesDetailViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.e(TAG, "Error loading series details", e)
                 withContext(Dispatchers.Main) {
                     _uiState.value = SeriesDetailUiState.Error(e.message ?: "Erro ao carregar detalhes da série.")
@@ -403,6 +407,7 @@ class SeriesDetailViewModel @Inject constructor(
                 _uiState.value = currentState.copy(isStarred = newStarred)
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Error toggling star", e)
         }
     }
@@ -474,6 +479,7 @@ class SeriesDetailViewModel @Inject constructor(
                 )
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Error setting episode watched state", e)
         }
     }

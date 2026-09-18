@@ -3,6 +3,7 @@ package zechs.drive.stream.utils
 import android.content.Context
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -72,6 +73,7 @@ class OnlineSubtitleManager @Inject constructor(
                 }
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.w(TAG, "Cinemeta series search error: ${e.message}")
         }
 
@@ -97,6 +99,7 @@ class OnlineSubtitleManager @Inject constructor(
                 }
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.w(TAG, "Cinemeta movie search error: ${e.message}")
         }
 
@@ -184,6 +187,7 @@ class OnlineSubtitleManager @Inject constructor(
                     .thenBy { it.langName }
             )
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Error fetching subtitles from OpenSubtitles", e)
             emptyList()
         }
@@ -293,14 +297,9 @@ class OnlineSubtitleManager @Inject constructor(
             Log.d(TAG, "Subtitle downloaded and permanently saved: ${targetFile.absolutePath} (${targetFile.length()} bytes)")
             Result.success(targetFile)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Failed to download online subtitle", e)
             Result.failure(e)
         }
     }
-
-    suspend fun downloadSubtitle(
-        sub: OnlineSubtitle,
-        cacheDir: File?,
-        filenamePrefix: String
-    ): Result<File> = downloadSubtitle(sub, filenamePrefix)
 }

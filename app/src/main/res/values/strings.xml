@@ -84,4 +84,16 @@
     <string name="animes">Animes</string>
     <string name="back">Voltar</string>
     <string name="search">Buscar</string>
+    <string name="searching_episode">Buscando episódio…</string>
+    <string name="starting_mpv">Iniciando MPV Player…</string>
+    <string name="voice_search_not_supported">Pesquisa por voz não suportada neste dispositivo</string>
+    <string name="no_audio_tracks">Nenhuma faixa de áudio encontrada</string>
+    <string name="switching_to_mpv">Alternando para MPV Player…</string>
+    <string name="no_episodes_available">Nenhum episódio disponível</string>
+    <string name="trailer_not_opened">Não foi possível abrir o trailer</string>
+    <string name="trailer_not_available">Trailer não disponível nesta pasta</string>
+    <string name="season_marked_watched">Temporada marcada como assistida!</string>
+    <string name="file_name_copied">Nome do arquivo copiado!</string>
+    <string name="mal_anime_completed">MAL: Anime marcado como Completo! (Nota: %1$d/10)</string>
+    <string name="mal_save_score_error">MAL: Erro ao salvar avaliação: %1$s</string>
 </resources>

@@ -32,6 +32,10 @@ object MediaImageLoader {
             return
         }
 
+        val thumbnailRequest = GlideApp.with(view)
+            .load(url)
+            .sizeMultiplier(0.18f)
+
         GlideApp.with(view)
             .load(url)
             .override(width, height)
@@ -39,7 +43,7 @@ object MediaImageLoader {
             .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
             .placeholder(placeholder)
             .error(placeholder)
-            .thumbnail(0.18f)
+            .thumbnail(thumbnailRequest)
             .transition(DrawableTransitionOptions.withCrossFade(160))
             .into(view)
     }

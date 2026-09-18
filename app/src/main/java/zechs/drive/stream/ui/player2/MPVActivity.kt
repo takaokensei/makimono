@@ -1933,9 +1933,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                             val res = malRepository.get().completeAnimeWithScore(anime.id, anime.numEpisodes, score)
                             withContext(Dispatchers.Main) {
                                 if (res is zechs.drive.stream.utils.state.Resource.Success) {
-                                    android.widget.Toast.makeText(this@MPVActivity, "MAL: Anime marcado como Completo! (Nota: $score/10)", android.widget.Toast.LENGTH_LONG).show()
+                                    android.widget.Toast.makeText(this@MPVActivity, getString(R.string.mal_anime_completed, score), android.widget.Toast.LENGTH_LONG).show()
                                 } else {
-                                    android.widget.Toast.makeText(this@MPVActivity, "MAL: Erro ao salvar avaliação: ${res.message}", android.widget.Toast.LENGTH_SHORT).show()
+                                    android.widget.Toast.makeText(this@MPVActivity, getString(R.string.mal_save_score_error, res.message ?: ""), android.widget.Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }

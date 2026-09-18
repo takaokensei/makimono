@@ -1415,9 +1415,9 @@ class PlayerActivity : AppCompatActivity() {
                             val res = malRepository.get().completeAnimeWithScore(anime.id, anime.numEpisodes, score)
                             withContext(Dispatchers.Main) {
                                 if (res is Resource.Success) {
-                                    Toast.makeText(this@PlayerActivity, "MAL: Anime marcado como Completo! (Nota: $score/10)", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(this@PlayerActivity, getString(R.string.mal_anime_completed, score), Toast.LENGTH_LONG).show()
                                 } else {
-                                    Toast.makeText(this@PlayerActivity, "MAL: Erro ao salvar avaliação: ${res.message}", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(this@PlayerActivity, getString(R.string.mal_save_score_error, res.message ?: ""), Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }
@@ -1872,7 +1872,7 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         if (audioItems.isEmpty()) {
-            Toast.makeText(this, "Nenhuma faixa de áudio encontrada", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.no_audio_tracks), Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -2481,7 +2481,7 @@ class PlayerActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                Toast.makeText(this@PlayerActivity, "Alternando para MPV Player...", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@PlayerActivity, getString(R.string.switching_to_mpv), Toast.LENGTH_SHORT).show()
                 val client = sessionManager.get().fetchClient()
                 if (client != null) {
                     val tokenRes = driveRepository.get().fetchAccessToken(client)

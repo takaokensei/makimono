@@ -54,7 +54,7 @@ class AuthenticatingDataSource(
                 val token = runBlocking {
                     driveRepository.fetchAccessToken(client, forceRefresh = e.responseCode == 401)
                 }
-                if (token is Resource.Success && token.data != null) {
+                if (token is Resource.Success) {
                     wrappedDataSource.setRequestProperty(
                         "Authorization", "Bearer ${token.data.accessToken}"
                     )

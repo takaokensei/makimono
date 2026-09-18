@@ -262,7 +262,7 @@ class SeriesDetailFragment : BaseFragment() {
         binding.tvPrimaryActionSubtitle.text = state.continueWatchingSubtitle
         binding.btnPrimaryAction.setOnClickListener {
             state.continueWatchingItem?.let { playEpisode(it) }
-                ?: Toast.makeText(requireContext(), "Nenhum episódio disponível", Toast.LENGTH_SHORT).show()
+                ?: Toast.makeText(requireContext(), getString(R.string.no_episodes_available), Toast.LENGTH_SHORT).show()
         }
 
         binding.btnTrailer.setOnClickListener {
@@ -279,10 +279,10 @@ class SeriesDetailFragment : BaseFragment() {
                         startActivity(intent)
                     } catch (e: Exception) {
                         Log.w("SeriesDetail", "Could not open trailer url: $trailerUrl", e)
-                        Toast.makeText(requireContext(), "Não foi possível abrir o trailer", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), getString(R.string.trailer_not_opened), Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    Toast.makeText(requireContext(), "Trailer não disponível nesta pasta", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.trailer_not_available), Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -296,7 +296,7 @@ class SeriesDetailFragment : BaseFragment() {
         // Mark Watched button
         binding.btnMarkWatched.setOnClickListener {
             viewModel.markSeasonWatched()
-            Toast.makeText(requireContext(), "Temporada marcada como assistida!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.season_marked_watched), Toast.LENGTH_SHORT).show()
         }
 
         // 6. Season Tabs
@@ -367,7 +367,7 @@ class SeriesDetailFragment : BaseFragment() {
         actions.add {
             val cm = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
             cm?.setPrimaryClip(ClipData.newPlainText("Arquivo", item.file.name))
-            Toast.makeText(requireContext(), "Nome do arquivo copiado!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.file_name_copied), Toast.LENGTH_SHORT).show()
         }
 
         MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)

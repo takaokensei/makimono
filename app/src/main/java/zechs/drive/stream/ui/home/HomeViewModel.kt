@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.Lazy
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -90,6 +91,7 @@ class HomeViewModel @Inject constructor(
             val updated = _recentWatches.value.filter { it.videoId != watchItem.videoId }
             _recentWatches.value = updated
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Error removing watch item", e)
         }
     }
@@ -105,6 +107,7 @@ class HomeViewModel @Inject constructor(
             val updated = _recentWatches.value.filter { it.videoId != watchItem.videoId }
             _recentWatches.value = updated
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Error marking watch item finished", e)
         }
     }
@@ -113,6 +116,7 @@ class HomeViewModel @Inject constructor(
         try {
             folderMetadataRepository.recordFolderOpened(folderId, folderName)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Error recording folder opened", e)
         }
     }
@@ -184,6 +188,7 @@ class HomeViewModel @Inject constructor(
                 }
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Error finding oneblacki folder", e)
         }
 
@@ -229,6 +234,7 @@ class HomeViewModel @Inject constructor(
                 resolveMissingPosters(filesWithPosters)
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Error fetching starred files", e)
         }
     }
@@ -371,6 +377,7 @@ class HomeViewModel @Inject constructor(
                     _isLoadingAnime.value = false
                 }
                 } catch (e: Exception) {
+                    if (e is CancellationException) throw e
                     Log.e(TAG, "Error loading anime library", e)
                     _isLoadingAnime.value = false
                 }
@@ -428,6 +435,7 @@ class HomeViewModel @Inject constructor(
                 )
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Error resolving featured spotlight", e)
             _featuredAnime.value = FeaturedAnime(
                 title = chosenFolder.name,
@@ -611,6 +619,7 @@ class HomeViewModel @Inject constructor(
                 }
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Error resolving episode to play", e)
         }
         kotlinx.coroutines.withContext(Dispatchers.Main) {

@@ -7,6 +7,10 @@ import zechs.drive.stream.data.remote.DriveApi
 import zechs.drive.stream.data.remote.TokenApi
 import zechs.drive.stream.utils.SessionManager
 import zechs.drive.stream.utils.state.Resource
+import kotlinx.coroutines.CancellationException
+import retrofit2.HttpException
+import java.io.IOException
+import java.net.SocketTimeoutException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -189,8 +193,22 @@ class DriveRepository @Inject constructor(
     }
 
     private inline fun <reified T> doOnError(e: Exception): Resource<T> {
+        if (e is CancellationException) throw e
         Log.e(TAG, "Drive API call failed: ${e.message}", e)
-        val error = e.message ?: "An unknown error occurred."
+        val error = when (e) {
+            is HttpException -> {
+                when (e.code()) {
+                    401 -> "Sessão expirada ou não autorizada (401)"
+                    403 -> "Acesso negado ou limite de requisições excedido (403)"
+                    404 -> "Recurso não encontrado no Google Drive (404)"
+                    in 500..599 -> "Servidor do Google Drive indisponível (${e.code()})"
+                    else -> "Erro na comunicação com o Google Drive (${e.code()})"
+                }
+            }
+            is SocketTimeoutException -> "Tempo limite de conexão esgotado"
+            is IOException -> "Falha de conexão com a rede: ${e.localizedMessage ?: "Verifique sua internet"}"
+            else -> e.localizedMessage ?: "Ocorreu um erro desconhecido."
+        }
         return Resource.Error(error)
     }
 
@@ -246,6 +264,7 @@ class DriveRepository @Inject constructor(
                 zechs.drive.stream.utils.EpisodeParser.naturalCompare(a.title, b.title)
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.w(TAG, "Failed to get sibling files for fileId=$fileId: ${e.message}")
             emptyList()
         }
@@ -278,6 +297,7 @@ class DriveRepository @Inject constructor(
                 )
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.w(TAG, "Failed to get subtitles for fileId=$fileId: ${e.message}")
             emptyList()
         }
@@ -308,6 +328,7 @@ class DriveRepository @Inject constructor(
                 null
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Exception downloading subtitle ${sub.name}", e)
             null
         }

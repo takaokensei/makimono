@@ -14,6 +14,10 @@ import zechs.drive.stream.data.remote.MalApi
 import zechs.drive.stream.utils.MalSessionManager
 import zechs.drive.stream.utils.state.Resource
 import zechs.drive.stream.utils.util.Constants
+import kotlinx.coroutines.CancellationException
+import retrofit2.HttpException
+import java.io.IOException
+import java.net.SocketTimeoutException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,6 +30,23 @@ class MalRepository @Inject constructor(
 
     companion object {
         private const val TAG = "MalRepository"
+    }
+
+    private fun mapError(e: Exception, defaultMessage: String): String {
+        return when (e) {
+            is HttpException -> {
+                when (e.code()) {
+                    401 -> "Autenticação expirada no MyAnimeList (401)"
+                    403 -> "Acesso não autorizado no MyAnimeList (403)"
+                    404 -> "Item não encontrado no MyAnimeList (404)"
+                    in 500..599 -> "Servidor do MyAnimeList indisponível (${e.code()})"
+                    else -> "Erro na comunicação com MyAnimeList (${e.code()})"
+                }
+            }
+            is SocketTimeoutException -> "Tempo limite de conexão esgotado ao contatar MyAnimeList"
+            is IOException -> "Falha de conexão com MyAnimeList: ${e.localizedMessage ?: "Verifique sua internet"}"
+            else -> e.localizedMessage ?: defaultMessage
+        }
     }
 
     fun getAuthorizationUrl(codeVerifier: String): String {
@@ -63,8 +84,9 @@ class MalRepository @Inject constructor(
                 Resource.Error("Falha na autenticação do MAL: $err")
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Token exchange exception", e)
-            Resource.Error(e.localizedMessage ?: "Erro de conexão ao autenticar no MAL")
+            Resource.Error(mapError(e, "Erro de conexão ao autenticar no MAL"))
         }
     }
 
@@ -91,6 +113,7 @@ class MalRepository @Inject constructor(
                 Log.w(TAG, "Failed to refresh MAL token: ${response.code()}")
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Error refreshing MAL token", e)
         }
         return@withContext currentToken
@@ -106,6 +129,7 @@ class MalRepository @Inject constructor(
                 return@withContext body
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Error fetching user profile", e)
         }
         null
@@ -135,8 +159,9 @@ class MalRepository @Inject constructor(
                 Resource.Error("Erro na busca do MAL: ${response.code()}")
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Error searching MAL", e)
-            Resource.Error(e.localizedMessage ?: "Erro ao buscar anime no MAL")
+            Resource.Error(mapError(e, "Erro ao buscar anime no MAL"))
         }
     }
 
@@ -171,8 +196,9 @@ class MalRepository @Inject constructor(
                 Resource.Error("Falha ao atualizar MAL: $err")
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Exception scrobbling episode", e)
-            Resource.Error(e.localizedMessage ?: "Erro ao sincronizar com MAL")
+            Resource.Error(mapError(e, "Erro ao sincronizar com MAL"))
         }
     }
 
@@ -200,8 +226,9 @@ class MalRepository @Inject constructor(
                 Resource.Error("Falha ao finalizar anime no MAL: $err")
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Exception completing anime", e)
-            Resource.Error(e.localizedMessage ?: "Erro ao salvar avaliação no MAL")
+            Resource.Error(mapError(e, "Erro ao salvar avaliação no MAL"))
         }
     }
 }

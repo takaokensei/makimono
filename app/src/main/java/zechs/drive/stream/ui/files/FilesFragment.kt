@@ -413,7 +413,7 @@ class FilesFragment : BaseFragment() {
             val folderId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
                 file.shortcutDetails.targetId
             } else file.id
-            android.widget.Toast.makeText(context, "Buscando episódio...", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(context, getString(R.string.searching_episode), android.widget.Toast.LENGTH_SHORT).show()
             viewModel.getFirstEpisodeInFolder(folderId) { firstEp ->
                 if (firstEp != null) {
                     launchVideoPlayer(firstEp)
@@ -549,7 +549,7 @@ class FilesFragment : BaseFragment() {
         when (mainViewModel.currentPlayerIndex) {
             VideoPlayer.EXO_PLAYER -> launchExo(file)
             VideoPlayer.MPV -> {
-                android.widget.Toast.makeText(context, "Iniciando MPV Player...", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, getString(R.string.starting_mpv), android.widget.Toast.LENGTH_SHORT).show()
                 viewModel.fetchToken(file)
             }
         }
