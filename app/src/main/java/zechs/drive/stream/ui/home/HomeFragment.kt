@@ -288,6 +288,9 @@ class HomeFragment : BaseFragment() {
         }
 
         binding.apply {
+            btnHamburgerMenu?.setOnClickListener {
+                toggleSidebar()
+            }
             btnBrandLogo.setOnClickListener {
                 if (hasOverlay) toggleSidebar() else focusCurrentNavItem()
             }
@@ -317,6 +320,7 @@ class HomeFragment : BaseFragment() {
 
             btnNavPastas.setOnClickListener {
                 selectTab("Pastas")
+                if (hasOverlay) collapseSidebar()
                 val action = HomeFragmentDirections.actionHomeFragmentToFilesFragment(
                     name = getString(R.string.my_drive),
                     query = "'root' in parents and trashed = false"
@@ -332,6 +336,7 @@ class HomeFragment : BaseFragment() {
             }
 
             btnNavConfig.setOnClickListener {
+                if (hasOverlay) collapseSidebar()
                 findNavController().navigateSafe(R.id.action_homeFragment_to_settingsFragment)
             }
 
@@ -388,7 +393,7 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun isCollapsibleRail(): Boolean =
-        binding.sidebarDimOverlay?.visibility == View.VISIBLE
+        binding.sidebarDimOverlay != null
 
     private fun focusCurrentNavItem() {
         val target = when (currentTab) {

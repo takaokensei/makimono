@@ -64,9 +64,14 @@ class ProfileSelectionFragment : BaseFragment() {
             }
         )
 
+        val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         binding.rvProfiles.apply {
             adapter = profilesAdapter
-            layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+            layoutManager = if (isLandscape) {
+                LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+            } else {
+                androidx.recyclerview.widget.GridLayoutManager(requireContext(), 2)
+            }
         }
     }
 

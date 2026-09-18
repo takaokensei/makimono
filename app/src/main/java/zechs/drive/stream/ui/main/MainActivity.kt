@@ -27,12 +27,14 @@ import android.view.View
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import android.content.res.Configuration
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.PlaybackException
 import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
@@ -431,6 +433,13 @@ class MainActivity : AppCompatActivity() {
         isVinhetaDismissed = false
 
         try {
+            val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+            binding.pvVinheta.resizeMode = if (isLandscape) {
+                AspectRatioFrameLayout.RESIZE_MODE_FIT
+            } else {
+                AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+            }
+
             val vinhetaUri = Uri.parse("android.resource://$packageName/${R.raw.vinheta}")
             val player = ExoPlayer.Builder(this).build().apply {
                 setMediaItem(MediaItem.fromUri(vinhetaUri))

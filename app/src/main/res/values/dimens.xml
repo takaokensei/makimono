@@ -14,4 +14,10 @@
     <dimen name="tv_nav_icon_size">32dp</dimen>
     <dimen name="tv_shelf_card_width">300dp</dimen>
     <dimen name="tv_shelf_card_height">169dp</dimen>
+
+    <!-- Profile Selection (Default / Phone portrait) -->
+    <dimen name="profile_avatar_size">104dp</dimen>
+    <dimen name="profile_card_margin_horizontal">10dp</dimen>
+    <dimen name="profile_card_margin_vertical">10dp</dimen>
+    <dimen name="profile_title_size">26sp</dimen>
 </resources>
