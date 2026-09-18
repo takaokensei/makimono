@@ -2,17 +2,24 @@ package zechs.drive.stream.data.model
 
 import androidx.annotation.Keep
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import zechs.drive.stream.utils.ThumbnailUrl
 
 @Keep
-@Entity(tableName = "watch_list")
+@Entity(
+    tableName = "watch_list",
+    indices = [
+        Index(value = ["profileId", "videoId"])
+    ]
+)
 data class WatchList(
     val name: String,
     val videoId: String,
     val watchedDuration: Long,
     val totalDuration: Long,
     val thumbnailLink: String? = null,
+    val profileId: String = "caua",
     @PrimaryKey(autoGenerate = true) val id: Int? = null
 ) {
 

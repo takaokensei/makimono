@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zechs.drive.stream.R
-import zechs.drive.stream.data.local.WatchListDao
 import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.data.model.WatchList
 import zechs.drive.stream.data.remote.AnimeMetadata
@@ -21,6 +20,7 @@ import zechs.drive.stream.data.remote.AnimePosterResolver
 import zechs.drive.stream.data.remote.TenraiAnimeService
 import zechs.drive.stream.data.repository.DriveRepository
 import zechs.drive.stream.data.repository.FolderMetadataRepository
+import zechs.drive.stream.data.repository.WatchListRepository
 import zechs.drive.stream.ui.files.adapter.FilesDataModel
 import zechs.drive.stream.ui.series.adapter.SeasonTab
 import zechs.drive.stream.ui.series.adapter.SeriesEpisodeItem
@@ -59,7 +59,7 @@ sealed class SeriesDetailUiState {
 class SeriesDetailViewModel @Inject constructor(
     private val driveRepository: DriveRepository,
     private val tenraiAnimeService: TenraiAnimeService,
-    private val watchListDao: WatchListDao,
+    private val watchListRepository: WatchListRepository,
     private val folderMetadataRepository: FolderMetadataRepository,
     private val animePosterResolver: AnimePosterResolver,
     private val favoriteRepository: zechs.drive.stream.data.repository.FavoriteRepository
@@ -132,7 +132,7 @@ class SeriesDetailViewModel @Inject constructor(
                 val cachedPoster = initialPoster
                     ?: folderMetadataRepository.getMetadata(folderId)?.posterUrl
                 val videoIds = driveFiles.map { it.id }
-                val watchList = watchListDao.getWatches(videoIds)
+                val watchList = watchListRepository.getWatches(videoIds)
                 val watchMap = watchList.associateBy { it.videoId }
 
                 // Check folder star status (local favorite has precedence, fallback to Drive star)
@@ -429,7 +429,7 @@ class SeriesDetailViewModel @Inject constructor(
                 totalDuration = 24 * 60 * 1000L,
                 thumbnailLink = item.file.thumbnailLarge ?: item.file.thumbnailLink
             )
-            watchListDao.upsertWatch(watch)
+            watchListRepository.insertWatch(watch)
         }
 
         // Reload to update progress bars
@@ -447,9 +447,9 @@ class SeriesDetailViewModel @Inject constructor(
                     totalDuration = 24 * 60 * 1000L,
                     thumbnailLink = file.thumbnailLarge ?: file.thumbnailLink ?: file.posterUrl
                 )
-                watchListDao.upsertWatch(watch)
+                watchListRepository.insertWatch(watch)
             } else {
-                watchListDao.deleteWatchByVideoId(file.id)
+                watchListRepository.deleteWatchByVideoId(file.id)
             }
 
             val updatedAll = allEpisodeItems.map { ep ->

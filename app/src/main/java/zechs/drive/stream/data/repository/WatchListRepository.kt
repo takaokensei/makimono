@@ -2,24 +2,48 @@ package zechs.drive.stream.data.repository
 
 import zechs.drive.stream.data.local.WatchListDao
 import zechs.drive.stream.data.model.WatchList
+import zechs.drive.stream.utils.ProfileManager
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class WatchListRepository @Inject constructor(
-    private val watchListDao: WatchListDao
+    private val watchListDao: WatchListDao,
+    private val profileManager: ProfileManager
 ) {
 
-    suspend fun insertWatch(
-        watchList: WatchList
-    ) = watchListDao.upsertWatch(watchList)
+    private fun currentProfileId(): String = profileManager.getActiveProfile().id
 
-    suspend fun getWatch(videoId: String): WatchList? {
-        return watchListDao.getWatch(videoId)
+    suspend fun insertWatch(
+        watchList: WatchList,
+        profileId: String = currentProfileId()
+    ): Long {
+        val watchWithProfile = if (watchList.profileId.isBlank()) {
+            watchList.copy(profileId = profileId)
+        } else {
+            watchList
+        }
+        return watchListDao.upsertWatch(watchWithProfile)
     }
 
-    suspend fun getLastWatched(): WatchList? {
-        return watchListDao.getLastWatched()
+    suspend fun getWatch(
+        videoId: String,
+        profileId: String = currentProfileId()
+    ): WatchList? {
+        return watchListDao.getWatch(videoId, profileId)
+    }
+
+    suspend fun getWatches(
+        videoIds: List<String>,
+        profileId: String = currentProfileId()
+    ): List<WatchList> {
+        return watchListDao.getWatches(profileId, videoIds)
+    }
+
+    suspend fun getLastWatched(
+        profileId: String = currentProfileId()
+    ): WatchList? {
+        return watchListDao.getLastWatched(profileId)
     }
 
     /**
@@ -30,8 +54,11 @@ class WatchListRepository @Inject constructor(
      * doesn't starve the row down to fewer than [limit] entries when recent titles
      * happen to include several finished ones.
      */
-    suspend fun getRecentWatches(limit: Int = 10): List<WatchList> {
-        return watchListDao.getRecentWatches(limit * 2)
+    suspend fun getRecentWatches(
+        limit: Int = 10,
+        profileId: String = currentProfileId()
+    ): List<WatchList> {
+        return watchListDao.getRecentWatches(profileId, limit * 2)
             .filterNot { it.hasFinished() }
             .take(limit)
     }
@@ -39,5 +66,10 @@ class WatchListRepository @Inject constructor(
     suspend fun deleteWatch(
         watch: WatchList
     ) = watchListDao.deleteWatch(watch)
+
+    suspend fun deleteWatchByVideoId(
+        videoId: String,
+        profileId: String = currentProfileId()
+    ) = watchListDao.deleteWatchByVideoId(videoId, profileId)
 
 }

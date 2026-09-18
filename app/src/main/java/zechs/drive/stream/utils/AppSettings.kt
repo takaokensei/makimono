@@ -13,7 +13,8 @@ import javax.inject.Singleton
 
 @Singleton
 class AppSettings @Inject constructor(
-    @ApplicationContext appContext: Context
+    @ApplicationContext appContext: Context,
+    private val profileManager: ProfileManager
 ) {
 
     companion object {
@@ -24,25 +25,32 @@ class AppSettings @Inject constructor(
         const val APP_THEME = "APP_THEME"
         const val VIDEO_PLAYER = "VIDEO_PLAYER"
         const val LAST_UPDATED = "LAST_UPDATED"
+        const val SUBTITLE_SIZE = "SUBTITLE_SIZE"
+
+        fun profileThemeKey(profileId: String) = stringPreferencesKey("profile_${profileId}_theme")
+        fun profilePlayerKey(profileId: String) = stringPreferencesKey("profile_${profileId}_player")
+        fun profileSubtitleKey(profileId: String) = androidx.datastore.preferences.core.floatPreferencesKey("profile_${profileId}_sub_size")
     }
 
     private val sessionStore = appContext.appSettingsDataStore
 
-    suspend fun saveTheme(theme: AppTheme) {
-        val dataStoreKey = stringPreferencesKey(APP_THEME)
+    private fun currentProfileId(): String = profileManager.getActiveProfile().id
+
+    suspend fun saveTheme(theme: AppTheme, profileId: String = currentProfileId()) {
+        val dataStoreKey = profileThemeKey(profileId)
         sessionStore.edit { settings ->
             settings[dataStoreKey] = theme.text
         }
-        Log.d(TAG, "saveTheme: ${theme.text}")
+        Log.d(TAG, "saveTheme [profile=$profileId]: ${theme.text}")
     }
 
-    suspend fun fetchTheme(): AppTheme {
+    suspend fun fetchTheme(profileId: String = currentProfileId()): AppTheme {
         return try {
-            val dataStoreKey = stringPreferencesKey(APP_THEME)
+            val profileKey = profileThemeKey(profileId)
             val preferences = sessionStore.data.first()
-            val themeText = preferences[dataStoreKey]
+            val themeText = preferences[profileKey] ?: preferences[stringPreferencesKey(APP_THEME)]
             val appTheme = AppTheme.fromText(themeText)
-            Log.d(TAG, "fetchTheme: $appTheme")
+            Log.d(TAG, "fetchTheme [profile=$profileId]: $appTheme")
             appTheme
         } catch (e: Exception) {
             Log.e(TAG, "fetchTheme error, fallback to Kodi Estuary", e)
@@ -50,38 +58,41 @@ class AppSettings @Inject constructor(
         }
     }
 
-    suspend fun savePlayer(player: VideoPlayer) {
-        val dataStoreKey = stringPreferencesKey(VIDEO_PLAYER)
+    suspend fun savePlayer(player: VideoPlayer, profileId: String = currentProfileId()) {
+        val dataStoreKey = profilePlayerKey(profileId)
         sessionStore.edit { settings ->
             settings[dataStoreKey] = player.text
         }
-        Log.d(TAG, "savePlayer: ${player.text}")
+        Log.d(TAG, "savePlayer [profile=$profileId]: ${player.text}")
     }
 
-    suspend fun fetchPlayer(): VideoPlayer {
-        val dataStoreKey = stringPreferencesKey(VIDEO_PLAYER)
+    suspend fun fetchPlayer(profileId: String = currentProfileId()): VideoPlayer {
+        val profileKey = profilePlayerKey(profileId)
         val preferences = sessionStore.data.first()
-        val videoPlayer = when (preferences[dataStoreKey]) {
+        val playerText = preferences[profileKey] ?: preferences[stringPreferencesKey(VIDEO_PLAYER)]
+        val videoPlayer = when (playerText) {
             VideoPlayer.MPV.text -> VideoPlayer.MPV
             else -> VideoPlayer.EXO_PLAYER
         }
-        Log.d(TAG, "fetchPlayer: $videoPlayer")
+        Log.d(TAG, "fetchPlayer [profile=$profileId]: $videoPlayer")
         return videoPlayer
     }
 
-    suspend fun saveSubtitleSize(sizeSp: Float) {
-        val dataStoreKey = androidx.datastore.preferences.core.floatPreferencesKey("SUBTITLE_SIZE")
+    suspend fun saveSubtitleSize(sizeSp: Float, profileId: String = currentProfileId()) {
+        val dataStoreKey = profileSubtitleKey(profileId)
         sessionStore.edit { settings ->
             settings[dataStoreKey] = sizeSp
         }
-        Log.d(TAG, "saveSubtitleSize: $sizeSp")
+        Log.d(TAG, "saveSubtitleSize [profile=$profileId]: $sizeSp")
     }
 
-    suspend fun fetchSubtitleSize(): Float {
+    suspend fun fetchSubtitleSize(profileId: String = currentProfileId()): Float {
         return try {
-            val dataStoreKey = androidx.datastore.preferences.core.floatPreferencesKey("SUBTITLE_SIZE")
+            val profileKey = profileSubtitleKey(profileId)
             val preferences = sessionStore.data.first()
-            preferences[dataStoreKey] ?: 20f
+            preferences[profileKey]
+                ?: preferences[androidx.datastore.preferences.core.floatPreferencesKey(SUBTITLE_SIZE)]
+                ?: 20f
         } catch (e: Exception) {
             20f
         }

@@ -7,9 +7,18 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import zechs.drive.stream.data.local.CatalogDao
+import zechs.drive.stream.data.local.FavoriteDao
+import zechs.drive.stream.data.local.FolderMetadataDao
 import zechs.drive.stream.data.local.WatchListDao
 import zechs.drive.stream.data.local.WatchListDatabase
+import zechs.drive.stream.data.local.WatchQueueDao
+import zechs.drive.stream.data.repository.CatalogRepository
+import zechs.drive.stream.data.repository.FavoriteRepository
+import zechs.drive.stream.data.repository.FolderMetadataRepository
 import zechs.drive.stream.data.repository.WatchListRepository
+import zechs.drive.stream.data.repository.WatchQueueRepository
+import zechs.drive.stream.utils.ProfileManager
 import javax.inject.Singleton
 
 @Module
@@ -30,7 +39,8 @@ object DatabaseModule {
         .addMigrations(
             WatchListDatabase.MIGRATION_1_2,
             WatchListDatabase.MIGRATION_2_3,
-            WatchListDatabase.MIGRATION_3_4
+            WatchListDatabase.MIGRATION_3_4,
+            WatchListDatabase.MIGRATION_4_5
         )
         .build()
 
@@ -46,7 +56,7 @@ object DatabaseModule {
     @Provides
     fun provideFolderMetadataDao(
         db: WatchListDatabase
-    ): zechs.drive.stream.data.local.FolderMetadataDao {
+    ): FolderMetadataDao {
         return db.getFolderMetadataDao()
     }
 
@@ -54,26 +64,57 @@ object DatabaseModule {
     @Provides
     fun provideFavoriteDao(
         db: WatchListDatabase
-    ): zechs.drive.stream.data.local.FavoriteDao {
+    ): FavoriteDao {
         return db.getFavoriteDao()
     }
 
     @Singleton
     @Provides
+    fun provideWatchQueueDao(
+        db: WatchListDatabase
+    ): WatchQueueDao {
+        return db.getWatchQueueDao()
+    }
+
+    @Singleton
+    @Provides
+    fun provideCatalogDao(
+        db: WatchListDatabase
+    ): CatalogDao {
+        return db.getCatalogDao()
+    }
+
+    @Singleton
+    @Provides
     fun provideWatchListRepository(
-        watchListDao: WatchListDao
-    ) = WatchListRepository(watchListDao)
+        watchListDao: WatchListDao,
+        profileManager: ProfileManager
+    ) = WatchListRepository(watchListDao, profileManager)
 
     @Singleton
     @Provides
     fun provideFolderMetadataRepository(
-        folderMetadataDao: zechs.drive.stream.data.local.FolderMetadataDao
-    ) = zechs.drive.stream.data.repository.FolderMetadataRepository(folderMetadataDao)
+        folderMetadataDao: FolderMetadataDao
+    ) = FolderMetadataRepository(folderMetadataDao)
 
     @Singleton
     @Provides
     fun provideFavoriteRepository(
-        favoriteDao: zechs.drive.stream.data.local.FavoriteDao
-    ) = zechs.drive.stream.data.repository.FavoriteRepository(favoriteDao)
+        favoriteDao: FavoriteDao,
+        profileManager: ProfileManager
+    ) = FavoriteRepository(favoriteDao, profileManager)
+
+    @Singleton
+    @Provides
+    fun provideWatchQueueRepository(
+        watchQueueDao: WatchQueueDao,
+        profileManager: ProfileManager
+    ) = WatchQueueRepository(watchQueueDao, profileManager)
+
+    @Singleton
+    @Provides
+    fun provideCatalogRepository(
+        catalogDao: CatalogDao
+    ) = CatalogRepository(catalogDao)
 
 }

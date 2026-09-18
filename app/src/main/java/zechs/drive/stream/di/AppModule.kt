@@ -33,7 +33,8 @@ object AppModule {
     @Singleton
     @Provides
     fun provideThemeDataStore(
-        @ApplicationContext appContext: Context
-    ): AppSettings = AppSettings(appContext)
+        @ApplicationContext appContext: Context,
+        profileManager: zechs.drive.stream.utils.ProfileManager
+    ): AppSettings = AppSettings(appContext, profileManager)
 
 }

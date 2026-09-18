@@ -37,4 +37,24 @@ class RoomMigrationTest {
             db.execSQL(match { it.contains("CREATE TABLE IF NOT EXISTS `favorite_folder`") })
         }
     }
+
+    @Test
+    fun migration_4_5_addsProfileIdQueueAndCatalog() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+        WatchListDatabase.MIGRATION_4_5.migrate(db)
+
+        verify(exactly = 1) {
+            db.execSQL("ALTER TABLE `watch_list` ADD COLUMN `profileId` TEXT NOT NULL DEFAULT 'caua'")
+        }
+        verify(exactly = 1) {
+            db.execSQL(match { it.contains("CREATE TABLE IF NOT EXISTS `watch_queue`") })
+        }
+        verify(exactly = 1) {
+            db.execSQL(match { it.contains("CREATE TABLE IF NOT EXISTS `catalog_entry`") })
+        }
+        verify(exactly = 1) {
+            db.execSQL(match { it.contains("CREATE TABLE IF NOT EXISTS `favorite_folder_new`") })
+        }
+    }
 }
+

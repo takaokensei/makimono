@@ -10,9 +10,12 @@ import androidx.room.PrimaryKey
  * allowing full functionality with readonly OAuth scopes (`drive.readonly`).
  */
 @Keep
-@Entity(tableName = "favorite_folder")
+@Entity(
+    tableName = "favorite_folder",
+    primaryKeys = ["profileId", "folderId"]
+)
 data class FavoriteFolder(
-    @PrimaryKey
+    val profileId: String = "caua",
     val folderId: String,
     val folderName: String = "",
     val isFavorite: Boolean = true,

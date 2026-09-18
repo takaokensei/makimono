@@ -412,6 +412,11 @@ class HomeFragment : BaseFragment() {
 
     override fun onResume() {
         super.onResume()
+        viewModel.getRecentWatches()
+        viewModel.getLastWatched()
+        if (currentTab == "Favoritos") {
+            viewModel.filterStarred(true)
+        }
         if (!isCollapsibleRail()) {
             // Restore stable focus on TV resume
             val focusedView = lastFocusedAnimeView
