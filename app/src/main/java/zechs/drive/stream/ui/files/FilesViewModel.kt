@@ -32,7 +32,8 @@ class FilesViewModel @Inject constructor(
     private val driveRepository: DriveRepository,
     private val sessionManager: SessionManager,
     private val folderMetadataRepository: FolderMetadataRepository,
-    private val animePosterResolver: AnimePosterResolver
+    private val animePosterResolver: AnimePosterResolver,
+    private val favoriteRepository: zechs.drive.stream.data.repository.FavoriteRepository
 ) : ViewModel() {
 
     var isCurrentFolderOneBlacki: Boolean = false
@@ -138,7 +139,13 @@ class FilesViewModel @Inject constructor(
                 val filesDataModel = mutableListOf<FilesDataModel>()
 
                 val filesList = files.files
-                    .map { FilesDataModel.File(it.toDriveFile()) }
+                    .map {
+                        val driveFile = it.toDriveFile()
+                        val targetId = (if (driveFile.isShortcut) driveFile.shortcutDetails.targetId else null) ?: driveFile.id
+                        val isFav = favoriteRepository.isFavorite(targetId)
+                        val starredStatus = if (isFav) Starred.STARRED else driveFile.starred
+                        FilesDataModel.File(driveFile.copy(starred = starredStatus))
+                    }
                     .distinctBy { it.driveFile.id }
 
                 postSuccess(filesDataModel, filesList)
@@ -333,41 +340,16 @@ class FilesViewModel @Inject constructor(
 
         try {
             updateFileState(Starred.LOADING)
-
+            val targetId = (if (file.isShortcut) file.shortcutDetails.targetId else null) ?: file.id
+            favoriteRepository.set(targetId, file.name, starred)
             if (starred) {
-                val targetId = (if (file.isShortcut) file.shortcutDetails.targetId else null) ?: file.id
                 folderMetadataRepository.recordFolderOpened(targetId, file.name)
             }
-
-            val update = driveRepository.updateFile(
-                fileId = file.id,
-                starred = starred
-            )
-            when (update) {
-                is Resource.Error -> {
-                    _fileUpdate.emit(update.message)
-                    updateFileState(if (starred) Starred.UNSTARRED else Starred.STARRED)
-                }
-                is Resource.Success -> {
-                    Log.d(TAG, "File updated")
-                    updateFileState(
-                        if (starred) Starred.STARRED else Starred.UNSTARRED
-                    )
-                    if (starred) {
-                        val targetId = (if (file.isShortcut) file.shortcutDetails.targetId else null) ?: file.id
-                        folderMetadataRepository.recordFolderOpened(targetId, file.name)
-                    }
-                }
-                else -> {}
-            }
+            updateFileState(if (starred) Starred.STARRED else Starred.UNSTARRED)
         } catch (cancel: CancellationException) {
             updateFileState(if (starred) Starred.UNSTARRED else Starred.STARRED)
-            _fileUpdate.emit("Unable to update file")
+            _fileUpdate.emit("Unable to update favorite")
             Log.d(TAG, cancel.message ?: "CancellationException")
-        } catch (timeout: SocketTimeoutException) {
-            updateFileState(if (starred) Starred.UNSTARRED else Starred.STARRED)
-            _fileUpdate.emit("Server timed out")
-            Log.d(TAG, timeout.message ?: "SocketTimeoutException")
         } catch (e: Exception) {
             updateFileState(if (starred) Starred.UNSTARRED else Starred.STARRED)
             _fileUpdate.emit(e.message ?: "Something went wrong")

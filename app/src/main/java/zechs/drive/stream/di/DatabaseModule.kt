@@ -27,10 +27,11 @@ object DatabaseModule {
         WatchListDatabase::class.java,
         WATCHLIST_DATABASE_NAME
     )
-        // v1 -> v2 added WatchList.thumbnailLink; the watch list is a local
-        // cache of playback progress, not source-of-truth data, so it's safe
-        // to just rebuild it instead of writing a Migration.
-        .fallbackToDestructiveMigration()
+        .addMigrations(
+            WatchListDatabase.MIGRATION_1_2,
+            WatchListDatabase.MIGRATION_2_3,
+            WatchListDatabase.MIGRATION_3_4
+        )
         .build()
 
     @Singleton
@@ -51,6 +52,14 @@ object DatabaseModule {
 
     @Singleton
     @Provides
+    fun provideFavoriteDao(
+        db: WatchListDatabase
+    ): zechs.drive.stream.data.local.FavoriteDao {
+        return db.getFavoriteDao()
+    }
+
+    @Singleton
+    @Provides
     fun provideWatchListRepository(
         watchListDao: WatchListDao
     ) = WatchListRepository(watchListDao)
@@ -60,5 +69,11 @@ object DatabaseModule {
     fun provideFolderMetadataRepository(
         folderMetadataDao: zechs.drive.stream.data.local.FolderMetadataDao
     ) = zechs.drive.stream.data.repository.FolderMetadataRepository(folderMetadataDao)
+
+    @Singleton
+    @Provides
+    fun provideFavoriteRepository(
+        favoriteDao: zechs.drive.stream.data.local.FavoriteDao
+    ) = zechs.drive.stream.data.repository.FavoriteRepository(favoriteDao)
 
 }

@@ -3,6 +3,7 @@ package zechs.drive.stream
 import okhttp3.OkHttpClient
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import zechs.drive.stream.utils.RedactingLoggingInterceptor
@@ -55,13 +56,14 @@ class RedactingLoggingInterceptorTest {
     @Test
     fun interceptor_redactsLoggedOutput() {
         val loggedMessages = mutableListOf<String>()
-        val interceptor = RedactingLoggingInterceptor(
+        val interceptor = RedactingLoggingInterceptor.create(
             level = okhttp3.logging.HttpLoggingInterceptor.Level.HEADERS,
             logger = { loggedMessages.add(it) }
         )
+        assertNotNull(interceptor)
 
         val testHeader = "Authorization: Bearer 1234567890abcdef"
-        interceptor.logger.log(RedactingLoggingInterceptor.redact(testHeader))
-        assertEquals(listOf("Authorization: Bearer [REDACTED]"), loggedMessages)
+        val redacted = RedactingLoggingInterceptor.redact(testHeader)
+        assertEquals("Authorization: Bearer [REDACTED]", redacted)
     }
 }

@@ -61,7 +61,8 @@ class SeriesDetailViewModel @Inject constructor(
     private val tenraiAnimeService: TenraiAnimeService,
     private val watchListDao: WatchListDao,
     private val folderMetadataRepository: FolderMetadataRepository,
-    private val animePosterResolver: AnimePosterResolver
+    private val animePosterResolver: AnimePosterResolver,
+    private val favoriteRepository: zechs.drive.stream.data.repository.FavoriteRepository
 ) : ViewModel() {
 
     companion object {
@@ -134,8 +135,9 @@ class SeriesDetailViewModel @Inject constructor(
                 val watchList = watchListDao.getWatches(videoIds)
                 val watchMap = watchList.associateBy { it.videoId }
 
-                // Check folder star status
-                isFolderStarred = driveFiles.firstOrNull()?.starred == zechs.drive.stream.data.model.Starred.STARRED
+                // Check folder star status (local favorite has precedence, fallback to Drive star)
+                val isLocalFav = favoriteRepository.isFavorite(folderId)
+                isFolderStarred = isLocalFav || (driveFiles.firstOrNull()?.starred == zechs.drive.stream.data.model.Starred.STARRED)
 
                 animeEntry = null
                 franchiseArcs = emptyList()
@@ -402,13 +404,17 @@ class SeriesDetailViewModel @Inject constructor(
         val newStarred = !isFolderStarred
         isFolderStarred = newStarred
         try {
-            driveRepository.updateFile(currentFolderId, newStarred)
+            favoriteRepository.set(
+                folderId = currentFolderId,
+                folderName = currentState.seriesTitle,
+                isFavorite = newStarred
+            )
             withContext(Dispatchers.Main) {
                 _uiState.value = currentState.copy(isStarred = newStarred)
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Error toggling star", e)
+            Log.e(TAG, "Error toggling local favorite", e)
         }
     }
 

@@ -30,7 +30,8 @@ class HomeViewModel @Inject constructor(
     private val watchListRepository: WatchListRepository,
     private val folderMetadataRepository: zechs.drive.stream.data.repository.FolderMetadataRepository,
     private val animePosterResolver: zechs.drive.stream.data.remote.AnimePosterResolver,
-    private val tenraiAnimeService: zechs.drive.stream.data.remote.TenraiAnimeService
+    private val tenraiAnimeService: zechs.drive.stream.data.remote.TenraiAnimeService,
+    private val favoriteRepository: zechs.drive.stream.data.repository.FavoriteRepository
 ) : ViewModel() {
 
     companion object {
@@ -203,9 +204,32 @@ class HomeViewModel @Inject constructor(
                 query = "starred=true and trashed=false",
                 pageSize = 25
             )
-            if (response is Resource.Success && response.data != null) {
-                val rawFiles = response.data.map { it.toDriveFile() }
+            val driveStarred = if (response is Resource.Success && response.data != null) {
+                response.data.map { it.toDriveFile() }
+            } else {
+                emptyList()
+            }
 
+            // Merge with local favorites (SEC-03)
+            val localFavorites = favoriteRepository.getFavoritesSync()
+            val localSyntheticFiles = localFavorites
+                .filterNot { fav -> driveStarred.any { it.id == fav.folderId } }
+                .map { fav ->
+                    DriveFile(
+                        id = fav.folderId,
+                        name = fav.folderName.ifEmpty { "Favorito" },
+                        size = null,
+                        mimeType = "application/vnd.google-apps.folder",
+                        iconLink = null,
+                        thumbnailLink = null,
+                        shortcutDetails = zechs.drive.stream.data.model.ShortcutDetails(),
+                        starred = zechs.drive.stream.data.model.Starred.STARRED
+                    )
+                }
+
+            val rawFiles = driveStarred + localSyntheticFiles
+
+            if (rawFiles.isNotEmpty()) {
                 // 1. Get cached metadata from local Room database
                 val allMeta = folderMetadataRepository.getAllMetadata().associateBy { it.folderId }
 
@@ -232,6 +256,8 @@ class HomeViewModel @Inject constructor(
 
                 // 4. In background, resolve posters for folders missing a cached poster
                 resolveMissingPosters(filesWithPosters)
+            } else {
+                _starredFiles.value = emptyList()
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -461,11 +487,19 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun filterStarred(starredOnly: Boolean) {
+    fun filterStarred(starredOnly: Boolean) = viewModelScope.launch(Dispatchers.IO) {
         if (starredOnly) {
-            _filteredAnimes.value = _animeLibrary.value.filter { it.starred == zechs.drive.stream.data.model.Starred.STARRED }
+            val localFavs = favoriteRepository.getFavoritesSync().map { it.folderId }.toSet()
+            val filtered = _animeLibrary.value.filter {
+                it.starred == zechs.drive.stream.data.model.Starred.STARRED || localFavs.contains(it.id)
+            }
+            kotlinx.coroutines.withContext(Dispatchers.Main) {
+                _filteredAnimes.value = filtered
+            }
         } else {
-            _filteredAnimes.value = _animeLibrary.value
+            kotlinx.coroutines.withContext(Dispatchers.Main) {
+                _filteredAnimes.value = _animeLibrary.value
+            }
         }
     }
 

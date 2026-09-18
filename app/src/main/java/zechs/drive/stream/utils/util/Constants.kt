@@ -24,7 +24,7 @@ class Constants {
         val DEFAULT_CLIENT_ID = zechs.drive.stream.BuildConfig.DRIVE_CLIENT_ID
         val DEFAULT_CLIENT_SECRET = zechs.drive.stream.BuildConfig.DRIVE_CLIENT_SECRET
         const val DEFAULT_REDIRECT_URI = "http://127.0.0.1:53682/"
-        const val DEFAULT_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive"
+        const val DEFAULT_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.readonly"
         val DEFAULT_REFRESH_TOKEN = zechs.drive.stream.BuildConfig.DRIVE_REFRESH_TOKEN
 
         val DEFAULT_CLIENT = zechs.drive.stream.data.model.DriveClient(

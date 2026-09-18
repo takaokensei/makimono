@@ -268,7 +268,7 @@ class TvLoginServer(
                 "client_id=${clientId}&" +
                 "redirect_uri=${redirectUri}&" +
                 "response_type=code&" +
-                "scope=https://www.googleapis.com/auth/drive&" +
+                "scope=${zechs.drive.stream.utils.util.Constants.DEFAULT_DRIVE_SCOPE}&" +
                 "access_type=offline&" +
                 "prompt=consent"
 
