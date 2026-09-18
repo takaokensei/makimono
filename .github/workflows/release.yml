@@ -27,6 +27,15 @@ jobs:
       - name: Grant Execute Permission to Gradlew
         run: chmod +x gradlew
 
+      - name: Verify Secret Leaks (TruffleHog OSS)
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
+        continue-on-error: true
+
       - name: Setup local.properties (Optional Secrets)
         run: |
           touch local.properties
@@ -40,12 +49,17 @@ jobs:
             echo "drive.refreshToken=${{ secrets.DRIVE_REFRESH_TOKEN }}" >> local.properties
           fi
 
-      - name: Setup release keystore (Optional Secret)
-        # If RELEASE_KEYSTORE_BASE64 is not configured as a repo secret, this
-        # step is skipped and the build falls back to debug signing (see
-        # app/build.gradle), which prints a clear warning instead of failing
-        # silently.
-        if: ${{ secrets.RELEASE_KEYSTORE_BASE64 != '' }}
+      - name: Validate Release Secrets
+        run: |
+          if [ -z "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" ] || \
+             [ -z "${{ secrets.RELEASE_STORE_PASSWORD }}" ] || \
+             [ -z "${{ secrets.RELEASE_KEY_ALIAS }}" ] || \
+             [ -z "${{ secrets.RELEASE_KEY_PASSWORD }}" ]; then
+            echo "::error::Missing required release signing secrets (RELEASE_KEYSTORE_BASE64, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD). Production release cannot be published without dedicated release keystore."
+            exit 1
+          fi
+
+      - name: Setup release keystore
         run: |
           echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > release.keystore
           {
@@ -60,6 +74,22 @@ jobs:
 
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest --no-daemon
+
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-test-reports
+          path: app/build/reports/tests/testDebugUnitTest/
+          retention-days: 14
+
+      - name: Upload Lint Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-lint-reports
+          path: app/build/reports/lint-results-debug.html
+          retention-days: 14
 
       - name: Build Release APKs (Split & Universal)
         run: ./gradlew assembleRelease --no-daemon
