@@ -29,6 +29,43 @@ class TvLoginServer(
 
     companion object {
         private const val TAG = "TvLoginServer"
+        const val NONCE_TTL_MS = 120_000L // 2 minutes (SEC-04)
+        const val MAX_BODY_BYTES = 65_536  // 64 KB limit
+    }
+
+    data class PairingSession(
+        val nonce: String,
+        val expiresAt: Long,
+        var used: Boolean = false
+    ) {
+        val isExpired: Boolean get() = System.currentTimeMillis() > expiresAt
+    }
+
+    @Volatile
+    private var currentSession: PairingSession? = null
+
+    fun generateNewPairingSession(ttlMs: Long = NONCE_TTL_MS): PairingSession {
+        val randomBytes = ByteArray(16)
+        java.security.SecureRandom().nextBytes(randomBytes)
+        val nonce = randomBytes.joinToString("") { "%02x".format(it) }
+        val session = PairingSession(
+            nonce = nonce,
+            expiresAt = System.currentTimeMillis() + ttlMs
+        )
+        currentSession = session
+        return session
+    }
+
+    fun getPairingNonce(): String {
+        val session = currentSession
+        if (session == null || session.isExpired || session.used) {
+            return generateNewPairingSession().nonce
+        }
+        return session.nonce
+    }
+
+    internal fun setPairingSessionForTesting(session: PairingSession) {
+        currentSession = session
     }
 
     private var serverSocket: ServerSocket? = null
@@ -37,6 +74,7 @@ class TvLoginServer(
         private set
 
     fun start(scope: CoroutineScope): Boolean {
+        getPairingNonce() // Initialize pairing nonce
         val existingSocket = serverSocket
         if (existingSocket != null && !existingSocket.isClosed) {
             Log.d(TAG, "Server already running on port $boundPort")
@@ -136,40 +174,46 @@ class TvLoginServer(
 
                 // Read body if POST
                 var body = ""
-                if (method == "POST" && contentLength > 0) {
-                    val charBuffer = CharArray(contentLength)
-                    var readTotal = 0
-                    while (readTotal < contentLength) {
-                        val count = reader.read(charBuffer, readTotal, contentLength - readTotal)
-                        if (count == -1) break
-                        readTotal += count
+                if (method == "POST") {
+                    if (contentLength > MAX_BODY_BYTES) {
+                        sendResponse(writer, 413, "Payload Too Large", "application/json", "{\"error\":\"Payload excede limite seguro (64KB)\"}")
+                        return
                     }
-                    body = String(charBuffer, 0, readTotal)
+                    if (contentLength > 0) {
+                        val charBuffer = CharArray(contentLength)
+                        var readTotal = 0
+                        while (readTotal < contentLength) {
+                            val count = reader.read(charBuffer, readTotal, contentLength - readTotal)
+                            if (count == -1) break
+                            readTotal += count
+                        }
+                        body = String(charBuffer, 0, readTotal)
+                    }
                 }
 
                 when {
                     method == "GET" && (path == "/" || path == "/login" || path == "/pair") -> {
-                        val html = buildHtmlPage()
+                        val queryNonce = if (fullPath.contains("nonce=")) {
+                            fullPath.substringAfter("nonce=").substringBefore("&").takeIf { it.isNotBlank() }
+                        } else null
+                        val nonceToUse = queryNonce ?: getPairingNonce()
+                        val html = buildHtmlPage(nonceToUse)
                         sendResponse(writer, 200, "OK", "text/html; charset=UTF-8", html)
                     }
 
                     method == "GET" && path == "/api/status" -> {
                         val authenticated = isAlreadyAuthenticated()
-                        val json = JSONObject().apply {
-                            put("authenticated", authenticated)
-                        }.toString()
+                        val json = "{\"authenticated\":$authenticated}"
                         sendResponse(writer, 200, "OK", "application/json; charset=UTF-8", json)
                     }
 
                     method == "POST" && path == "/api/auth-code" -> {
                         val parsed = parseJsonOrForm(body)
+                        if (!validatePairingNonce(parsed, headers, fullPath, writer)) return
                         val code = parsed["code"] ?: parsed["url"] ?: ""
                         if (code.isNotBlank()) {
                             onAuthCodeReceived(code)
-                            val json = JSONObject().apply {
-                                put("success", true)
-                                put("message", "Código recebido pela TV! Autenticando...")
-                            }.toString()
+                            val json = "{\"success\":true,\"message\":\"Código recebido pela TV! Autenticando...\"}"
                             sendResponse(writer, 200, "OK", "application/json; charset=UTF-8", json)
                         } else {
                             sendResponse(writer, 400, "Bad Request", "application/json", "{\"error\":\"Código vazio\"}")
@@ -178,6 +222,7 @@ class TvLoginServer(
 
                     method == "POST" && path == "/api/session" -> {
                         val parsed = parseJsonOrForm(body)
+                        if (!validatePairingNonce(parsed, headers, fullPath, writer)) return
                         val refreshToken = parsed["refreshToken"] ?: parsed["refresh_token"] ?: ""
                         val cId = parsed["clientId"] ?: parsed["client_id"]
                         val cSec = parsed["clientSecret"] ?: parsed["client_secret"]
@@ -185,10 +230,7 @@ class TvLoginServer(
 
                         if (refreshToken.isNotBlank()) {
                             onSessionReceived(refreshToken, cId, cSec, malToken)
-                            val json = JSONObject().apply {
-                                put("success", true)
-                                put("message", "Sessão transferida com sucesso para a TV!")
-                            }.toString()
+                            val json = "{\"success\":true,\"message\":\"Sessão transferida com sucesso para a TV!\"}"
                             sendResponse(writer, 200, "OK", "application/json; charset=UTF-8", json)
                         } else {
                             sendResponse(writer, 400, "Bad Request", "application/json", "{\"error\":\"Refresh token não informado\"}")
@@ -196,11 +238,10 @@ class TvLoginServer(
                     }
 
                     method == "POST" && path == "/api/activate-default" -> {
+                        val parsed = parseJsonOrForm(body)
+                        if (!validatePairingNonce(parsed, headers, fullPath, writer)) return
                         onActivateDefault()
-                        val json = JSONObject().apply {
-                            put("success", true)
-                            put("message", "Ativação com credenciais padrão solicitada.")
-                        }.toString()
+                        val json = "{\"success\":true,\"message\":\"Ativação com credenciais padrão solicitada.\"}"
                         sendResponse(writer, 200, "OK", "application/json; charset=UTF-8", json)
                     }
 
@@ -214,10 +255,57 @@ class TvLoginServer(
         }
     }
 
+    private fun validatePairingNonce(
+        parsed: Map<String, String>,
+        headers: Map<String, String>,
+        fullPath: String,
+        writer: PrintWriter
+    ): Boolean {
+        val activeSession = currentSession
+        val queryNonce = if (fullPath.contains("nonce=")) {
+            fullPath.substringAfter("nonce=").substringBefore("&").takeIf { it.isNotBlank() }
+        } else null
+
+        val providedNonce = parsed["nonce"]
+            ?: headers["x-pairing-nonce"]
+            ?: queryNonce
+
+        if (providedNonce.isNullOrBlank()) {
+            sendResponse(writer, 401, "Unauthorized", "application/json", "{\"error\":\"Nonce de pareamento ausente\"}")
+            return false
+        }
+        if (activeSession == null || providedNonce != activeSession.nonce) {
+            sendResponse(writer, 401, "Unauthorized", "application/json", "{\"error\":\"Nonce de pareamento inválido\"}")
+            return false
+        }
+        if (activeSession.isExpired) {
+            sendResponse(writer, 410, "Gone", "application/json", "{\"error\":\"Sessão de pareamento expirada\"}")
+            return false
+        }
+        if (activeSession.used) {
+            sendResponse(writer, 409, "Conflict", "application/json", "{\"error\":\"Sessão de pareamento já utilizada\"}")
+            return false
+        }
+
+        activeSession.used = true
+        return true
+    }
+
     private fun parseJsonOrForm(body: String): Map<String, String> {
         val result = mutableMapOf<String, String>()
         val trimmed = body.trim()
         if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+            try {
+                val type = object : com.google.gson.reflect.TypeToken<Map<String, Any?>>() {}.type
+                val map: Map<String, Any?>? = com.google.gson.Gson().fromJson(trimmed, type)
+                if (map != null) {
+                    map.forEach { (k, v) ->
+                        if (v != null) result[k] = v.toString()
+                    }
+                    return result
+                }
+            } catch (_: Exception) {}
+
             try {
                 val json = JSONObject(trimmed)
                 val keys = json.keys()
@@ -263,7 +351,7 @@ class TvLoginServer(
         writer.flush()
     }
 
-    private fun buildHtmlPage(): String {
+    private fun buildHtmlPage(nonce: String = getPairingNonce()): String {
         val googleAuthUrl = "https://accounts.google.com/o/oauth2/auth?" +
                 "client_id=${clientId}&" +
                 "redirect_uri=${redirectUri}&" +
@@ -536,6 +624,8 @@ class TvLoginServer(
     </div>
 
     <script>
+        const pairingNonce = "$nonce";
+
         function showToast(elemId, msg, isSuccess) {
             const el = document.getElementById(elemId);
             if (!el) return;
@@ -569,8 +659,11 @@ class TvLoginServer(
             try {
                 const res = await fetch('/api/auth-code', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code: code })
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Pairing-Nonce': pairingNonce
+                    },
+                    body: JSON.stringify({ code: code, nonce: pairingNonce })
                 });
                 const data = await res.json();
                 if (data.success) {
@@ -594,8 +687,11 @@ class TvLoginServer(
             try {
                 const res = await fetch('/api/session', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ refreshToken: token })
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Pairing-Nonce': pairingNonce
+                    },
+                    body: JSON.stringify({ refreshToken: token, nonce: pairingNonce })
                 });
                 const data = await res.json();
                 if (data.success) {
@@ -613,7 +709,14 @@ class TvLoginServer(
             btnDefault.addEventListener('click', async () => {
                 showToast('toastDefault', 'Ativando...', true);
                 try {
-                    const res = await fetch('/api/activate-default', { method: 'POST' });
+                    const res = await fetch('/api/activate-default', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Pairing-Nonce': pairingNonce
+                        },
+                        body: JSON.stringify({ nonce: pairingNonce })
+                    });
                     const data = await res.json();
                     showToast('toastDefault', data.message || 'Ativação enviada para a TV!', true);
                 } catch (e) {
