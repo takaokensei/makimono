@@ -68,6 +68,8 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import androidx.core.view.isVisible
 import com.bumptech.glide.Glide
+import zechs.drive.stream.utils.MediaImageLoader
+import zechs.drive.stream.utils.ThumbnailUrl
 import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
 import com.google.android.exoplayer2.util.MimeTypes
@@ -1580,15 +1582,7 @@ class PlayerActivity : AppCompatActivity() {
         val parsed = EpisodeParser.parse(next.title)
         card.tvNextEpisodeTitle.text = parsed.cleanTitle
 
-        val thumbUrl = next.thumbnailLink?.let {
-            if (it.contains(Regex("=s\\d+"))) it.replace(Regex("=s\\d+"), "=s600") else "$it=s600"
-        }
-        Glide.with(this)
-            .load(thumbUrl)
-            .placeholder(R.drawable.kodi_primary_bg)
-            .error(R.drawable.kodi_primary_bg)
-            .centerCrop()
-            .into(card.ivNextEpisodeThumb)
+        MediaImageLoader.card(card.ivNextEpisodeThumb, ThumbnailUrl.medium(next.thumbnailLink))
 
         card.root.alpha = 0f
         card.root.visibility = View.VISIBLE
