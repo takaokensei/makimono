@@ -28,6 +28,9 @@ jobs:
       - name: Grant Execute Permission to Gradlew
         run: chmod +x gradlew
 
+      - name: Verify repository claims
+        run: ./scripts/verify-claims.sh
+
       - name: Verify Secret Leaks (TruffleHog OSS)
         uses: trufflesecurity/trufflehog@main
         with:
@@ -67,4 +70,3 @@ jobs:
         with:
           name: debug-apk
           path: app/build/outputs/apk/debug/*.apk
-          retention-days: 7
