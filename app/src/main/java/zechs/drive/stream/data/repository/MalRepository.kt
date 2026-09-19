@@ -1,6 +1,7 @@
 package zechs.drive.stream.data.repository
 
 import android.net.Uri
+import android.util.Base64
 import android.util.Log
 import dagger.Lazy
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +19,8 @@ import kotlinx.coroutines.CancellationException
 import retrofit2.HttpException
 import java.io.IOException
 import java.net.SocketTimeoutException
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -54,8 +57,11 @@ class MalRepository @Inject constructor(
             .buildUpon()
             .appendQueryParameter("response_type", "code")
             .appendQueryParameter("client_id", sessionManager.getClientId())
-            .appendQueryParameter("code_challenge", codeVerifier)
-            .appendQueryParameter("code_challenge_method", "plain")
+            .appendQueryParameter("code_challenge", Base64.encodeToString(
+                MessageDigest.getInstance("SHA-256").digest(codeVerifier.toByteArray(StandardCharsets.US_ASCII)),
+                Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP
+            ))
+            .appendQueryParameter("code_challenge_method", "S256")
             .appendQueryParameter("redirect_uri", Constants.MAL_REDIRECT_URI)
             .build()
             .toString()

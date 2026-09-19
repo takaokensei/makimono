@@ -86,6 +86,7 @@ import zechs.drive.stream.data.model.SubtitleItem
 import zechs.drive.stream.data.repository.DriveRepository
 import zechs.drive.stream.databinding.ActivityPlayerBinding
 import zechs.drive.stream.ui.player.utils.AuthenticatingDataSource
+import zechs.drive.stream.ui.player.engine.PlaybackCoordinator
 import zechs.drive.stream.ui.player.utils.BufferConfig
 import zechs.drive.stream.ui.player.utils.CustomTrackNameProvider
 import zechs.drive.stream.ui.player2.MPVActivity
@@ -222,6 +223,7 @@ class PlayerActivity : AppCompatActivity() {
     private var playlist = mutableListOf<PlaylistItem>()
     private var nextEpisode: PlaylistItem? = null
     private var nextEpisodeCanceled = false
+    private val playbackCoordinator = PlaybackCoordinator()
     private var isNextEpisodeCardShowing = false
     private var countdownJob: Job? = null
     private var progressTrackerJob: Job? = null
@@ -590,6 +592,7 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun updateNextEpisode() {
+        playbackCoordinator.setPlaylist(playlist, currentFileId)
         if (playlist.isEmpty()) {
             nextEpisode = null
             prevEpisode = null
@@ -608,13 +611,9 @@ class PlayerActivity : AppCompatActivity() {
             )
             return
         }
-        val currentIndex = playlist.indexOfFirst { it.fileId == currentFileId }
-        nextEpisode = if (currentIndex != -1 && currentIndex + 1 < playlist.size) {
-            playlist[currentIndex + 1]
-        } else null
-        prevEpisode = if (currentIndex > 0) {
-            playlist[currentIndex - 1]
-        } else null
+        val coordinatorState = playbackCoordinator.state.value
+        nextEpisode = coordinatorState.nextEpisode
+        prevEpisode = coordinatorState.prevEpisode
         if (::btnPrevEp.isInitialized) {
             btnPrevEp.isEnabled = prevEpisode != null
             btnPrevEp.alpha = if (prevEpisode != null) 1.0f else 0.35f
@@ -628,6 +627,7 @@ class PlayerActivity : AppCompatActivity() {
             canSkipNext = nextEpisode != null,
             canSkipPrevious = prevEpisode != null
         )
+        val currentIndex = playlist.indexOfFirst { it.fileId == currentFileId }
         Log.d(TAG, "updateNextEpisode: currentIndex=$currentIndex, prevEpisode=${prevEpisode?.title}, nextEpisode=${nextEpisode?.title}")
     }
 
@@ -1536,11 +1536,9 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun checkAutoPlayNextEpisode(positionMs: Long, durationMs: Long) {
-        val decision = PlaybackProgressPolicy.evaluateAutoplay(
+        val decision = playbackCoordinator.onPlaybackTick(
             positionMs = positionMs,
             durationMs = durationMs,
-            hasNextEpisode = nextEpisode != null,
-            isCanceled = nextEpisodeCanceled,
             controlsLocked = controlsLocked
         )
 
@@ -1617,6 +1615,7 @@ class PlayerActivity : AppCompatActivity() {
         countdownJob = null
         if (isManualCancel) {
             nextEpisodeCanceled = true
+            playbackCoordinator.cancelAutoplay()
         }
         isNextEpisodeCardShowing = false
         val card = binding.nextEpisodeCard.root
@@ -1641,6 +1640,7 @@ class PlayerActivity : AppCompatActivity() {
         currentTitle = next.title
         currentThumbnailLink = next.thumbnailLink
         nextEpisodeCanceled = false
+        playbackCoordinator.resetAutoplayCancellation()
         addedSubtitleFileIds.clear()
         updateNextEpisode()
 
@@ -1663,6 +1663,7 @@ class PlayerActivity : AppCompatActivity() {
         currentTitle = prev.title
         currentThumbnailLink = prev.thumbnailLink
         nextEpisodeCanceled = false
+        playbackCoordinator.resetAutoplayCancellation()
         addedSubtitleFileIds.clear()
         updateNextEpisode()
 

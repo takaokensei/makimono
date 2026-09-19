@@ -541,6 +541,18 @@
                             android:textColor="#22D3EE"
                             android:textSize="11sp" />
 
+                        <TextView
+                            android:id="@+id/tvShelfViewQueue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:fontFamily="@font/inter"
+                            android:text="MINHA FILA ›"
+                            android:textColor="#22D3EE"
+                            android:textSize="11sp" />
+
                     </LinearLayout>
 
                     <androidx.recyclerview.widget.RecyclerView

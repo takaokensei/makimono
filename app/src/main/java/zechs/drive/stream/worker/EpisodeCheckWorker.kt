@@ -10,9 +10,11 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 import zechs.drive.stream.R
 import zechs.drive.stream.data.repository.DriveRepository
 import zechs.drive.stream.data.repository.FollowedFolderRepository
+import zechs.drive.stream.utils.ProfileManager
 import zechs.drive.stream.utils.state.Resource
 
 /**
@@ -33,7 +35,8 @@ class EpisodeCheckWorker @AssistedInject constructor(
     @Assisted private val context: Context,
     @Assisted workerParams: WorkerParameters,
     private val driveRepository: DriveRepository,
-    private val followedFolderRepository: FollowedFolderRepository
+    private val followedFolderRepository: FollowedFolderRepository,
+    private val profileManager: ProfileManager
 ) : CoroutineWorker(context, workerParams) {
 
     companion object {
@@ -48,11 +51,11 @@ class EpisodeCheckWorker @AssistedInject constructor(
          * without loading all content bytes.
          *
          * In practice, most anime folders contain 1–200 episodes, so fetching
-         * up to 3 pages of 100 results each (cap = 3) is acceptable and keeps
-         * request cost low.
+         * up to the repository safety cap of 25 pages. This avoids silently
+         * missing new episodes in large folders.
          */
         private const val COUNT_PAGE_SIZE = 100
-        private const val COUNT_MAX_PAGES = 3
+        private const val COUNT_MAX_PAGES = DriveRepository.MAX_PAGINATION_PAGES
 
         private fun folderChildrenQuery(folderId: String) =
             "'$folderId' in parents and trashed = false"
@@ -61,15 +64,19 @@ class EpisodeCheckWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         ensureChannel()
 
-        // Iterate all profiles' followed lists — we read them all here because
-        // the worker is not profile-aware at scheduling time.
-        val profileIds = listOf("caua", "anime") // TODO: read from ProfileManager when multi-profile list is available
+        // Read the persisted profile list instead of assuming profile IDs.
+        val profileIds = profileManager.getProfiles().map { it.id }
         var anyFailure = false
 
         for (profileId in profileIds) {
-            val followed = runCatching {
+            val followed = try {
                 followedFolderRepository.getFollowedSync(profileId)
-            }.getOrNull() ?: continue
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                anyFailure = true
+                continue
+            }
 
             for (folder in followed) {
                 val result = driveRepository.getAllFiles(

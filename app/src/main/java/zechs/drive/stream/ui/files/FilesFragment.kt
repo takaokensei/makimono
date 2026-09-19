@@ -114,10 +114,6 @@ class FilesFragment : BaseFragment() {
             }
         }
 
-        val folderName = args.name.trim()
-        viewModel.isCurrentFolderOneBlacki = folderName.equals("oneblacki", ignoreCase = true) ||
-                (folderName.contains("oneblacki", ignoreCase = true) && !folderName.contains("1oneblacki", ignoreCase = true) && !folderName.startsWith("1"))
-
         setupRecyclerView()
         setupSearchAndLayoutToggle()
         setupFilesObserver()
@@ -271,7 +267,7 @@ class FilesFragment : BaseFragment() {
 
     private fun setupSearchAndLayoutToggle() {
         val prefs = requireContext().getSharedPreferences("FILES_PREFS", android.content.Context.MODE_PRIVATE)
-        isGridMode = if (viewModel.isCurrentFolderOneBlacki) true else prefs.getBoolean("IS_GRID_MODE", false)
+        isGridMode = prefs.getBoolean("IS_GRID_MODE", false)
         updateLayoutMode()
 
         binding.btnToggleGrid.setOnClickListener {

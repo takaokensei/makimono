@@ -9,6 +9,7 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
+import android.util.Base64
 import android.util.Log
 import android.view.ViewGroup
 import android.webkit.CookieManager
@@ -24,7 +25,6 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.*
 import org.json.JSONObject
-import zechs.drive.stream.data.model.MalTokenResponse
 import zechs.drive.stream.databinding.DialogMalAuthBinding
 import zechs.drive.stream.utils.NetworkUtils
 import zechs.drive.stream.utils.QRCodeGenerator
@@ -37,11 +37,12 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.security.SecureRandom
 
 class MalAuthDialog(
     private val onCodeReceived: (code: String, codeVerifier: String) -> Unit,
-    private val onTokenReceived: ((token: MalTokenResponse, username: String?) -> Unit)? = null
+    private val clientId: String = Constants.MAL_CLIENT_ID
 ) : DialogFragment() {
 
     companion object {
@@ -56,6 +57,11 @@ class MalAuthDialog(
             }
             return sb.toString()
         }
+
+        fun codeChallenge(verifier: String): String = Base64.encodeToString(
+            MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray(StandardCharsets.US_ASCII)),
+            Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP
+        )
     }
 
     private var _binding: DialogMalAuthBinding? = null
@@ -205,9 +211,9 @@ class MalAuthDialog(
         val authUrl = Uri.parse(Constants.MAL_OAUTH_BASE_URL + "v1/oauth2/authorize")
             .buildUpon()
             .appendQueryParameter("response_type", "code")
-            .appendQueryParameter("client_id", Constants.MAL_CLIENT_ID)
-            .appendQueryParameter("code_challenge", codeVerifier)
-            .appendQueryParameter("code_challenge_method", "plain")
+            .appendQueryParameter("client_id", clientId)
+            .appendQueryParameter("code_challenge", codeChallenge(codeVerifier))
+            .appendQueryParameter("code_challenge_method", "S256")
             .appendQueryParameter("redirect_uri", Constants.MAL_REDIRECT_URI)
             .build()
             .toString()
@@ -221,7 +227,7 @@ class MalAuthDialog(
             binding.tvManualError.isVisible = false
 
             if (input.isBlank()) {
-                binding.tvManualError.text = "Por favor, cole o código, URL ou token."
+                binding.tvManualError.text = "Por favor, cole a URL ou o código retornado."
                 binding.tvManualError.isVisible = true
                 return@setOnClickListener
             }
@@ -231,19 +237,6 @@ class MalAuthDialog(
             if (extractedCode.isNotBlank() && (extractedCode.length in 20..150) && !extractedCode.contains(" ")) {
                 isAuthCompleted = true
                 handleCode(extractedCode)
-                return@setOnClickListener
-            }
-
-            // 2. If user pasted an access token directly
-            if (input.length > 50 && !input.contains("?") && !input.contains("&")) {
-                isAuthCompleted = true
-                val tokenResponse = MalTokenResponse(
-                    tokenType = "Bearer",
-                    expiresIn = 2592000L,
-                    accessToken = input,
-                    refreshToken = ""
-                )
-                handleTokens(tokenResponse, null)
                 return@setOnClickListener
             }
 
@@ -274,14 +267,6 @@ class MalAuthDialog(
         activity?.runOnUiThread {
             binding.tvStatusText.text = "Conectando com MyAnimeList..."
             onCodeReceived(code, codeVerifier)
-            dismissAllowingStateLoss()
-        }
-    }
-
-    private fun handleTokens(tokens: MalTokenResponse, username: String?) {
-        activity?.runOnUiThread {
-            binding.tvStatusText.text = "Conectado com sucesso!"
-            onTokenReceived?.invoke(tokens, username)
             dismissAllowingStateLoss()
         }
     }
@@ -394,29 +379,13 @@ class MalAuthDialog(
                     }
 
                     method == "POST" && path == "/api/mal-token" -> {
-                        val parsed = parseJsonOrForm(body)
-                        val accessToken = parsed["accessToken"] ?: parsed["access_token"] ?: ""
-                        val refreshToken = parsed["refreshToken"] ?: parsed["refresh_token"] ?: ""
-                        val expiresIn = parsed["expiresIn"]?.toLongOrNull() ?: parsed["expires_in"]?.toLongOrNull() ?: 2592000L
-                        val username = parsed["username"]
-
-                        if (accessToken.isNotBlank() && !isAuthCompleted) {
-                            isAuthCompleted = true
-                            val tokenResponse = MalTokenResponse(
-                                tokenType = "Bearer",
-                                expiresIn = expiresIn,
-                                accessToken = accessToken,
-                                refreshToken = refreshToken
-                            )
-                            val json = JSONObject().apply {
-                                put("success", true)
-                                put("message", "Sessão transferida com sucesso para a TV!")
-                            }.toString()
-                            sendResponse(writer, 200, "OK", "application/json; charset=UTF-8", json)
-                            handleTokens(tokenResponse, username)
-                        } else {
-                            sendResponse(writer, 400, "Bad Request", "application/json", "{\"error\":\"Access token vazio\"}")
-                        }
+                        sendResponse(
+                            writer,
+                            410,
+                            "Gone",
+                            "application/json",
+                            "{\"error\":\"Transferência direta de token desativada; use o código OAuth\"}"
+                        )
                     }
 
                     else -> {
@@ -478,9 +447,8 @@ class MalAuthDialog(
         writer.print("Content-Type: $contentType\r\n")
         writer.print("Content-Length: ${bodyBytes.size}\r\n")
         writer.print("Connection: close\r\n")
-        writer.print("Access-Control-Allow-Origin: *\r\n")
-        writer.print("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n")
-        writer.print("Access-Control-Allow-Headers: Content-Type, Authorization\r\n")
+        writer.print("Cache-Control: no-store\r\n")
+        writer.print("X-Content-Type-Options: nosniff\r\n")
         writer.print("\r\n")
         writer.flush()
         writer.print(body)
@@ -490,9 +458,9 @@ class MalAuthDialog(
     private fun buildMalPhoneHtml(): String {
         val malAuthUrl = "https://myanimelist.net/v1/oauth2/authorize?" +
                 "response_type=code&" +
-                "client_id=${Constants.MAL_CLIENT_ID}&" +
-                "code_challenge=${codeVerifier}&" +
-                "code_challenge_method=plain&" +
+                "client_id=${clientId}&" +
+                "code_challenge=${codeChallenge(codeVerifier)}&" +
+                "code_challenge_method=S256&" +
                 "redirect_uri=${Constants.MAL_REDIRECT_URI}"
 
         return """
@@ -664,21 +632,6 @@ class MalAuthDialog(
             <div id="toastMalCode" class="toast-msg"></div>
         </div>
 
-        <div class="card">
-            <div class="card-title">
-                <span>⚡ Transferir Token Diretamente</span>
-            </div>
-            <p class="help-text" style="margin-bottom: 10px;">
-                Se você já tiver seu Access Token do MyAnimeList:
-            </p>
-            <div class="input-group">
-                <input type="text" id="inputMalToken" class="input-box" placeholder="Cole o Access Token aqui...">
-            </div>
-            <button class="btn btn-secondary" id="btnSendMalToken">
-                Enviar Token para TV
-            </button>
-            <div id="toastMalToken" class="toast-msg"></div>
-        </div>
     </div>
 
     <!-- Celebration -->
@@ -738,30 +691,6 @@ class MalAuthDialog(
             }
         });
 
-        // Send MAL Token
-        document.getElementById('btnSendMalToken').addEventListener('click', async () => {
-            const token = document.getElementById('inputMalToken').value.trim();
-            if (!token) {
-                showToast('toastMalToken', 'Por favor insira o token.', false);
-                return;
-            }
-            showToast('toastMalToken', 'Transferindo token para a TV...', true);
-            try {
-                const res = await fetch('/api/mal-token', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ accessToken: token })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    showToast('toastMalToken', 'Token aplicado na TV!', true);
-                } else {
-                    showToast('toastMalToken', data.error || 'Erro ao aplicar token', false);
-                }
-            } catch (e) {
-                showToast('toastMalToken', 'Falha ao conectar com a TV.', false);
-            }
-        });
     </script>
 </body>
 </html>

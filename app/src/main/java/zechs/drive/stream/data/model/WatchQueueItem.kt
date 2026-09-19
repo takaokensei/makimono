@@ -17,7 +17,7 @@ import androidx.room.PrimaryKey
     ]
 )
 data class WatchQueueItem(
-    val profileId: String = "caua",
+    val profileId: String = "",
     val fileId: String,
     val name: String,
     val posterUrl: String? = null,

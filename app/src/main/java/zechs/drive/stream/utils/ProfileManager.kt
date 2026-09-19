@@ -24,8 +24,8 @@ class ProfileManager @Inject constructor(
         private const val KEY_ACTIVE_ID = "active_profile_id"
 
         val DEFAULT_PROFILES = listOf(
-            UserProfile(id = "caua", name = "Cauã", avatarResName = "avatar_caua", isDefault = true),
-            UserProfile(id = "anime", name = "Anime", avatarResName = "avatar_anime", isDefault = false)
+            UserProfile(id = "profile-1", name = "Perfil principal", avatarResName = "avatar_caua", isDefault = true),
+            UserProfile(id = "profile-2", name = "Perfil secundário", avatarResName = "avatar_anime", isDefault = false)
         )
     }
 
@@ -54,6 +54,8 @@ class ProfileManager @Inject constructor(
                         name = obj.getString("name"),
                         avatarResName = obj.optString("avatarResName", "avatar_caua"),
                         isDefault = obj.optBoolean("isDefault", false),
+                        libraryRootId = obj.optString("libraryRootId").takeIf { it.isNotBlank() },
+                        libraryRootName = obj.optString("libraryRootName").takeIf { it.isNotBlank() },
                         createdAt = obj.optLong("createdAt", System.currentTimeMillis())
                     )
                 )
@@ -78,6 +80,8 @@ class ProfileManager @Inject constructor(
                 put("name", p.name)
                 put("avatarResName", p.avatarResName)
                 put("isDefault", p.isDefault)
+                put("libraryRootId", p.libraryRootId ?: "")
+                put("libraryRootName", p.libraryRootName ?: "")
                 put("createdAt", p.createdAt)
             }
             jsonArray.put(obj)
@@ -118,6 +122,24 @@ class ProfileManager @Inject constructor(
         if (_activeProfileFlow.value.id == id) {
             _activeProfileFlow.value = updated.first { it.id == id }
         }
+    }
+
+    fun getLibraryRoot(): Pair<String?, String?> {
+        val active = getActiveProfile()
+        return active.libraryRootId to active.libraryRootName
+    }
+
+    fun setLibraryRoot(id: String?, name: String?) {
+        val activeId = getActiveProfile().id
+        val updated = _profilesFlow.value.map {
+            if (it.id == activeId) it.copy(
+                libraryRootId = id?.trim()?.takeIf { value -> value.isNotBlank() },
+                libraryRootName = name?.trim()?.takeIf { value -> value.isNotBlank() }
+            ) else it
+        }
+        saveProfilesInternal(updated)
+        _profilesFlow.value = updated
+        _activeProfileFlow.value = updated.first { it.id == activeId }
     }
 
     fun deleteProfile(id: String): Boolean {

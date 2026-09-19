@@ -13,7 +13,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import zechs.drive.stream.BuildConfig
 import zechs.drive.stream.data.model.ChecksumAsset
 import zechs.drive.stream.data.model.ReleaseAsset
 import java.io.File
@@ -47,12 +46,6 @@ class AppUpdateManager @Inject constructor(
             val request = Request.Builder()
                 .url(asset.browserDownloadUrl)
                 .header("Accept", "application/octet-stream")
-                .apply {
-                    val token = BuildConfig.GITHUB_API_TOKEN.trim()
-                    if (token.isNotBlank()) {
-                        header("Authorization", "Bearer $token")
-                    }
-                }
                 .build()
 
             val response = okHttpClient.newCall(request).execute()
@@ -123,12 +116,6 @@ class AppUpdateManager @Inject constructor(
                 val request = Request.Builder()
                     .url(checksumAsset.browserDownloadUrl)
                     .header("Accept", "application/octet-stream")
-                    .apply {
-                        val token = BuildConfig.GITHUB_API_TOKEN.trim()
-                        if (token.isNotBlank()) {
-                            header("Authorization", "Bearer $token")
-                        }
-                    }
                     .build()
 
                 val response = okHttpClient.newCall(request).execute()

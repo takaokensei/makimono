@@ -29,7 +29,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Verify repository claims
-        run: ./scripts/verify-claims.sh
+        run: bash scripts/verify-claims.sh
 
       - name: Verify Secret Leaks (TruffleHog OSS)
         uses: trufflesecurity/trufflehog@main
@@ -38,7 +38,6 @@ jobs:
           base: ${{ github.event.repository.default_branch }}
           head: HEAD
           extra_args: --debug --only-verified
-        continue-on-error: true
 
       - name: Run lint checks
         run: ./gradlew lintDebug --no-daemon

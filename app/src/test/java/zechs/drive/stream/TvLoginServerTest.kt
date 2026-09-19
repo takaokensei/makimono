@@ -22,21 +22,20 @@ class TvLoginServerTest {
 
     private lateinit var scope: CoroutineScope
     private lateinit var server: TvLoginServer
-    private var receivedToken: String? = null
+    private var receivedCode: String? = null
     private var activatedDefault: Boolean = false
 
     @Before
     fun setUp() {
         scope = CoroutineScope(Dispatchers.IO + Job())
-        receivedToken = null
+        receivedCode = null
         activatedDefault = false
 
         // Pick port 0 or an available port
         server = TvLoginServer(
             port = 18880,
             clientId = "test-client-id",
-            onAuthCodeReceived = {},
-            onSessionReceived = { token, _, _, _ -> receivedToken = token },
+            onAuthCodeReceived = { receivedCode = it },
             onActivateDefault = { activatedDefault = true },
             isAlreadyAuthenticated = { false }
         )
@@ -94,29 +93,29 @@ class TvLoginServerTest {
     fun postWithoutNonce_returns401() {
         val (code, body) = sendHttpRequest(
             method = "POST",
-            path = "/api/session",
+            path = "/api/auth-code",
             headers = mapOf("Content-Type" to "application/json"),
-            body = "{\"refreshToken\":\"secret_refresh_token_123\"}"
+            body = "{\"code\":\"oauth_code_123\"}"
         )
         assertEquals(401, code)
         assertTrue(body.contains("Nonce de pareamento ausente"))
-        assertEquals(null, receivedToken)
+        assertEquals(null, receivedCode)
     }
 
     @Test
     fun postWithInvalidNonce_returns401() {
         val (code, body) = sendHttpRequest(
             method = "POST",
-            path = "/api/session",
+            path = "/api/auth-code",
             headers = mapOf(
                 "Content-Type" to "application/json",
                 "X-Pairing-Nonce" to "invalid_fake_nonce"
             ),
-            body = "{\"refreshToken\":\"secret_refresh_token_123\"}"
+            body = "{\"code\":\"oauth_code_123\"}"
         )
         assertEquals(401, code)
         assertTrue(body.contains("Nonce de pareamento inválido"))
-        assertEquals(null, receivedToken)
+        assertEquals(null, receivedCode)
     }
 
     @Test
@@ -130,16 +129,16 @@ class TvLoginServerTest {
 
         val (code, body) = sendHttpRequest(
             method = "POST",
-            path = "/api/session",
+            path = "/api/auth-code",
             headers = mapOf(
                 "Content-Type" to "application/json",
                 "X-Pairing-Nonce" to "expired_nonce_123"
             ),
-            body = "{\"refreshToken\":\"secret_refresh_token_123\"}"
+            body = "{\"code\":\"oauth_code_123\"}"
         )
         assertEquals(410, code)
         assertTrue(body.contains("Sessão de pareamento expirada"))
-        assertEquals(null, receivedToken)
+        assertEquals(null, receivedCode)
     }
 
     @Test
@@ -149,23 +148,23 @@ class TvLoginServerTest {
         // 1st request with valid nonce succeeds
         val (code1, _) = sendHttpRequest(
             method = "POST",
-            path = "/api/session",
+            path = "/api/auth-code",
             headers = mapOf("Content-Type" to "application/json"),
-            body = "{\"refreshToken\":\"token_1\",\"nonce\":\"$validNonce\"}"
+            body = "{\"code\":\"oauth_code_1\",\"nonce\":\"$validNonce\"}"
         )
         assertEquals(200, code1)
-        assertEquals("token_1", receivedToken)
+        assertEquals("oauth_code_1", receivedCode)
 
         // 2nd request with same nonce is rejected
         val (code2, body2) = sendHttpRequest(
             method = "POST",
-            path = "/api/session",
+            path = "/api/auth-code",
             headers = mapOf("Content-Type" to "application/json"),
-            body = "{\"refreshToken\":\"token_2\",\"nonce\":\"$validNonce\"}"
+            body = "{\"code\":\"oauth_code_2\",\"nonce\":\"$validNonce\"}"
         )
         assertEquals(409, code2)
         assertTrue(body2.contains("já utilizada"))
-        assertEquals("token_1", receivedToken) // Not overwritten
+        assertEquals("oauth_code_1", receivedCode) // Not overwritten
     }
 
     @Test
@@ -173,7 +172,7 @@ class TvLoginServerTest {
         val largeBody = "{\"data\":\"" + "A".repeat(70_000) + "\"}"
         val (code, _) = sendHttpRequest(
             method = "POST",
-            path = "/api/session",
+            path = "/api/auth-code",
             headers = mapOf("Content-Type" to "application/json"),
             body = largeBody
         )
@@ -183,15 +182,15 @@ class TvLoginServerTest {
     @Test
     fun response_neverEchoesSensitiveTokens() {
         val validNonce = server.getPairingNonce()
-        val sensitiveRefreshToken = "very_secret_refresh_token_999"
+        val sensitiveCode = "short_lived_oauth_code_999"
 
         val (code, responseBody) = sendHttpRequest(
             method = "POST",
-            path = "/api/session",
+            path = "/api/auth-code",
             headers = mapOf("Content-Type" to "application/json"),
-            body = "{\"refreshToken\":\"$sensitiveRefreshToken\",\"nonce\":\"$validNonce\"}"
+            body = "{\"code\":\"$sensitiveCode\",\"nonce\":\"$validNonce\"}"
         )
         assertEquals(200, code)
-        assertFalse("Response must not echo refresh token", responseBody.contains(sensitiveRefreshToken))
+        assertFalse("Response must not echo OAuth code", responseBody.contains(sensitiveCode))
     }
 }

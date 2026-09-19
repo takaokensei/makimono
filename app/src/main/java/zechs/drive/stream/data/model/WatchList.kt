@@ -19,7 +19,7 @@ data class WatchList(
     val watchedDuration: Long,
     val totalDuration: Long,
     val thumbnailLink: String? = null,
-    val profileId: String = "caua",
+    val profileId: String = "",
     @PrimaryKey(autoGenerate = true) val id: Int? = null
 ) {
 

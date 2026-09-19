@@ -9,15 +9,17 @@ import dagger.Lazy
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import zechs.drive.stream.data.local.CatalogEntry
 import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.data.model.WatchList
@@ -28,6 +30,7 @@ import zechs.drive.stream.data.repository.WatchListRepository
 import zechs.drive.stream.data.repository.WatchQueueRepository
 import zechs.drive.stream.data.remote.AnimePosterResolver
 import zechs.drive.stream.utils.Event
+import zechs.drive.stream.utils.ProfileManager
 import zechs.drive.stream.utils.SessionManager
 import zechs.drive.stream.utils.state.Resource
 import javax.inject.Inject
@@ -42,7 +45,8 @@ class HomeViewModel @Inject constructor(
     private val tenraiAnimeService: zechs.drive.stream.data.remote.TenraiAnimeService,
     private val favoriteRepository: zechs.drive.stream.data.repository.FavoriteRepository,
     private val catalogRepository: CatalogRepository,
-    private val watchQueueRepository: WatchQueueRepository
+    private val watchQueueRepository: WatchQueueRepository,
+    private val profileManager: ProfileManager
 ) : ViewModel() {
 
     companion object {
@@ -62,6 +66,9 @@ class HomeViewModel @Inject constructor(
     private val _recentWatches = MutableStateFlow<List<WatchList>>(emptyList())
     val recentWatches = _recentWatches.asStateFlow()
 
+    private val _watchHistory = MutableStateFlow<List<WatchList>>(emptyList())
+    val watchHistory = _watchHistory.asStateFlow()
+
     private val _starredFiles = MutableStateFlow<List<DriveFile>>(emptyList())
     val starredFiles = _starredFiles.asStateFlow()
 
@@ -70,6 +77,8 @@ class HomeViewModel @Inject constructor(
 
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
+
+    private var searchJob: Job? = null
 
     val watchQueue: StateFlow<List<WatchQueueItem>> =
         watchQueueRepository.observeQueue()
@@ -80,7 +89,6 @@ class HomeViewModel @Inject constructor(
             )
 
     init {
-        setupGlobalSearchPipeline()
     }
 
     data class FeaturedAnime(
@@ -113,6 +121,12 @@ class HomeViewModel @Inject constructor(
 
     fun getRecentWatches(limit: Int = 10) = viewModelScope.launch {
         _recentWatches.value = watchListRepository.getRecentWatches(limit)
+    }
+
+    fun getWatchHistory(limit: Int = 100) = viewModelScope.launch {
+        _watchHistory.value = watchListRepository.getAllWatches()
+            .sortedByDescending { it.id ?: 0 }
+            .take(limit)
     }
 
     fun removeWatchItem(watchItem: WatchList) = viewModelScope.launch(Dispatchers.IO) {
@@ -151,79 +165,63 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private var cachedOneBlackiId: String? = null
+    private var cachedLibraryRootId: String? = null
+    private var cachedLibraryRootProfileId: String? = null
 
-    fun getOneBlackiFolder(onResult: (folderId: String?, folderName: String) -> Unit) = viewModelScope.launch(Dispatchers.IO) {
-        if (!cachedOneBlackiId.isNullOrBlank()) {
+    fun getLibraryRootFolder(onResult: (folderId: String?, folderName: String) -> Unit) = viewModelScope.launch(Dispatchers.IO) {
+        val activeProfileId = profileManager.getActiveProfile().id
+        if (!cachedLibraryRootId.isNullOrBlank() && cachedLibraryRootProfileId == activeProfileId) {
             kotlinx.coroutines.withContext(Dispatchers.Main) {
-                onResult(cachedOneBlackiId, "oneblacki")
+                onResult(cachedLibraryRootId, profileManager.getLibraryRoot().second ?: "Biblioteca")
             }
             return@launch
         }
 
         try {
-            // 1. First priority: Exact match query for folder or shortcut named 'oneblacki'
-            val exactResponse = driveRepository.get().getFiles(
-                query = "name = 'oneblacki' and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut') and trashed=false",
-                pageToken = null,
-                pageSize = 10
-            )
-            if (exactResponse is Resource.Success && exactResponse.data != null && exactResponse.data.files.isNotEmpty()) {
-                val folder = exactResponse.data.files.firstOrNull {
-                    it.name.trim().equals("oneblacki", ignoreCase = true)
-                } ?: exactResponse.data.files.first()
-
-                val targetId = if (folder.shortcutDetails.targetId != null && folder.shortcutDetails.targetMimeType == "application/vnd.google-apps.folder") {
-                    folder.shortcutDetails.targetId
-                } else {
-                    folder.id
-                }
-                cachedOneBlackiId = targetId
-                Log.d(TAG, "Found exact oneblacki folder: id=$targetId, name=${folder.name}")
-                kotlinx.coroutines.withContext(Dispatchers.Main) {
-                    onResult(targetId, folder.name)
+            val (configuredId, configuredName) = profileManager.getLibraryRoot()
+            if (!configuredId.isNullOrBlank()) {
+                cachedLibraryRootId = configuredId
+                cachedLibraryRootProfileId = activeProfileId
+                withContext(Dispatchers.Main) {
+                    onResult(configuredId, configuredName ?: "Biblioteca")
                 }
                 return@launch
             }
 
-            // 2. Second priority: Query contains 'oneblacki' with strict exclusion of '1oneblacki'
-            val response = driveRepository.get().getFiles(
-                query = "name contains 'oneblacki' and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut') and trashed=false",
-                pageToken = null,
-                pageSize = 50
-            )
-            if (response is Resource.Success && response.data != null) {
-                val files = response.data.files
-                val folder = files.firstOrNull {
-                    it.name.trim().equals("oneblacki", ignoreCase = true)
-                } ?: files.firstOrNull {
-                    it.name.trim().equals("one blacki", ignoreCase = true)
-                } ?: files.firstOrNull {
-                    val n = it.name.trim().lowercase()
-                    n.contains("oneblacki") && !n.contains("1oneblacki") && !n.startsWith("1")
-                }
-
+            if (!configuredName.isNullOrBlank()) {
+                val escapedName = configuredName.replace("'", "\\'")
+                val response = driveRepository.get().getAllFiles(
+                    query = "name = '$escapedName' and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut') and trashed=false",
+                    pageSize = 25
+                )
+                val folder = (response as? Resource.Success)?.data?.firstOrNull()
                 if (folder != null) {
-                    val targetId = if (folder.shortcutDetails.targetId != null && folder.shortcutDetails.targetMimeType == "application/vnd.google-apps.folder") {
+                    val resolvedId = if (folder.shortcutDetails.targetId != null) {
                         folder.shortcutDetails.targetId
                     } else {
                         folder.id
                     }
-                    cachedOneBlackiId = targetId
-                    Log.d(TAG, "Found oneblacki folder (filtered): id=$targetId, name=${folder.name}")
-                    kotlinx.coroutines.withContext(Dispatchers.Main) {
-                        onResult(targetId, folder.name)
-                    }
+                    cachedLibraryRootId = resolvedId
+                    cachedLibraryRootProfileId = activeProfileId
+                    withContext(Dispatchers.Main) { onResult(resolvedId, folder.name) }
                     return@launch
                 }
+                Log.w(TAG, "Configured library folder not found: $configuredName")
             }
+
+            // An unset profile uses Drive root. The user can choose a narrower
+            // folder from Settings without recompiling the app.
+            cachedLibraryRootId = "root"
+            cachedLibraryRootProfileId = activeProfileId
+            withContext(Dispatchers.Main) { onResult("root", "Meu Drive") }
+            return@launch
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Error finding oneblacki folder", e)
+            Log.e(TAG, "Error resolving configured library root", e)
         }
 
         kotlinx.coroutines.withContext(Dispatchers.Main) {
-            onResult(null, "oneblacki")
+            onResult(null, "Biblioteca")
         }
     }
 
@@ -297,7 +295,7 @@ class HomeViewModel @Inject constructor(
     private fun resolveMissingPosters(files: List<DriveFile>) = viewModelScope.launch(Dispatchers.IO) {
         val updatedList = files.toMutableList()
 
-        for (i in updatedList.indices) {
+        for (i in updatedList.indices.take(60)) {
             val file = updatedList[i]
             val isFolder = file.isFolder || file.isShortcutFolder
             if (isFolder && file.posterUrl.isNullOrBlank()) {
@@ -362,10 +360,11 @@ class HomeViewModel @Inject constructor(
 
     fun loadAnimeLibrary(forceRefresh: Boolean = false) = viewModelScope.launch(Dispatchers.IO) {
         if (forceRefresh) {
-            cachedOneBlackiId = null
+            cachedLibraryRootId = null
+            cachedLibraryRootProfileId = null
         }
         _isLoadingAnime.value = true
-        getOneBlackiFolder { folderId, folderName ->
+        getLibraryRootFolder { folderId, folderName ->
             viewModelScope.launch(Dispatchers.IO) {
                 try {
                     if (folderId != null) {
@@ -444,27 +443,27 @@ class HomeViewModel @Inject constructor(
                             )
 
                             // Asynchronously resolve posters for items missing them
-                        val updatedList = mappedFiles.toMutableList()
-                        for (i in updatedList.indices) {
-                            val file = updatedList[i]
-                            if (file.posterUrl.isNullOrBlank() && (file.isFolder || file.isShortcutFolder)) {
-                                val poster = animePosterResolver.resolvePoster(file.name)
-                                if (!poster.isNullOrBlank()) {
-                                    val targetId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
-                                        file.shortcutDetails.targetId
-                                    } else file.id
-                                    folderMetadataRepository.updatePosterUrl(targetId, file.name, poster)
-                                    updatedList[i] = file.copy(posterUrl = poster)
-                                    _animeLibrary.value = updatedList.toList()
-                                    _filteredAnimes.value = updatedList.toList()
+                            val updatedList = mappedFiles.toMutableList()
+                            for (i in updatedList.indices.take(100)) {
+                                val file = updatedList[i]
+                                if (file.posterUrl.isNullOrBlank() && (file.isFolder || file.isShortcutFolder)) {
+                                    val poster = animePosterResolver.resolvePoster(file.name)
+                                    if (!poster.isNullOrBlank()) {
+                                        val targetId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
+                                            file.shortcutDetails.targetId
+                                        } else file.id
+                                        folderMetadataRepository.updatePosterUrl(targetId, file.name, poster)
+                                        updatedList[i] = file.copy(posterUrl = poster)
+                                        _animeLibrary.value = updatedList.toList()
+                                        _filteredAnimes.value = updatedList.toList()
+                                    }
                                 }
                             }
-                        }
                     } else {
                         _isLoadingAnime.value = false
                     }
                 } else {
-                    Log.w(TAG, "Pasta 'oneblacki' não encontrada no Google Drive.")
+                    Log.w(TAG, "Pasta de biblioteca não encontrada no Google Drive.")
                     _isLoadingAnime.value = false
                 }
                 } catch (e: Exception) {
@@ -543,27 +542,19 @@ class HomeViewModel @Inject constructor(
     fun filterAnimes(query: String) {
         val trimmed = query.trim()
         _searchQuery.value = trimmed
+        searchJob?.cancel()
         if (trimmed.isBlank()) {
+            _isSearching.value = false
             _filteredAnimes.value = _animeLibrary.value
         } else {
             _filteredAnimes.value = _animeLibrary.value.filter {
                 it.name.contains(trimmed, ignoreCase = true) ||
                 AnimePosterResolver.cleanAnimeTitle(it.name).contains(trimmed, ignoreCase = true)
             }
-        }
-    }
-
-    @OptIn(kotlinx.coroutines.FlowPreview::class)
-    private fun setupGlobalSearchPipeline() {
-        viewModelScope.launch {
-            _searchQuery
-                .debounce(350L)
-                .distinctUntilChanged()
-                .collect { query ->
-                    if (query.isNotBlank()) {
-                        performGlobalSearch(query)
-                    }
-                }
+            searchJob = viewModelScope.launch {
+                delay(350L)
+                performGlobalSearch(trimmed)
+            }
         }
     }
 
@@ -576,7 +567,7 @@ class HomeViewModel @Inject constructor(
 
             // 1. Check local offline catalog cache first
             val cached = catalogRepository.searchCatalog(trimmed)
-            if (cached.isNotEmpty()) {
+            if (cached.isNotEmpty() && _searchQuery.value == trimmed) {
                 val cachedFiles = cached.map { entry ->
                     DriveFile(
                         id = entry.id,
@@ -595,16 +586,17 @@ class HomeViewModel @Inject constructor(
 
             // 2. Global Google Drive search with pagination
             val sanitized = trimmed.replace("'", "\\'")
-            val driveQuery = "name contains '$sanitized' and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut') and trashed=false"
+            val driveQuery = "name contains '$sanitized' and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut' or mimeType contains 'video/') and trashed=false"
             val response = driveRepository.get().getAllFiles(
                 query = driveQuery,
                 pageSize = 50,
                 maxPages = 3
             )
-            if (response is Resource.Success && response.data != null) {
+            if (response is Resource.Success && response.data != null && _searchQuery.value == trimmed) {
                 val remoteFiles = response.data.map { it.toDriveFile() }.filter { file ->
                     val isFolder = file.isFolder || file.isShortcutFolder
-                    isFolder && !file.name.startsWith(".")
+                    val isVideo = file.isVideoFile || file.isShortcutVideo
+                    (isFolder || isVideo) && !file.name.startsWith(".")
                 }
                 mergeSearchResults(remoteFiles)
             }
@@ -612,7 +604,9 @@ class HomeViewModel @Inject constructor(
             if (e is CancellationException) throw e
             Log.e(TAG, "Error executing global search for: $query", e)
         } finally {
-            _isSearching.value = false
+            if (currentCoroutineContext().isActive) {
+                _isSearching.value = false
+            }
         }
     }
 
@@ -629,14 +623,37 @@ class HomeViewModel @Inject constructor(
 
     fun addToQueue(file: DriveFile) = viewModelScope.launch(Dispatchers.IO) {
         try {
-            watchQueueRepository.enqueue(
-                fileId = file.id,
-                name = file.name,
-                posterUrl = file.posterUrl ?: file.thumbnailLink
-            )
+            if (!watchQueueRepository.isInQueue(file.id)) {
+                watchQueueRepository.enqueue(
+                    fileId = file.id,
+                    name = file.name,
+                    posterUrl = file.posterUrl ?: file.thumbnailLink
+                )
+            }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e(TAG, "Error adding to watch queue", e)
+        }
+    }
+
+    fun starFile(file: DriveFile, starred: Boolean) = viewModelScope.launch(Dispatchers.IO) {
+        try {
+            val targetId = if (file.isShortcut) file.shortcutDetails.targetId ?: file.id else file.id
+            favoriteRepository.set(targetId, file.name, starred)
+            if (starred) {
+                folderMetadataRepository.recordFolderOpened(targetId, file.name)
+            }
+            val status = if (starred) zechs.drive.stream.data.model.Starred.STARRED
+            else zechs.drive.stream.data.model.Starred.UNSTARRED
+            _animeLibrary.value = _animeLibrary.value.map { item ->
+                if (item.id == file.id || item.shortcutDetails.targetId == targetId) item.copy(starred = status) else item
+            }
+            _filteredAnimes.value = _filteredAnimes.value.map { item ->
+                if (item.id == file.id || item.shortcutDetails.targetId == targetId) item.copy(starred = status) else item
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.e(TAG, "Error updating Home favorite", e)
         }
     }
 
@@ -699,14 +716,14 @@ class HomeViewModel @Inject constructor(
             }
 
             // 2. Query the anime folder to find video files
-            val response = driveRepository.get().getFiles(
+            val response = driveRepository.get().getAllFiles(
                 query = "'$folderId' in parents and trashed=false",
-                pageToken = null,
                 pageSize = 100
             )
             if (response is Resource.Success && response.data != null) {
-                val files = response.data.files.map { it.toDriveFile() }
-                val videos = files.filter { it.isVideoFile || it.isShortcutVideo }.sortedBy { it.name }
+                val files = response.data.map { it.toDriveFile() }
+                val videos = files.filter { it.isVideoFile || it.isShortcutVideo }
+                    .sortedWith { a, b -> zechs.drive.stream.utils.EpisodeParser.naturalCompare(a.name, b.name) }
 
                 if (videos.isNotEmpty()) {
                     val watchMap = recentWatches.associateBy { it.videoId }
@@ -755,19 +772,20 @@ class HomeViewModel @Inject constructor(
                 }
 
                 // If no video in root, check subfolders (e.g. Season 1)
-                val subFolders = files.filter { it.isFolder || it.isShortcutFolder }.sortedBy { it.name }
+                    val subFolders = files.filter { it.isFolder || it.isShortcutFolder }
+                        .sortedWith { a, b -> zechs.drive.stream.utils.EpisodeParser.naturalCompare(a.name, b.name) }
                 for (subFolder in subFolders) {
                     val subFolderId = if (subFolder.isShortcut && subFolder.shortcutDetails.targetId != null) {
                         subFolder.shortcutDetails.targetId
                     } else subFolder.id
-                    val subResponse = driveRepository.get().getFiles(
+                    val subResponse = driveRepository.get().getAllFiles(
                         query = "'$subFolderId' in parents and trashed=false",
-                        pageToken = null,
                         pageSize = 100
                     )
                     if (subResponse is Resource.Success && subResponse.data != null) {
-                        val subFiles = subResponse.data.files.map { it.toDriveFile() }
-                        val subVideos = subFiles.filter { it.isVideoFile || it.isShortcutVideo }.sortedBy { it.name }
+                        val subFiles = subResponse.data.map { it.toDriveFile() }
+                        val subVideos = subFiles.filter { it.isVideoFile || it.isShortcutVideo }
+                            .sortedWith { a, b -> zechs.drive.stream.utils.EpisodeParser.naturalCompare(a.name, b.name) }
                         if (subVideos.isNotEmpty()) {
                             val watchMap = recentWatches.associateBy { it.videoId }
 

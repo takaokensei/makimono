@@ -34,20 +34,10 @@ jobs:
           base: ${{ github.event.repository.default_branch }}
           head: HEAD
           extra_args: --debug --only-verified
-        continue-on-error: true
 
       - name: Setup local.properties (Optional Secrets)
         run: |
           touch local.properties
-          if [ -n "${{ secrets.DRIVE_CLIENT_ID }}" ]; then
-            echo "drive.clientId=${{ secrets.DRIVE_CLIENT_ID }}" >> local.properties
-          fi
-          if [ -n "${{ secrets.DRIVE_CLIENT_SECRET }}" ]; then
-            echo "drive.clientSecret=${{ secrets.DRIVE_CLIENT_SECRET }}" >> local.properties
-          fi
-          if [ -n "${{ secrets.DRIVE_REFRESH_TOKEN }}" ]; then
-            echo "drive.refreshToken=${{ secrets.DRIVE_REFRESH_TOKEN }}" >> local.properties
-          fi
 
       - name: Validate Release Secrets
         run: |

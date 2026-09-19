@@ -21,11 +21,11 @@ class Constants {
         // to a bundled identity - the user configures their own client on the
         // "Configure your drive client" screen (see SignInFragment), which is
         // exactly what the original DriveStream project intends.
-        val DEFAULT_CLIENT_ID = zechs.drive.stream.BuildConfig.DRIVE_CLIENT_ID
-        val DEFAULT_CLIENT_SECRET = zechs.drive.stream.BuildConfig.DRIVE_CLIENT_SECRET
+        const val DEFAULT_CLIENT_ID = ""
+        const val DEFAULT_CLIENT_SECRET = ""
         const val DEFAULT_REDIRECT_URI = "http://127.0.0.1:53682/"
         const val DEFAULT_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.readonly"
-        val DEFAULT_REFRESH_TOKEN = zechs.drive.stream.BuildConfig.DRIVE_REFRESH_TOKEN
+        const val DEFAULT_REFRESH_TOKEN = ""
 
         val DEFAULT_CLIENT = zechs.drive.stream.data.model.DriveClient(
             clientId = DEFAULT_CLIENT_ID,
@@ -34,10 +34,10 @@ class Constants {
             scopes = listOf(DEFAULT_DRIVE_SCOPE)
         )
 
-        // MyAnimeList (MAL) API v2 Credentials & Endpoints
-        // Injected dynamically via BuildConfig from local.properties
-        val MAL_CLIENT_ID = zechs.drive.stream.BuildConfig.MAL_CLIENT_ID
-        val MAL_CLIENT_SECRET = zechs.drive.stream.BuildConfig.MAL_CLIENT_SECRET
+        // MyAnimeList (MAL) API v2 endpoints. Credentials are supplied by the
+        // user and stored in the encrypted session store; never ship them here.
+        const val MAL_CLIENT_ID = ""
+        const val MAL_CLIENT_SECRET = ""
         const val MAL_API_BASE_URL = "https://api.myanimelist.net/"
         const val MAL_OAUTH_BASE_URL = "https://myanimelist.net/"
         const val MAL_REDIRECT_URI = "http://127.0.0.1:1420/auth/callback"

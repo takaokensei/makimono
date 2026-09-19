@@ -480,6 +480,38 @@
                                     android:text="Favoritar"
                                     android:textColor="?attr/colorTextPrimary"
                                     android:textSize="11sp" />
+                             </LinearLayout>
+
+                            <LinearLayout
+                                android:id="@+id/btnFollow"
+                                android:layout_width="wrap_content"
+                                android:layout_height="42dp"
+                                android:layout_marginStart="10dp"
+                                android:background="@drawable/btn_secondary_action_bg"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:focusableInTouchMode="true"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:paddingStart="14dp"
+                                android:paddingEnd="14dp">
+
+                                <ImageView
+                                    android:id="@+id/ivFollowIcon"
+                                    android:layout_width="17dp"
+                                    android:layout_height="17dp"
+                                    android:contentDescription="@null"
+                                    android:src="@drawable/ic_notification_24"
+                                    app:tint="?attr/colorTextPrimary" />
+
+                                <TextView
+                                    android:id="@+id/tvFollowText"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="7dp"
+                                    android:text="Seguir"
+                                    android:textColor="?attr/colorTextPrimary"
+                                    android:textSize="11sp" />
                             </LinearLayout>
 
                             <LinearLayout

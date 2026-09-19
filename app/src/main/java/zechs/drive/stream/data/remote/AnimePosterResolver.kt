@@ -9,7 +9,8 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.net.URLEncoder
-import java.util.concurrent.ConcurrentHashMap
+import java.util.Collections
+import java.util.LinkedHashMap
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -92,7 +93,13 @@ class AnimePosterResolver @Inject constructor() {
         .readTimeout(8, TimeUnit.SECONDS)
         .build()
 
-    private val metadataCache = ConcurrentHashMap<String, AnimeMetadata>()
+    private val metadataCache = Collections.synchronizedMap(
+        object : LinkedHashMap<String, AnimeMetadata>(64, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, AnimeMetadata>?): Boolean {
+                return size > 128
+            }
+        }
+    )
 
     /**
      * Resolves complete metadata (high-res poster, banner, dominant color, canonical titles, score, synopsis)
@@ -100,15 +107,6 @@ class AnimePosterResolver @Inject constructor() {
      */
     suspend fun resolveMetadata(folderName: String): AnimeMetadata? = withContext(Dispatchers.IO) {
         val trimmed = folderName.trim()
-        if (trimmed.equals("oneblacki", ignoreCase = true) ||
-            (trimmed.contains("oneblacki", ignoreCase = true) && !trimmed.contains("1oneblacki", ignoreCase = true) && !trimmed.startsWith("1"))) {
-            return@withContext AnimeMetadata(
-                posterUrl = "android.resource://zechs.drive.stream/drawable/oneblacki_cover",
-                titleRomaji = "OneBlacki",
-                dominantColor = "#00E5FF"
-            )
-        }
-
         val query = cleanAnimeTitle(folderName)
         if (query.isBlank()) return@withContext null
 

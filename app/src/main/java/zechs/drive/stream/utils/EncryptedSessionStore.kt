@@ -14,33 +14,44 @@ import javax.inject.Singleton
 /**
  * SEC-02: Android Keystore-backed encrypted storage for Google Drive OAuth credentials.
  * Protects access tokens, refresh tokens, and client secrets with hardware/AES-256 encryption.
- * Automatically falls back to mode-private SharedPreferences if Keystore is unavailable (e.g. JVM tests).
+ * Fails closed if Keystore-backed storage is unavailable. JVM tests must inject an
+ * explicit in-memory preference implementation through the internal constructor.
  */
 @Singleton
-class EncryptedSessionStore @Inject constructor(
-    @ApplicationContext private val context: Context
+class EncryptedSessionStore private constructor(
+    private val prefs: SharedPreferences
 ) : SecretStore {
+
+    @Inject
+    constructor(@ApplicationContext context: Context) : this(createSecurePreferences(context))
+
+    internal constructor(testPreferences: SharedPreferences, testOnly: Boolean = true) : this(testPreferences)
 
     companion object {
         private const val TAG = "EncryptedSessionStore"
         private const val PREFS_NAME = "encrypted_drive_session"
-    }
 
-    private val prefs: SharedPreferences = try {
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
+        private fun createSecurePreferences(context: Context): SharedPreferences {
+            return try {
+                val masterKey = MasterKey.Builder(context)
+                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                    .build()
 
-        EncryptedSharedPreferences.create(
-            context,
-            PREFS_NAME,
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
-    } catch (e: Exception) {
-        Log.e(TAG, "Failed to create EncryptedSharedPreferences for Drive session, falling back to private prefs", e)
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                EncryptedSharedPreferences.create(
+                    context,
+                    PREFS_NAME,
+                    masterKey,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to create encrypted Drive session store", e)
+                throw IllegalStateException(
+                    "Secure credential storage is unavailable; refusing to store Drive credentials in plain text",
+                    e
+                )
+            }
+        }
     }
 
     override suspend fun put(key: String, value: String) = withContext(Dispatchers.IO) {

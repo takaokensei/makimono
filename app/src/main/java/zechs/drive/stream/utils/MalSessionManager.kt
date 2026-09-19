@@ -10,34 +10,23 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import zechs.drive.stream.data.model.MalTokenResponse
 import zechs.drive.stream.data.model.MalUserProfile
+import zechs.drive.stream.utils.util.Constants
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class MalSessionManager @Inject constructor(
-    @ApplicationContext private val context: Context
+class MalSessionManager private constructor(
+    private val prefs: SharedPreferences
 ) {
 
     // MAL access/refresh tokens are long-lived OAuth credentials; store them in
     // EncryptedSharedPreferences (AES256-GCM, key held in the Android Keystore)
-    // instead of plain SharedPreferences. Falls back to plain prefs if the
-    // Keystore is unavailable on a given device rather than crashing the app.
-    private val prefs: SharedPreferences = try {
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
+    // instead of plain SharedPreferences. Keystore failure is fatal for this
+    // store: silently persisting OAuth credentials in clear text is unsafe.
+    @Inject
+    constructor(@ApplicationContext context: Context) : this(createSecurePreferences(context))
 
-        EncryptedSharedPreferences.create(
-            context,
-            PREFS_NAME,
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
-    } catch (e: Exception) {
-        Log.e(TAG, "Failed to create EncryptedSharedPreferences, falling back to plain prefs", e)
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    }
+    internal constructor(testPreferences: SharedPreferences, testOnly: Boolean = true) : this(testPreferences)
 
     private val _isSyncEnabledFlow = MutableStateFlow(isSyncEnabled())
     val isSyncEnabledFlow = _isSyncEnabledFlow.asStateFlow()
@@ -109,13 +98,13 @@ class MalSessionManager @Inject constructor(
     fun getClientId(): String {
         val custom = prefs.getString(KEY_CLIENT_ID, null)
         if (!custom.isNullOrBlank()) return custom
-        return zechs.drive.stream.BuildConfig.MAL_CLIENT_ID
+        return Constants.MAL_CLIENT_ID
     }
 
     fun getClientSecret(): String {
         val custom = prefs.getString(KEY_CLIENT_SECRET, null)
         if (!custom.isNullOrBlank()) return custom
-        return zechs.drive.stream.BuildConfig.MAL_CLIENT_SECRET
+        return Constants.MAL_CLIENT_SECRET
     }
 
     fun saveClientCredentials(clientId: String, clientSecret: String) {
@@ -139,5 +128,27 @@ class MalSessionManager @Inject constructor(
         private const val KEY_GESTURES_ENABLED = "gestures_enabled"
         private const val KEY_CLIENT_ID = "custom_mal_client_id"
         private const val KEY_CLIENT_SECRET = "custom_mal_client_secret"
+
+        private fun createSecurePreferences(context: Context): SharedPreferences {
+            return try {
+                val masterKey = MasterKey.Builder(context)
+                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                    .build()
+
+                EncryptedSharedPreferences.create(
+                    context,
+                    PREFS_NAME,
+                    masterKey,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to create encrypted MAL session store", e)
+                throw IllegalStateException(
+                    "Secure credential storage is unavailable; refusing to store MAL credentials in plain text",
+                    e
+                )
+            }
+        }
     }
 }

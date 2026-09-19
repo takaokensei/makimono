@@ -1,9 +1,6 @@
 package zechs.drive.stream
 
-import android.content.Context
 import android.content.SharedPreferences
-import io.mockk.every
-import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -15,15 +12,9 @@ import zechs.drive.stream.data.model.MalTokenResponse
 /**
  * Tests for MalSessionManager using a fake in-memory SharedPreferences.
  *
- * MalSessionManager uses EncryptedSharedPreferences in production, but the
- * constructor falls back to plain SharedPreferences if the Android Keystore is
- * unavailable (which is always the case on the JVM). We exploit this by injecting
- * a real in-memory SharedPreferences via MockK so we can exercise the actual
- * read/write logic without any Android framework dependency.
- *
- * Note: MalSessionManager constructor takes a Context and creates SharedPreferences
- * internally. To make it testable without Robolectric we use a MockK Context
- * that returns an in-memory SharedPreferences on getSharedPreferences().
+ * MalSessionManager uses EncryptedSharedPreferences in production. The explicit
+ * in-memory constructor is test-only and exercises the same read/write logic
+ * without weakening the production storage policy.
  */
 class MalSessionManagerTest {
 
@@ -34,14 +25,7 @@ class MalSessionManagerTest {
 
     @Before
     fun setUp() {
-        // Mock context: getSharedPreferences always returns our in-memory prefs.
-        // MasterKey.Builder will throw on JVM -> constructor catches and falls back to
-        // context.getSharedPreferences(), giving us full control over storage.
-        val context: Context = mockk {
-            every { getSharedPreferences(any(), any()) } returns inMemoryPrefs
-            every { packageName } returns "zechs.drive.stream"
-        }
-        sessionManager = zechs.drive.stream.utils.MalSessionManager(context)
+        sessionManager = zechs.drive.stream.utils.MalSessionManager(inMemoryPrefs, true)
     }
 
     // saveTokens() roundtrip: access token and refresh token are persisted

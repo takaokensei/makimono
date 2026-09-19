@@ -34,7 +34,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import zechs.drive.stream.data.repository.MalRepository
 import zechs.drive.stream.utils.MalSessionManager
-import zechs.drive.stream.utils.util.Constants
 
 @AndroidEntryPoint
 class SettingsFragment : BaseFragment() {
@@ -99,6 +98,7 @@ class SettingsFragment : BaseFragment() {
         }
 
         setupUserProfileSection()
+        setupLibraryRootSetting()
         setupThemeMenu()
         setupDefaultPlayerMenu()
         setupSubtitleSizeSetting()
@@ -115,6 +115,7 @@ class SettingsFragment : BaseFragment() {
 
         val rows = listOfNotNull(
             binding.settingSelectProfile,
+            binding.settingLibraryRoot,
             binding.settingSelectTheme,
             binding.settingDefaultPlayer,
             binding.settingSubtitleSize,
@@ -160,6 +161,34 @@ class SettingsFragment : BaseFragment() {
 
         binding.settingSelectProfile.setOnClickListener {
             findNavController().navigate(R.id.action_settingsFragment_to_profileSelectionFragment)
+        }
+    }
+
+    private fun setupLibraryRootSetting() {
+        fun refreshValue() {
+            val (rootId, rootName) = profileManager.getLibraryRoot()
+            binding.tvLibraryRootValue.text = rootName ?: if (rootId.isNullOrBlank()) "Meu Drive" else rootId
+        }
+
+        refreshValue()
+        binding.settingLibraryRoot.setOnClickListener {
+            val input = android.widget.EditText(requireContext()).apply {
+                hint = "Nome da pasta no Google Drive"
+                setText(profileManager.getLibraryRoot().second.orEmpty())
+                setSelection(text?.length ?: 0)
+                isSingleLine = true
+            }
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Pasta da biblioteca")
+                .setMessage("Deixe vazio para usar a raiz do Meu Drive.")
+                .setView(input)
+                .setPositiveButton("Salvar") { _, _ ->
+                    val name = input.text?.toString()?.trim().orEmpty()
+                    profileManager.setLibraryRoot(null, name.ifBlank { null })
+                    refreshValue()
+                }
+                .setNegativeButton("Cancelar", null)
+                .show()
         }
     }
 
@@ -404,7 +433,9 @@ class SettingsFragment : BaseFragment() {
 
                 is Resource.Error -> {
                     isChecking(false)
-                    showSnackBar(getString(R.string.unable_to_check_updates))
+                    val errorMsg = state.message?.takeIf { it.isNotBlank() }
+                        ?: getString(R.string.unable_to_check_updates)
+                    showSnackBar(errorMsg)
                 }
 
                 is Resource.Success -> {
@@ -434,7 +465,9 @@ class SettingsFragment : BaseFragment() {
             }
             binding.switchMalSync.isChecked = malSessionManager.isSyncEnabled()
             binding.settingMalSyncToggle.isVisible = isLoggedIn
-            binding.settingMalTransferToTv.isVisible = isLoggedIn
+            // Direct token transfer over the LAN was removed. The TV flow uses
+            // the short-lived OAuth code handled by MalAuthDialog instead.
+            binding.settingMalTransferToTv.isVisible = false
         }
 
         updateMalUi()
@@ -442,34 +475,6 @@ class SettingsFragment : BaseFragment() {
         binding.switchMalSync.setOnCheckedChangeListener { _, isChecked ->
             malSessionManager.setSyncEnabled(isChecked)
             showSnackBar(if (isChecked) "Sincronização com o MyAnimeList ativada" else "Sincronização com o MyAnimeList pausada")
-        }
-
-        binding.settingMalTransferToTv.setOnClickListener {
-            val inputLayout = com.google.android.material.textfield.TextInputLayout(requireContext()).apply {
-                boxBackgroundMode = com.google.android.material.textfield.TextInputLayout.BOX_BACKGROUND_OUTLINE
-                hint = "IP da TV (ex: 192.168.1.150)"
-                setPadding(48, 24, 48, 12)
-            }
-            val editText = com.google.android.material.textfield.TextInputEditText(inputLayout.context).apply {
-                inputType = android.text.InputType.TYPE_CLASS_PHONE or android.text.InputType.TYPE_TEXT_VARIATION_URI
-                setText("192.168.")
-                setSelection(text?.length ?: 0)
-            }
-            inputLayout.addView(editText)
-
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Transferir Login para Android TV")
-                .setMessage("Abra a tela de conexão do MAL na sua TV e digite o IP exibido no QR Code:")
-                .setView(inputLayout)
-                .setPositiveButton("Transferir") { dialog, _ ->
-                    val ip = editText.text?.toString()?.trim()
-                    if (!ip.isNullOrBlank()) {
-                        transferMalSessionToTv(ip)
-                    }
-                    dialog.dismiss()
-                }
-                .setNegativeButton("Cancelar") { dialog, _ -> dialog.dismiss() }
-                .show()
         }
 
         binding.settingMalAccount.setOnClickListener {
@@ -486,67 +491,59 @@ class SettingsFragment : BaseFragment() {
                     .setNegativeButton("Cancelar") { dialog, _ -> dialog.dismiss() }
                     .show()
             } else {
-                val authDialog = MalAuthDialog(
-                    onCodeReceived = { code, verifier ->
-                        viewLifecycleOwner.lifecycleScope.launch {
-                            showSnackBar("Autenticando com MyAnimeList...")
-                            val res = malRepository.exchangeToken(code, verifier)
-                            if (res is Resource.Success) {
-                                updateMalUi()
-                                showSnackBar("MyAnimeList conectado com sucesso!")
+                val openAuth = {
+                    val authDialog = MalAuthDialog(
+                        onCodeReceived = { code, verifier ->
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                showSnackBar("Autenticando com MyAnimeList...")
+                                val res = malRepository.exchangeToken(code, verifier)
+                                if (res is Resource.Success) {
+                                    updateMalUi()
+                                    showSnackBar("MyAnimeList conectado com sucesso!")
+                                } else {
+                                    showSnackBar(res.message ?: "Falha ao conectar MyAnimeList")
+                                }
+                            }
+                        },
+                        clientId = malSessionManager.getClientId()
+                    )
+                    authDialog.show(parentFragmentManager, MalAuthDialog.TAG)
+                }
+
+                if (malSessionManager.getClientId().isBlank() || malSessionManager.getClientSecret().isBlank()) {
+                    val fields = LinearLayout(requireContext()).apply {
+                        orientation = LinearLayout.VERTICAL
+                        setPadding(48, 0, 48, 0)
+                    }
+                    val clientId = android.widget.EditText(requireContext()).apply {
+                        hint = "Client ID"
+                        setText(malSessionManager.getClientId())
+                        isSingleLine = true
+                    }
+                    val clientSecret = android.widget.EditText(requireContext()).apply {
+                        hint = "Client Secret"
+                        setText(malSessionManager.getClientSecret())
+                        inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                        isSingleLine = true
+                    }
+                    fields.addView(clientId)
+                    fields.addView(clientSecret)
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("Configurar MyAnimeList")
+                        .setMessage("Crie uma aplicação OAuth no MyAnimeList e informe as credenciais. Elas serão armazenadas criptografadas.")
+                        .setView(fields)
+                        .setPositiveButton("Continuar") { _, _ ->
+                            if (clientId.text.isNullOrBlank() || clientSecret.text.isNullOrBlank()) {
+                                showSnackBar("Informe o Client ID e o Client Secret")
                             } else {
-                                showSnackBar(res.message ?: "Falha ao conectar MyAnimeList")
+                                malSessionManager.saveClientCredentials(clientId.text.toString(), clientSecret.text.toString())
+                                openAuth()
                             }
                         }
-                    },
-                    onTokenReceived = { token, username ->
-                        malSessionManager.saveTokens(token)
-                        if (!username.isNullOrBlank()) {
-                            malSessionManager.saveUserProfile(zechs.drive.stream.data.model.MalUserProfile(0, username, null))
-                        }
-                        updateMalUi()
-                        showSnackBar("MyAnimeList conectado com sucesso via celular!")
-                    }
-                )
-                authDialog.show(parentFragmentManager, MalAuthDialog.TAG)
-            }
-        }
-    }
-
-    private fun transferMalSessionToTv(rawIp: String) {
-        viewLifecycleOwner.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            try {
-                val cleanHost = rawIp.removePrefix("http://").removePrefix("https://").substringBefore(":").substringBefore("/")
-                val targetUrl = "http://$cleanHost:${Constants.MAL_REDIRECT_PORT}/api/mal-token"
-                val payload = org.json.JSONObject().apply {
-                    put("accessToken", malSessionManager.getAccessToken() ?: "")
-                    put("refreshToken", malSessionManager.getRefreshToken() ?: "")
-                    put("expiresIn", (malSessionManager.getExpiresAt() - System.currentTimeMillis()) / 1000L)
-                    put("username", malSessionManager.getUsername() ?: "")
-                }.toString()
-
-                val connection = java.net.URL(targetUrl).openConnection() as java.net.HttpURLConnection
-                connection.requestMethod = "POST"
-                connection.doOutput = true
-                connection.connectTimeout = 5000
-                connection.readTimeout = 5000
-                connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
-                connection.outputStream.use { os ->
-                    os.write(payload.toByteArray(java.nio.charset.StandardCharsets.UTF_8))
-                }
-
-                val responseCode = connection.responseCode
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    if (responseCode in 200..299) {
-                        showSnackBar("🎉 Login do MyAnimeList transferido para a TV com sucesso!")
-                    } else {
-                        showSnackBar("Falha ao comunicar com a TV (código HTTP $responseCode)")
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error transferring MAL login to TV", e)
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    showSnackBar("Erro ao transferir: ${e.message}")
+                        .setNegativeButton("Cancelar", null)
+                        .show()
+                } else {
+                    openAuth()
                 }
             }
         }

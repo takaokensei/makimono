@@ -4,7 +4,6 @@ import android.util.Log
 import dagger.Lazy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import zechs.drive.stream.BuildConfig
 import zechs.drive.stream.data.model.LatestRelease
 import zechs.drive.stream.data.remote.GithubApi
 import zechs.drive.stream.utils.state.Resource
@@ -21,16 +20,18 @@ class GithubRepository @Inject constructor(
     }
 
     suspend fun getLatestRelease(): Resource<LatestRelease> = withContext(Dispatchers.IO) {
-        val token = BuildConfig.GITHUB_API_TOKEN.trim()
-        val authHeader = if (token.isNotBlank()) "Bearer $token" else null
-
         try {
-            val latest = githubApi.get().getLatestRelease(authHeader)
+            val latest = githubApi.get().getLatestRelease(null)
             Log.d(TAG, "Fetched latest release from API: ${latest.tagName}")
             return@withContext Resource.Success(latest)
         } catch (e: Exception) {
             Log.e(TAG, "GitHub release API failed", e)
-            return@withContext Resource.Error(e.message ?: "Erro ao verificar atualizações")
+            val msg = when (e) {
+                is java.net.UnknownHostException -> "Sem conexão com o GitHub"
+                is retrofit2.HttpException -> "GitHub retornou erro HTTP ${e.code()}"
+                else -> e.localizedMessage ?: e.message ?: "Erro ao verificar atualizações"
+            }
+            return@withContext Resource.Error(msg)
         }
     }
 

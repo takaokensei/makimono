@@ -29,8 +29,9 @@ class DriveRepository @Inject constructor(
          * Safety cap on pagination to prevent runaway API calls on very large shared drives.
          * At the default page size of 100 this covers up to 2 500 files per query — well above
          * any practical anime-streaming library while still bounding latency and quota usage.
-         */
+        */
         const val MAX_PAGINATION_PAGES = 25
+        const val MAX_PAGINATED_FILES = 2_500
     }
 
     suspend fun <T> retryWithBackoff(
@@ -78,19 +79,44 @@ class DriveRepository @Inject constructor(
         val accessToken = getOrFetchAccessToken()
             ?: return Resource.Error("Access token can not be null")
         return try {
-            val files = retryWithBackoff {
-                driveApi.getFiles(
-                    q = query,
-                    pageSize = pageSize,
-                    pageToken = pageToken,
-                    accessToken = "Bearer $accessToken",
-                    orderBy = orderBy
-                )
-            }
+            val files = requestFiles(accessToken, query, pageToken, pageSize, orderBy)
             Resource.Success(files)
+        } catch (unauthorized: HttpException) {
+            if (unauthorized.code() != 401) return doOnError(unauthorized)
+
+            val client = sessionManager.fetchClient()
+                ?: return doOnError(unauthorized)
+            val refreshed = fetchAccessToken(client, forceRefresh = true)
+            if (refreshed is Resource.Success) {
+                try {
+                    Resource.Success(
+                        requestFiles(refreshed.data.accessToken, query, pageToken, pageSize, orderBy)
+                    )
+                } catch (retryError: Exception) {
+                    doOnError(retryError)
+                }
+            } else {
+                doOnError(unauthorized)
+            }
         } catch (e: Exception) {
             doOnError(e)
         }
+    }
+
+    private suspend fun requestFiles(
+        accessToken: String,
+        query: String,
+        pageToken: String?,
+        pageSize: Int,
+        orderBy: String
+    ): FilesResponse = retryWithBackoff {
+        driveApi.getFiles(
+            q = query,
+            pageSize = pageSize,
+            pageToken = pageToken,
+            accessToken = "Bearer $accessToken",
+            orderBy = orderBy
+        )
     }
 
     /** Fetches every page while keeping the existing single-page API intact. */
@@ -103,10 +129,15 @@ class DriveRepository @Inject constructor(
         val collected = mutableListOf<File>()
         var pageToken: String? = null
 
-        repeat(maxPages) {
-            when (val response = getFiles(query, pageToken, pageSize, orderBy)) {
+        val boundedPages = maxPages.coerceIn(1, MAX_PAGINATION_PAGES)
+        val boundedPageSize = pageSize.coerceIn(1, 100)
+
+        repeat(boundedPages) {
+            when (val response = getFiles(query, pageToken, boundedPageSize, orderBy)) {
                 is Resource.Success -> {
-                    collected += response.data.files
+                    val remaining = MAX_PAGINATED_FILES - collected.size
+                    collected += response.data.files.take(remaining.coerceAtLeast(0))
+                    if (collected.size >= MAX_PAGINATED_FILES) return Resource.Success(collected)
                     pageToken = response.data.nextPageToken
                     if (pageToken.isNullOrBlank()) return Resource.Success(collected)
                 }

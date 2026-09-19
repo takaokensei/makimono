@@ -6,6 +6,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
@@ -21,6 +22,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import zechs.drive.stream.R
 import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.data.model.WatchList
+import zechs.drive.stream.data.model.WatchQueueItem
 import zechs.drive.stream.databinding.FragmentHomeBinding
 import zechs.drive.stream.ui.BaseFragment
 import zechs.drive.stream.ui.files.adapter.FilesAdapter
@@ -53,6 +55,7 @@ class HomeFragment : BaseFragment() {
     private var isSidebarExpanded = false
     private var lastFocusedAnimeView: View? = null
     private var lastFocusedItemId: String? = null
+    private var lastProfileConfiguration: String? = null
 
     private val voiceSearchLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
@@ -73,11 +76,10 @@ class HomeFragment : BaseFragment() {
                 handleQuickPlay(file)
             },
             onStarClickListener = { file, star ->
-                // Star toggled
+                viewModel.starFile(file, star)
             },
             onLongClickListener = { file ->
-                // Long press (segurar o botão): abrir pasta para navegar episódios!
-                handleOpenFolder(file)
+                showAnimeContextMenu(file)
             },
             onPlayClickListener = { file ->
                 // Botão play central: iniciar imediatamente!
@@ -125,10 +127,12 @@ class HomeFragment : BaseFragment() {
         )
         binding.rvContinueWatchingShelf.adapter = continueWatchingAdapter
 
-        // "VER HISTÓRICO" shows all watched items — for now scrolls the shelf to end
         binding.tvShelfViewHistory?.setOnClickListener {
-            val count = continueWatchingAdapter.itemCount
-            if (count > 0) binding.rvContinueWatchingShelf.smoothScrollToPosition(count - 1)
+            showWatchHistoryDialog()
+        }
+
+        binding.tvShelfViewQueue?.setOnClickListener {
+            showWatchQueueDialog()
         }
 
         binding.btnExploreAnimes?.setOnClickListener {
@@ -137,7 +141,9 @@ class HomeFragment : BaseFragment() {
 
         observeAnimeLibrary()
         observeRecentWatches()
+        observeWatchQueue()
         observeFeaturedAnime()
+        observeProfileConfiguration()
         observeLogOutState()
         observeMpv()
 
@@ -147,6 +153,26 @@ class HomeFragment : BaseFragment() {
         // Load anime library immediately on opening
         viewModel.loadAnimeLibrary()
         viewModel.getRecentWatches()
+        viewModel.getWatchHistory()
+    }
+
+    private fun observeProfileConfiguration() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                profileManager.activeProfileFlow.collect { profile ->
+                    val signature = listOf(
+                        profile.id,
+                        profile.libraryRootId.orEmpty(),
+                        profile.libraryRootName.orEmpty()
+                    ).joinToString("|")
+                    val previous = lastProfileConfiguration
+                    lastProfileConfiguration = signature
+                    if (previous != null && previous != signature) {
+                        viewModel.loadAnimeLibrary(forceRefresh = true)
+                    }
+                }
+            }
+        }
     }
 
     private fun getResponsiveSpanCount(): Int {
@@ -322,11 +348,14 @@ class HomeFragment : BaseFragment() {
             btnNavPastas.setOnClickListener {
                 selectTab("Pastas")
                 if (hasOverlay) collapseSidebar()
-                val action = HomeFragmentDirections.actionHomeFragmentToFilesFragment(
-                    name = getString(R.string.my_drive),
-                    query = "'root' in parents and trashed = false"
-                )
-                findNavController().navigateSafe(action)
+                viewModel.getLibraryRootFolder { folderId, folderName ->
+                    val resolvedId = folderId ?: "root"
+                    val action = HomeFragmentDirections.actionHomeFragmentToFilesFragment(
+                        name = folderName,
+                        query = "'$resolvedId' in parents and trashed = false"
+                    )
+                    findNavController().navigateSafe(action)
+                }
             }
 
             btnNavInicio.setOnClickListener {
@@ -413,6 +442,7 @@ class HomeFragment : BaseFragment() {
     override fun onResume() {
         super.onResume()
         viewModel.getRecentWatches()
+        viewModel.getWatchHistory()
         viewModel.getLastWatched()
         if (currentTab == "Favoritos") {
             viewModel.filterStarred(true)
@@ -618,6 +648,7 @@ class HomeFragment : BaseFragment() {
     private fun selectTab(tab: String) {
         currentTab = tab
         val hasRecent = viewModel.recentWatches.value.isNotEmpty()
+        val hasQueue = viewModel.watchQueue.value.isNotEmpty()
 
         binding.apply {
             when (tab) {
@@ -626,7 +657,7 @@ class HomeFragment : BaseFragment() {
                     val hasFeatured = viewModel.featuredAnime.value != null
                     val hasLibrary = viewModel.animeLibrary.value.isNotEmpty()
                     featuredHeroContainer?.visibility = if (hasFeatured) View.VISIBLE else View.GONE
-                    shelfHeaderRow?.visibility = if (hasRecent) View.VISIBLE else View.GONE
+                    shelfHeaderRow?.visibility = if (hasRecent || hasQueue) View.VISIBLE else View.GONE
                     rvContinueWatchingShelf.visibility = if (hasRecent) View.VISIBLE else View.GONE
                     layoutHomeEmpty?.visibility = if (!hasRecent && !hasFeatured && !hasLibrary) View.VISIBLE else View.GONE
                     rvAnimeLibrary.visibility = View.VISIBLE
@@ -791,6 +822,20 @@ class HomeFragment : BaseFragment() {
         }
     }
 
+    private fun observeWatchQueue() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.watchQueue.collect {
+                    if (currentTab == "Início") {
+                        binding.shelfHeaderRow?.visibility = if (
+                            viewModel.recentWatches.value.isNotEmpty() || it.isNotEmpty()
+                        ) View.VISIBLE else View.GONE
+                    }
+                }
+            }
+        }
+    }
+
     private fun observeFeaturedAnime() {
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -928,6 +973,81 @@ class HomeFragment : BaseFragment() {
         }
     }
 
+    private fun showAnimeContextMenu(file: DriveFile) {
+        val isStarred = file.starred == zechs.drive.stream.data.model.Starred.STARRED
+        val options = mutableListOf("Abrir detalhes")
+        val actions = mutableListOf<() -> Unit>({ handleOpenFolder(file) })
+
+        options += if (isStarred) "Remover dos favoritos" else "Adicionar aos favoritos"
+        actions += { viewModel.starFile(file, !isStarred) }
+
+        if (file.isVideoFile || file.isShortcutVideo) {
+            options += "Adicionar à fila"
+            actions += { viewModel.addToQueue(file) }
+        }
+
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+            .setTitle(file.name)
+            .setItems(options.toTypedArray()) { dialog, which ->
+                dialog.dismiss()
+                actions.getOrNull(which)?.invoke()
+            }
+            .show()
+    }
+
+    private fun showWatchHistoryDialog() {
+        val items = viewModel.watchHistory.value
+        if (items.isEmpty()) {
+            Toast.makeText(requireContext(), "O histórico está vazio", Toast.LENGTH_SHORT).show()
+            return
+        }
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+            .setTitle("Histórico recente")
+            .setItems(items.map { it.name }.toTypedArray()) { dialog, which ->
+                dialog.dismiss()
+                items.getOrNull(which)?.let { playWatchItem(it) }
+            }
+            .show()
+    }
+
+    private fun showWatchQueueDialog() {
+        val items = viewModel.watchQueue.value
+        if (items.isEmpty()) {
+            Toast.makeText(requireContext(), "A fila está vazia", Toast.LENGTH_SHORT).show()
+            return
+        }
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+            .setTitle("Minha fila")
+            .setItems(items.map { it.name }.toTypedArray()) { dialog, which ->
+                dialog.dismiss()
+                items.getOrNull(which)?.let { showQueueItemContextMenu(it) }
+            }
+            .setNegativeButton("Fechar", null)
+            .show()
+    }
+
+    private fun showQueueItemContextMenu(item: WatchQueueItem) {
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+            .setTitle(item.name)
+            .setItems(arrayOf("Reproduzir", "Remover da fila")) { dialog, which ->
+                dialog.dismiss()
+                if (which == 0) {
+                    playWatchItem(
+                        WatchList(
+                            name = item.name,
+                            videoId = item.fileId,
+                            watchedDuration = 0L,
+                            totalDuration = 0L,
+                            thumbnailLink = item.posterUrl
+                        )
+                    )
+                } else {
+                    viewModel.removeFromQueue(item.fileId)
+                }
+            }
+            .show()
+    }
+
     private fun launchVideoPlayer(file: DriveFile, startPosition: Long = -1L) {
         val fileId = file.id
         val thumb = file.thumbnailLarge ?: file.posterUrl ?: file.thumbnailLink
@@ -983,7 +1103,13 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun playWatchItem(watchItem: WatchList, startFromBeginning: Boolean = false) {
-        val startPos = if (startFromBeginning) 0L else if (watchItem.watchedDuration > 0L) watchItem.watchedDuration else -1L
+        val startPos = if (startFromBeginning || watchItem.hasFinished()) {
+            0L
+        } else if (watchItem.watchedDuration > 0L) {
+            watchItem.watchedDuration
+        } else {
+            -1L
+        }
         when (mainViewModel.currentPlayerIndex) {
             zechs.drive.stream.utils.VideoPlayer.EXO_PLAYER -> {
                 val intent = android.content.Intent(requireContext(), zechs.drive.stream.ui.player.PlayerActivity::class.java).apply {

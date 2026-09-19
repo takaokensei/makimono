@@ -36,8 +36,6 @@ class FilesViewModel @Inject constructor(
     private val favoriteRepository: zechs.drive.stream.data.repository.FavoriteRepository
 ) : ViewModel() {
 
-    var isCurrentFolderOneBlacki: Boolean = false
-
     fun recordFolderOpened(folderId: String, folderName: String) = viewModelScope.launch(Dispatchers.IO) {
         try {
             folderMetadataRepository.recordFolderOpened(folderId, folderName)
@@ -48,13 +46,12 @@ class FilesViewModel @Inject constructor(
 
     fun getFirstEpisodeInFolder(folderId: String, onResult: (DriveFile?) -> Unit) = viewModelScope.launch(Dispatchers.IO) {
         try {
-            val res = driveRepository.getFiles(
+            val res = driveRepository.getAllFiles(
                 query = "'$folderId' in parents and mimeType contains 'video/' and trashed=false",
-                pageToken = null,
                 pageSize = 10
             )
-            if (res is Resource.Success && res.data.files.isNotEmpty()) {
-                val videoFiles = res.data.files.map { it.toDriveFile() }
+            if (res is Resource.Success && res.data.isNotEmpty()) {
+                val videoFiles = res.data.map { it.toDriveFile() }
                     .sortedWith { a, b -> zechs.drive.stream.utils.EpisodeParser.naturalCompare(a.name, b.name) }
                 val firstEp = videoFiles.firstOrNull()
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
@@ -214,11 +211,7 @@ class FilesViewModel @Inject constructor(
 
         response = updated
 
-        if (isCurrentFolderOneBlacki) {
-            attachCachedPostersAndResolveMissing()
-        } else {
-            _filesList.postValue(Resource.Success(updated))
-        }
+        attachCachedPostersAndResolveMissing()
     }
 
     private fun attachCachedPostersAndResolveMissing() = viewModelScope.launch(Dispatchers.IO) {
@@ -246,9 +239,9 @@ class FilesViewModel @Inject constructor(
                 _filesList.postValue(Resource.Success(snapshot.toList()))
             }
 
-            resolveMissingOneBlackiPosters()
+            resolveMissingPosters()
         } catch (e: Exception) {
-            Log.e(TAG, "Error attaching cached posters in oneblacki", e)
+            Log.e(TAG, "Error attaching cached posters", e)
             val fallback = response
             if (fallback != null) {
                 _filesList.postValue(Resource.Success(fallback))
@@ -256,10 +249,9 @@ class FilesViewModel @Inject constructor(
         }
     }
 
-    private fun resolveMissingOneBlackiPosters() = viewModelScope.launch(Dispatchers.IO) {
+    private fun resolveMissingPosters() = viewModelScope.launch(Dispatchers.IO) {
         val currentList = response ?: return@launch
-        for (i in currentList.indices) {
-            if (!isCurrentFolderOneBlacki) return@launch
+        for (i in currentList.indices.take(100)) {
             val item = currentList.getOrNull(i)
             if (item is FilesDataModel.File) {
                 val file = item.driveFile

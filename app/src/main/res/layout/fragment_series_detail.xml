@@ -593,6 +593,40 @@
                         android:textSize="12sp" />
                 </LinearLayout>
 
+                <!-- Seguir pasta e receber alertas de episódios -->
+                <LinearLayout
+                    android:id="@+id/btnFollow"
+                    android:layout_width="wrap_content"
+                    android:layout_height="44dp"
+                    android:layout_marginStart="12dp"
+                    android:background="@drawable/btn_secondary_action_bg"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp">
+
+                    <ImageView
+                        android:id="@+id/ivFollowIcon"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_notification_24"
+                        app:tint="#E2E8F0" />
+
+                    <TextView
+                        android:id="@+id/tvFollowText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Seguir"
+                        android:textColor="#F8FAFC"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
                 <!-- Marcar como Assistido -->
                 <LinearLayout
                     android:id="@+id/btnMarkWatched"

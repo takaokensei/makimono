@@ -6,19 +6,13 @@ plugins {
     id "dagger.hilt.android.plugin"
 }
 
-// Local, single-user auto-login support: these three keys are read from
-// local.properties, which never leaves this machine and is git-ignored.
+// Local release-signing settings are read from local.properties, which is
+// git-ignored and is never embedded into the application BuildConfig.
 def localPropertiesFile = rootProject.file("local.properties")
 def localProperties = new Properties()
 if (localPropertiesFile.exists()) {
     localPropertiesFile.withInputStream { localProperties.load(it) }
 }
-def driveClientId = localProperties.getProperty("drive.clientId", "")
-def driveClientSecret = localProperties.getProperty("drive.clientSecret", "")
-def driveRefreshToken = localProperties.getProperty("drive.refreshToken", "")
-def malClientId = localProperties.getProperty("mal.clientId", "")
-def malClientSecret = localProperties.getProperty("mal.clientSecret", "")
-def githubApiToken = localProperties.getProperty("github.apiToken", "")
 
 // Release signing: optional dedicated keystore, configured via local.properties
 // (release.storeFile / release.storePassword / release.keyAlias / release.keyPassword).
@@ -72,18 +66,12 @@ android {
         applicationId "zechs.drive.stream"
         minSdk 21
         targetSdk 33
-        versionCode 36
-        versionName "1.4.24"
+        versionCode 37
+        versionName "1.4.25"
         archivesBaseName = "makimono-v${versionName}"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField "String", "DRIVE_CLIENT_ID", "\"${driveClientId}\""
-        buildConfigField "String", "DRIVE_CLIENT_SECRET", "\"${driveClientSecret}\""
-        buildConfigField "String", "DRIVE_REFRESH_TOKEN", "\"${driveRefreshToken}\""
-        buildConfigField "String", "MAL_CLIENT_ID", "\"${malClientId}\""
-        buildConfigField "String", "MAL_CLIENT_SECRET", "\"${malClientSecret}\""
-        buildConfigField "String", "GITHUB_API_TOKEN", "\"${githubApiToken}\""
     }
 
     signingConfigs {

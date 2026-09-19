@@ -22,7 +22,6 @@ class TvLoginServer(
     private val redirectUri: String = "http://127.0.0.1:53682/",
     private val hasDefaultToken: Boolean = false,
     private val onAuthCodeReceived: (String) -> Unit,
-    private val onSessionReceived: (refreshToken: String, clientId: String?, clientSecret: String?, malToken: String?) -> Unit,
     private val onActivateDefault: () -> Unit,
     private val isAlreadyAuthenticated: () -> Boolean
 ) {
@@ -213,7 +212,7 @@ class TvLoginServer(
                     method == "POST" && path == "/api/auth-code" -> {
                         val parsed = parseJsonOrForm(body)
                         if (!validatePairingNonce(parsed, headers, fullPath, writer)) return
-                        val code = parsed["code"] ?: parsed["url"] ?: ""
+                        val code = extractAuthCode(parsed["code"] ?: parsed["url"] ?: "")
                         if (code.isNotBlank()) {
                             onAuthCodeReceived(code)
                             val json = "{\"success\":true,\"message\":\"Código recebido pela TV! Autenticando...\"}"
@@ -224,20 +223,14 @@ class TvLoginServer(
                     }
 
                     method == "POST" && path == "/api/session" -> {
-                        val parsed = parseJsonOrForm(body)
-                        if (!validatePairingNonce(parsed, headers, fullPath, writer)) return
-                        val refreshToken = parsed["refreshToken"] ?: parsed["refresh_token"] ?: ""
-                        val cId = parsed["clientId"] ?: parsed["client_id"]
-                        val cSec = parsed["clientSecret"] ?: parsed["client_secret"]
-                        val malToken = parsed["malAccessToken"] ?: parsed["mal_access_token"]
-
-                        if (refreshToken.isNotBlank()) {
-                            onSessionReceived(refreshToken, cId, cSec, malToken)
-                            val json = "{\"success\":true,\"message\":\"Sessão transferida com sucesso para a TV!\"}"
-                            sendResponse(writer, 200, "OK", "application/json; charset=UTF-8", json)
-                        } else {
-                            sendResponse(writer, 400, "Bad Request", "application/json", "{\"error\":\"Refresh token não informado\"}")
-                        }
+                        // Persistent credentials must never cross the local network.
+                        sendResponse(
+                            writer,
+                            410,
+                            "Gone",
+                            "application/json",
+                            "{\"error\":\"Transferência direta de sessão desativada; use o código OAuth de uso único\"}"
+                        )
                     }
 
                     method == "POST" && path == "/api/activate-default" -> {
@@ -281,17 +274,21 @@ class TvLoginServer(
             sendResponse(writer, 401, "Unauthorized", "application/json", "{\"error\":\"Nonce de pareamento inválido\"}")
             return false
         }
-        if (activeSession.isExpired) {
-            sendResponse(writer, 410, "Gone", "application/json", "{\"error\":\"Sessão de pareamento expirada\"}")
-            return false
-        }
-        if (activeSession.used) {
-            sendResponse(writer, 409, "Conflict", "application/json", "{\"error\":\"Sessão de pareamento já utilizada\"}")
-            return false
-        }
 
-        activeSession.used = true
-        return true
+        // Consume the nonce atomically so two simultaneous requests cannot both
+        // exchange the same pairing session.
+        synchronized (activeSession) {
+            if (activeSession.isExpired) {
+                sendResponse(writer, 410, "Gone", "application/json", "{\"error\":\"Sessão de pareamento expirada\"}")
+                return false
+            }
+            if (activeSession.used) {
+                sendResponse(writer, 409, "Conflict", "application/json", "{\"error\":\"Sessão de pareamento já utilizada\"}")
+                return false
+            }
+            activeSession.used = true
+            return true
+        }
     }
 
     private fun parseJsonOrForm(body: String): Map<String, String> {
@@ -333,6 +330,19 @@ class TvLoginServer(
         return result
     }
 
+    private fun extractAuthCode(value: String): String {
+        val trimmed = value.trim()
+        if (!trimmed.contains("code=")) return trimmed
+        return try {
+            URLDecoder.decode(
+                trimmed.substringAfter("code=").substringBefore('&'),
+                StandardCharsets.UTF_8.name()
+            )
+        } catch (_: Exception) {
+            trimmed
+        }
+    }
+
     private fun sendResponse(
         writer: PrintWriter,
         statusCode: Int,
@@ -345,9 +355,8 @@ class TvLoginServer(
         writer.print("Content-Type: $contentType\r\n")
         writer.print("Content-Length: ${bodyBytes.size}\r\n")
         writer.print("Connection: close\r\n")
-        writer.print("Access-Control-Allow-Origin: *\r\n")
-        writer.print("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n")
-        writer.print("Access-Control-Allow-Headers: Content-Type, Authorization\r\n")
+        writer.print("Cache-Control: no-store\r\n")
+        writer.print("X-Content-Type-Options: nosniff\r\n")
         writer.print("\r\n")
         writer.flush()
         writer.print(body)
@@ -585,21 +594,6 @@ class TvLoginServer(
             <div id="toastCode" class="toast-msg"></div>
         </div>
 
-        <!-- Direct Refresh Token Transfer -->
-        <div class="card">
-            <div class="card-title">
-                <span>🔑 Transferir Refresh Token</span>
-            </div>
-            <div class="input-group">
-                <label class="input-label">Cole o Refresh Token do Google Drive:</label>
-                <input type="text" id="inputRefreshToken" class="input-box" placeholder="1//0xxxx...">
-            </div>
-            <button class="btn btn-secondary" id="btnSendToken">
-                Enviar Token para TV
-            </button>
-            <div id="toastToken" class="toast-msg"></div>
-        </div>
-
         ${if (hasDefaultToken) """
         <!-- Default Credentials Quick Activation -->
         <div class="card">
@@ -676,34 +670,6 @@ class TvLoginServer(
                 }
             } catch (e) {
                 showToast('toastCode', 'Falha ao comunicar com a TV. Verifique a rede Wi-Fi.', false);
-            }
-        });
-
-        // Send Refresh Token
-        document.getElementById('btnSendToken').addEventListener('click', async () => {
-            const token = document.getElementById('inputRefreshToken').value.trim();
-            if (!token) {
-                showToast('toastToken', 'Por favor cole o Refresh Token.', false);
-                return;
-            }
-            showToast('toastToken', 'Transferindo sessão...', true);
-            try {
-                const res = await fetch('/api/session', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Pairing-Nonce': pairingNonce
-                    },
-                    body: JSON.stringify({ refreshToken: token, nonce: pairingNonce })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    showToast('toastToken', 'Token recebido com sucesso!', true);
-                } else {
-                    showToast('toastToken', data.error || 'Erro ao salvar token', false);
-                }
-            } catch (e) {
-                showToast('toastToken', 'Falha ao comunicar com a TV.', false);
             }
         });
 

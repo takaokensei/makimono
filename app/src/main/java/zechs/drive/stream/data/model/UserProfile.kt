@@ -10,5 +10,7 @@ data class UserProfile(
     val name: String,
     val avatarResName: String = "avatar_caua",
     val isDefault: Boolean = false,
+    val libraryRootId: String? = null,
+    val libraryRootName: String? = null,
     val createdAt: Long = System.currentTimeMillis()
 )

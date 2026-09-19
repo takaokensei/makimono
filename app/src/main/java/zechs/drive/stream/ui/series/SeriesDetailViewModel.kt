@@ -20,7 +20,9 @@ import zechs.drive.stream.data.remote.AnimePosterResolver
 import zechs.drive.stream.data.remote.TenraiAnimeService
 import zechs.drive.stream.data.repository.DriveRepository
 import zechs.drive.stream.data.repository.FolderMetadataRepository
+import zechs.drive.stream.data.repository.FollowedFolderRepository
 import zechs.drive.stream.data.repository.WatchListRepository
+import zechs.drive.stream.data.repository.WatchQueueRepository
 import zechs.drive.stream.ui.files.adapter.FilesDataModel
 import zechs.drive.stream.ui.series.adapter.SeasonTab
 import zechs.drive.stream.ui.series.adapter.SeriesEpisodeItem
@@ -48,6 +50,7 @@ sealed class SeriesDetailUiState {
         val continueWatchingItem: SeriesEpisodeItem?,
         val continueWatchingSubtitle: String,
         val isStarred: Boolean,
+        val isFollowed: Boolean = false,
         val fallbackPosterUrl: String? = null,
         val qualityBadge: String = "1080p",
         val audioBadge: String = "Dual Áudio PT-BR / JA",
@@ -63,7 +66,9 @@ class SeriesDetailViewModel @Inject constructor(
     private val watchListRepository: WatchListRepository,
     private val folderMetadataRepository: FolderMetadataRepository,
     private val animePosterResolver: AnimePosterResolver,
-    private val favoriteRepository: zechs.drive.stream.data.repository.FavoriteRepository
+    private val favoriteRepository: zechs.drive.stream.data.repository.FavoriteRepository,
+    private val followedFolderRepository: FollowedFolderRepository,
+    private val watchQueueRepository: WatchQueueRepository
 ) : ViewModel() {
 
     companion object {
@@ -78,6 +83,7 @@ class SeriesDetailViewModel @Inject constructor(
     private var currentFolderId: String = ""
     private var currentSeriesTitle: String = ""
     private var isFolderStarred: Boolean = false
+    private var isFolderFollowed: Boolean = false
     private var animeEntry: TenraiAnimeService.TenraiAnimeEntry? = null
     private var franchiseArcs = listOf<TenraiAnimeService.TenraiFranchiseArc>()
 
@@ -139,6 +145,7 @@ class SeriesDetailViewModel @Inject constructor(
                 // Check folder star status (local favorite has precedence, fallback to Drive star)
                 val isLocalFav = favoriteRepository.isFavorite(folderId)
                 isFolderStarred = isLocalFav || (driveFiles.firstOrNull()?.starred == zechs.drive.stream.data.model.Starred.STARRED)
+                isFolderFollowed = followedFolderRepository.isFollowed(folderId)
 
                 animeEntry = null
                 franchiseArcs = emptyList()
@@ -256,6 +263,7 @@ class SeriesDetailViewModel @Inject constructor(
             continueWatchingItem = continueItem,
             continueWatchingSubtitle = continueSubtitle,
             isStarred = isFolderStarred,
+            isFollowed = isFolderFollowed,
             fallbackPosterUrl = fallbackPosterUrl,
             qualityBadge = detectQuality(driveFiles),
             audioBadge = detectAudio(driveFiles),
@@ -416,6 +424,41 @@ class SeriesDetailViewModel @Inject constructor(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e(TAG, "Error toggling local favorite", e)
+        }
+    }
+
+    fun toggleFollow() = viewModelScope.launch(Dispatchers.IO) {
+        val currentState = _uiState.value as? SeriesDetailUiState.Success ?: return@launch
+        val newFollowed = !isFolderFollowed
+        isFolderFollowed = newFollowed
+        try {
+            if (newFollowed) {
+                followedFolderRepository.follow(currentFolderId, currentState.seriesTitle)
+            } else {
+                followedFolderRepository.unfollow(currentFolderId)
+            }
+            withContext(Dispatchers.Main) {
+                _uiState.value = currentState.copy(isFollowed = newFollowed)
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            isFolderFollowed = !newFollowed
+            Log.e(TAG, "Error toggling followed folder", e)
+        }
+    }
+
+    fun addToQueue(file: DriveFile) = viewModelScope.launch(Dispatchers.IO) {
+        try {
+            if (!watchQueueRepository.isInQueue(file.id)) {
+                watchQueueRepository.enqueue(
+                    fileId = file.id,
+                    name = file.name,
+                    posterUrl = file.thumbnailLarge ?: file.thumbnailLink ?: file.posterUrl
+                )
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.e(TAG, "Error adding episode to queue", e)
         }
     }
 

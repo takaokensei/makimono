@@ -117,6 +117,7 @@ class SeriesDetailFragment : BaseFragment() {
             binding.btnPrimaryAction,
             binding.btnTrailer,
             binding.btnFavorite,
+            binding.btnFollow,
             binding.btnMarkWatched,
             binding.btnBack,
             binding.btnSearch
@@ -293,6 +294,11 @@ class SeriesDetailFragment : BaseFragment() {
             viewModel.toggleStar()
         }
 
+        updateFollowButton(state.isFollowed)
+        binding.btnFollow.setOnClickListener {
+            viewModel.toggleFollow()
+        }
+
         // Mark Watched button
         binding.btnMarkWatched.setOnClickListener {
             viewModel.markSeasonWatched()
@@ -333,6 +339,16 @@ class SeriesDetailFragment : BaseFragment() {
         }
     }
 
+    private fun updateFollowButton(isFollowed: Boolean) {
+        binding.tvFollowText.text = if (isFollowed) "Seguindo" else "Seguir"
+        binding.ivFollowIcon.setColorFilter(
+            ContextCompat.getColor(
+                requireContext(),
+                if (isFollowed) R.color.cyan_400 else R.color.textColor
+            )
+        )
+    }
+
     private fun showEpisodeContextMenu(item: SeriesEpisodeItem) {
         val options = mutableListOf<String>()
         val actions = mutableListOf<() -> Unit>()
@@ -369,6 +385,9 @@ class SeriesDetailFragment : BaseFragment() {
             cm?.setPrimaryClip(ClipData.newPlainText("Arquivo", item.file.name))
             Toast.makeText(requireContext(), getString(R.string.file_name_copied), Toast.LENGTH_SHORT).show()
         }
+
+        options.add("Adicionar à fila")
+        actions.add { viewModel.addToQueue(item.file) }
 
         MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
             .setTitle(item.displayTitle)

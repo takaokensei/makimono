@@ -46,4 +46,14 @@ class GithubRepositoryTest {
         assertTrue(result is Resource.Error)
         assertEquals("Network error", (result as Resource.Error).message)
     }
+
+    @Test
+    fun getLatestRelease_unknownHostException_returnsNoConnectionMessage() = runTest {
+        coEvery { githubApi.getLatestRelease(any()) } throws java.net.UnknownHostException("api.github.com")
+
+        val result = repository.getLatestRelease()
+
+        assertTrue(result is Resource.Error)
+        assertEquals("Sem conexão com o GitHub", (result as Resource.Error).message)
+    }
 }

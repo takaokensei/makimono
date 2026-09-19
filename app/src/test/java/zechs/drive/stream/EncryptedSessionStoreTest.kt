@@ -1,9 +1,6 @@
 package zechs.drive.stream
 
-import android.content.Context
 import android.content.SharedPreferences
-import io.mockk.every
-import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -19,11 +16,7 @@ class EncryptedSessionStoreTest {
 
     @Before
     fun setUp() {
-        val context: Context = mockk {
-            every { getSharedPreferences(any(), any()) } returns inMemoryPrefs
-            every { packageName } returns "zechs.drive.stream"
-        }
-        store = EncryptedSessionStore(context)
+        store = EncryptedSessionStore(inMemoryPrefs, true)
     }
 
     @Test

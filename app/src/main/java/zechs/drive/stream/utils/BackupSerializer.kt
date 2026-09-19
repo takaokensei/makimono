@@ -131,6 +131,8 @@ class BackupSerializer @Inject constructor(
                     name = p.name,
                     avatarResName = p.avatarResName,
                     isDefault = p.isDefault,
+                    libraryRootId = p.libraryRootId,
+                    libraryRootName = p.libraryRootName,
                     settings = ProfileSettingsBackup(
                         theme = theme,
                         player = player,
@@ -195,7 +197,9 @@ class BackupSerializer @Inject constructor(
                 id = pb.id,
                 name = pb.name,
                 avatarResName = pb.avatarResName,
-                isDefault = pb.isDefault
+                isDefault = pb.isDefault,
+                libraryRootId = pb.libraryRootId,
+                libraryRootName = pb.libraryRootName
             )
             restoredProfiles.add(userProfile)
 
@@ -306,6 +310,8 @@ data class UserProfileBackup(
     val name: String,
     val avatarResName: String,
     val isDefault: Boolean,
+    val libraryRootId: String? = null,
+    val libraryRootName: String? = null,
     val settings: ProfileSettingsBackup = ProfileSettingsBackup(),
     val watchList: List<WatchListItemBackup> = emptyList(),
     val favorites: List<FavoriteItemBackup> = emptyList(),

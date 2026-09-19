@@ -15,7 +15,7 @@ import androidx.room.PrimaryKey
     primaryKeys = ["profileId", "folderId"]
 )
 data class FavoriteFolder(
-    val profileId: String = "caua",
+    val profileId: String = "",
     val folderId: String,
     val folderName: String = "",
     val isFavorite: Boolean = true,

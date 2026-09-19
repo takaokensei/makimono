@@ -1,7 +1,6 @@
 package zechs.drive.stream.data.repository
 
 import android.util.Log
-import kotlinx.coroutines.runBlocking
 import okhttp3.Authenticator
 import okhttp3.Request
 import okhttp3.Response
@@ -52,21 +51,11 @@ class TokenAuthenticator @Inject constructor(
                 .build()
         }
 
-        val newToken = runBlocking {
-            tokenProvider.refresh()
-        }
-
-        if (!newToken.isNullOrEmpty()) {
-            Log.d(TAG, "Received new access token (len=${newToken.length})")
-            return response.request.newBuilder()
-                .removeHeader("Authorization")
-                .addHeader("Authorization", "Bearer $newToken")
-                .url(response.request.url.toString())
-                .build()
-        } else {
-            Log.w(TAG, "Unable to refresh access token via TokenProvider")
-        }
-
+        // Authenticator callbacks are synchronous. Never block an OkHttp
+        // dispatcher thread on a coroutine/network refresh here. DriveRepository
+        // performs a bounded refresh-and-retry before making the request, while
+        // streaming callers invalidate the provider and retry on the next open.
+        Log.w(TAG, "No refreshed cached token available; refusing a blocking refresh")
         return null
     }
 
