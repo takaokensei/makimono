@@ -108,4 +108,7 @@
     <string name="action_follow">Seguir série</string>
     <string name="action_unfollow">Deixar de seguir</string>
     <string name="following_series">Seguindo</string>
+    <string name="unable_to_check_updates">Unable to check for updates</string>
+    <string name="already_latest_version">You are already on the latest version</string>
+    <string name="last_checked">Last checked: %1$s</string>
 </resources>

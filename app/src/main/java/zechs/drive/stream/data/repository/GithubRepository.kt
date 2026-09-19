@@ -22,19 +22,15 @@ class GithubRepository @Inject constructor(
 
     suspend fun getLatestRelease(): Resource<LatestRelease> = withContext(Dispatchers.IO) {
         val token = BuildConfig.GITHUB_API_TOKEN.trim()
-        if (token.isBlank()) {
-            return@withContext Resource.Error(
-                "Atualizações privadas não configuradas: defina github.apiToken em local.properties"
-            )
-        }
+        val authHeader = if (token.isNotBlank()) "Bearer $token" else null
 
         try {
-            val latest = githubApi.get().getLatestRelease("Bearer $token")
+            val latest = githubApi.get().getLatestRelease(authHeader)
             Log.d(TAG, "Fetched latest release from API: ${latest.tagName}")
             return@withContext Resource.Success(latest)
         } catch (e: Exception) {
-            Log.e(TAG, "Private GitHub release API failed", e)
-            return@withContext Resource.Error(e.message ?: "Erro ao verificar atualizações privadas")
+            Log.e(TAG, "GitHub release API failed", e)
+            return@withContext Resource.Error(e.message ?: "Erro ao verificar atualizações")
         }
     }
 

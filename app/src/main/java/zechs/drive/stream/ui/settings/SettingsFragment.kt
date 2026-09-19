@@ -384,7 +384,7 @@ class SettingsFragment : BaseFragment() {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 mainViewModel.lastUpdated.collect {
                     if (it != null) {
-                        val last = "Last checked: $it"
+                        val last = getString(R.string.last_checked, it)
                         TransitionManager.beginDelayedTransition(
                             binding.settingCheckForUpdate,
                         )
@@ -404,14 +404,14 @@ class SettingsFragment : BaseFragment() {
 
                 is Resource.Error -> {
                     isChecking(false)
-                    showSnackBar("Unable to check for updates")
+                    showSnackBar(getString(R.string.unable_to_check_updates))
                 }
 
                 is Resource.Success -> {
                     isChecking(false)
                     val release = state.data
                     if (release.isLatest() && isUserClick) {
-                        showSnackBar("You are already on the latest version")
+                        showSnackBar(getString(R.string.already_latest_version))
                     }
                 }
             }

@@ -8,7 +8,7 @@ interface GithubApi {
 
     @GET("repos/takaokensei/makimono/releases/latest")
     suspend fun getLatestRelease(
-        @Header("Authorization") authorization: String
+        @Header("Authorization") authorization: String? = null
     ): LatestRelease
 
 }
