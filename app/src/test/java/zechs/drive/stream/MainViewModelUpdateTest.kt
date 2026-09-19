@@ -73,37 +73,40 @@ class MainViewModelUpdateTest {
         fakeApkFile.delete()
     }
 
-    // Path 1: no .sha256 asset -> installs without verification (retrocompatibility)
+    // Path 1: no .sha256 asset -> fail-closed: deletes APK and emits Failed
     @Test
-    fun noChecksumAsset_installsWithoutVerification() = runTest {
+    fun noChecksumAsset_failsClosedAndDeletesApk() = runTest {
         val release = buildRelease(hasChecksum = false)
-        coEvery { appUpdateManager.downloadApk(apkAsset, any()) } returns Result.success(fakeApkFile)
+        val tmpApk = File.createTempFile("no-checksum", ".apk").also { it.writeBytes(ByteArray(256)) }
+        coEvery { appUpdateManager.downloadApk(apkAsset, any()) } returns Result.success(tmpApk)
         viewModel.updateDownloadState.test {
             awaitItem()
             viewModel.startUpdateDownload(release)
             testDispatcher.scheduler.advanceUntilIdle()
             val state = expectMostRecentItem()
-            assertTrue(state is MainViewModel.UpdateDownloadState.ReadyToInstall)
+            assertTrue(state is MainViewModel.UpdateDownloadState.Failed)
+            assertTrue(!tmpApk.exists())
             coVerify(exactly = 0) { appUpdateManager.fetchExpectedChecksum(any()) }
             coVerify(exactly = 0) { appUpdateManager.verifyChecksum(any(), any()) }
             cancelAndIgnoreRemainingEvents()
         }
     }
 
-    // Path 2: valid hash match -> ReadyToInstall
+    // Path 2: checksum fetch fails -> fail-closed: deletes APK and emits Failed
     @Test
-    fun validChecksum_emitsReadyToInstall() = runTest {
+    fun checksumFetchFails_failsClosedAndDeletesApk() = runTest {
         val release = buildRelease(hasChecksum = true)
-        coEvery { appUpdateManager.downloadApk(apkAsset, any()) } returns Result.success(fakeApkFile)
-        coEvery { appUpdateManager.fetchExpectedChecksum(checksumAsset) } returns validHash
-        coEvery { appUpdateManager.verifyChecksum(fakeApkFile, validHash) } returns true
+        val tmpApk = File.createTempFile("fetch-fail", ".apk").also { it.writeBytes(ByteArray(256)) }
+        coEvery { appUpdateManager.downloadApk(apkAsset, any()) } returns Result.success(tmpApk)
+        coEvery { appUpdateManager.fetchExpectedChecksum(checksumAsset) } returns null
         viewModel.updateDownloadState.test {
             awaitItem()
             viewModel.startUpdateDownload(release)
             testDispatcher.scheduler.advanceUntilIdle()
             val state = expectMostRecentItem()
-            assertTrue(state is MainViewModel.UpdateDownloadState.ReadyToInstall)
-            assertEquals(fakeApkFile, (state as MainViewModel.UpdateDownloadState.ReadyToInstall).apkFile)
+            assertTrue(state is MainViewModel.UpdateDownloadState.Failed)
+            assertTrue(!tmpApk.exists())
+            coVerify(exactly = 0) { appUpdateManager.verifyChecksum(any(), any()) }
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -127,19 +130,43 @@ class MainViewModelUpdateTest {
         }
     }
 
-    // Path 4: fetchExpectedChecksum returns null -> install unverified
+    // Path 4: signature mismatch -> Failed + APK file deleted
     @Test
-    fun checksumFetchFails_installsUnverifiedGracefully() = runTest {
+    fun signatureMismatch_emitsFailedAndDeletesApk() = runTest {
+        val release = buildRelease(hasChecksum = true)
+        val tmpApk = File.createTempFile("bad-sig", ".apk").also { it.writeBytes(ByteArray(512)) }
+        coEvery { appUpdateManager.downloadApk(apkAsset, any()) } returns Result.success(tmpApk)
+        coEvery { appUpdateManager.fetchExpectedChecksum(checksumAsset) } returns validHash
+        coEvery { appUpdateManager.verifyChecksum(tmpApk, validHash) } returns true
+        io.mockk.every { appUpdateManager.verifyApkSignature(tmpApk) } returns false
+
+        viewModel.updateDownloadState.test {
+            awaitItem()
+            viewModel.startUpdateDownload(release)
+            testDispatcher.scheduler.advanceUntilIdle()
+            val state = expectMostRecentItem()
+            assertTrue(state is MainViewModel.UpdateDownloadState.Failed)
+            assertTrue(!tmpApk.exists())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    // Path 5: valid hash and signature match -> ReadyToInstall
+    @Test
+    fun validChecksumAndSignature_emitsReadyToInstall() = runTest {
         val release = buildRelease(hasChecksum = true)
         coEvery { appUpdateManager.downloadApk(apkAsset, any()) } returns Result.success(fakeApkFile)
-        coEvery { appUpdateManager.fetchExpectedChecksum(checksumAsset) } returns null
+        coEvery { appUpdateManager.fetchExpectedChecksum(checksumAsset) } returns validHash
+        coEvery { appUpdateManager.verifyChecksum(fakeApkFile, validHash) } returns true
+        io.mockk.every { appUpdateManager.verifyApkSignature(fakeApkFile) } returns true
+
         viewModel.updateDownloadState.test {
             awaitItem()
             viewModel.startUpdateDownload(release)
             testDispatcher.scheduler.advanceUntilIdle()
             val state = expectMostRecentItem()
             assertTrue(state is MainViewModel.UpdateDownloadState.ReadyToInstall)
-            coVerify(exactly = 0) { appUpdateManager.verifyChecksum(any(), any()) }
+            assertEquals(fakeApkFile, (state as MainViewModel.UpdateDownloadState.ReadyToInstall).apkFile)
             cancelAndIgnoreRemainingEvents()
         }
     }

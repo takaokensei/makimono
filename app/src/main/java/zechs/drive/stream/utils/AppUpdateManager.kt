@@ -154,6 +154,10 @@ class AppUpdateManager @Inject constructor(
     suspend fun verifyChecksum(apkFile: File, expectedSha256Hex: String): Boolean =
         withContext(Dispatchers.IO) {
             try {
+                if (!apkFile.exists() || apkFile.length() == 0L) {
+                    Log.e(TAG, "Cannot verify checksum of non-existent or empty file: ${apkFile.absolutePath}")
+                    return@withContext false
+                }
                 val digest = MessageDigest.getInstance("SHA-256")
                 apkFile.inputStream().use { input ->
                     val buffer = ByteArray(32768)
@@ -173,6 +177,104 @@ class AppUpdateManager @Inject constructor(
                 false
             }
         }
+
+    /**
+     * Verifies that the downloaded APK package name matches [context.packageName]
+     * and that its cryptographic signing certificate fingerprint matches the
+     * currently installed application's certificate.
+     */
+    fun verifyApkSignature(apkFile: File): Boolean {
+        return try {
+            if (!apkFile.exists() || apkFile.length() == 0L) {
+                Log.e(TAG, "Cannot verify signature of non-existent or empty file: ${apkFile.absolutePath}")
+                return false
+            }
+
+            val pm = context.packageManager
+            val installedSignatures = getInstalledSignatures(pm)
+            if (installedSignatures.isEmpty()) {
+                Log.w(TAG, "No signing certificates found for installed app")
+                return false
+            }
+
+            val archiveFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES
+            } else {
+                @Suppress("DEPRECATION")
+                android.content.pm.PackageManager.GET_SIGNATURES
+            }
+
+            val archivePackageInfo = pm.getPackageArchiveInfo(apkFile.absolutePath, archiveFlags)
+            if (archivePackageInfo == null) {
+                Log.e(TAG, "Failed to parse APK archive info: ${apkFile.absolutePath}")
+                return false
+            }
+
+            if (archivePackageInfo.packageName != context.packageName) {
+                Log.e(TAG, "Package name mismatch: expected ${context.packageName}, found ${archivePackageInfo.packageName}")
+                return false
+            }
+
+            val archiveSignatures = getArchiveSignatures(archivePackageInfo)
+            if (archiveSignatures.isEmpty()) {
+                Log.e(TAG, "No signing certificates found in update APK archive")
+                return false
+            }
+
+            val matches = archiveSignatures.any { archiveCert ->
+                installedSignatures.any { it.equals(archiveCert, ignoreCase = true) }
+            }
+
+            if (!matches) {
+                Log.e(TAG, "APK signature fingerprint does not match installed application signature")
+            } else {
+                Log.d(TAG, "APK signature successfully verified against installed application")
+            }
+            matches
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to verify APK signature", e)
+            false
+        }
+    }
+
+    private fun getInstalledSignatures(pm: android.content.pm.PackageManager): List<String> {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val packageInfo = pm.getPackageInfo(
+                    context.packageName,
+                    android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES
+                )
+                packageInfo.signingInfo?.apkContentsSigners?.map { getCertSha256(it.toByteArray()) }
+            } else {
+                @Suppress("DEPRECATION")
+                val packageInfo = pm.getPackageInfo(
+                    context.packageName,
+                    android.content.pm.PackageManager.GET_SIGNATURES
+                )
+                @Suppress("DEPRECATION")
+                packageInfo.signatures?.map { getCertSha256(it.toByteArray()) }
+            } ?: emptyList()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get installed package signatures", e)
+            emptyList()
+        }
+    }
+
+    private fun getArchiveSignatures(archivePackageInfo: android.content.pm.PackageInfo): List<String> {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            archivePackageInfo.signingInfo?.apkContentsSigners?.map { getCertSha256(it.toByteArray()) }
+                ?: emptyList()
+        } else {
+            @Suppress("DEPRECATION")
+            archivePackageInfo.signatures?.map { getCertSha256(it.toByteArray()) }
+                ?: emptyList()
+        }
+    }
+
+    private fun getCertSha256(bytes: ByteArray): String {
+        val md = MessageDigest.getInstance("SHA-256")
+        return md.digest(bytes).joinToString("") { "%02x".format(it) }
+    }
 
     /**
      * Triggers the Android package installer to install the downloaded APK.

@@ -174,28 +174,41 @@ class MainViewModel @Inject constructor(
         result.onSuccess { apkFile ->
             val checksumAsset = release.findChecksumAsset(asset)
             if (checksumAsset == null) {
-                // Release published without a .sha256 asset (e.g. older releases).
-                // Nothing to verify against; proceed as before.
-                _updateDownloadState.value = UpdateDownloadState.ReadyToInstall(apkFile)
+                apkFile.delete()
+                _updateDownloadState.value = UpdateDownloadState.Failed(
+                    "A release não possui arquivo de verificação (.sha256). A atualização foi cancelada por segurança."
+                )
                 return@onSuccess
             }
 
             val expected = appUpdateManager.fetchExpectedChecksum(checksumAsset)
             if (expected == null) {
-                Log.w("MainViewModel", "Could not fetch expected checksum, installing unverified")
-                _updateDownloadState.value = UpdateDownloadState.ReadyToInstall(apkFile)
+                apkFile.delete()
+                _updateDownloadState.value = UpdateDownloadState.Failed(
+                    "Falha ao obter o checksum SHA-256 de verificação. A atualização foi cancelada por segurança."
+                )
                 return@onSuccess
             }
 
             val verified = appUpdateManager.verifyChecksum(apkFile, expected)
-            if (verified) {
-                _updateDownloadState.value = UpdateDownloadState.ReadyToInstall(apkFile)
-            } else {
+            if (!verified) {
                 apkFile.delete()
                 _updateDownloadState.value = UpdateDownloadState.Failed(
-                    "Verificação de integridade falhou. O download foi descartado por segurança."
+                    "Verificação de integridade falhou (checksum mismatch). O arquivo foi descartado por segurança."
                 )
+                return@onSuccess
             }
+
+            val signatureVerified = appUpdateManager.verifyApkSignature(apkFile)
+            if (!signatureVerified) {
+                apkFile.delete()
+                _updateDownloadState.value = UpdateDownloadState.Failed(
+                    "A assinatura criptográfica do APK baixado não confere com o aplicativo instalado. Instalação bloqueada por segurança."
+                )
+                return@onSuccess
+            }
+
+            _updateDownloadState.value = UpdateDownloadState.ReadyToInstall(apkFile)
         }.onFailure { error ->
             _updateDownloadState.value = UpdateDownloadState.Failed(error.localizedMessage ?: "Falha ao baixar APK")
         }
