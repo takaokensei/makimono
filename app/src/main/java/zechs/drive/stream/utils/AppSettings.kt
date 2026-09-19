@@ -190,6 +190,10 @@ enum class VideoPlayer(
     val value: Int
 ) {
     EXO_PLAYER("ExoPlayer", 0),
-    MPV("MPV", 1),
+    MPV("MPV", 1);
 
+    companion object {
+        fun fromText(text: String?): VideoPlayer =
+            entries.find { it.text.equals(text, ignoreCase = true) } ?: EXO_PLAYER
+    }
 }

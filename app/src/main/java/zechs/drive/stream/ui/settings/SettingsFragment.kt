@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.graphics.Color
 import android.widget.LinearLayout
 import android.content.res.Configuration
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
@@ -26,6 +27,7 @@ import zechs.drive.stream.databinding.FragmentSettingsBinding
 import zechs.drive.stream.ui.BaseFragment
 import zechs.drive.stream.ui.main.MainViewModel
 import zechs.drive.stream.utils.AppTheme
+import zechs.drive.stream.utils.BackupSerializer
 import zechs.drive.stream.utils.VideoPlayer
 import zechs.drive.stream.utils.state.Resource
 import dagger.hilt.android.AndroidEntryPoint
@@ -58,6 +60,25 @@ class SettingsFragment : BaseFragment() {
     @Inject
     lateinit var appSettings: zechs.drive.stream.utils.AppSettings
 
+    @Inject
+    lateinit var backupSerializer: BackupSerializer
+
+    private val exportBackupLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            exportBackupToUri(uri)
+        }
+    }
+
+    private val importBackupLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            promptImportModeAndExecute(uri)
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -85,13 +106,14 @@ class SettingsFragment : BaseFragment() {
         setupCheckForUpdates()
         setupMalIntegration()
         setupPlaybackExperience()
+        setupBackupRestore()
         setupTvFocus()
     }
 
     private fun setupTvFocus() {
         if (resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE) return
 
-        val rows = listOf(
+        val rows = listOfNotNull(
             binding.settingSelectProfile,
             binding.settingSelectTheme,
             binding.settingDefaultPlayer,
@@ -101,7 +123,9 @@ class SettingsFragment : BaseFragment() {
             binding.settingMalAccount,
             binding.settingMalSyncToggle,
             binding.settingAutoSkipToggle,
-            binding.settingGesturesToggle
+            binding.settingGesturesToggle,
+            binding.settingExportBackup,
+            binding.settingImportBackup
         )
 
         rows.forEachIndexed { index, row ->
@@ -120,7 +144,7 @@ class SettingsFragment : BaseFragment() {
         binding.switchMalSync.isFocusable = false
         binding.switchAutoSkip.isFocusable = false
         binding.switchGestures.isFocusable = false
-        binding.settingSelectProfile.post { binding.settingSelectProfile.requestFocus() }
+        binding.settingSelectProfile?.post { binding.settingSelectProfile?.requestFocus() }
     }
 
     private fun setupUserProfileSection() {
@@ -545,6 +569,77 @@ class SettingsFragment : BaseFragment() {
         binding.switchGestures.setOnCheckedChangeListener { _, isChecked ->
             malSessionManager.setGesturesEnabled(isChecked)
             showSnackBar(if (isChecked) "Gestos touch ativados" else "Gestos touch desativados")
+        }
+    }
+
+    private fun setupBackupRestore() {
+        binding.settingExportBackup?.setOnClickListener {
+            val fileName = "makimono_backup_${System.currentTimeMillis()}.json"
+            exportBackupLauncher.launch(fileName)
+        }
+
+        binding.settingImportBackup?.setOnClickListener {
+            importBackupLauncher.launch(arrayOf("application/json", "text/*", "*/*"))
+        }
+    }
+
+    private fun exportBackupToUri(uri: android.net.Uri) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val json = backupSerializer.exportBackupJson()
+                requireContext().contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    outputStream.write(json.toByteArray(Charsets.UTF_8))
+                }
+                showSnackBar("Backup exportado com sucesso!")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error exporting backup", e)
+                showSnackBar("Erro ao exportar backup: ${e.message}")
+            }
+        }
+    }
+
+    private fun promptImportModeAndExecute(uri: android.net.Uri) {
+        val options = arrayOf(
+            "Mesclar com perfis existentes (Recomendado)",
+            "Substituir todos os dados existentes"
+        )
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Restaurar Backup")
+            .setMessage("Escolha como deseja aplicar os dados do arquivo de backup:")
+            .setItems(options) { _, which ->
+                val mode = if (which == 0) {
+                    BackupSerializer.ImportMode.MERGE
+                } else {
+                    BackupSerializer.ImportMode.REPLACE
+                }
+                executeImport(uri, mode)
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun executeImport(uri: android.net.Uri, mode: BackupSerializer.ImportMode) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val json = requireContext().contentResolver.openInputStream(uri)?.use { inputStream ->
+                    inputStream.bufferedReader(Charsets.UTF_8).readText()
+                } ?: run {
+                    showSnackBar("Não foi possível ler o arquivo selecionado")
+                    return@launch
+                }
+
+                val result = backupSerializer.importBackupJson(json, mode)
+                if (result.isSuccess) {
+                    val summary = "Backup restaurado: ${result.importedProfiles} perfis, ${result.importedWatches} históricos, ${result.importedFavorites} favoritos"
+                    showSnackBar(summary)
+                } else {
+                    val errorMsg = result.errorMessage ?: "Erro desconhecido ao importar backup"
+                    showSnackBar(errorMsg)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error importing backup", e)
+                showSnackBar("Falha na restauração: ${e.message}")
+            }
         }
     }
 

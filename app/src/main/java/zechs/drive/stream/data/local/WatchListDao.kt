@@ -32,4 +32,10 @@ interface WatchListDao {
 
     @Query("DELETE FROM `watch_list` WHERE videoId = :videoId AND profileId = :profileId")
     suspend fun deleteWatchByVideoId(videoId: String, profileId: String)
+
+    @Query("SELECT * FROM `watch_list` WHERE profileId = :profileId")
+    suspend fun getAllWatches(profileId: String): List<WatchList>
+
+    @Query("SELECT * FROM `watch_list`")
+    suspend fun getAllWatchesGlobal(): List<WatchList>
 }

@@ -177,6 +177,9 @@ class TvLoginServer(
                 if (method == "POST") {
                     if (contentLength > MAX_BODY_BYTES) {
                         sendResponse(writer, 413, "Payload Too Large", "application/json", "{\"error\":\"Payload excede limite seguro (64KB)\"}")
+                        try {
+                            reader.skip(contentLength.toLong())
+                        } catch (_: Exception) {}
                         return
                     }
                     if (contentLength > 0) {

@@ -38,6 +38,9 @@ class WatchQueueRepository @Inject constructor(
         )
     }
 
+    suspend fun enqueueItem(item: WatchQueueItem): Long =
+        watchQueueDao.enqueue(item)
+
     suspend fun dequeue(fileId: String, profileId: String = currentProfileId()) {
         watchQueueDao.dequeue(fileId, profileId)
     }

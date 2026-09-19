@@ -72,4 +72,11 @@ class WatchListRepository @Inject constructor(
         profileId: String = currentProfileId()
     ) = watchListDao.deleteWatchByVideoId(videoId, profileId)
 
+    suspend fun getAllWatches(
+        profileId: String = currentProfileId()
+    ): List<WatchList> = watchListDao.getAllWatches(profileId)
+
+    suspend fun getAllWatchesGlobal(): List<WatchList> =
+        watchListDao.getAllWatchesGlobal()
+
 }

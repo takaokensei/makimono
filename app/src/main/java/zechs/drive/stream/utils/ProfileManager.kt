@@ -132,6 +132,15 @@ class ProfileManager @Inject constructor(
         return true
     }
 
+    fun restoreProfiles(profiles: List<UserProfile>) {
+        if (profiles.isEmpty()) return
+        saveProfilesInternal(profiles)
+        _profilesFlow.value = profiles
+        if (profiles.none { it.id == _activeProfileFlow.value.id }) {
+            setActiveProfile(profiles.first().id)
+        }
+    }
+
     fun getAvatarDrawableRes(avatarName: String?): Int {
         return when (avatarName) {
             "avatar_caua" -> R.drawable.avatar_caua
