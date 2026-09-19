@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 echo "=== Makimono Claims Verification ==="
@@ -54,7 +54,7 @@ else
 fi
 
 echo "====================================="
-if [ $ERRORS -eq 0 ]; then
+if [ "$ERRORS" -eq 0 ]; then
     echo "ALL AUDIT CLAIMS VERIFIED SUCCESSFULLY!"
     exit 0
 else
