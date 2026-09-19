@@ -222,6 +222,12 @@ class MPVView(
             // do nothing
         }
 
+    val videoW: Int?
+        get() = MPVLib.getPropertyInt("video-params/w") ?: MPVLib.getPropertyInt("dwidth")
+
+    val videoH: Int?
+        get() = MPVLib.getPropertyInt("video-params/h") ?: MPVLib.getPropertyInt("dheight")
+
     class TrackDelegate {
         operator fun getValue(thisRef: Any?, property: KProperty<*>): Int {
             val v = MPVLib.getPropertyString(property.name)

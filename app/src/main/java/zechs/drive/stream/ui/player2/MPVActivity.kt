@@ -13,8 +13,12 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
 import android.widget.SeekBar
+import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import zechs.drive.stream.utils.MakimonoMediaSessionHelper
+import zechs.drive.stream.utils.MakimonoPiPHelper
 import zechs.drive.stream.utils.PlaybackProgressPolicy
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
@@ -141,6 +145,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     private var activeSkipChapter: ParsedChapter? = null
     private lateinit var gestureHelper: PlayerGestureHelper
     private var hasAutoSkippedCurrentInterval = false
+
+    // MediaSession
+    private var mediaSessionHelper: MakimonoMediaSessionHelper? = null
 
     // Playlist & Next Episode Auto-Play
     private var currentFileId: String = ""
@@ -340,6 +347,18 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                 handleLockingControls()
             }
 
+            btnPip.setOnClickListener {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    enterPIPMode()
+                } else {
+                    Toast.makeText(
+                        this@MPVActivity,
+                        getString(R.string.pip_not_supported),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+
         }
 
         gestureHelper = PlayerGestureHelper(
@@ -404,7 +423,78 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         }
 
         updateOrientation(resources.configuration)
+        setupMediaSession()
 
+    }
+
+    private fun setupMediaSession() {
+        mediaSessionHelper = MakimonoMediaSessionHelper(
+            context = this,
+            tag = "MPVSession",
+            callback = object : MakimonoMediaSessionHelper.Callback {
+                override fun onPlay() {
+                    player.paused = false
+                }
+
+                override fun onPause() {
+                    player.paused = true
+                }
+
+                override fun onSkipToNext() {
+                    playNextEpisodeDirectly()
+                }
+
+                override fun onSkipToPrevious() {
+                    playPrevEpisodeDirectly()
+                }
+
+                override fun onSeekTo(positionMs: Long) {
+                    player.timePos = (positionMs / 1000L).toInt()
+                }
+
+                override fun onFastForward() {
+                    skipForward()
+                }
+
+                override fun onRewind() {
+                    rewindBackward()
+                }
+
+                override fun onStop() {
+                    player.paused = true
+                    finish()
+                }
+            }
+        )
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun enterPIPMode() {
+        val width = player.videoW ?: 0
+        val height = player.videoH ?: 0
+        MakimonoPiPHelper.enterPiP(this, width, height)
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (::player.isInitialized && !(player.paused ?: true)) {
+            val width = player.videoW ?: 0
+            val height = player.videoH ?: 0
+            MakimonoPiPHelper.enterPiP(this, width, height)
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: Configuration
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        if (isInPictureInPictureMode) {
+            hideControls()
+        } else {
+            showControlsWithFocus()
+        }
     }
 
     private fun updateNextEpisode() {
@@ -417,6 +507,13 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                 controller.btnNextEp.isEnabled = false
                 controller.btnNextEp.alpha = 0.35f
             }
+            mediaSessionHelper?.updatePlaybackState(
+                isPlaying = if (::player.isInitialized) !(player.paused ?: true) else false,
+                positionMs = if (::player.isInitialized) ((player.timePos ?: 0) * 1000L).coerceAtLeast(0L) else 0L,
+                speed = (MPVLib.getPropertyDouble("speed") ?: 1.0).toFloat(),
+                canSkipNext = false,
+                canSkipPrevious = false
+            )
             return
         }
         val currentIndex = playlist.indexOfFirst { it.fileId == currentFileId }
@@ -432,6 +529,13 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             controller.btnNextEp.isEnabled = nextEpisode != null
             controller.btnNextEp.alpha = if (nextEpisode != null) 1.0f else 0.35f
         }
+        mediaSessionHelper?.updatePlaybackState(
+            isPlaying = if (::player.isInitialized) !(player.paused ?: true) else false,
+            positionMs = if (::player.isInitialized) ((player.timePos ?: 0) * 1000L).coerceAtLeast(0L) else 0L,
+            speed = (MPVLib.getPropertyDouble("speed") ?: 1.0).toFloat(),
+            canSkipNext = nextEpisode != null,
+            canSkipPrevious = prevEpisode != null
+        )
         Log.d(TAG, "updateNextEpisode: currentIndex=$currentIndex, prevEpisode=${prevEpisode?.title}, nextEpisode=${nextEpisode?.title}")
     }
 
@@ -934,6 +1038,12 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         val epText = if (currentEpNumber > 0) "Episódio ${currentEpNumber.toString().padStart(2, '0')}" else ""
         controller.tvPlayerMeta.text = epText
 
+        mediaSessionHelper?.updateMetadata(
+            title = parsed.cleanTitle.ifBlank { title ?: "" },
+            seriesName = parsed.showTitle.ifBlank { null },
+            durationMs = ((player.duration ?: 0) * 1000L).coerceAtLeast(0L)
+        )
+
         val playUri = getStreamUrl(fileId)
         hasAutoSelectedMpvTracks = false
         isFileLoaded = false
@@ -1056,6 +1166,14 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         if (!userIsOperatingSeekbar) {
             controller.progressBar.max = duration
         }
+        mediaSessionHelper?.updateMetadata(
+            title = controller.tvPlayerTitle.text?.toString() ?: (currentTitle.ifBlank { intent.getStringExtra("title") ?: "" }),
+            seriesName = controller.tvPlayerMeta.text?.toString(),
+            durationMs = duration * 1000L
+        )
+        val width = player.videoW ?: 0
+        val height = player.videoH ?: 0
+        MakimonoPiPHelper.updatePiPParams(this, width, height, isPlaying = !(player.paused ?: true))
     }
 
     private fun updatePlaybackStatus(paused: Boolean) {
@@ -1075,6 +1193,17 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         } else {
             window.addFlags(FLAG_KEEP_SCREEN_ON)
         }
+
+        mediaSessionHelper?.updatePlaybackState(
+            isPlaying = !paused,
+            positionMs = ((player.timePos ?: 0) * 1000L).coerceAtLeast(0L),
+            speed = (MPVLib.getPropertyDouble("speed") ?: 1.0).toFloat(),
+            canSkipNext = nextEpisode != null,
+            canSkipPrevious = prevEpisode != null
+        )
+        val width = player.videoW ?: 0
+        val height = player.videoH ?: 0
+        MakimonoPiPHelper.updatePiPParams(this, width, height, isPlaying = !paused)
     }
 
     private fun skipForward() {
@@ -2114,6 +2243,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     override fun onDestroy() {
         countdownJob?.cancel()
         Log.v(TAG, "Exiting.")
+
+        mediaSessionHelper?.release()
+        mediaSessionHelper = null
 
         @Suppress("DEPRECATION")
         audioManager.abandonAudioFocus(audioFocusChangeListener)

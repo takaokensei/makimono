@@ -23,6 +23,8 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import zechs.drive.stream.utils.MakimonoMediaSessionHelper
+import zechs.drive.stream.utils.MakimonoPiPHelper
 import zechs.drive.stream.utils.PlaybackProgressPolicy
 import androidx.core.content.ContextCompat
 import androidx.core.view.*
@@ -187,6 +189,9 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var tvAniSkipLabel: TextView
     private var prevEpisode: PlaylistItem? = null
     private var aniskipPillJob: Job? = null
+
+    // MediaSession
+    private var mediaSessionHelper: MakimonoMediaSessionHelper? = null
 
     // States
     private var onStopCalled = false
@@ -521,8 +526,62 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         updateOrientation(resources.configuration)
+        setupMediaSession()
         initPlayer()
         playMedia()
+    }
+
+    private fun setupMediaSession() {
+        mediaSessionHelper = MakimonoMediaSessionHelper(
+            context = this,
+            tag = "ExoPlayerSession",
+            callback = object : MakimonoMediaSessionHelper.Callback {
+                override fun onPlay() {
+                    if (::player.isInitialized) {
+                        player.play()
+                    }
+                }
+
+                override fun onPause() {
+                    if (::player.isInitialized) {
+                        player.pause()
+                    }
+                }
+
+                override fun onSkipToNext() {
+                    playNextEpisodeDirectly()
+                }
+
+                override fun onSkipToPrevious() {
+                    playPrevEpisodeDirectly()
+                }
+
+                override fun onSeekTo(positionMs: Long) {
+                    if (::player.isInitialized) {
+                        player.seekTo(positionMs)
+                    }
+                }
+
+                override fun onFastForward() {
+                    if (::player.isInitialized) {
+                        player.seekTo(player.currentPosition + 10_000L)
+                    }
+                }
+
+                override fun onRewind() {
+                    if (::player.isInitialized) {
+                        player.seekTo((player.currentPosition - 10_000L).coerceAtLeast(0L))
+                    }
+                }
+
+                override fun onStop() {
+                    if (::player.isInitialized) {
+                        player.stop()
+                    }
+                    finish()
+                }
+            }
+        )
     }
 
     private fun updateNextEpisode() {
@@ -535,6 +594,13 @@ class PlayerActivity : AppCompatActivity() {
                 btnNextEp.isEnabled = false
                 btnNextEp.alpha = 0.35f
             }
+            mediaSessionHelper?.updatePlaybackState(
+                isPlaying = if (::player.isInitialized) player.isPlaying else false,
+                positionMs = if (::player.isInitialized) player.currentPosition else 0L,
+                speed = if (::player.isInitialized) player.playbackParameters.speed else 1.0f,
+                canSkipNext = false,
+                canSkipPrevious = false
+            )
             return
         }
         val currentIndex = playlist.indexOfFirst { it.fileId == currentFileId }
@@ -550,6 +616,13 @@ class PlayerActivity : AppCompatActivity() {
             btnNextEp.isEnabled = nextEpisode != null
             btnNextEp.alpha = if (nextEpisode != null) 1.0f else 0.35f
         }
+        mediaSessionHelper?.updatePlaybackState(
+            isPlaying = if (::player.isInitialized) player.isPlaying else false,
+            positionMs = if (::player.isInitialized) player.currentPosition else 0L,
+            speed = if (::player.isInitialized) player.playbackParameters.speed else 1.0f,
+            canSkipNext = nextEpisode != null,
+            canSkipPrevious = prevEpisode != null
+        )
         Log.d(TAG, "updateNextEpisode: currentIndex=$currentIndex, prevEpisode=${prevEpisode?.title}, nextEpisode=${nextEpisode?.title}")
     }
 
@@ -560,11 +633,18 @@ class PlayerActivity : AppCompatActivity() {
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun enterPIPMode() {
-        this.enterPictureInPictureMode(
-            PictureInPictureParams
-                .Builder()
-                .build()
-        )
+        val width = if (::player.isInitialized) player.videoFormat?.width ?: 0 else 0
+        val height = if (::player.isInitialized) player.videoFormat?.height ?: 0 else 0
+        MakimonoPiPHelper.enterPiP(this, width, height)
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (::player.isInitialized && player.isPlaying) {
+            val width = player.videoFormat?.width ?: 0
+            val height = player.videoFormat?.height ?: 0
+            MakimonoPiPHelper.enterPiP(this, width, height)
+        }
     }
 
     private val playerListener = object : Player.Listener {
@@ -635,6 +715,15 @@ class PlayerActivity : AppCompatActivity() {
                 }
                 tvPlayerMeta.text = fullMeta
                 toolbar.subtitle = subtitleText
+
+                mediaSessionHelper?.updateMetadata(
+                    title = currentTitle.ifBlank { toolbar.title?.toString() ?: "" },
+                    seriesName = fullMeta,
+                    durationMs = player.duration.coerceAtLeast(0L)
+                )
+                val width = player.videoFormat?.width ?: 0
+                val height = player.videoFormat?.height ?: 0
+                MakimonoPiPHelper.updatePiPParams(this@PlayerActivity, width, height, isPlaying = player.isPlaying)
             }
         }
 
@@ -652,6 +741,17 @@ class PlayerActivity : AppCompatActivity() {
                 else R.drawable.ic_play_24
             )
             Log.d(TAG, "isPlaying=${isPlaying}")
+
+            mediaSessionHelper?.updatePlaybackState(
+                isPlaying = isPlaying,
+                positionMs = player.currentPosition,
+                speed = player.playbackParameters.speed,
+                canSkipNext = nextEpisode != null,
+                canSkipPrevious = prevEpisode != null
+            )
+            val width = player.videoFormat?.width ?: 0
+            val height = player.videoFormat?.height ?: 0
+            MakimonoPiPHelper.updatePiPParams(this@PlayerActivity, width, height, isPlaying = isPlaying)
         }
 
         override fun onPlayerError(error: PlaybackException) {
@@ -1146,6 +1246,12 @@ class PlayerActivity : AppCompatActivity() {
         tvPlayerTitle.text = parsed.showTitle.ifBlank { parsed.cleanTitle.ifBlank { title ?: "" } }
         val epText = if (currentEpNumber > 0) "Episódio ${currentEpNumber.toString().padStart(2, '0')}" else ""
         tvPlayerMeta.text = epText
+
+        mediaSessionHelper?.updateMetadata(
+            title = parsed.cleanTitle.ifBlank { title ?: "" },
+            seriesName = parsed.showTitle.ifBlank { null },
+            durationMs = if (::player.isInitialized) player.duration.coerceAtLeast(0L) else 0L
+        )
 
         playerView.apply {
             player = this@PlayerActivity.player
@@ -2675,6 +2781,8 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         countdownJob?.cancel()
+        mediaSessionHelper?.release()
+        mediaSessionHelper = null
         releasePlayer()
         super.onDestroy()
     }
