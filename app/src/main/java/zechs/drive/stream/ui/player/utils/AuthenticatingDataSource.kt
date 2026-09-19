@@ -49,7 +49,7 @@ class AuthenticatingDataSource(
                 401 -> {
                     // Token expired or invalid; invalidate cached token asynchronously without blocking
                     tokenProvider.invalidateToken()
-                    Log.w(TAG, "HTTP 401 in AuthenticatingDataSource.open: token invalidated without runBlocking")
+                    Log.w(TAG, "HTTP 401 in AuthenticatingDataSource.open: token invalidated asynchronously")
                 }
                 403 -> {
                     Log.w(TAG, "HTTP 403 Forbidden in AuthenticatingDataSource.open: request denied")

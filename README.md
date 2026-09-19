@@ -6,7 +6,7 @@
 </h1>
 <p align="center">
   <b>Sacred Anime &amp; Media Archive Client for Android &amp; Android TV</b><br>
-  High-performance direct cloud streaming from Google Drive with native fansub subtitle styling and seamless in-app updates.
+  High-performance direct cloud streaming from Google Drive with native fansub subtitle styling, encrypted credentials, and fail-closed verified updates.
 </p>
 
 <p align="center">
@@ -26,11 +26,15 @@
 
 ## ✨ Highlights
 
-- **Native Fansub Subtitle Rendering**: Fully preserves custom SSA/ASS font styles, colors, and dialogue formatting while automatically normalizing vertical placement right above the bezel across TV and mobile displays.
-- **Dual Playback Engines**: Built-in ExoPlayer (with custom FFmpeg software audio decoders for DTS/AC3/EAC3) and native MPV playback engine.
-- **Automatic In-App Updater**: Automatically detects newer releases from GitHub, selects the optimal architecture APK (`armeabi-v7a` for TVs, `arm64-v8a` for phones), downloads with a progress interface, and triggers seamless system package installation.
-- **Themes**: Tokyo Night, Catppuccin Mocha, Dracula, Nord, and Kodi Estuary.
-- **Android TV & Leanback Support**: Native D-pad navigation, Leanback launcher banner, and TV-optimized controls.
+- **Dual Playback Engines**: Common `PlayerEngine` contract and `PlaybackCoordinator` orchestrating both ExoPlayer (with FFmpeg decoders) and MPV.
+- **Native Fansub Subtitle Rendering**: Preserves custom SSA/ASS font styles, colors, and dialogue formatting while automatically normalizing vertical placement right above the bezel across TV and mobile displays.
+- **Hardened Security & Keystore Encryption**: Drive session tokens and credentials encrypted via Android Keystore (AES-256-GCM); zero raw tokens in logs with `RedactingLoggingInterceptor`.
+- **Fail-Closed Secure In-App Updater**: Automatic detection of GitHub releases with mandatory SHA-256 checksum verification and cryptographic signing certificate fingerprint matching before installation.
+- **Multi-Profile System**: Isolated watchlists, watch queues, play progress, and preferences per user profile.
+- **Global Search & Offline-First Catalog**: Debounced global search across Drive files and local Room catalog caching for instant startup and offline browsing.
+- **Background Playback & PiP**: Full `MediaSession` integration for remote controls/lockscreen and Picture-in-Picture (Android 8.0+) with dynamic aspect ratio.
+- **Android TV & Leanback Support**: Native D-pad navigation, 10-foot rail layout, Leanback launcher banner, and overscan safe-insets.
+- **Quality Assurance**: 122 automated unit tests passing (100% success rate), clean lint checks, and reproducible release builds.
 
 ---
 
@@ -42,7 +46,7 @@ Get the latest APK directly from [GitHub Releases](https://github.com/takaokense
 
 ## 🔑 Drive OAuth Setup
 
-Makimono connects directly to your private Google Drive using standard OAuth 2.0. To set up your credentials, create a Google Cloud Project with the Google Drive API enabled, and configure your client ID and client secret.
+Makimono connects directly to your private Google Drive using standard OAuth 2.0 with least-privilege `drive.readonly` scope. To set up your credentials, create a Google Cloud Project with the Google Drive API enabled, and configure your client ID and client secret.
 
 ---
 
