@@ -12,6 +12,7 @@ import org.junit.Test
 import retrofit2.HttpException
 import retrofit2.Response
 import zechs.drive.stream.data.model.File
+import zechs.drive.stream.data.model.FileDetailsResponse
 import zechs.drive.stream.data.model.FilesResponse
 import zechs.drive.stream.data.model.TokenResponse
 import zechs.drive.stream.data.remote.DriveApi
@@ -204,5 +205,116 @@ class DriveRepositoryTest {
         assertTrue(result is Resource.Error)
         val message = result.message ?: ""
         assertTrue(message.contains("Muitas requisições") || message.contains("429"))
+    }
+
+    @Test
+    fun getFileSiblings_multiPage_accumulatesAllPages() = runBlocking {
+        coEvery {
+            driveApi.getFile(
+                accessToken = any(),
+                fileId = "file_ep1",
+                fields = any(),
+                supportsAllDrives = any()
+            )
+        } returns FileDetailsResponse(id = "file_ep1", name = "Ep 01.mkv", parents = listOf("parent_folder_1"))
+
+        val page1 = listOf(createFile("s1", "Episode 01.mkv"))
+        val page2 = listOf(createFile("s2", "Episode 02.mkv"))
+
+        coEvery {
+            driveApi.getFiles(
+                accessToken = any(),
+                q = any(),
+                pageSize = any(),
+                pageToken = null,
+                supportsAllDrives = any(),
+                includeItemsFromAllDrives = any(),
+                fields = any(),
+                orderBy = any()
+            )
+        } returns FilesResponse(files = page1, nextPageToken = "token_p2")
+
+        coEvery {
+            driveApi.getFiles(
+                accessToken = any(),
+                q = any(),
+                pageSize = any(),
+                pageToken = "token_p2",
+                supportsAllDrives = any(),
+                includeItemsFromAllDrives = any(),
+                fields = any(),
+                orderBy = any()
+            )
+        } returns FilesResponse(files = page2, nextPageToken = null)
+
+        val siblings = repository.getFileSiblings("file_ep1")
+        assertEquals(2, siblings.size)
+        assertEquals("s1", siblings[0].fileId)
+        assertEquals("s2", siblings[1].fileId)
+    }
+
+    @Test
+    fun getFolderSubtitles_multiPage_accumulatesAndFiltersSubtitles() = runBlocking {
+        coEvery {
+            driveApi.getFile(
+                accessToken = any(),
+                fileId = "file_ep1",
+                fields = any(),
+                supportsAllDrives = any()
+            )
+        } returns FileDetailsResponse(id = "file_ep1", name = "Ep 01.mkv", parents = listOf("parent_folder_1"))
+
+        val page1 = listOf(
+            File("sub1", "Episode 01.ass", 500L, "https://example.com/icon.png", "text/x-ssa"),
+            File("ignored_txt", "README.txt", 100L, "https://example.com/icon.png", "text/plain")
+        )
+        val page2 = listOf(
+            File("sub2", "Episode 02.srt", 400L, "https://example.com/icon.png", "text/plain")
+        )
+
+        coEvery {
+            driveApi.getFiles(
+                accessToken = any(),
+                q = any(),
+                pageSize = any(),
+                pageToken = null,
+                supportsAllDrives = any(),
+                includeItemsFromAllDrives = any(),
+                fields = any(),
+                orderBy = any()
+            )
+        } returns FilesResponse(files = page1, nextPageToken = "sub_p2")
+
+        coEvery {
+            driveApi.getFiles(
+                accessToken = any(),
+                q = any(),
+                pageSize = any(),
+                pageToken = "sub_p2",
+                supportsAllDrives = any(),
+                includeItemsFromAllDrives = any(),
+                fields = any(),
+                orderBy = any()
+            )
+        } returns FilesResponse(files = page2, nextPageToken = null)
+
+        val subtitles = repository.getFolderSubtitles("file_ep1")
+        assertEquals(2, subtitles.size)
+        assertEquals("sub1", subtitles[0].id)
+        assertEquals("sub2", subtitles[1].id)
+    }
+
+    @Test
+    fun retryWithBackoff_retriesOnTransientErrorAndSucceeds() = runBlocking {
+        var callCount = 0
+        val result = repository.retryWithBackoff(times = 3, initialDelayMs = 10L, maxDelayMs = 50L) {
+            callCount++
+            if (callCount < 2) {
+                throw java.io.IOException("Temporary network glitch")
+            }
+            "success_payload"
+        }
+        assertEquals("success_payload", result)
+        assertEquals(2, callCount)
     }
 }

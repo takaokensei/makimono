@@ -8,6 +8,7 @@ import zechs.drive.stream.data.remote.TokenApi
 import zechs.drive.stream.utils.SessionManager
 import zechs.drive.stream.utils.state.Resource
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import retrofit2.HttpException
 import java.io.IOException
 import java.net.SocketTimeoutException
@@ -32,11 +33,38 @@ class DriveRepository @Inject constructor(
         const val MAX_PAGINATION_PAGES = 25
     }
 
+    suspend fun <T> retryWithBackoff(
+        times: Int = 3,
+        initialDelayMs: Long = 300L,
+        maxDelayMs: Long = 2000L,
+        factor: Double = 2.0,
+        block: suspend () -> T
+    ): T {
+        var currentDelay = initialDelayMs
+        repeat(times - 1) { attempt ->
+            try {
+                return block()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                val isTransient = when (e) {
+                    is IOException -> true
+                    is HttpException -> e.code() in listOf(429, 500, 502, 503, 504)
+                    else -> false
+                }
+                if (!isTransient) throw e
+                Log.w(TAG, "Transient network error on attempt ${attempt + 1}, retrying in ${currentDelay}ms...", e)
+                delay(currentDelay)
+                currentDelay = (currentDelay * factor).toLong().coerceAtMost(maxDelayMs)
+            }
+        }
+        return block()
+    }
+
     private suspend fun getOrFetchAccessToken(): String? {
         val client = sessionManager.fetchClient() ?: return null
         val tokenResponse = fetchAccessToken(client)
         if (tokenResponse is Resource.Success) {
-            return tokenResponse.data?.accessToken
+            return tokenResponse.data.accessToken
         }
         return null
     }
@@ -45,16 +73,20 @@ class DriveRepository @Inject constructor(
         query: String,
         pageToken: String?,
         pageSize: Int,
+        orderBy: String = "folder, name"
     ): Resource<FilesResponse> {
         val accessToken = getOrFetchAccessToken()
             ?: return Resource.Error("Access token can not be null")
         return try {
-            val files = driveApi.getFiles(
-                q = query,
-                pageSize = pageSize,
-                pageToken = pageToken,
-                accessToken = "Bearer $accessToken"
-            )
+            val files = retryWithBackoff {
+                driveApi.getFiles(
+                    q = query,
+                    pageSize = pageSize,
+                    pageToken = pageToken,
+                    accessToken = "Bearer $accessToken",
+                    orderBy = orderBy
+                )
+            }
             Resource.Success(files)
         } catch (e: Exception) {
             doOnError(e)
@@ -65,19 +97,20 @@ class DriveRepository @Inject constructor(
     suspend fun getAllFiles(
         query: String,
         pageSize: Int = 100,
-        maxPages: Int = MAX_PAGINATION_PAGES
+        maxPages: Int = MAX_PAGINATION_PAGES,
+        orderBy: String = "folder, name"
     ): Resource<List<File>> {
         val collected = mutableListOf<File>()
         var pageToken: String? = null
 
         repeat(maxPages) {
-            when (val response = getFiles(query, pageToken, pageSize)) {
+            when (val response = getFiles(query, pageToken, pageSize, orderBy)) {
                 is Resource.Success -> {
-                    collected += response.data?.files.orEmpty()
-                    pageToken = response.data?.nextPageToken
+                    collected += response.data.files
+                    pageToken = response.data.nextPageToken
                     if (pageToken.isNullOrBlank()) return Resource.Success(collected)
                 }
-                is Resource.Error -> return Resource.Error(response.message ?: "Falha ao listar arquivos")
+                is Resource.Error -> return Resource.Error(response.message)
                 is Resource.Loading -> Unit
             }
         }
@@ -244,24 +277,30 @@ class DriveRepository @Inject constructor(
     suspend fun getFileSiblings(fileId: String): List<PlaylistItem> {
         val accessToken = getOrFetchAccessToken() ?: return emptyList()
         return try {
-            val file = driveApi.getFile(
-                accessToken = "Bearer $accessToken",
-                fileId = fileId,
-                fields = "id, name, parents"
-            )
+            val file = retryWithBackoff {
+                driveApi.getFile(
+                    accessToken = "Bearer $accessToken",
+                    fileId = fileId,
+                    fields = "id, name, parents"
+                )
+            }
             val parentId = file.parents?.firstOrNull() ?: return emptyList()
             val query = "'$parentId' in parents and trashed=false and mimeType contains 'video/'"
-            val response = driveApi.getFiles(
-                accessToken = "Bearer $accessToken",
-                q = query,
-                pageSize = 100,
-                orderBy = "name"
-            )
-            val list = response.files.map {
-                PlaylistItem(it.id, it.name, it.thumbnailLink)
-            }
-            list.sortedWith { a, b ->
-                zechs.drive.stream.utils.EpisodeParser.naturalCompare(a.title, b.title)
+
+            when (val res = getAllFiles(query = query, pageSize = 100, orderBy = "name")) {
+                is Resource.Success -> {
+                    val list = res.data.map {
+                        PlaylistItem(it.id, it.name, it.thumbnailLink)
+                    }
+                    list.sortedWith { a, b ->
+                        zechs.drive.stream.utils.EpisodeParser.naturalCompare(a.title, b.title)
+                    }
+                }
+                is Resource.Error -> {
+                    Log.w(TAG, "getFileSiblings error: ${res.message}")
+                    emptyList()
+                }
+                is Resource.Loading -> emptyList()
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -273,28 +312,34 @@ class DriveRepository @Inject constructor(
     suspend fun getFolderSubtitles(fileId: String): List<SubtitleItem> {
         val accessToken = getOrFetchAccessToken() ?: return emptyList()
         return try {
-            val file = driveApi.getFile(
-                accessToken = "Bearer $accessToken",
-                fileId = fileId,
-                fields = "id, name, parents"
-            )
+            val file = retryWithBackoff {
+                driveApi.getFile(
+                    accessToken = "Bearer $accessToken",
+                    fileId = fileId,
+                    fields = "id, name, parents"
+                )
+            }
             val parentId = file.parents?.firstOrNull() ?: return emptyList()
             val query = "'$parentId' in parents and trashed=false and mimeType != 'application/vnd.google-apps.folder'"
-            val response = driveApi.getFiles(
-                accessToken = "Bearer $accessToken",
-                q = query,
-                pageSize = 100,
-                orderBy = "name"
-            )
-            response.files.filter { f ->
-                val name = f.name.lowercase()
-                name.endsWith(".ass") || name.endsWith(".srt") || name.endsWith(".vtt") ||
-                        name.endsWith(".ssa") || name.endsWith(".sub")
-            }.map { f ->
-                SubtitleItem(
-                    id = f.id,
-                    name = f.name
-                )
+
+            when (val res = getAllFiles(query = query, pageSize = 100, orderBy = "name")) {
+                is Resource.Success -> {
+                    res.data.filter { f ->
+                        val name = f.name.lowercase()
+                        name.endsWith(".ass") || name.endsWith(".srt") || name.endsWith(".vtt") ||
+                                name.endsWith(".ssa") || name.endsWith(".sub")
+                    }.map { f ->
+                        SubtitleItem(
+                            id = f.id,
+                            name = f.name
+                        )
+                    }
+                }
+                is Resource.Error -> {
+                    Log.w(TAG, "getFolderSubtitles error: ${res.message}")
+                    emptyList()
+                }
+                is Resource.Loading -> emptyList()
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
