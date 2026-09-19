@@ -1,29 +1,23 @@
 package zechs.drive.stream.data.repository
 
 import android.util.Log
-import dagger.Lazy
 import kotlinx.coroutines.runBlocking
 import okhttp3.Authenticator
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.Route
-import zechs.drive.stream.utils.SessionManager
-import zechs.drive.stream.utils.state.Resource
 import javax.inject.Inject
 
 class TokenAuthenticator @Inject constructor(
-    private val driveRepository: Lazy<DriveRepository>,
-    private val sessionManager: Lazy<SessionManager>
+    private val tokenProvider: TokenProvider
 ) : Authenticator {
 
     companion object {
         private const val TAG = "TokenAuthenticator"
 
         // OkHttp calls authenticate() again if the request we return still
-        // comes back as a challenge. Without a cap, a persistently invalid
-        // refresh token (or a server that keeps returning 401) makes this
-        // recurse/retry forever. Give up after a couple of attempts.
-        private const val MAX_RETRIES = 2
+        // comes back as a challenge. ARCH-02 caps this to a single retry.
+        private const val MAX_RETRIES = 1
     }
 
     private fun responseCount(response: Response): Int {
@@ -41,29 +35,36 @@ class TokenAuthenticator @Inject constructor(
     ): Request? {
 
         if (responseCount(response) > MAX_RETRIES) {
-            Log.w(TAG, "Giving up refreshing token after $MAX_RETRIES attempts")
+            Log.w(TAG, "Giving up refreshing token after $MAX_RETRIES attempt")
             return null
         }
 
-        val client = runBlocking {
-            sessionManager.get().fetchClient()
-        } ?: return null
+        val requestToken = response.request.header("Authorization")?.removePrefix("Bearer ")?.trim()
+        val currentCached = tokenProvider.getCachedToken()
 
-        val tokenResponse = runBlocking {
-            driveRepository.get().fetchAccessToken(client, forceRefresh = true)
+        // If another thread already refreshed the token concurrently, reuse it without another network roundtrip
+        if (!currentCached.isNullOrEmpty() && currentCached != requestToken) {
+            Log.d(TAG, "Token already refreshed by concurrent thread, using new cached token")
+            return response.request.newBuilder()
+                .removeHeader("Authorization")
+                .addHeader("Authorization", "Bearer $currentCached")
+                .url(response.request.url.toString())
+                .build()
         }
 
-        if (tokenResponse is Resource.Success) {
-            tokenResponse.data?.let { token ->
-                Log.d(TAG, "Received new access token (len=${token.accessToken.length})")
-                return response.request.newBuilder()
-                    .removeHeader("Authorization")
-                    .addHeader("Authorization", "Bearer ${token.accessToken}")
-                    .url(response.request.url.toString())
-                    .build()
-            }
+        val newToken = runBlocking {
+            tokenProvider.refresh()
+        }
+
+        if (!newToken.isNullOrEmpty()) {
+            Log.d(TAG, "Received new access token (len=${newToken.length})")
+            return response.request.newBuilder()
+                .removeHeader("Authorization")
+                .addHeader("Authorization", "Bearer $newToken")
+                .url(response.request.url.toString())
+                .build()
         } else {
-            Log.d(TAG, tokenResponse.message ?: "Unable to refresh access token")
+            Log.w(TAG, "Unable to refresh access token via TokenProvider")
         }
 
         return null

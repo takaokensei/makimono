@@ -4,30 +4,23 @@ import android.net.Uri
 import com.google.android.exoplayer2.upstream.*
 import com.google.android.exoplayer2.util.Assertions
 import com.google.android.exoplayer2.util.Log
-import kotlinx.coroutines.runBlocking
-import zechs.drive.stream.data.repository.DriveRepository
+import zechs.drive.stream.data.repository.TokenProvider
 import zechs.drive.stream.ui.player.PlayerActivity.Companion.TAG
-import zechs.drive.stream.utils.SessionManager
-import zechs.drive.stream.utils.state.Resource
 import java.io.IOException
-
 
 class AuthenticatingDataSource(
     private val wrappedDataSource: DefaultHttpDataSource,
-    private val driveRepository: DriveRepository,
-    private val sessionManager: SessionManager
+    private val tokenProvider: TokenProvider
 ) : DataSource {
 
     class Factory(
         private val wrappedFactory: DefaultHttpDataSource.Factory,
-        private val driveRepository: DriveRepository,
-        private val sessionManager: SessionManager
+        private val tokenProvider: TokenProvider
     ) : DataSource.Factory {
         override fun createDataSource(): AuthenticatingDataSource {
             return AuthenticatingDataSource(
                 wrappedFactory.createDataSource(),
-                driveRepository,
-                sessionManager
+                tokenProvider
             )
         }
     }
@@ -42,32 +35,27 @@ class AuthenticatingDataSource(
     @Throws(IOException::class)
     override fun open(dataSpec: DataSpec): Long {
         upstreamOpened = true
+
+        // Apply pre-warmed token non-blockingly before opening connection
+        val cachedToken = tokenProvider.getCachedToken()
+        if (!cachedToken.isNullOrEmpty()) {
+            wrappedDataSource.setRequestProperty("Authorization", "Bearer $cachedToken")
+        }
+
         return try {
             wrappedDataSource.open(dataSpec)
         } catch (e: HttpDataSource.InvalidResponseCodeException) {
-            val client = runBlocking { sessionManager.fetchClient() }
-            if (client == null) {
-                Log.w(TAG, "No drive client configured, cannot refresh token")
-                throw e
-            }
-            if (e.responseCode == 401 || e.responseCode == 403) {
-                val token = runBlocking {
-                    driveRepository.fetchAccessToken(client, forceRefresh = e.responseCode == 401)
+            when (e.responseCode) {
+                401 -> {
+                    // Token expired or invalid; invalidate cached token asynchronously without blocking
+                    tokenProvider.invalidateToken()
+                    Log.w(TAG, "HTTP 401 in AuthenticatingDataSource.open: token invalidated without runBlocking")
                 }
-                if (token is Resource.Success) {
-                    wrappedDataSource.setRequestProperty(
-                        "Authorization", "Bearer ${token.data.accessToken}"
-                    )
-                    Log.d(TAG, "Refreshed token after HTTP ${e.responseCode}")
-                } else {
-                    Log.w(TAG, "Unable to refresh access token: ${token.message ?: "unknown error"}")
-                    // No usable token - rethrow instead of retrying the same
-                    // request with a stale/missing Authorization header, which
-                    // would otherwise just fail again with the same 401/403.
-                    throw e
+                403 -> {
+                    Log.w(TAG, "HTTP 403 Forbidden in AuthenticatingDataSource.open: request denied")
                 }
             }
-            wrappedDataSource.open(dataSpec)
+            throw e
         }
     }
 

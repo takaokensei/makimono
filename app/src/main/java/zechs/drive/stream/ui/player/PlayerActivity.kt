@@ -125,6 +125,9 @@ class PlayerActivity : AppCompatActivity() {
     lateinit var driveRepository: Lazy<DriveRepository>
 
     @Inject
+    lateinit var tokenProvider: Lazy<zechs.drive.stream.data.repository.TokenProvider>
+
+    @Inject
     lateinit var sessionManager: Lazy<SessionManager>
 
     @Inject
@@ -881,7 +884,7 @@ class PlayerActivity : AppCompatActivity() {
             val dataSource = DefaultHttpDataSource.Factory()
 
             AuthenticatingDataSource
-                .Factory(dataSource, driveRepository.get(), sessionManager.get())
+                .Factory(dataSource, tokenProvider.get())
                 .createDataSource()
         }
 
@@ -1306,11 +1309,7 @@ class PlayerActivity : AppCompatActivity() {
 
             lifecycleScope.launch {
                 try {
-                    val client = sessionManager.get().fetchClient()
-                    val token = if (client != null) {
-                        val res = driveRepository.get().fetchAccessToken(client)
-                        if (res is Resource.Success) res.data?.accessToken else null
-                    } else null
+                    val token = tokenProvider.get().validToken()
                     val chapters = MatroskaChapterParser.extractChapters(streamUri.toString(), token)
                     parsedChapters = chapters
                     Log.d(TAG, "Extracted ${chapters.size} chapters from MKV")
@@ -2578,27 +2577,24 @@ class PlayerActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 Toast.makeText(this@PlayerActivity, getString(R.string.switching_to_mpv), Toast.LENGTH_SHORT).show()
-                val client = sessionManager.get().fetchClient()
-                if (client != null) {
-                    val tokenRes = driveRepository.get().fetchAccessToken(client)
-                    if (tokenRes is Resource.Success && tokenRes.data != null) {
-                        val mpvIntent = Intent(this@PlayerActivity, MPVActivity::class.java).apply {
-                            putExtra("fileId", fileId)
-                            putExtra("title", title)
-                            putExtra("thumbnailLink", thumbnailLink)
-                            putExtra("accessToken", tokenRes.data.accessToken)
-                            putExtra("theme", theme)
-                            putExtra("playlist", ArrayList(playlist))
-                            putExtra("subtitles", ArrayList(folderSubtitles))
-                            if (currentPos > 0) {
-                                putExtra("startPosition", currentPos)
-                            }
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                val token = tokenProvider.get().validToken()
+                if (!token.isNullOrEmpty()) {
+                    val mpvIntent = Intent(this@PlayerActivity, MPVActivity::class.java).apply {
+                        putExtra("fileId", fileId)
+                        putExtra("title", title)
+                        putExtra("thumbnailLink", thumbnailLink)
+                        putExtra("accessToken", token)
+                        putExtra("theme", theme)
+                        putExtra("playlist", ArrayList(playlist))
+                        putExtra("subtitles", ArrayList(folderSubtitles))
+                        if (currentPos > 0) {
+                            putExtra("startPosition", currentPos)
                         }
-                        finish()
-                        startActivity(mpvIntent)
-                        return@launch
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                     }
+                    finish()
+                    startActivity(mpvIntent)
+                    return@launch
                 }
                 Toast.makeText(this@PlayerActivity, "Falha ao obter token para abrir no MPV", Toast.LENGTH_LONG).show()
             } catch (e: Exception) {

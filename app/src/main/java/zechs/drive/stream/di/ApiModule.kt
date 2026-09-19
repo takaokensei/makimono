@@ -49,11 +49,19 @@ object ApiModule {
 
     @Provides
     @Singleton
+    fun provideTokenProvider(
+        sessionManager: SessionManager,
+        driveRepository: Lazy<DriveRepository>
+    ): zechs.drive.stream.data.repository.TokenProvider {
+        return zechs.drive.stream.data.repository.DefaultTokenProvider(sessionManager, driveRepository)
+    }
+
+    @Provides
+    @Singleton
     fun provideTokenAuthenticator(
-        driveRepository: Lazy<DriveRepository>,
-        sessionManager: Lazy<SessionManager>
+        tokenProvider: zechs.drive.stream.data.repository.TokenProvider
     ): TokenAuthenticator {
-        return TokenAuthenticator(driveRepository, sessionManager)
+        return TokenAuthenticator(tokenProvider)
     }
 
     @Provides

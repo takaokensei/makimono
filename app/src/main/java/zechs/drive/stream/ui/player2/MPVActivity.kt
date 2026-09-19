@@ -136,6 +136,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     lateinit var appSettings: dagger.Lazy<AppSettings>
 
     @Inject
+    lateinit var tokenProvider: dagger.Lazy<zechs.drive.stream.data.repository.TokenProvider>
+
+    @Inject
     lateinit var tenraiService: dagger.Lazy<zechs.drive.stream.data.remote.TenraiAnimeService>
 
     // States
@@ -993,7 +996,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
 
         val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") }
         val title = currentTitle.ifBlank { intent.getStringExtra("title") }
-        val accessToken = currentAccessToken.ifBlank { intent.getStringExtra("accessToken") }
+        val accessToken = currentAccessToken.ifBlank {
+            tokenProvider.get().getCachedToken() ?: intent.getStringExtra("accessToken")
+        }
 
         if (fileId == null || accessToken == null) {
             Log.d(TAG, "FileId & AccessToken both are required. exiting...")
