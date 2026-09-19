@@ -76,30 +76,34 @@ class PlayerViewModel @Inject constructor(
         totalDuration: Long,
         thumbnailLink: String? = null,
     ) = viewModelScope.launch(Dispatchers.IO) {
-        val lookUpWatched = watchListRepository.getWatch(videoId)
+        if (!zechs.drive.stream.utils.PlaybackProgressPolicy.shouldSave(watchedDuration, totalDuration)) {
+            Log.d(TAG, "Playback below minimum threshold or invalid, skipping save")
+            return@launch
+        }
 
+        val isFinished = zechs.drive.stream.utils.PlaybackProgressPolicy.isFinished(watchedDuration, totalDuration)
+        val finalWatched = if (isFinished && totalDuration > 0L) totalDuration else watchedDuration
+
+        val lookUpWatched = watchListRepository.getWatch(videoId)
         val watch = lookUpWatched?.copy(
             name = name,
             videoId = videoId,
-            watchedDuration = watchedDuration,
+            watchedDuration = finalWatched,
             totalDuration = totalDuration,
             // Keep whatever thumbnail we already had saved if this particular
             // save-progress tick didn't come with a fresh one (e.g. resumed
             // from a deep link without the Drive file object on hand).
             thumbnailLink = thumbnailLink ?: lookUpWatched.thumbnailLink
         ) ?: WatchList(
-            name, videoId,
-            watchedDuration, totalDuration,
+            name = name,
+            videoId = videoId,
+            watchedDuration = finalWatched,
+            totalDuration = totalDuration,
             thumbnailLink = thumbnailLink
         )
 
-        if (watch.hasFinished()) {
-            Log.d(TAG, "Video has finished, removing from database")
-            watchListRepository.deleteWatch(watch)
-        } else {
-            Log.d(TAG, "Saving video at ${watch.watchedDuration}")
-            watchListRepository.insertWatch(watch)
-        }
+        Log.d(TAG, "Saving video at ${watch.watchedDuration}/${watch.totalDuration} (finished=$isFinished)")
+        watchListRepository.insertWatch(watch)
     }
 
 }

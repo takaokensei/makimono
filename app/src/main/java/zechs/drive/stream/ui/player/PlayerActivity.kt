@@ -23,6 +23,7 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import zechs.drive.stream.utils.PlaybackProgressPolicy
 import androidx.core.content.ContextCompat
 import androidx.core.view.*
 import androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -1428,36 +1429,31 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun checkAutoPlayNextEpisode(positionMs: Long, durationMs: Long) {
-        if (controlsLocked || durationMs <= 60_000L) {
-            if (isNextEpisodeCardShowing) {
-                dismissNextEpisodeCard(isManualCancel = false)
-            }
-            return
-        }
-        val next = nextEpisode ?: return
-        val remainingMs = durationMs - positionMs
+        val decision = PlaybackProgressPolicy.evaluateAutoplay(
+            positionMs = positionMs,
+            durationMs = durationMs,
+            hasNextEpisode = nextEpisode != null,
+            isCanceled = nextEpisodeCanceled,
+            controlsLocked = controlsLocked
+        )
 
-        // Instant advance if episode reaches or exceeds full duration
-        if (remainingMs <= 1_000L || positionMs >= durationMs) {
-            if (!nextEpisodeCanceled) {
+        when (decision) {
+            is PlaybackProgressPolicy.AutoplayDecision.PlayNext -> {
                 playNextEpisodeDirectly()
-                return
             }
-        }
-
-        val isNearEnd = remainingMs in 1_000L..10_500L
-
-        if (isNextEpisodeCardShowing) {
-            if (!isNearEnd) {
-                dismissNextEpisodeCard(isManualCancel = false)
+            is PlaybackProgressPolicy.AutoplayDecision.ShowCountdown -> {
+                val next = nextEpisode ?: return
+                if (!isNextEpisodeCardShowing) {
+                    showNextEpisodeCard(next)
+                }
+                binding.nextEpisodeCard.tvNextEpisodeCountdown.text = "A SEGUIR • ${decision.countdownSeconds}s"
             }
-            return
-        }
-
-        if (nextEpisodeCanceled) return
-
-        if (isNearEnd) {
-            showNextEpisodeCard(next)
+            is PlaybackProgressPolicy.AutoplayDecision.DismissCard -> {
+                if (isNextEpisodeCardShowing) {
+                    dismissNextEpisodeCard(isManualCancel = false)
+                }
+            }
+            is PlaybackProgressPolicy.AutoplayDecision.None -> Unit
         }
     }
 
@@ -2622,8 +2618,7 @@ class PlayerActivity : AppCompatActivity() {
     private fun saveProgress() {
         val watchedDuration = player.currentPosition
         val totalDuration = player.duration
-        val watchProgress = (watchedDuration.toDouble() / totalDuration.toDouble()).toFloat() * 100
-        if (watchProgress > 10) {
+        if (PlaybackProgressPolicy.shouldSave(watchedDuration, totalDuration)) {
             val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") ?: "" }
             val title = currentTitle.ifBlank { intent.getStringExtra("title") ?: "" }
             if (fileId.isBlank()) {

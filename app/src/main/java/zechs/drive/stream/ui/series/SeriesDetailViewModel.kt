@@ -25,6 +25,7 @@ import zechs.drive.stream.ui.files.adapter.FilesDataModel
 import zechs.drive.stream.ui.series.adapter.SeasonTab
 import zechs.drive.stream.ui.series.adapter.SeriesEpisodeItem
 import zechs.drive.stream.utils.EpisodeParser
+import zechs.drive.stream.utils.PlaybackProgressPolicy
 import zechs.drive.stream.utils.SeasonEpisodeGrouper
 import zechs.drive.stream.utils.SeasonGroup
 import zechs.drive.stream.utils.state.Resource
@@ -422,11 +423,12 @@ class SeriesDetailViewModel @Inject constructor(
         val currentState = _uiState.value as? SeriesDetailUiState.Success ?: return@launch
 
         currentState.currentEpisodes.forEach { item ->
+            val resolvedDuration = PlaybackProgressPolicy.resolveWatchedDuration(item.totalDuration)
             val watch = WatchList(
                 name = item.file.name,
                 videoId = item.file.id,
-                watchedDuration = 24 * 60 * 1000L,
-                totalDuration = 24 * 60 * 1000L,
+                watchedDuration = resolvedDuration,
+                totalDuration = resolvedDuration,
                 thumbnailLink = item.file.thumbnailLarge ?: item.file.thumbnailLink
             )
             watchListRepository.insertWatch(watch)
@@ -439,12 +441,15 @@ class SeriesDetailViewModel @Inject constructor(
     fun setEpisodeWatched(file: DriveFile, watched: Boolean) = viewModelScope.launch(Dispatchers.IO) {
         val currentState = _uiState.value as? SeriesDetailUiState.Success ?: return@launch
         try {
+            val existingEpisode = allEpisodeItems.firstOrNull { it.file.id == file.id }
+            val resolvedDuration = PlaybackProgressPolicy.resolveWatchedDuration(existingEpisode?.totalDuration)
+
             if (watched) {
                 val watch = WatchList(
                     name = file.name,
                     videoId = file.id,
-                    watchedDuration = 24 * 60 * 1000L,
-                    totalDuration = 24 * 60 * 1000L,
+                    watchedDuration = resolvedDuration,
+                    totalDuration = resolvedDuration,
                     thumbnailLink = file.thumbnailLarge ?: file.thumbnailLink ?: file.posterUrl
                 )
                 watchListRepository.insertWatch(watch)
@@ -455,7 +460,11 @@ class SeriesDetailViewModel @Inject constructor(
             val updatedAll = allEpisodeItems.map { ep ->
                 if (ep.file.id == file.id) {
                     if (watched) {
-                        ep.copy(progressPercent = 100, watchedDuration = 24 * 60 * 1000L, totalDuration = 24 * 60 * 1000L)
+                        ep.copy(
+                            progressPercent = 100,
+                            watchedDuration = resolvedDuration,
+                            totalDuration = resolvedDuration
+                        )
                     } else {
                         ep.copy(progressPercent = 0, watchedDuration = 0L, totalDuration = 0L)
                     }

@@ -15,6 +15,7 @@ import android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
 import android.widget.SeekBar
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import zechs.drive.stream.utils.PlaybackProgressPolicy
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -1645,8 +1646,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         Log.d(TAG, "MPV(current=$watchedDurationInMills, total=$totalDurationInMills)")
         Log.d(TAG, "MPV(saveProgress=${Utils.prettyTime(watchedDuration)})")
 
-        val watchProgress = (watchedDuration.toDouble() / totalDuration.toDouble()).toFloat() * 100
-        if (watchProgress > 10) {
+        if (PlaybackProgressPolicy.shouldSave(watchedDurationInMills, totalDurationInMills)) {
             val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") ?: "" }
             val title = currentTitle.ifBlank { intent.getStringExtra("title") ?: "" }
             if (fileId.isBlank()) {
@@ -1665,36 +1665,31 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     }
 
     private fun checkAutoPlayNextEpisode(timePosSeconds: Long, durationSeconds: Long) {
-        if (controlsLocked || durationSeconds <= 60L) {
-            if (isNextEpisodeCardShowing) {
-                dismissNextEpisodeCard(isManualCancel = false)
-            }
-            return
-        }
-        val next = nextEpisode ?: return
-        val remaining = durationSeconds - timePosSeconds
+        val decision = PlaybackProgressPolicy.evaluateAutoplay(
+            positionMs = timePosSeconds * 1000L,
+            durationMs = durationSeconds * 1000L,
+            hasNextEpisode = nextEpisode != null,
+            isCanceled = nextEpisodeCanceled,
+            controlsLocked = controlsLocked
+        )
 
-        // Instant advance if episode reaches or exceeds full duration
-        if (remaining <= 1L || timePosSeconds >= durationSeconds) {
-            if (!nextEpisodeCanceled) {
+        when (decision) {
+            is PlaybackProgressPolicy.AutoplayDecision.PlayNext -> {
                 playNextEpisodeDirectly()
-                return
             }
-        }
-
-        val isNearEnd = remaining in 1L..10L
-
-        if (isNextEpisodeCardShowing) {
-            if (!isNearEnd) {
-                dismissNextEpisodeCard(isManualCancel = false)
+            is PlaybackProgressPolicy.AutoplayDecision.ShowCountdown -> {
+                val next = nextEpisode ?: return
+                if (!isNextEpisodeCardShowing) {
+                    showNextEpisodeCard(next)
+                }
+                binding.nextEpisodeCard.tvNextEpisodeCountdown.text = "A SEGUIR • ${decision.countdownSeconds}s"
             }
-            return
-        }
-
-        if (nextEpisodeCanceled) return
-
-        if (isNearEnd) {
-            showNextEpisodeCard(next)
+            is PlaybackProgressPolicy.AutoplayDecision.DismissCard -> {
+                if (isNextEpisodeCardShowing) {
+                    dismissNextEpisodeCard(isManualCancel = false)
+                }
+            }
+            is PlaybackProgressPolicy.AutoplayDecision.None -> Unit
         }
     }
 

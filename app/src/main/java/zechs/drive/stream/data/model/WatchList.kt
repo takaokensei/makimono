@@ -23,17 +23,14 @@ data class WatchList(
     @PrimaryKey(autoGenerate = true) val id: Int? = null
 ) {
 
-    fun watchProgress(): Int {
-        if (totalDuration <= 0L) return 0
-        return ((watchedDuration.toDouble() / totalDuration) * 100)
-            .toInt()
-            .coerceIn(0, 100)
-    }
+    fun watchProgress(): Int =
+        zechs.drive.stream.utils.PlaybackProgressPolicy.calculateProgress(watchedDuration, totalDuration)
 
     /*
-     * If video is watched at least 95% then we can say it is watched.
+     * If video is watched at least 95% (or within end window), it is marked finished.
      */
-    fun hasFinished() = watchProgress() >= 95
+    fun hasFinished(): Boolean =
+        zechs.drive.stream.utils.PlaybackProgressPolicy.isFinished(watchedDuration, totalDuration)
 }
 
 /** Upgrade old low-resolution Drive thumbnails before loading them on TV. */

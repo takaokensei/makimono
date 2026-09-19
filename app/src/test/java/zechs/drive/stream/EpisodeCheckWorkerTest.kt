@@ -46,7 +46,7 @@ class EpisodeCheckWorkerTest {
                 maxPages = 3
             )
             if (result is Resource.Success) {
-                val currentCount = result.data?.size ?: 0
+                val currentCount = result.data.size
                 if (currentCount > folder.lastKnownCount && folder.lastKnownCount > 0) {
                     notified += folder.folderId
                 }
