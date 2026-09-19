@@ -13,7 +13,16 @@ class QueueAdapter(
     private val onQueueItemMove: (Int, Int) -> Unit
 ) : RecyclerView.Adapter<QueueAdapter.QueueViewHolder>() {
 
+    init {
+        stateRestorationPolicy = StateRestorationPolicy.PREVENT_WHEN_EMPTY
+        setHasStableIds(true)
+    }
+
     private var items = listOf<WatchQueueItem>()
+
+    override fun getItemId(position: Int): Long {
+        return items.getOrNull(position)?.fileId?.hashCode()?.toLong() ?: RecyclerView.NO_ID
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): QueueViewHolder {
         val binding = ItemQueueBinding.inflate(

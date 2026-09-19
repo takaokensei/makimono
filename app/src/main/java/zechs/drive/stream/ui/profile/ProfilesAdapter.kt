@@ -22,6 +22,18 @@ class ProfilesAdapter(
     private val onEditProfileClicked: (UserProfile) -> Unit
 ) : ListAdapter<ProfileUiModel, ProfilesAdapter.ProfileViewHolder>(DiffCallback) {
 
+    init {
+        stateRestorationPolicy = StateRestorationPolicy.PREVENT_WHEN_EMPTY
+        setHasStableIds(true)
+    }
+
+    override fun getItemId(position: Int): Long {
+        return when (val item = getItem(position)) {
+            is ProfileUiModel.ProfileItem -> item.profile.id.hashCode().toLong()
+            is ProfileUiModel.AddProfileItem -> -1L
+        }
+    }
+
     var isManageMode: Boolean = false
         set(value) {
             field = value

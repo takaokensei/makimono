@@ -15,6 +15,15 @@ class StarredShelfAdapter(
     private val onClick: (DriveFile) -> Unit
 ) : ListAdapter<DriveFile, StarredShelfAdapter.ViewHolder>(DiffCallback()) {
 
+    init {
+        stateRestorationPolicy = StateRestorationPolicy.PREVENT_WHEN_EMPTY
+        setHasStableIds(true)
+    }
+
+    override fun getItemId(position: Int): Long {
+        return getItem(position).id.hashCode().toLong()
+    }
+
     var onFocusItemListener: ((View) -> Unit)? = null
     var onDpadLeftListener: ((View) -> Boolean)? = null
 

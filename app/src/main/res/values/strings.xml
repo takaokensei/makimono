@@ -125,4 +125,27 @@
     <string name="library_folder">Pasta da biblioteca</string>
     <string name="library_folder_hint">Nome da pasta no Google Drive</string>
     <string name="subtitles_settings">Legendas</string>
+
+    <!-- A11Y-01: Accessibility and TalkBack strings -->
+    <string name="play_button">Play</string>
+    <string name="pause_button">Pause</string>
+    <string name="favorite_button">Add to favorites</string>
+    <string name="unfavorite_button">Remove from favorites</string>
+    <string name="add_to_queue">Add to watch queue</string>
+    <string name="remove_from_queue">Remove from watch queue</string>
+    <string name="open_details">Open details</string>
+    <string name="search_button">Search</string>
+    <string name="voice_search_button">Voice search</string>
+    <string name="menu_button">Open menu</string>
+    <string name="close_button">Close</string>
+
+    <!-- Content descriptions for icons and interactive controls -->
+    <string name="content_description_play">Play</string>
+    <string name="content_description_pause">Pause</string>
+    <string name="content_description_favorite">Add to favorites</string>
+    <string name="content_description_unfavorite">Remove from favorites</string>
+    <string name="content_description_search">Search</string>
+    <string name="content_description_voice_search">Voice search</string>
+    <string name="content_description_menu">Open menu</string>
+    <string name="content_description_close">Close</string>
 </resources>

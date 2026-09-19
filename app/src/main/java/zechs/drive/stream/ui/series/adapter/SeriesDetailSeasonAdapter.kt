@@ -20,6 +20,15 @@ class SeriesDetailSeasonAdapter(
     private val onTabClick: (SeasonTab) -> Unit
 ) : ListAdapter<SeasonTab, SeriesDetailSeasonAdapter.SeasonViewHolder>(DiffCallback) {
 
+    init {
+        stateRestorationPolicy = StateRestorationPolicy.PREVENT_WHEN_EMPTY
+        setHasStableIds(true)
+    }
+
+    override fun getItemId(position: Int): Long {
+        return getItem(position).id.hashCode().toLong()
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SeasonViewHolder {
         val binding = ItemSeriesSeasonTabBinding.inflate(
             LayoutInflater.from(parent.context), parent, false

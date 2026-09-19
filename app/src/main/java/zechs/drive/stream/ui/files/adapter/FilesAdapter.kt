@@ -16,6 +16,18 @@ class FilesAdapter(
     val onPlayClickListener: ((DriveFile) -> Unit)? = null
 ) : ListAdapter<FilesDataModel, FilesViewHolder>(FilesItemDiffCallback()) {
 
+    init {
+        stateRestorationPolicy = StateRestorationPolicy.PREVENT_WHEN_EMPTY
+        setHasStableIds(true)
+    }
+
+    override fun getItemId(position: Int): Long {
+        return when (val item = getItem(position)) {
+            is FilesDataModel.File -> item.driveFile.id.hashCode().toLong()
+            is FilesDataModel.Loading -> Long.MAX_VALUE
+        }
+    }
+
     var isGridMode: Boolean = false
         set(value) {
             if (field != value) {

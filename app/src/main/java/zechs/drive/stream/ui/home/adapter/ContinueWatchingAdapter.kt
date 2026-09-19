@@ -19,6 +19,15 @@ class ContinueWatchingAdapter(
     private val onClick: (WatchList) -> Unit
 ) : ListAdapter<WatchList, ContinueWatchingAdapter.ViewHolder>(DiffCallback()) {
 
+    init {
+        stateRestorationPolicy = StateRestorationPolicy.PREVENT_WHEN_EMPTY
+        setHasStableIds(true)
+    }
+
+    override fun getItemId(position: Int): Long {
+        return getItem(position).videoId.hashCode().toLong()
+    }
+
     var onDpadLeftListener: ((android.view.View) -> Boolean)? = null
     var onFocusItemListener: ((android.view.View) -> Unit)? = null
     var onLongClickListener: ((WatchList) -> Unit)? = null

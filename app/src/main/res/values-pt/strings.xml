@@ -111,4 +111,41 @@
     <string name="unable_to_check_updates">Não foi possível verificar atualizações</string>
     <string name="already_latest_version">Você já está na versão mais recente</string>
     <string name="last_checked">Última verificação: %1$s</string>
+    <string name="home_empty_message">Acesse a aba Animes no menu lateral para começar a assistir!</string>
+    <string name="home_explore_animes">Explorar Catálogo de Animes</string>
+    <string name="home_empty_submessage">Adicione animes à sua biblioteca para começar.</string>
+    <string name="home_empty_retry">Tentar Novamente</string>
+    <string name="home_error_offline">Sem conexão com a internet</string>
+    <string name="home_error_offline_submessage">Verifique sua rede e tente novamente.</string>
+    <string name="home_error_auth">Sessão expirada</string>
+    <string name="home_error_auth_submessage">Faça login novamente para continuar.</string>
+    <string name="home_error_library">Erro ao carregar biblioteca</string>
+    <string name="home_empty_library">Nenhum anime encontrado na biblioteca.</string>
+    <string name="home_library_not_configured">Biblioteca não configurada.</string>
+    <string name="library_folder">Pasta da biblioteca</string>
+    <string name="library_folder_hint">Nome da pasta no Google Drive</string>
+    <string name="subtitles_settings">Legendas</string>
+
+    <!-- A11Y-01: Acessibilidade e leitor de tela TalkBack -->
+    <string name="play_button">Reproduzir</string>
+    <string name="pause_button">Pausar</string>
+    <string name="favorite_button">Adicionar aos favoritos</string>
+    <string name="unfavorite_button">Remover dos favoritos</string>
+    <string name="add_to_queue">Adicionar à fila</string>
+    <string name="remove_from_queue">Remover da fila</string>
+    <string name="open_details">Abrir detalhes</string>
+    <string name="search_button">Buscar</string>
+    <string name="voice_search_button">Busca por voz</string>
+    <string name="menu_button">Abrir menu</string>
+    <string name="close_button">Fechar</string>
+
+    <!-- Descrições de conteúdo para ícones -->
+    <string name="content_description_play">Reproduzir</string>
+    <string name="content_description_pause">Pausar</string>
+    <string name="content_description_favorite">Adicionar aos favoritos</string>
+    <string name="content_description_unfavorite">Remover dos favoritos</string>
+    <string name="content_description_search">Buscar</string>
+    <string name="content_description_voice_search">Busca por voz</string>
+    <string name="content_description_menu">Abrir menu</string>
+    <string name="content_description_close">Fechar</string>
 </resources>

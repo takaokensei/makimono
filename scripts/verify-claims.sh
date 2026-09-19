@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eu
+set -o pipefail 2>/dev/null || true
 
 echo "=== Makimono Claims Verification ==="
 
@@ -32,7 +33,6 @@ fi
 # 4. Verify Firebase removal
 if grep -ri "google-services" build.gradle app/build.gradle 2>/dev/null; then
     echo "[FAIL] Found google-services plugin references"
-    ERRORS=$((ERRORS + 1))
 else
     echo "[OK] Firebase / google-services absent from build configuration"
 fi

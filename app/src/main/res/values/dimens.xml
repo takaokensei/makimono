@@ -23,4 +23,33 @@
 
     <!-- Player UI -->
     <dimen name="next_episode_card_offset">84dp</dimen>
+
+    <!-- Accessibility Improvements (A11Y-01) -->
+    <!-- Minimum touch targets (Android / WCAG 2.1 AA minimum 48x48dp) -->
+    <dimen name="touch_target_min_size">48dp</dimen>
+    <dimen name="icon_size_small">20dp</dimen>
+    <dimen name="icon_size_medium">24dp</dimen>
+    <dimen name="icon_size_large">32dp</dimen>
+
+    <!-- Text scaling -->
+    <dimen name="text_size_body">16sp</dimen>
+    <dimen name="text_size_title">20sp</dimen>
+    <dimen name="text_size_header">24sp</dimen>
+
+    <!-- Design System Spacing (4dp grid system) -->
+    <dimen name="spacing_0">0dp</dimen>
+    <dimen name="spacing_1">4dp</dimen>
+    <dimen name="spacing_2">8dp</dimen>
+    <dimen name="spacing_3">12dp</dimen>
+    <dimen name="spacing_4">16dp</dimen>
+    <dimen name="spacing_5">20dp</dimen>
+    <dimen name="spacing_6">24dp</dimen>
+    <dimen name="spacing_8">32dp</dimen>
+    <dimen name="spacing_12">48dp</dimen>
+    <dimen name="spacing_16">64dp</dimen>
+
+    <!-- Standard screen padding -->
+    <dimen name="content_padding">@dimen/spacing_4</dimen>
+    <dimen name="horizontal_padding">@dimen/spacing_4</dimen>
+    <dimen name="vertical_padding">@dimen/spacing_3</dimen>
 </resources>

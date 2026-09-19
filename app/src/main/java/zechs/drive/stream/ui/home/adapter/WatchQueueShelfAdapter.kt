@@ -14,6 +14,15 @@ class WatchQueueShelfAdapter(
     private val onClick: (WatchQueueItem) -> Unit
 ) : ListAdapter<WatchQueueItem, WatchQueueShelfAdapter.ViewHolder>(DiffCallback()) {
 
+    init {
+        stateRestorationPolicy = StateRestorationPolicy.PREVENT_WHEN_EMPTY
+        setHasStableIds(true)
+    }
+
+    override fun getItemId(position: Int): Long {
+        return getItem(position).fileId.hashCode().toLong()
+    }
+
     var onDpadLeftListener: ((android.view.View) -> Boolean)? = null
     var onFocusItemListener: ((android.view.View) -> Unit)? = null
     var onLongClickListener: ((WatchQueueItem) -> Unit)? = null

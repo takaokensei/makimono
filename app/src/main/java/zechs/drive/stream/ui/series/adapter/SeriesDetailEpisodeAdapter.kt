@@ -26,6 +26,15 @@ class SeriesDetailEpisodeAdapter(
     private val onEpisodeLongClick: ((SeriesEpisodeItem) -> Unit)? = null
 ) : ListAdapter<SeriesEpisodeItem, SeriesDetailEpisodeAdapter.EpisodeViewHolder>(DiffCallback) {
 
+    init {
+        stateRestorationPolicy = StateRestorationPolicy.PREVENT_WHEN_EMPTY
+        setHasStableIds(true)
+    }
+
+    override fun getItemId(position: Int): Long {
+        return getItem(position).file.id.hashCode().toLong()
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): EpisodeViewHolder {
         val binding = ItemSeriesEpisodeCardBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
