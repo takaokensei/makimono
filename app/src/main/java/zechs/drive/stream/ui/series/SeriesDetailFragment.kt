@@ -20,6 +20,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import zechs.drive.stream.utils.MediaImageLoader
+import zechs.drive.stream.utils.DeviceUi
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -66,6 +67,7 @@ class SeriesDetailFragment : BaseFragment() {
         setupTopHeader()
         setupAdapters()
         setupFocusAnimations()
+        setupFocusChain()
         binding.btnRetry.setOnClickListener {
             viewModel.loadSeriesDetails(
                 folderId = args.folderId,
@@ -91,7 +93,7 @@ class SeriesDetailFragment : BaseFragment() {
         binding.tvBreadcrumbCurrent.text = args.name
 
         binding.btnSearch.setOnClickListener {
-            findNavController().navigateUp()
+            showEpisodeSearchDialog()
         }
     }
 
@@ -132,6 +134,34 @@ class SeriesDetailFragment : BaseFragment() {
                 }
             }
         }
+    }
+
+    private fun setupFocusChain() {
+        if (!DeviceUi.isTenFootExperience(requireContext())) return
+
+        // Define focus chain for action buttons
+        binding.btnBack.nextFocusRightId = binding.btnSearch.id
+        binding.btnSearch.nextFocusRightId = binding.btnPrimaryAction.id
+        binding.btnPrimaryAction.nextFocusRightId = binding.btnTrailer.id
+        binding.btnTrailer.nextFocusRightId = binding.btnFavorite.id
+        binding.btnFavorite.nextFocusRightId = binding.btnFollow.id
+        binding.btnFollow.nextFocusRightId = binding.btnMarkWatched.id
+
+        // Reverse direction
+        binding.btnMarkWatched.nextFocusLeftId = binding.btnFollow.id
+        binding.btnFollow.nextFocusLeftId = binding.btnFavorite.id
+        binding.btnFavorite.nextFocusLeftId = binding.btnTrailer.id
+        binding.btnTrailer.nextFocusLeftId = binding.btnPrimaryAction.id
+        binding.btnPrimaryAction.nextFocusLeftId = binding.btnSearch.id
+        binding.btnSearch.nextFocusLeftId = binding.btnBack.id
+
+        // Connect to season tabs
+        binding.btnMarkWatched.nextFocusDownId = binding.rvSeasonTabs.id
+        binding.rvSeasonTabs.nextFocusUpId = binding.btnMarkWatched.id
+
+        // Connect season tabs to episodes
+        binding.rvSeasonTabs.nextFocusDownId = binding.rvEpisodes.id
+        binding.rvEpisodes.nextFocusUpId = binding.rvSeasonTabs.id
     }
 
     private fun observeUiState() {
@@ -228,18 +258,36 @@ class SeriesDetailFragment : BaseFragment() {
         binding.tvEnglishSubtitle.text = englishSubtitle.uppercase(Locale.ROOT)
 
         // 3. Meta Row 1
-        binding.tvAgeRating.text = formatRating(state.animeEntry?.rating)
-        val releaseYear = state.aniListMetadata?.year ?: state.animeEntry?.year ?: 2015
-        binding.tvReleaseYear.text = releaseYear.toString()
-        binding.tvSeriesStatus.text = if (state.animeEntry?.status?.contains("Finished", true) == true) {
-            "Completo"
+        val ageRating = formatRating(state.animeEntry?.rating)
+        if (ageRating != null) {
+            binding.tvAgeRating.visibility = View.VISIBLE
+            binding.tvAgeRating.text = ageRating
         } else {
-            "Em Exibição"
+            binding.tvAgeRating.visibility = View.GONE
+        }
+
+        val releaseYear = state.aniListMetadata?.year ?: state.animeEntry?.year
+        if (releaseYear != null) {
+            binding.tvReleaseYear.visibility = View.VISIBLE
+            binding.tvReleaseYear.text = releaseYear.toString()
+        } else {
+            binding.tvReleaseYear.visibility = View.GONE
+        }
+
+        val statusRaw = state.animeEntry?.status
+        binding.tvSeriesStatus.text = when {
+            statusRaw.isNullOrBlank() -> "—"
+            statusRaw.contains("Finished", true) -> "Completo"
+            else -> "Em exibição"
         }
 
         val scoreVal = state.aniListMetadata?.score ?: state.animeEntry?.score
-        val score = scoreVal?.let { String.format(Locale.US, "%.1f", it) } ?: "8.2"
-        binding.tvMalScore.text = score
+        if (scoreVal != null) {
+            binding.tvMalScore.visibility = View.VISIBLE
+            binding.tvMalScore.text = String.format(Locale.US, "%.1f", scoreVal)
+        } else {
+            binding.tvMalScore.visibility = View.GONE
+        }
 
         // 4. Meta Row 2 (Tech Specs)
         binding.tvQualityBadge.text = state.qualityBadge
@@ -450,8 +498,8 @@ class SeriesDetailFragment : BaseFragment() {
         }
     }
 
-    private fun formatRating(rating: String?): String {
-        if (rating == null) return "16+"
+    private fun formatRating(rating: String?): String? {
+        if (rating.isNullOrBlank()) return null
         val lower = rating.lowercase(Locale.ROOT)
         return when {
             lower.contains("18+") || lower.contains("rx") || lower.contains("r+") -> "18+"
@@ -459,8 +507,33 @@ class SeriesDetailFragment : BaseFragment() {
             lower.contains("13+") || lower.contains("pg-13") -> "14+"
             lower.contains("pg") -> "10+"
             lower.contains("g") -> "L"
-            else -> "14+"
+            else -> null
         }
+    }
+
+    private fun showEpisodeSearchDialog() {
+        val state = viewModel.uiState.value
+        if (state !is SeriesDetailUiState.Success) return
+        val episodes = state.currentEpisodes
+        if (episodes.isEmpty()) {
+            MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+                .setTitle("Buscar episódio")
+                .setMessage("Nenhum episódio carregado ainda.")
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+            return
+        }
+        val titles = episodes.map { ep ->
+            val num = ep.episodeNumber?.let { "Ep. ${it.toString().padStart(2, '0')}" } ?: ep.displayTitle
+            "$num • ${ep.displayTitle}"
+        }.toTypedArray()
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+            .setTitle("Buscar episódio")
+            .setItems(titles) { dialog, which ->
+                dialog.dismiss()
+                episodes.getOrNull(which)?.let { playEpisode(it) }
+            }
+            .show()
     }
 
     override fun onDestroyView() {

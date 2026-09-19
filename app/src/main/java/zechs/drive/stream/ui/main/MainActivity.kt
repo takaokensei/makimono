@@ -180,13 +180,7 @@ class MainActivity : AppCompatActivity() {
                     } else {
                         Log.d(TAG, "Newer version of app is available (latest=${release.tagName})")
                         if (viewModel.updateDownloadState.value is MainViewModel.UpdateDownloadState.Idle) {
-                            android.widget.Toast.makeText(
-                                this@MainActivity,
-                                "Nova versão encontrada: Baixando Makimono ${release.tagName}...",
-                                android.widget.Toast.LENGTH_LONG
-                            ).show()
-                            viewModel.startUpdateDownload(release)
-                            sendUpdateNotification(release)
+                            showUpdateAvailableDialog(release)
                         }
                     }
                 }

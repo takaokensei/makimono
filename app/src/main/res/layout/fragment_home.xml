@@ -568,6 +568,33 @@
                         android:visibility="gone"
                         tools:visibility="visible" />
 
+                    <TextView
+                        android:id="@+id/tvQueueShelfLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:fontFamily="@font/inter"
+                        android:letterSpacing="0.08"
+                        android:text="MINHA FILA"
+                        android:textColor="#7DD3FC"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:visibility="gone"
+                        tools:visibility="visible" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rvWatchQueueShelf"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        android:clipChildren="false"
+                        android:clipToPadding="false"
+                        android:descendantFocusability="afterDescendants"
+                        android:focusable="true"
+                        android:orientation="horizontal"
+                        android:visibility="gone"
+                        tools:visibility="visible" />
+
                     <!-- Main Anime Library Grid (5 columns on TV / Landscape) -->
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/rvAnimeLibrary"
@@ -643,6 +670,7 @@
                     app:tint="#22D3EE" />
 
                 <TextView
+                    android:id="@+id/tvEmptyMessage"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
@@ -653,11 +681,12 @@
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/tvEmptySubMessage"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
                     android:fontFamily="@font/inter"
-                    android:text="Acesse a aba Animes no menu lateral para começar a assistir!"
+                    android:text="@string/home_empty_message"
                     android:textColor="#94A3B8"
                     android:textSize="13sp" />
 
@@ -668,9 +697,24 @@
                     android:layout_marginTop="16dp"
                     android:backgroundTint="#1E293B"
                     android:fontFamily="@font/inter"
-                    android:text="Explorar Catálogo de Animes"
+                    android:text="@string/home_explore_animes"
                     android:textColor="#22D3EE"
                     android:textSize="13sp"
+                    app:cornerRadius="8dp"
+                    app:strokeColor="#22D3EE"
+                    app:strokeWidth="1dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnEmptyRetry"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:backgroundTint="#1E293B"
+                    android:fontFamily="@font/inter"
+                    android:text="Tentar Novamente"
+                    android:textColor="#22D3EE"
+                    android:textSize="13sp"
+                    android:visibility="gone"
                     app:cornerRadius="8dp"
                     app:strokeColor="#22D3EE"
                     app:strokeWidth="1dp" />
@@ -768,7 +812,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
                     android:fontFamily="@font/inter"
-                    android:text="Animes"
+                    android:text="@string/animes"
                     android:textColor="#94A3B8"
                     android:textSize="16sp" />
 

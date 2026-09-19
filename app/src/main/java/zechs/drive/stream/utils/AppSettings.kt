@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
+import com.google.gson.Gson
 import zechs.drive.stream.utils.util.Converter
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -26,11 +27,15 @@ class AppSettings @Inject constructor(
         const val VIDEO_PLAYER = "VIDEO_PLAYER"
         const val LAST_UPDATED = "LAST_UPDATED"
         const val SUBTITLE_SIZE = "SUBTITLE_SIZE"
+        const val SUBTITLE_STYLE = "SUBTITLE_STYLE"
 
         fun profileThemeKey(profileId: String) = stringPreferencesKey("profile_${profileId}_theme")
         fun profilePlayerKey(profileId: String) = stringPreferencesKey("profile_${profileId}_player")
         fun profileSubtitleKey(profileId: String) = androidx.datastore.preferences.core.floatPreferencesKey("profile_${profileId}_sub_size")
+        fun profileSubtitleStyleKey(profileId: String) = stringPreferencesKey("profile_${profileId}_sub_style")
     }
+
+    private val gson = Gson()
 
     private val sessionStore = appContext.appSettingsDataStore
 
@@ -79,22 +84,38 @@ class AppSettings @Inject constructor(
     }
 
     suspend fun saveSubtitleSize(sizeSp: Float, profileId: String = currentProfileId()) {
-        val dataStoreKey = profileSubtitleKey(profileId)
-        sessionStore.edit { settings ->
-            settings[dataStoreKey] = sizeSp
-        }
-        Log.d(TAG, "saveSubtitleSize [profile=$profileId]: $sizeSp")
+        saveSubtitleStyle(fetchSubtitleStyle(profileId).copy(sizeSp = sizeSp), profileId)
     }
 
     suspend fun fetchSubtitleSize(profileId: String = currentProfileId()): Float {
+        return fetchSubtitleStyle(profileId).sizeSp
+    }
+
+    suspend fun saveSubtitleStyle(style: SubtitleStyle, profileId: String = currentProfileId()) {
+        val key = profileSubtitleStyleKey(profileId)
+        sessionStore.edit { settings ->
+            settings[key] = gson.toJson(style)
+            settings[profileSubtitleKey(profileId)] = style.sizeSp
+        }
+        Log.d(TAG, "saveSubtitleStyle [profile=$profileId]: ${style.summaryLabel()}")
+    }
+
+    suspend fun fetchSubtitleStyle(profileId: String = currentProfileId()): SubtitleStyle {
         return try {
-            val profileKey = profileSubtitleKey(profileId)
+            val profileKey = profileSubtitleStyleKey(profileId)
             val preferences = sessionStore.data.first()
-            preferences[profileKey]
-                ?: preferences[androidx.datastore.preferences.core.floatPreferencesKey(SUBTITLE_SIZE)]
-                ?: 20f
+            val json = preferences[profileKey]
+            if (!json.isNullOrBlank()) {
+                gson.fromJson(json, SubtitleStyle::class.java)
+            } else {
+                val legacySize = preferences[profileSubtitleKey(profileId)]
+                    ?: preferences[androidx.datastore.preferences.core.floatPreferencesKey(SUBTITLE_SIZE)]
+                    ?: 20f
+                SubtitleStyle(sizeSp = legacySize)
+            }
         } catch (e: Exception) {
-            20f
+            Log.w(TAG, "fetchSubtitleStyle fallback", e)
+            SubtitleStyle()
         }
     }
 

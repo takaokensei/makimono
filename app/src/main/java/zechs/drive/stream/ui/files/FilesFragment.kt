@@ -649,7 +649,7 @@ class FilesFragment : BaseFragment() {
             val isAtLastItem = firstVisibleItemPosition + visibleItemCount >= totalItemCount
             val isLastPage = viewModel.isLastPage
 
-            if (isAtLastItem && !isLoading && !isLastPage && isScrolling) {
+            if (isAtLastItem && !isLoading && !isLastPage) {
                 Log.d(TAG, "Paginating...")
                 viewModel.queryFiles(args.query)
                 isScrolling = false
@@ -658,7 +658,7 @@ class FilesFragment : BaseFragment() {
 
         override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
             super.onScrollStateChanged(recyclerView, newState)
-            if (newState == AbsListView.OnScrollListener.SCROLL_STATE_TOUCH_SCROLL) {
+            if (newState != AbsListView.OnScrollListener.SCROLL_STATE_IDLE) {
                 isScrolling = true
             }
         }
@@ -668,8 +668,29 @@ class FilesFragment : BaseFragment() {
         binding.rvList.apply {
             adapter = filesAdapter
             addOnScrollListener(this@FilesFragment.scrollListener)
+            addOnChildAttachStateChangeListener(focusPaginationListener)
         }
         updateLayoutMode()
+    }
+
+    private val focusPaginationListener = object : RecyclerView.OnChildAttachStateChangeListener {
+        override fun onChildViewAttachedToWindow(view: View) {
+            view.setOnFocusChangeListener { focusedView, hasFocus ->
+                if (!hasFocus) return@setOnFocusChangeListener
+                val rv = binding.rvList
+                val position = rv.getChildAdapterPosition(focusedView)
+                if (position == RecyclerView.NO_POSITION) return@setOnFocusChangeListener
+                val total = filesAdapter.itemCount
+                if (position >= total - 2 && !isLoading && !viewModel.isLastPage) {
+                    Log.d(TAG, "Paginating via D-pad focus near end (pos=$position)")
+                    viewModel.queryFiles(args.query)
+                }
+            }
+        }
+
+        override fun onChildViewDetachedFromWindow(view: View) {
+            view.onFocusChangeListener = null
+        }
     }
 
     private fun showSnackBar(message: String?) {

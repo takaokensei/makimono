@@ -106,8 +106,7 @@ class AnimePosterResolver @Inject constructor() {
      * for a folder using AniList GraphQL as the primary source, falling back to Jikan (MAL) and Kitsu.
      */
     suspend fun resolveMetadata(folderName: String): AnimeMetadata? = withContext(Dispatchers.IO) {
-        val trimmed = folderName.trim()
-        val query = cleanAnimeTitle(folderName)
+        val query = cleanAnimeTitle(folderName.trim())
         if (query.isBlank()) return@withContext null
 
         metadataCache[query]?.let { return@withContext it }

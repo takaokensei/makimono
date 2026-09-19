@@ -63,8 +63,8 @@
             <!-- Play icon overlay on focus / hover -->
             <ImageView
                 android:id="@+id/ivPlayOverlay"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:layout_gravity="center"
                 android:contentDescription="@null"
                 android:src="@drawable/ic_play_24"

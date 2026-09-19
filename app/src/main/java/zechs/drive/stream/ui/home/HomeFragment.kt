@@ -6,6 +6,8 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
+import android.widget.TextView
 import android.widget.Toast
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.activityViewModels
@@ -28,6 +30,7 @@ import zechs.drive.stream.ui.BaseFragment
 import zechs.drive.stream.ui.files.adapter.FilesAdapter
 import zechs.drive.stream.ui.files.adapter.FilesDataModel
 import zechs.drive.stream.ui.home.adapter.ContinueWatchingAdapter
+import zechs.drive.stream.ui.home.adapter.WatchQueueShelfAdapter
 import zechs.drive.stream.utils.GlideApp
 import zechs.drive.stream.utils.MediaImageLoader
 import zechs.drive.stream.utils.ProfileManager
@@ -72,8 +75,7 @@ class HomeFragment : BaseFragment() {
     private val animeAdapter by lazy {
         FilesAdapter(
             onClickListener = { file ->
-                // Quick 1-click (1 toque rápido): iniciar/retomar anime no último episódio!
-                handleQuickPlay(file)
+                handleOpenFolder(file)
             },
             onStarClickListener = { file, star ->
                 viewModel.starFile(file, star)
@@ -95,6 +97,14 @@ class HomeFragment : BaseFragment() {
     }.apply {
         onLongClickListener = { watchItem ->
             showContinueWatchingContextMenu(watchItem)
+        }
+    }
+
+    private val watchQueueAdapter = WatchQueueShelfAdapter { item ->
+        playQueueItem(item)
+    }.apply {
+        onLongClickListener = { item ->
+            showQueueItemContextMenu(item)
         }
     }
 
@@ -127,12 +137,27 @@ class HomeFragment : BaseFragment() {
         )
         binding.rvContinueWatchingShelf.adapter = continueWatchingAdapter
 
+        binding.rvWatchQueueShelf.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(
+            requireContext(), androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false
+        )
+        binding.rvWatchQueueShelf.adapter = watchQueueAdapter
+        watchQueueAdapter.onDpadLeftListener = {
+            if (usesOverlaySidebar()) expandSidebar() else focusCurrentNavItem()
+            true
+        }
+        watchQueueAdapter.onFocusItemListener = { v ->
+            lastFocusedAnimeView = v
+        }
+
+        setupTenFootFocusChain()
+
         binding.tvShelfViewHistory?.setOnClickListener {
             showWatchHistoryDialog()
         }
 
         binding.tvShelfViewQueue?.setOnClickListener {
-            showWatchQueueDialog()
+            val action = HomeFragmentDirections.actionHomeFragmentToQueueFragment()
+            findNavController().navigateSafe(action)
         }
 
         binding.btnExploreAnimes?.setOnClickListener {
@@ -180,12 +205,53 @@ class HomeFragment : BaseFragment() {
         if (!isLandscape) return 2
 
         val density = resources.displayMetrics.density
-        val railWidth = (240f * density).toInt()
-        val safeMargins = (64f * density).toInt()
-        val minimumCardWidth = (220f * density).toInt()
+        val tenFoot = zechs.drive.stream.utils.DeviceUi.isTenFootExperience(requireContext())
+        val railWidth = if (tenFoot) (240f * density).toInt() else 0
+        val safeMargins = ((if (tenFoot) 64f else 32f) * density).toInt()
+        val minimumCardWidth = ((if (tenFoot) 220f else 160f) * density).toInt()
         val usableWidth = (resources.displayMetrics.widthPixels - railWidth - safeMargins)
-            .coerceAtLeast(minimumCardWidth * 3)
-        return (usableWidth / minimumCardWidth).coerceIn(3, 6)
+            .coerceAtLeast(minimumCardWidth * 2)
+        return (usableWidth / minimumCardWidth).coerceIn(if (tenFoot) 3 else 2, if (tenFoot) 6 else 4)
+    }
+
+    private fun setupTenFootFocusChain() {
+        // Setup focus chain for TV and tablet landscape, but not phone landscape
+        val isTabletOrTV = zechs.drive.stream.utils.DeviceUi.isTenFootExperience(requireContext()) || 
+                          zechs.drive.stream.utils.DeviceUi.isTablet(requireContext())
+        
+        if (!isTabletOrTV) return
+        
+        val search = binding.etSearchAnime
+        val play = binding.btnFeaturedPlay
+        val info = binding.btnFeaturedInfo
+        val continueShelf = binding.rvContinueWatchingShelf
+        val queueShelf = binding.rvWatchQueueShelf
+        val catalog = binding.rvAnimeLibrary
+
+        listOf(
+            binding.btnBrandLogo,
+            binding.btnNavInicio,
+            binding.btnNavAnimes,
+            binding.btnNavPastas,
+            binding.btnNavFavoritos,
+            binding.userProfilePill,
+            binding.btnNavConfig
+        ).forEach { railItem ->
+            railItem?.nextFocusRightId = search.id
+        }
+
+        search.nextFocusLeftId = binding.btnNavInicio.id
+        play?.nextFocusLeftId = binding.btnNavInicio.id
+        play?.nextFocusRightId = info?.id ?: View.NO_ID
+        play?.nextFocusDownId = continueShelf.id
+        info?.nextFocusLeftId = play?.id ?: View.NO_ID
+        info?.nextFocusDownId = continueShelf.id
+        continueShelf.nextFocusUpId = play?.id ?: search.id
+        continueShelf.nextFocusDownId = queueShelf?.id ?: catalog.id
+        queueShelf?.nextFocusUpId = continueShelf.id
+        queueShelf?.nextFocusDownId = catalog.id
+        catalog.nextFocusUpId = queueShelf?.id ?: continueShelf.id
+        catalog.nextFocusLeftId = binding.btnNavInicio.id
     }
 
     private fun setupAnimeGrid() {
@@ -230,8 +296,9 @@ class HomeFragment : BaseFragment() {
 
         binding.btnVoiceSearch.setOnFocusChangeListener { v, hasFocus ->
             v.animate().scaleX(if (hasFocus) 1.15f else 1.0f).scaleY(if (hasFocus) 1.15f else 1.0f).setDuration(120L).start()
+            val context = requireContext()
             binding.btnVoiceSearch.imageTintList = android.content.res.ColorStateList.valueOf(
-                if (hasFocus) android.graphics.Color.parseColor("#38BDF8") else android.graphics.Color.parseColor("#94A3B8")
+                if (hasFocus) context.getColor(R.color.cyan_400) else context.getColor(R.color.textColor_54)
             )
         }
     }
@@ -267,7 +334,7 @@ class HomeFragment : BaseFragment() {
                 gridBtn.setBackgroundResource(R.drawable.bg_segmented_active)
                 gridBtn.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
                 listBtn.background = null
-                listBtn.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#64748B"))
+                listBtn.imageTintList = android.content.res.ColorStateList.valueOf(requireContext().getColor(R.color.textColor_54))
                 setupAnimeGrid()
             }
         }
@@ -279,14 +346,14 @@ class HomeFragment : BaseFragment() {
                 listBtn.setBackgroundResource(R.drawable.bg_segmented_active)
                 listBtn.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
                 gridBtn.background = null
-                gridBtn.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#64748B"))
+                gridBtn.imageTintList = android.content.res.ColorStateList.valueOf(requireContext().getColor(R.color.textColor_54))
                 setupAnimeGrid()
             }
         }
     }
 
     private fun setupSidebarNavigation() {
-        val hasOverlay = isCollapsibleRail()
+        val hasOverlay = usesOverlaySidebar()
 
         if (hasOverlay) {
             binding.navRail.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
@@ -436,8 +503,30 @@ class HomeFragment : BaseFragment() {
         }
     }
 
-    private fun isCollapsibleRail(): Boolean =
-        resources.getBoolean(R.bool.is_collapsible_rail)
+    private fun isCollapsibleRail(): Boolean {
+        if (zechs.drive.stream.utils.DeviceUi.isTenFootExperience(requireContext())) {
+            return false
+        }
+        return resources.getBoolean(R.bool.is_collapsible_rail)
+    }
+
+    /** Drawer overlay exists only on compact Home variants with a dim scrim, not chip rows. */
+    private fun usesOverlaySidebar(): Boolean =
+        isCollapsibleRail() && binding.sidebarDimOverlay != null
+
+    private fun refreshInicioShelfUi() {
+        if (currentTab != "Início") return
+        val hasRecent = viewModel.recentWatches.value.isNotEmpty()
+        val hasQueue = viewModel.watchQueue.value.isNotEmpty()
+        binding.rvContinueWatchingShelf.visibility = if (hasRecent) View.VISIBLE else View.GONE
+        binding.shelfHeaderRow?.visibility = if (hasRecent || hasQueue) View.VISIBLE else View.GONE
+        binding.tvShelfLabel?.visibility = if (hasRecent) View.VISIBLE else View.GONE
+        binding.tvShelfViewHistory?.visibility = if (hasRecent) View.VISIBLE else View.GONE
+        binding.tvShelfViewQueue?.visibility = if (hasQueue) View.VISIBLE else View.GONE
+        binding.tvQueueShelfLabel?.visibility = if (hasQueue) View.VISIBLE else View.GONE
+        binding.rvWatchQueueShelf?.visibility = if (hasQueue) View.VISIBLE else View.GONE
+        binding.tvShelfLabel?.text = "CONTINUAR ASSISTINDO"
+    }
 
     override fun onResume() {
         super.onResume()
@@ -588,7 +677,7 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun setupHeroAndProfile() {
-        val hasOverlay = isCollapsibleRail()
+        val hasOverlay = usesOverlaySidebar()
 
         binding.btnFeaturedPlay?.setOnFocusChangeListener { v, hasFocus ->
             if (hasFocus) {
@@ -648,7 +737,6 @@ class HomeFragment : BaseFragment() {
     private fun selectTab(tab: String) {
         currentTab = tab
         val hasRecent = viewModel.recentWatches.value.isNotEmpty()
-        val hasQueue = viewModel.watchQueue.value.isNotEmpty()
 
         binding.apply {
             when (tab) {
@@ -657,8 +745,7 @@ class HomeFragment : BaseFragment() {
                     val hasFeatured = viewModel.featuredAnime.value != null
                     val hasLibrary = viewModel.animeLibrary.value.isNotEmpty()
                     featuredHeroContainer?.visibility = if (hasFeatured) View.VISIBLE else View.GONE
-                    shelfHeaderRow?.visibility = if (hasRecent || hasQueue) View.VISIBLE else View.GONE
-                    rvContinueWatchingShelf.visibility = if (hasRecent) View.VISIBLE else View.GONE
+                    refreshInicioShelfUi()
                     layoutHomeEmpty?.visibility = if (!hasRecent && !hasFeatured && !hasLibrary) View.VISIBLE else View.GONE
                     rvAnimeLibrary.visibility = View.VISIBLE
                     layoutEmpty.visibility = View.GONE
@@ -702,9 +789,9 @@ class HomeFragment : BaseFragment() {
 
             val normalBg = R.drawable.rail_item_focus_bg
             val activeBg = R.drawable.nav_item_active_bg
-            val normalTextColor = android.graphics.Color.parseColor("#94A3B8")
+            val normalTextColor = requireContext().getColor(R.color.textColor_54)
             val activeTextColor = android.graphics.Color.WHITE
-            val normalIconColor = android.graphics.Color.parseColor("#7FA3D6")
+            val normalIconColor = requireContext().getColor(R.color.colorAccentNeon)
             val activeIconColor = android.graphics.Color.WHITE
 
             // Início
@@ -727,8 +814,8 @@ class HomeFragment : BaseFragment() {
             ivNavFavoritosIcon.imageTintList = android.content.res.ColorStateList.valueOf(if (tab == "Favoritos") activeIconColor else normalIconColor)
 
             // Mobile Bottom Navigation Bar state
-            val bottomActiveColor = android.graphics.Color.parseColor("#22D3EE")
-            val bottomInactiveColor = android.graphics.Color.parseColor("#64748B")
+            val bottomActiveColor = requireContext().getColor(R.color.cyan_400)
+            val bottomInactiveColor = requireContext().getColor(R.color.textColor_54)
 
             ivBottomNavInicio?.imageTintList = android.content.res.ColorStateList.valueOf(if (tab == "Início") bottomActiveColor else bottomInactiveColor)
             tvBottomNavInicio?.setTextColor(if (tab == "Início") bottomActiveColor else bottomInactiveColor)
@@ -798,6 +885,69 @@ class HomeFragment : BaseFragment() {
                         binding.progressBar.visibility = if (loading) View.VISIBLE else View.GONE
                     }
                 }
+
+                launch {
+                    viewModel.libraryLoadError.collect { message ->
+                        if (!message.isNullOrBlank()) {
+                            com.google.android.material.snackbar.Snackbar
+                                .make(binding.root, message, com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
+                                .setAction("Tentar de novo") {
+                                    viewModel.loadAnimeLibrary(forceRefresh = true)
+                                }
+                                .show()
+                        }
+                    }
+                }
+
+                launch {
+                    viewModel.homeState.collect { state ->
+                        when (state) {
+                            is HomeViewModel.HomeState.Loading -> {
+                                binding.progressBar.visibility = View.VISIBLE
+                                binding.layoutHomeEmpty?.visibility = View.GONE
+                                binding.layoutEmpty.visibility = View.GONE
+                            }
+                            is HomeViewModel.HomeState.Content -> {
+                                binding.progressBar.visibility = View.GONE
+                                binding.layoutHomeEmpty?.visibility = View.GONE
+                                binding.layoutEmpty.visibility = View.GONE
+                            }
+                            is HomeViewModel.HomeState.Empty -> {
+                                binding.progressBar.visibility = View.GONE
+                                binding.layoutHomeEmpty?.visibility = View.VISIBLE
+                                binding.layoutEmpty.visibility = View.GONE
+                                binding.layoutHomeEmpty?.findViewById<TextView>(R.id.tvEmptyMessage)?.text = state.message
+                                binding.layoutHomeEmpty?.findViewById<TextView>(R.id.tvEmptySubMessage)?.text = getString(R.string.home_empty_submessage)
+                                binding.layoutHomeEmpty?.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnExploreAnimes)?.visibility = View.VISIBLE
+                                binding.layoutHomeEmpty?.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnEmptyRetry)?.visibility = View.GONE
+                            }
+                            is HomeViewModel.HomeState.Error -> {
+                                binding.progressBar.visibility = View.GONE
+                                binding.layoutHomeEmpty?.visibility = View.VISIBLE
+                                binding.layoutEmpty.visibility = View.GONE
+                                val emptyMessage = when {
+                                    state.isOffline -> getString(R.string.home_error_offline)
+                                    state.isAuthError -> getString(R.string.home_error_auth)
+                                    else -> getString(R.string.home_error_library)
+                                }
+                                val emptySubMessage = when {
+                                    state.isOffline -> getString(R.string.home_error_offline_submessage)
+                                    state.isAuthError -> getString(R.string.home_error_auth_submessage)
+                                    else -> state.message
+                                }
+                                binding.layoutHomeEmpty?.findViewById<TextView>(R.id.tvEmptyMessage)?.text = emptyMessage
+                                binding.layoutHomeEmpty?.findViewById<TextView>(R.id.tvEmptySubMessage)?.text = emptySubMessage
+                                binding.layoutHomeEmpty?.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnExploreAnimes)?.visibility = View.GONE
+                                binding.layoutHomeEmpty?.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnEmptyRetry)?.apply {
+                                    visibility = View.VISIBLE
+                                    setOnClickListener {
+                                        viewModel.loadAnimeLibrary(forceRefresh = true)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -811,8 +961,7 @@ class HomeFragment : BaseFragment() {
                         val hasRecent = items.isNotEmpty()
                         val hasFeatured = viewModel.featuredAnime.value != null
                         val hasLibrary = viewModel.animeLibrary.value.isNotEmpty()
-                        binding.shelfHeaderRow?.visibility = if (hasRecent) View.VISIBLE else View.GONE
-                        binding.rvContinueWatchingShelf.visibility = if (hasRecent) View.VISIBLE else View.GONE
+                        refreshInicioShelfUi()
                         binding.layoutHomeEmpty?.visibility = if (!hasRecent && !hasFeatured && !hasLibrary) View.VISIBLE else View.GONE
                         binding.containerItemCount.visibility = if (hasLibrary) View.VISIBLE else View.GONE
                         binding.tvItemCount.text = "${viewModel.animeLibrary.value.size} títulos"
@@ -825,11 +974,10 @@ class HomeFragment : BaseFragment() {
     private fun observeWatchQueue() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.watchQueue.collect {
+                viewModel.watchQueue.collect { items ->
+                    watchQueueAdapter.submitList(items)
                     if (currentTab == "Início") {
-                        binding.shelfHeaderRow?.visibility = if (
-                            viewModel.recentWatches.value.isNotEmpty() || it.isNotEmpty()
-                        ) View.VISIBLE else View.GONE
+                        refreshInicioShelfUi()
                     }
                 }
             }
@@ -872,7 +1020,7 @@ class HomeFragment : BaseFragment() {
                             val pill = android.widget.TextView(requireContext()).apply {
                                 text = genreName
                                 textSize = 10f
-                                setTextColor(android.graphics.Color.parseColor("#94A3B8"))
+                                setTextColor(requireContext().getColor(R.color.textColor_54))
                                 setBackgroundResource(R.drawable.tag_genre_pill_bg)
                                 setPadding(18, 6, 18, 6)
                                 val params = android.widget.LinearLayout.LayoutParams(
@@ -1001,29 +1149,39 @@ class HomeFragment : BaseFragment() {
             Toast.makeText(requireContext(), "O histórico está vazio", Toast.LENGTH_SHORT).show()
             return
         }
-        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
-            .setTitle("Histórico recente")
-            .setItems(items.map { it.name }.toTypedArray()) { dialog, which ->
-                dialog.dismiss()
-                items.getOrNull(which)?.let { playWatchItem(it) }
-            }
-            .show()
+        val menuItems = items.mapIndexed { index, watch ->
+            zechs.drive.stream.ui.player.GlassMenuItem(
+                id = "history_$index",
+                title = watch.name,
+                subtitle = watch.watchProgress().let { if (it > 0) "$it% assistido" else null },
+                tag = watch
+            )
+        }
+        zechs.drive.stream.ui.player.PlayerGlassMenuDialog(
+            context = requireContext(),
+            title = "Histórico recente",
+            items = menuItems
+        ) { selected ->
+            (selected.tag as? zechs.drive.stream.data.model.WatchList)?.let { playWatchItem(it) }
+        }.show()
     }
 
     private fun showWatchQueueDialog() {
-        val items = viewModel.watchQueue.value
-        if (items.isEmpty()) {
-            Toast.makeText(requireContext(), "A fila está vazia", Toast.LENGTH_SHORT).show()
-            return
-        }
-        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
-            .setTitle("Minha fila")
-            .setItems(items.map { it.name }.toTypedArray()) { dialog, which ->
-                dialog.dismiss()
-                items.getOrNull(which)?.let { showQueueItemContextMenu(it) }
-            }
-            .setNegativeButton("Fechar", null)
-            .show()
+        // Navigate to the new QueueFragment instead of showing dialog
+        val action = HomeFragmentDirections.actionHomeFragmentToQueueFragment()
+        findNavController().navigateSafe(action)
+    }
+
+    private fun playQueueItem(item: WatchQueueItem) {
+        playWatchItem(
+            WatchList(
+                name = item.name,
+                videoId = item.fileId,
+                watchedDuration = 0L,
+                totalDuration = 0L,
+                thumbnailLink = item.posterUrl
+            )
+        )
     }
 
     private fun showQueueItemContextMenu(item: WatchQueueItem) {

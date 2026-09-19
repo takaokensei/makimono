@@ -259,31 +259,12 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         player.initialize(filesDir.path)
         player.addObserver(this)
 
-        // Enforce PotPlayer subtitle typography & fixed 96% bottom positioning
-        MPVLib.setPropertyInt("sub-pos", 96)
-        MPVLib.setPropertyString("sub-ass-override", "force")
-        MPVLib.setPropertyString("sub-font", "sans-serif")
-        MPVLib.setPropertyString("sub-bold", "yes")
-        MPVLib.setPropertyString("sub-color", "#FFFFFFFF")
-        MPVLib.setPropertyString("sub-border-color", "#FF000000")
-        MPVLib.setPropertyDouble("sub-border-size", 3.2)
-        MPVLib.setPropertyDouble("sub-shadow-offset", 0.0)
-        MPVLib.setPropertyString("sub-back-color", "#00000000")
-
         lifecycleScope.launch {
             try {
-                val savedSp = appSettings.get().fetchSubtitleSize()
-                if (savedSp > 0f) {
-                    val mpvSize = when {
-                        savedSp <= 16f -> 38
-                        savedSp <= 20f -> 48
-                        savedSp <= 24f -> 58
-                        else -> 68
-                    }
-                    MPVLib.setPropertyInt("sub-font-size", mpvSize)
-                }
+                val style = appSettings.get().fetchSubtitleStyle()
+                applyMpvSubtitleStyle(style)
             } catch (e: Exception) {
-                Log.w(TAG, "Failed loading MPV subtitle size", e)
+                Log.w(TAG, "Failed loading MPV subtitle style", e)
             }
         }
 
@@ -559,7 +540,11 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                 KeyEvent.KEYCODE_NUMPAD_ENTER,
                 KeyEvent.KEYCODE_BUTTON_A -> {
                     if (binding.nextEpisodeCard.root.isVisible) {
-                        playNextEpisodeDirectly()
+                        if (binding.nextEpisodeCard.btnCancelNextEpisode.isFocused) {
+                            dismissNextEpisodeCard(isManualCancel = true)
+                        } else {
+                            playNextEpisodeDirectly()
+                        }
                         return true
                     }
                     if (binding.netflixSkipRow.isVisible) {
@@ -696,7 +681,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         controller.topScrim.animate().alpha(1f).setDuration(animDuration).start()
 
         if (binding.nextEpisodeCard.root.isVisible) {
-            binding.nextEpisodeCard.root.animate().translationY(-84f * density).setDuration(animDuration).start()
+            binding.nextEpisodeCard.root.animate().translationY(-resources.getDimensionPixelOffset(R.dimen.next_episode_card_offset).toFloat()).setDuration(animDuration).start()
         }
         handleLockingControls()
         val currentPos = (player.timePos ?: 0).toDouble()
@@ -1505,7 +1490,33 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             showSubtitleSizeDialog()
         }
 
+        glassDialog.setActionButton("Personalizar aparência") { dialog ->
+            dialog.dismiss()
+            openSubtitleStyleDialog()
+        }
+
         glassDialog.show()
+    }
+
+    private fun openSubtitleStyleDialog() {
+        lifecycleScope.launch {
+            val style = try {
+                appSettings.get().fetchSubtitleStyle()
+            } catch (_: Exception) {
+                zechs.drive.stream.utils.SubtitleStyle()
+            }
+            zechs.drive.stream.ui.player.SubtitleStyleDialog.show(this@MPVActivity, style) { updated ->
+                applyMpvSubtitleStyle(updated)
+                lifecycleScope.launch {
+                    try {
+                        appSettings.get().saveSubtitleStyle(updated)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Error saving subtitle style", e)
+                    }
+                }
+                configSnackbar("Estilo de legenda salvo", 1200)
+            }
+        }
     }
 
     private fun showSubtitleSyncDialog() {
@@ -1583,16 +1594,11 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                 items = items
             ) { selected ->
                 val chosenSp = selected.tag as? Float ?: 20f
-                val mpvSize = when {
-                    chosenSp <= 16f -> 38
-                    chosenSp <= 20f -> 48
-                    chosenSp <= 24f -> 58
-                    else -> 68
-                }
-                MPVLib.setPropertyInt("sub-font-size", mpvSize)
                 lifecycleScope.launch {
                     try {
-                        appSettings.get().saveSubtitleSize(chosenSp)
+                        val style = appSettings.get().fetchSubtitleStyle().copy(sizeSp = chosenSp)
+                        appSettings.get().saveSubtitleStyle(style)
+                        applyMpvSubtitleStyle(style)
                     } catch (e: Exception) {
                         Log.w(TAG, "Error saving subtitle size", e)
                     }
@@ -1839,8 +1845,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         controller.skipIntroRow.visibility = View.GONE
 
         val card = binding.nextEpisodeCard
-        val density = resources.displayMetrics.density
-        card.root.translationY = if (controller.root.isVisible) -84f * density else 0f
+        card.root.translationY = if (controller.root.isVisible) -resources.getDimensionPixelOffset(R.dimen.next_episode_card_offset).toFloat() else 0f
 
         val parsed = EpisodeParser.parse(next.title)
         card.tvNextEpisodeTitle.text = parsed.cleanTitle
@@ -2253,6 +2258,44 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         player.destroy()
 
         super.onDestroy()
+    }
+
+    private fun applyMpvSubtitleStyle(style: zechs.drive.stream.utils.SubtitleStyle) {
+        MPVLib.setPropertyInt("sub-pos", 96)
+        MPVLib.setPropertyString("sub-ass-override", "force")
+        MPVLib.setPropertyString("sub-font", style.fontFamily.mpvFont)
+        MPVLib.setPropertyString("sub-bold", if (style.bold) "yes" else "no")
+        MPVLib.setPropertyString("sub-italic", if (style.italic) "yes" else "no")
+        MPVLib.setPropertyString("sub-color", argbToMpvColor(style.foregroundColor))
+        MPVLib.setPropertyString("sub-border-color", argbToMpvColor(style.edgeColor))
+        val edge = style.edgeType
+        MPVLib.setPropertyDouble(
+            "sub-border-size",
+            when (edge) {
+                com.google.android.exoplayer2.ui.CaptionStyleCompat.EDGE_TYPE_NONE -> 0.0
+                com.google.android.exoplayer2.ui.CaptionStyleCompat.EDGE_TYPE_DROP_SHADOW -> 2.0
+                else -> 3.2
+            }
+        )
+        MPVLib.setPropertyDouble(
+            "sub-shadow-offset",
+            if (edge == com.google.android.exoplayer2.ui.CaptionStyleCompat.EDGE_TYPE_DROP_SHADOW) 1.5 else 0.0
+        )
+        val back = if (style.backgroundColor == android.graphics.Color.TRANSPARENT) {
+            "#00000000"
+        } else {
+            argbToMpvColor(style.backgroundColor)
+        }
+        MPVLib.setPropertyString("sub-back-color", back)
+        MPVLib.setPropertyInt("sub-font-size", zechs.drive.stream.utils.SubtitleAppearance.mpvFontSize(style.sizeSp))
+    }
+
+    private fun argbToMpvColor(color: Int): String {
+        val a = (color ushr 24) and 0xFF
+        val r = (color ushr 16) and 0xFF
+        val g = (color ushr 8) and 0xFF
+        val b = color and 0xFF
+        return String.format("#%02X%02X%02X%02X", a, r, g, b)
     }
 
 }

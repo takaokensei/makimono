@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tablet landscape: Intermediate density between phone and TV -->
+    <dimen name="tv_overscan_margin">20dp</dimen>
+    <dimen name="tv_overscan_margin_vertical">20dp</dimen>
+    <dimen name="tv_nav_rail_width">220dp</dimen>
+    <dimen name="tv_shelf_card_width">280dp</dimen>
+    <dimen name="tv_shelf_card_height">158dp</dimen>
+    
+    <!-- Profile Selection (Landscape / Tablet) -->
+    <dimen name="profile_avatar_size">128dp</dimen>
+    <dimen name="profile_card_margin_horizontal">18dp</dimen>
+    <dimen name="profile_card_margin_vertical">6dp</dimen>
+    <dimen name="profile_title_size">34sp</dimen>
+</resources>

@@ -1,8 +1,15 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Profile Selection (Landscape / TV) -->
-    <dimen name="profile_avatar_size">136dp</dimen>
-    <dimen name="profile_card_margin_horizontal">20dp</dimen>
-    <dimen name="profile_card_margin_vertical">0dp</dimen>
-    <dimen name="profile_title_size">36sp</dimen>
+    <!-- Phone landscape: Keep mobile-friendly dimensions, not TV 10-foot spacing -->
+    <dimen name="tv_overscan_margin">16dp</dimen>
+    <dimen name="tv_overscan_margin_vertical">16dp</dimen>
+    <dimen name="tv_nav_rail_width">200dp</dimen>
+    <dimen name="tv_shelf_card_width">240dp</dimen>
+    <dimen name="tv_shelf_card_height">135dp</dimen>
+    
+    <!-- Profile Selection (Landscape / Phone) -->
+    <dimen name="profile_avatar_size">120dp</dimen>
+    <dimen name="profile_card_margin_horizontal">16dp</dimen>
+    <dimen name="profile_card_margin_vertical">8dp</dimen>
+    <dimen name="profile_title_size">32sp</dimen>
 </resources>

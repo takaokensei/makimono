@@ -20,4 +20,7 @@
     <dimen name="profile_card_margin_horizontal">10dp</dimen>
     <dimen name="profile_card_margin_vertical">10dp</dimen>
     <dimen name="profile_title_size">26sp</dimen>
+
+    <!-- Player UI -->
+    <dimen name="next_episode_card_offset">84dp</dimen>
 </resources>

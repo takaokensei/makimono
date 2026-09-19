@@ -97,14 +97,16 @@
 
                 <ImageView
                     android:id="@+id/btnCancelNextEpisode"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
                     android:background="@drawable/glass_circle_button_bg"
                     android:clickable="true"
                     android:contentDescription="Cancelar"
                     android:focusable="true"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
                     android:nextFocusDown="@+id/btnPlayNextEpisodeNow"
-                    android:padding="5dp"
+                    android:padding="12dp"
                     android:src="@drawable/ic_close_24"
                     app:tint="#FFFFFFFF" />
             </LinearLayout>
@@ -128,7 +130,8 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPlayNextEpisodeNow"
                 android:layout_width="wrap_content"
-                android:layout_height="32dp"
+                android:layout_height="48dp"
+                android:minHeight="48dp"
                 android:background="@drawable/glass_pill_accent_bg"
                 android:clickable="true"
                 android:focusable="true"

@@ -215,6 +215,7 @@ class PlayerActivity : AppCompatActivity() {
     private var activeExternalSubItem: SubtitleItem? = null
     private var activeExternalSubFile: java.io.File? = null
     private var currentSubtitleOffsetMs = 0L
+    private var currentSubtitleStyle = zechs.drive.stream.utils.SubtitleStyle()
 
     // Playlist & Next Episode Auto-Play
     private var currentFileId: String = ""
@@ -802,44 +803,14 @@ class PlayerActivity : AppCompatActivity() {
             playerView.subtitleView?.setCues(emptyList())
             return
         }
-        val normalizedCues = cues.map { cue ->
-            val builder = cue.buildUpon()
+        playerView.subtitleView?.setCues(
+            zechs.drive.stream.utils.SubtitleCueComposer.compose(cues, currentSubtitleStyle)
+        )
+    }
 
-            // 1. HEIGHT NORMALIZATION:
-            // Top signs / notes are explicitly in the top third (line < 0.35f with START anchor).
-            // All other dialogue is unified to a stable, crisp bottom position: 0.93f (7% clearance from bottom).
-            // This eliminates random vertical jumping between ASS styles, prevents text from being
-            // buried at the bottom bezel, and stops text from floating awkwardly in the middle.
-            val isTopSign = cue.lineType == Cue.LINE_TYPE_FRACTION &&
-                    cue.line in 0.0f..0.35f &&
-                    cue.lineAnchor == Cue.ANCHOR_TYPE_START
-
-            if (!isTopSign) {
-                builder.setLine(0.95f, Cue.LINE_TYPE_FRACTION)
-                builder.setLineAnchor(Cue.ANCHOR_TYPE_END)
-            }
-
-            // 2. TYPOGRAPHY ENHANCEMENT:
-            // Ensure bold styling for tracks that lack bold styling spans
-            val text = cue.text
-            if (text != null && text.isNotEmpty()) {
-                val spannable = SpannableStringBuilder.valueOf(text)
-                val hasBold = spannable.getSpans(0, spannable.length, StyleSpan::class.java)
-                    .any { it.style == Typeface.BOLD }
-                if (!hasBold) {
-                    spannable.setSpan(
-                        StyleSpan(Typeface.BOLD),
-                        0,
-                        spannable.length,
-                        Spanned.SPAN_INCLUSIVE_INCLUSIVE
-                    )
-                    builder.setText(spannable)
-                }
-            }
-
-            builder.build()
-        }
-        playerView.subtitleView?.setCues(normalizedCues)
+    private fun applySubtitleStyleToPlayer(style: zechs.drive.stream.utils.SubtitleStyle) {
+        currentSubtitleStyle = style
+        zechs.drive.stream.utils.SubtitleAppearance.applyToExo(playerView.subtitleView, style)
     }
 
     private fun initPlayer() {
@@ -905,10 +876,9 @@ class PlayerActivity : AppCompatActivity() {
             .build()
 
         playerView.setControllerVisibilityListener { visibility ->
-            val density = resources.displayMetrics.density
             val isVisible = visibility == View.VISIBLE
 
-            val targetCardY = if (isVisible) -84f * density else 0f
+            val targetCardY = if (isVisible) -resources.getDimensionPixelOffset(R.dimen.next_episode_card_offset).toFloat() else 0f
             if (binding.nextEpisodeCard.root.isVisible) {
                 binding.nextEpisodeCard.root.animate().translationY(targetCardY).setDuration(220L).start()
             }
@@ -928,30 +898,11 @@ class PlayerActivity : AppCompatActivity() {
             }
         }
 
-        // Configure subtitle appearance (PotPlayer style: crisp white text, strong black outline, no background box, bold)
-        playerView.subtitleView?.apply {
-            val captionStyle = CaptionStyleCompat(
-                /* foregroundColor  */ Color.WHITE,
-                /* backgroundColor */ Color.TRANSPARENT,
-                /* windowColor     */ Color.TRANSPARENT,
-                /* edgeType        */ CaptionStyleCompat.EDGE_TYPE_OUTLINE,
-                /* edgeColor       */ Color.BLACK,
-                /* typeface        */ Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-            )
-            setStyle(captionStyle)
-            setApplyEmbeddedStyles(false)
-            setApplyEmbeddedFontSizes(false)
-            setBottomPaddingFraction(0.035f)
-        }
-
         lifecycleScope.launch {
             try {
-                val savedSize = appSettings.get().fetchSubtitleSize()
-                if (savedSize > 0f) {
-                    playerView.subtitleView?.setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, savedSize)
-                }
+                applySubtitleStyleToPlayer(appSettings.get().fetchSubtitleStyle())
             } catch (e: Exception) {
-                Log.w(TAG, "Failed loading subtitle size", e)
+                Log.w(TAG, "Failed loading subtitle style", e)
             }
         }
 
@@ -1284,7 +1235,9 @@ class PlayerActivity : AppCompatActivity() {
                 val cachedFile = java.io.File(cacheDir, "subtitles/${sub.id}_$safeName")
                 if (cachedFile.exists() && cachedFile.length() > 0) {
                     val isPortuguese = sub.languageCode == "por" || sub.name.lowercase().contains(".por.") || sub.name.lowercase().contains("pt")
-                    val (subUri, mimeType) = zechs.drive.stream.utils.SubtitleConverter.prepareSubtitleForExoPlayer(cacheDir, sub, cachedFile)
+                    val (subUri, mimeType) = zechs.drive.stream.utils.SubtitleConverter.prepareSubtitleForExoPlayer(
+                        cacheDir, sub, cachedFile, currentSubtitleStyle.bridgeGapMs, currentSubtitleStyle.subtitleDelayMs
+                    )
                     subConfigs.add(
                         MediaItem.SubtitleConfiguration.Builder(subUri)
                             .setMimeType(mimeType)
@@ -1407,14 +1360,10 @@ class PlayerActivity : AppCompatActivity() {
         activeExternalSubItem = sub
         activeExternalSubFile = cachedFile
 
-        val (rawUri, mimeType) = zechs.drive.stream.utils.SubtitleConverter.prepareSubtitleForExoPlayer(cacheDir, sub, cachedFile)
-        val finalUri = if (currentSubtitleOffsetMs != 0L && rawUri.scheme == "file") {
-            val sourceFile = java.io.File(rawUri.path ?: "")
-            val shiftedFile = java.io.File(cacheDir, "subtitles/${sub.id}_shifted_${currentSubtitleOffsetMs}.srt")
-            if (zechs.drive.stream.utils.SubtitleConverter.shiftSrtTimestamps(sourceFile, shiftedFile, currentSubtitleOffsetMs)) {
-                Uri.fromFile(shiftedFile)
-            } else rawUri
-        } else rawUri
+        val (rawUri, mimeType) = zechs.drive.stream.utils.SubtitleConverter.prepareSubtitleForExoPlayer(
+            cacheDir, sub, cachedFile, currentSubtitleStyle.bridgeGapMs, currentSubtitleStyle.subtitleDelayMs
+        )
+        val finalUri = rawUri
 
         val isPortuguese = sub.languageCode == "por" || sub.name.lowercase().contains(".por.") || sub.name.lowercase().contains("pt")
         val trackLabel = if (isMatching) "★ [Drive] ${sub.languageLabel}" else "📁 [Drive] ${sub.name}"
@@ -1573,8 +1522,7 @@ class PlayerActivity : AppCompatActivity() {
         skipIntroRow.visibility = View.GONE
 
         val card = binding.nextEpisodeCard
-        val density = resources.displayMetrics.density
-        card.root.translationY = if (playerView.isControllerVisible) -84f * density else 0f
+        card.root.translationY = if (playerView.isControllerVisible) -resources.getDimensionPixelOffset(R.dimen.next_episode_card_offset).toFloat() else 0f
 
         val parsed = EpisodeParser.parse(next.title)
         card.tvNextEpisodeTitle.text = parsed.cleanTitle
@@ -2209,7 +2157,35 @@ class PlayerActivity : AppCompatActivity() {
             showSubtitleSizeDialog()
         }
 
+        glassDialog.setActionButton("Personalizar aparência") { dialog ->
+            dialog.dismiss()
+            openSubtitleStyleDialog()
+        }
+
         glassDialog.show()
+    }
+
+    private fun openSubtitleStyleDialog() {
+        lifecycleScope.launch {
+            val style = try {
+                appSettings.get().fetchSubtitleStyle()
+            } catch (_: Exception) {
+                currentSubtitleStyle
+            }
+            SubtitleStyleDialog.show(this@PlayerActivity, style) { updated ->
+                applySubtitleStyleToPlayer(updated)
+                lifecycleScope.launch {
+                    try {
+                        appSettings.get().saveSubtitleStyle(updated)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Error saving subtitle style", e)
+                    }
+                }
+                Snackbar.make(playerView, "Estilo de legenda salvo", 1200).apply {
+                    anchorView = progressViewGroup
+                }.show()
+            }
+        }
     }
 
     private fun showSubtitleSizeDialog() {

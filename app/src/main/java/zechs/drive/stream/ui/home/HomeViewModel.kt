@@ -358,14 +358,29 @@ class HomeViewModel @Inject constructor(
     private val _isLoadingAnime = MutableStateFlow(false)
     val isLoadingAnime = _isLoadingAnime.asStateFlow()
 
+    sealed class HomeState {
+        object Loading : HomeState()
+        object Content : HomeState()
+        data class Empty(val message: String) : HomeState()
+        data class Error(val message: String, val isOffline: Boolean = false, val isAuthError: Boolean = false) : HomeState()
+    }
+
+    private val _homeState = MutableStateFlow<HomeState>(HomeState.Loading)
+    val homeState = _homeState.asStateFlow()
+
+    private val _libraryLoadError = MutableStateFlow<String?>(null)
+    val libraryLoadError = _libraryLoadError.asStateFlow()
+
     fun loadAnimeLibrary(forceRefresh: Boolean = false) = viewModelScope.launch(Dispatchers.IO) {
         if (forceRefresh) {
             cachedLibraryRootId = null
             cachedLibraryRootProfileId = null
         }
         _isLoadingAnime.value = true
+        _libraryLoadError.value = null
+        _homeState.value = HomeState.Loading
         getLibraryRootFolder { folderId, folderName ->
-            viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch(Dispatchers.IO) loadLibrary@{
                 try {
                     if (folderId != null) {
                         Log.d(TAG, "Carregando catálogo de animes da pasta: $folderName ($folderId)")
@@ -396,6 +411,20 @@ class HomeViewModel @Inject constructor(
                             query = query,
                             pageSize = 100
                         )
+
+                        if (response is Resource.Error) {
+                            _libraryLoadError.value = response.message ?: "Não foi possível carregar a biblioteca."
+                            _isLoadingAnime.value = false
+                            val isOffline = response.message?.contains("network", ignoreCase = true) == true
+                            val isAuthError = response.message?.contains("401", ignoreCase = true) == true || 
+                                              response.message?.contains("403", ignoreCase = true) == true
+                            _homeState.value = HomeState.Error(
+                                message = response.message ?: "Não foi possível carregar a biblioteca.",
+                                isOffline = isOffline,
+                                isAuthError = isAuthError
+                            )
+                            return@loadLibrary
+                        }
 
                         if (response is Resource.Success && response.data != null) {
                             val rawFiles = response.data.map { it.toDriveFile() }
@@ -442,8 +471,9 @@ class HomeViewModel @Inject constructor(
                                 }
                             )
 
-                            // Asynchronously resolve posters for items missing them
+                            // Resolve posters in batches so the catalog is not republished per item.
                             val updatedList = mappedFiles.toMutableList()
+                            var pendingPublish = false
                             for (i in updatedList.indices.take(100)) {
                                 val file = updatedList[i]
                                 if (file.posterUrl.isNullOrBlank() && (file.isFolder || file.isShortcutFolder)) {
@@ -454,22 +484,40 @@ class HomeViewModel @Inject constructor(
                                         } else file.id
                                         folderMetadataRepository.updatePosterUrl(targetId, file.name, poster)
                                         updatedList[i] = file.copy(posterUrl = poster)
-                                        _animeLibrary.value = updatedList.toList()
-                                        _filteredAnimes.value = updatedList.toList()
+                                        pendingPublish = true
+                                        // Batch updates every 16 items instead of 8 for better performance
+                                        if (i % 16 == 15) {
+                                            _animeLibrary.value = updatedList.toList()
+                                            _filteredAnimes.value = updatedList.toList()
+                                            pendingPublish = false
+                                        }
                                     }
                                 }
                             }
+                            if (pendingPublish) {
+                                _animeLibrary.value = updatedList.toList()
+                                _filteredAnimes.value = updatedList.toList()
+                            }
+                            _homeState.value = HomeState.Content
                     } else {
                         _isLoadingAnime.value = false
+                        _homeState.value = HomeState.Empty("Nenhum anime encontrado na biblioteca.")
                     }
                 } else {
                     Log.w(TAG, "Pasta de biblioteca não encontrada no Google Drive.")
                     _isLoadingAnime.value = false
+                    _homeState.value = HomeState.Empty("Nenhum anime encontrado na biblioteca.")
                 }
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
                     Log.e(TAG, "Error loading anime library", e)
+                    _libraryLoadError.value = "Erro ao sincronizar com o Google Drive. Verifique a conexão e tente novamente."
                     _isLoadingAnime.value = false
+                    val isOffline = e.message?.contains("network", ignoreCase = true) == true
+                    _homeState.value = HomeState.Error(
+                        message = "Erro ao sincronizar com o Google Drive. Verifique a conexão e tente novamente.",
+                        isOffline = isOffline
+                    )
                 }
             }
         }
@@ -487,6 +535,17 @@ class HomeViewModel @Inject constructor(
         val targetId = if (chosenFolder.isShortcut && chosenFolder.shortcutDetails.targetId != null) {
             chosenFolder.shortcutDetails.targetId
         } else chosenFolder.id
+
+        // Show a local hero immediately so a slow AniList/Tenrai lookup does not blank the Home.
+        _featuredAnime.value = FeaturedAnime(
+            title = chosenFolder.name,
+            titleJapanese = null,
+            synopsis = null,
+            genres = emptyList(),
+            backdropUrl = chosenFolder.posterUrl ?: chosenFolder.thumbnailLink,
+            folderId = targetId,
+            posterUrl = chosenFolder.posterUrl ?: chosenFolder.thumbnailLink
+        )
 
         try {
             val aniListMeta = animePosterResolver.resolveMetadata(cleanTitle)
@@ -663,6 +722,20 @@ class HomeViewModel @Inject constructor(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e(TAG, "Error removing from watch queue", e)
+        }
+    }
+
+    fun reorderQueue(fromPosition: Int, toPosition: Int) = viewModelScope.launch(Dispatchers.IO) {
+        try {
+            val currentQueue = watchQueue.value.toMutableList()
+            if (fromPosition in currentQueue.indices && toPosition in currentQueue.indices) {
+                val item = currentQueue.removeAt(fromPosition)
+                currentQueue.add(toPosition, item)
+                watchQueueRepository.reorder(currentQueue)
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.e(TAG, "Error reordering watch queue", e)
         }
     }
 

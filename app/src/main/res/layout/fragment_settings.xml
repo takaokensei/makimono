@@ -135,14 +135,14 @@
                     <com.google.android.material.textview.MaterialTextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Pasta da biblioteca"
+                        android:text="@string/library_folder"
                         android:textAppearance="?attr/textAppearanceTitleMedium" />
 
                     <com.google.android.material.textview.MaterialTextView
                         android:id="@+id/tvLibraryRootValue"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Meu Drive"
+                        android:text="@string/my_drive"
                         android:textAppearance="?attr/textAppearanceBodySmall" />
                 </LinearLayout>
             </LinearLayout>
@@ -184,6 +184,7 @@
                         android:textAppearance="?attr/textAppearanceTitleMedium" />
 
                     <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/tvThemeCurrentValue"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/light_dark_and_system"
@@ -228,6 +229,7 @@
                         android:textAppearance="?attr/textAppearanceTitleMedium" />
 
                     <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/tvPlayerCurrentValue"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/select_default_video_player"
@@ -269,7 +271,7 @@
                     <com.google.android.material.textview.MaterialTextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Tamanho da Legenda"
+                        android:text="@string/subtitles_settings"
                         android:textAppearance="?attr/textAppearanceTitleMedium" />
 
                     <com.google.android.material.textview.MaterialTextView

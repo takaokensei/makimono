@@ -101,7 +101,8 @@ class SettingsFragment : BaseFragment() {
         setupLibraryRootSetting()
         setupThemeMenu()
         setupDefaultPlayerMenu()
-        setupSubtitleSizeSetting()
+        setupSubtitleAppearanceSetting()
+        refreshConfigurableSummaries()
         setupStorageAndCacheSetting()
         setupCheckForUpdates()
         setupMalIntegration()
@@ -167,13 +168,13 @@ class SettingsFragment : BaseFragment() {
     private fun setupLibraryRootSetting() {
         fun refreshValue() {
             val (rootId, rootName) = profileManager.getLibraryRoot()
-            binding.tvLibraryRootValue.text = rootName ?: if (rootId.isNullOrBlank()) "Meu Drive" else rootId
+            binding.tvLibraryRootValue.text = rootName ?: if (rootId.isNullOrBlank()) getString(R.string.my_drive) else rootId
         }
 
         refreshValue()
         binding.settingLibraryRoot.setOnClickListener {
             val input = android.widget.EditText(requireContext()).apply {
-                hint = "Nome da pasta no Google Drive"
+                hint = getString(R.string.library_folder_hint)
                 setText(profileManager.getLibraryRoot().second.orEmpty())
                 setSelection(text?.length ?: 0)
                 isSingleLine = true
@@ -224,6 +225,7 @@ class SettingsFragment : BaseFragment() {
 
                     cardTheme.setOnClickListener {
                         mainViewModel.setTheme(theme)
+                        binding.tvThemeCurrentValue.text = theme.displayName
                         dialog.dismiss()
                     }
                 }
@@ -252,62 +254,48 @@ class SettingsFragment : BaseFragment() {
                         else -> throw IllegalArgumentException("Unknown default player")
                     }
                     mainViewModel.setPlayer(player)
+                    binding.tvPlayerCurrentValue.text = players[item]
                     dialog.dismiss()
                 }
             }.also { it.show() }
         }
     }
 
-    private fun setupSubtitleSizeSetting() {
-        val sizes = arrayOf(
-            "Pequeno (16sp)",
-            "Médio (20sp - Padrão)",
-            "Grande (24sp)",
-            "Extra Grande (28sp)"
-        )
-        val sizeValues = floatArrayOf(16f, 20f, 24f, 28f)
-
+    private fun refreshConfigurableSummaries() {
         viewLifecycleOwner.lifecycleScope.launch {
-            val savedSp = try {
-                appSettings.fetchSubtitleSize()
+            val theme = AppTheme.fromValue(mainViewModel.currentThemeIndex)
+            binding.tvThemeCurrentValue.text = theme.displayName
+            binding.tvPlayerCurrentValue.text = when (mainViewModel.currentPlayerIndex.value) {
+                VideoPlayer.MPV.value -> getString(R.string.mpv)
+                else -> getString(R.string.exoplayer)
+            }
+            try {
+                binding.tvSubtitleSizeValue.text = appSettings.fetchSubtitleStyle().summaryLabel()
             } catch (e: Exception) {
-                20f
+                Log.w(TAG, "Could not load subtitle summary", e)
             }
-            val label = when {
-                savedSp <= 16.5f -> "Pequeno (16sp)"
-                savedSp <= 20.5f -> "Médio (20sp - Padrão)"
-                savedSp <= 24.5f -> "Grande (24sp)"
-                else -> "Extra Grande (28sp)"
-            }
-            binding.tvSubtitleSizeValue.text = label
         }
+    }
 
+    private fun setupSubtitleAppearanceSetting() {
         binding.settingSubtitleSize.setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {
-                val savedSp = try {
-                    appSettings.fetchSubtitleSize()
+                val initial = try {
+                    appSettings.fetchSubtitleStyle()
                 } catch (e: Exception) {
-                    20f
+                    zechs.drive.stream.utils.SubtitleStyle()
                 }
-                val currentIdx = sizeValues.indexOfFirst { kotlin.math.abs(it - savedSp) < 0.5f }.coerceAtLeast(1)
-
-                MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
-                    .setTitle("Tamanho da Legenda Padrão")
-                    .setSingleChoiceItems(sizes, currentIdx) { dialog, which ->
-                        val chosenSp = sizeValues[which]
-                        binding.tvSubtitleSizeValue.text = sizes[which]
-                        viewLifecycleOwner.lifecycleScope.launch {
-                            try {
-                                appSettings.saveSubtitleSize(chosenSp)
-                                showSnackBar("Tamanho de legenda definido: ${sizes[which]}")
-                            } catch (e: Exception) {
-                                Log.e(TAG, "Error saving subtitle size", e)
-                            }
+                zechs.drive.stream.ui.player.SubtitleStyleDialog.show(requireContext(), initial) { updated ->
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        try {
+                            appSettings.saveSubtitleStyle(updated)
+                            binding.tvSubtitleSizeValue.text = updated.summaryLabel()
+                            showSnackBar("Preferências de legenda salvas")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error saving subtitle style", e)
                         }
-                        dialog.dismiss()
                     }
-                    .setNegativeButton("Cancelar") { dialog, _ -> dialog.dismiss() }
-                    .show()
+                }
             }
         }
     }

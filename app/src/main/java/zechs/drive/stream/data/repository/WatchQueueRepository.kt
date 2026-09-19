@@ -64,4 +64,11 @@ class WatchQueueRepository @Inject constructor(
     suspend fun clearQueue(profileId: String = currentProfileId()) {
         watchQueueDao.clearQueue(profileId)
     }
+
+    suspend fun reorder(items: List<WatchQueueItem>, profileId: String = currentProfileId()) {
+        watchQueueDao.clearQueue(profileId)
+        items.forEachIndexed { index, item ->
+            watchQueueDao.enqueue(item.copy(orderIndex = index))
+        }
+    }
 }

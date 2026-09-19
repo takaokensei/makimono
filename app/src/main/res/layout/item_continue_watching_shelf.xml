@@ -55,11 +55,11 @@
 
             <ImageView
                 android:id="@+id/ivPlayBadge"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:background="@drawable/glass_circle_button_bg"
                 android:contentDescription="@null"
-                android:padding="5dp"
+                android:padding="12dp"
                 android:src="@drawable/ic_play_24"
                 app:tint="#22D3EE" />
 

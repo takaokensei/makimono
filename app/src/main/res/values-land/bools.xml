@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Landscape / TV: Rail is persistent and stays visible with stable D-pad focus -->
-    <bool name="is_collapsible_rail">false</bool>
+    <!-- Phone landscape keeps mobile navigation (drawer / chips), not the TV shell -->
+    <bool name="is_collapsible_rail">true</bool>
 </resources>

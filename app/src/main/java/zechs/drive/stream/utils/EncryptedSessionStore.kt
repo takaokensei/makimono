@@ -25,6 +25,7 @@ class EncryptedSessionStore private constructor(
     @Inject
     constructor(@ApplicationContext context: Context) : this(createSecurePreferences(context))
 
+    @Suppress("UNUSED_PARAMETER")
     internal constructor(testPreferences: SharedPreferences, testOnly: Boolean = true) : this(testPreferences)
 
     companion object {
