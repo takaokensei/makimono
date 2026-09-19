@@ -1,267 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Tema Base da Aplicação -->
+    <style name="Theme.IntelligentMendel" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Cores Primárias -->
+        <item name="colorPrimary">@color/md_theme_light_primary</item>
+        <item name="colorOnPrimary">@color/md_theme_light_onPrimary</item>
+        <item name="colorPrimaryContainer">@color/md_theme_light_primaryContainer</item>
+        <item name="colorOnPrimaryContainer">@color/md_theme_light_onPrimaryContainer</item>
 
-    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#000000</item>
-        <item name="windowSplashScreenAnimatedIcon">@android:color/transparent</item>
-        <item name="postSplashScreenTheme">@style/Theme.DriveStream.KodiEstuary</item>
-        <item name="windowSplashScreenIconBackgroundColor">#000000</item>
+        <!-- Cores Secundárias -->
+        <item name="colorSecondary">@color/md_theme_light_secondary</item>
+        <item name="colorOnSecondary">@color/md_theme_light_onSecondary</item>
+        <item name="colorSecondaryContainer">@color/md_theme_light_secondaryContainer</item>
+        <item name="colorOnSecondaryContainer">@color/md_theme_light_onSecondaryContainer</item>
+
+        <!-- Cores Terciárias -->
+        <item name="colorTertiary">@color/md_theme_light_tertiary</item>
+        <item name="colorOnTertiary">@color/md_theme_light_onTertiary</item>
+        <item name="colorTertiaryContainer">@color/md_theme_light_tertiaryContainer</item>
+        <item name="colorOnTertiaryContainer">@color/md_theme_light_onTertiaryContainer</item>
+
+        <!-- Cores Neutras -->
+        <item name="colorBackground">@color/md_theme_light_background</item>
+        <item name="colorOnBackground">@color/md_theme_light_onBackground</item>
+        <item name="colorSurface">@color/md_theme_light_surface</item>
+        <item name="colorOnSurface">@color/md_theme_light_onSurface</item>
+        <item name="colorSurfaceVariant">@color/md_theme_light_surfaceVariant</item>
+        <item name="colorOnSurfaceVariant">@color/md_theme_light_onSurfaceVariant</item>
+        <item name="colorOutline">@color/md_theme_light_outline</item>
+
+        <!-- Tipografia -->
+        <item name="textAppearanceHeadline1">@style/TextAppearance.IntelligentMendel.Headline1</item>
+        <item name="textAppearanceHeadline2">@style/TextAppearance.IntelligentMendel.Headline2</item>
+        <item name="textAppearanceHeadline3">@style/TextAppearance.IntelligentMendel.Headline3</item>
+        <item name="textAppearanceHeadline4">@style/TextAppearance.IntelligentMendel.Headline4</item>
+        <item name="textAppearanceHeadline5">@style/TextAppearance.IntelligentMendel.Headline5</item>
+        <item name="textAppearanceHeadline6">@style/TextAppearance.IntelligentMendel.Headline6</item>
+        <item name="textAppearanceBodyLarge">@style/TextAppearance.IntelligentMendel.BodyLarge</item>
+        <item name="textAppearanceBodyMedium">@style/TextAppearance.IntelligentMendel.BodyMedium</item
+        <item name="textAppearanceBodySmall">@style/TextAppearance.IntelligentMendel.BodySmall</item>
+        <item name="textAppearanceLabelLarge">@style/TextAppearance.IntelligentMendel.LabelLarge</item>
+        <item name="textAppearanceLabelMedium">@style/TextAppearance.IntelligentMendel.LabelMedium</item>
+        <item name="textAppearanceLabelSmall">@style/TextAppearance.IntelligentMendel.LabelSmall</item>
+
+        <!-- Formas -->
+        <item name="shapeCornerSmall">@dimen/shapeCornerSmall</item>
+        <item name="shapeCornerMedium">@dimen/shapeCornerMedium</item>
+        <item name="shapeCornerLarge">@dimen/shapeCornerLarge</item>
+        <item name="shapeCornerFamily">rounded</item>
+
+        <!-- Elevação -->
+        <item name="elevationLevel0">0dp</item>
+        <item name="elevationLevel1">1dp</item>
+        <item name="elevationLevel2">2dp</item>
+        <item name="elevationLevel3">4dp</item>
+        <item name="elevationLevel4">6dp</item>
+        <item name="elevationLevel5">8dp</item>
+
+        <!-- Sobrescrita de Componentes -->
+        <item name="materialButtonStyle">@style/Widget.IntelligentMendel.Button</item>
+        <item name="textInputStyle">@style/Widget.IntelligentMendel.TextInputLayout</item>
+        <item name="checkboxStyle">@style/Widget.IntelligentMendel.Checkbox</item>
+        <item name="radioButtonStyle">@style/Widget.IntelligentMendel.RadioButton</item>
+        <item name="switchStyle">@style/Widget.IntelligentMendel.Switch</item>
     </style>
 
-    <!-- Base DriveStream Theme with Inter Typography -->
-    <style name="Theme.DriveStream.Base" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="fontFamily">@font/inter</item>
-        <item name="android:fontFamily">@font/inter</item>
-        <item name="materialAlertDialogTheme">@style/ThemeOverlay.DriveStream.Dialog</item>
-        <item name="alertDialogTheme">@style/ThemeOverlay.DriveStream.Dialog</item>
+    <!-- Estilos de Tipografia -->
+    <style name="TextAppearance.IntelligentMendel.Headline1" parent="TextAppearance.Material3.HeadlineLarge">
+        <item name="fontFamily">sans-serif-medium</item>
+        <item name="android:textSize">@dimen/display_line_height</item>
+        <item name="android:letterSpacing">0.5</item>
     </style>
 
-    <!-- Theme 1: Tokyo Night (Default) -->
-    <style name="Theme.DriveStream.TokyoNight" parent="Theme.DriveStream.Base">
-        <item name="colorBgBase">@color/tn_bg_base</item>
-        <item name="colorBgSurface">@color/tn_bg_surface</item>
-        <item name="colorBgGlass">@color/tn_bg_glass</item>
-        <item name="colorBorderGlass">@color/tn_border_glass</item>
-        <item name="colorTextPrimary">@color/tn_text_primary</item>
-        <item name="colorTextSecondary">@color/tn_text_secondary</item>
-        <item name="colorAccentPrimary">@color/tn_accent_primary</item>
-        <item name="colorAccentSecondary">@color/tn_accent_secondary</item>
-        <item name="colorStatusSuccess">@color/tn_success</item>
-        <item name="colorStatusWarning">@color/tn_warning</item>
-        <item name="colorStatusDanger">@color/tn_danger</item>
-
-        <item name="android:statusBarColor">@color/tn_bg_base</item>
-        <item name="android:navigationBarColor">@color/tn_bg_base</item>
-        <item name="android:windowBackground">@color/tn_bg_base</item>
-        <item name="colorSurface">@color/tn_bg_surface</item>
-        <item name="colorOnSurface">@color/tn_text_primary</item>
-        <item name="colorPrimary">@color/tn_accent_primary</item>
-        <item name="colorSecondary">@color/tn_accent_secondary</item>
+    <style name="TextAppearance.IntelligentMendel.Headline2" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="fontFamily">sans-serif-medium</item>
+        <item name="android:textSize">32sp</item>
     </style>
 
-    <!-- Theme 2: Dracula ("Vampire") -->
-    <style name="Theme.DriveStream.Dracula" parent="Theme.DriveStream.Base">
-        <item name="colorBgBase">@color/dracula_bg_base</item>
-        <item name="colorBgSurface">@color/dracula_bg_surface</item>
-        <item name="colorBgGlass">@color/dracula_bg_glass</item>
-        <item name="colorBorderGlass">@color/dracula_border_glass</item>
-        <item name="colorTextPrimary">@color/dracula_text_primary</item>
-        <item name="colorTextSecondary">@color/dracula_text_secondary</item>
-        <item name="colorAccentPrimary">@color/dracula_accent_primary</item>
-        <item name="colorAccentSecondary">@color/dracula_accent_secondary</item>
-        <item name="colorStatusSuccess">@color/dracula_success</item>
-        <item name="colorStatusWarning">@color/dracula_warning</item>
-        <item name="colorStatusDanger">@color/dracula_danger</item>
-
-        <item name="android:statusBarColor">@color/dracula_bg_base</item>
-        <item name="android:navigationBarColor">@color/dracula_bg_base</item>
-        <item name="android:windowBackground">@color/dracula_bg_base</item>
-        <item name="colorSurface">@color/dracula_bg_surface</item>
-        <item name="colorOnSurface">@color/dracula_text_primary</item>
-        <item name="colorPrimary">@color/dracula_accent_primary</item>
-        <item name="colorSecondary">@color/dracula_accent_secondary</item>
-    </style>
-
-    <!-- Theme 3: Nord (Scandinavian Minimalism) -->
-    <style name="Theme.DriveStream.Nord" parent="Theme.DriveStream.Base">
-        <item name="colorBgBase">@color/nord_bg_base</item>
-        <item name="colorBgSurface">@color/nord_bg_surface</item>
-        <item name="colorBgGlass">@color/nord_bg_glass</item>
-        <item name="colorBorderGlass">@color/nord_border_glass</item>
-        <item name="colorTextPrimary">@color/nord_text_primary</item>
-        <item name="colorTextSecondary">@color/nord_text_secondary</item>
-        <item name="colorAccentPrimary">@color/nord_accent_primary</item>
-        <item name="colorAccentSecondary">@color/nord_accent_secondary</item>
-        <item name="colorStatusSuccess">@color/nord_success</item>
-        <item name="colorStatusWarning">@color/nord_warning</item>
-        <item name="colorStatusDanger">@color/nord_danger</item>
-
-        <item name="android:statusBarColor">@color/nord_bg_base</item>
-        <item name="android:navigationBarColor">@color/nord_bg_base</item>
-        <item name="android:windowBackground">@color/nord_bg_base</item>
-        <item name="colorSurface">@color/nord_bg_surface</item>
-        <item name="colorOnSurface">@color/nord_text_primary</item>
-        <item name="colorPrimary">@color/nord_accent_primary</item>
-        <item name="colorSecondary">@color/nord_accent_secondary</item>
-    </style>
-
-    <!-- Theme 4: Catppuccin Mocha -->
-    <style name="Theme.DriveStream.CatppuccinMocha" parent="Theme.DriveStream.Base">
-        <item name="colorBgBase">@color/mocha_bg_base</item>
-        <item name="colorBgSurface">@color/mocha_bg_surface</item>
-        <item name="colorBgGlass">@color/mocha_bg_glass</item>
-        <item name="colorBorderGlass">@color/mocha_border_glass</item>
-        <item name="colorTextPrimary">@color/mocha_text_primary</item>
-        <item name="colorTextSecondary">@color/mocha_text_secondary</item>
-        <item name="colorAccentPrimary">@color/mocha_accent_primary</item>
-        <item name="colorAccentSecondary">@color/mocha_accent_secondary</item>
-        <item name="colorStatusSuccess">@color/mocha_success</item>
-        <item name="colorStatusWarning">@color/mocha_warning</item>
-        <item name="colorStatusDanger">@color/mocha_danger</item>
-
-        <item name="android:statusBarColor">@color/mocha_bg_base</item>
-        <item name="android:navigationBarColor">@color/mocha_bg_base</item>
-        <item name="android:windowBackground">@color/mocha_bg_base</item>
-        <item name="colorSurface">@color/mocha_bg_surface</item>
-        <item name="colorOnSurface">@color/mocha_text_primary</item>
-        <item name="colorPrimary">@color/mocha_accent_primary</item>
-        <item name="colorSecondary">@color/mocha_accent_secondary</item>
-    </style>
-
-    <!-- Theme 5: Kodi Estuary (petroleum/cyan, see docs/kodi_reference) -->
-    <style name="Theme.DriveStream.KodiEstuary" parent="Theme.DriveStream.Base">
-        <item name="colorBgBase">@color/estuary_bg_base</item>
-        <item name="colorBgSurface">@color/estuary_bg_surface</item>
-        <item name="colorBgGlass">@color/estuary_bg_glass</item>
-        <item name="colorBorderGlass">@color/estuary_border_glass</item>
-        <item name="colorTextPrimary">@color/estuary_text_primary</item>
-        <item name="colorTextSecondary">@color/estuary_text_secondary</item>
-        <item name="colorAccentPrimary">@color/estuary_accent_primary</item>
-        <item name="colorAccentSecondary">@color/estuary_accent_secondary</item>
-        <item name="colorStatusSuccess">@color/estuary_success</item>
-        <item name="colorStatusWarning">@color/estuary_warning</item>
-        <item name="colorStatusDanger">@color/estuary_danger</item>
-
-        <item name="android:statusBarColor">@color/estuary_bg_base</item>
-        <item name="android:navigationBarColor">@color/estuary_bg_base</item>
-        <item name="android:windowBackground">@color/estuary_bg_base</item>
-        <item name="colorSurface">@color/estuary_bg_surface</item>
-        <item name="colorOnSurface">@color/estuary_text_primary</item>
-        <item name="colorPrimary">@color/estuary_accent_primary</item>
-        <item name="colorSecondary">@color/estuary_accent_secondary</item>
-    </style>
-
-    <!-- Legacy alias to TokyoNight -->
-    <style name="AppTheme" parent="Theme.DriveStream.TokyoNight" />
-
-    <!-- Fullscreen Player Themes inheriting Semantic Tokens -->
-    <style name="Theme.Fullscreen" parent="Theme.DriveStream.TokyoNight">
-        <item name="android:statusBarColor">@android:color/black</item>
-        <item name="android:navigationBarColor">@android:color/black</item>
-        <item name="android:windowBackground">@android:color/black</item>
-        <item name="android:windowFullscreen">true</item>
-    </style>
-
-    <style name="Theme.Fullscreen.TokyoNight" parent="Theme.DriveStream.TokyoNight">
-        <item name="android:statusBarColor">@android:color/black</item>
-        <item name="android:navigationBarColor">@android:color/black</item>
-        <item name="android:windowBackground">@android:color/black</item>
-        <item name="android:windowFullscreen">true</item>
-    </style>
-
-    <style name="Theme.Fullscreen.Dracula" parent="Theme.DriveStream.Dracula">
-        <item name="android:statusBarColor">@android:color/black</item>
-        <item name="android:navigationBarColor">@android:color/black</item>
-        <item name="android:windowBackground">@android:color/black</item>
-        <item name="android:windowFullscreen">true</item>
-    </style>
-
-    <style name="Theme.Fullscreen.Nord" parent="Theme.DriveStream.Nord">
-        <item name="android:statusBarColor">@android:color/black</item>
-        <item name="android:navigationBarColor">@android:color/black</item>
-        <item name="android:windowBackground">@android:color/black</item>
-        <item name="android:windowFullscreen">true</item>
-    </style>
-
-    <style name="Theme.Fullscreen.CatppuccinMocha" parent="Theme.DriveStream.CatppuccinMocha">
-        <item name="android:statusBarColor">@android:color/black</item>
-        <item name="android:navigationBarColor">@android:color/black</item>
-        <item name="android:windowBackground">@android:color/black</item>
-        <item name="android:windowFullscreen">true</item>
-    </style>
-
-    <style name="Theme.Fullscreen.KodiEstuary" parent="Theme.DriveStream.KodiEstuary">
-        <item name="android:statusBarColor">@android:color/black</item>
-        <item name="android:navigationBarColor">@android:color/black</item>
-        <item name="android:windowBackground">@android:color/black</item>
-        <item name="android:windowFullscreen">true</item>
-    </style>
-
-    <style name="MenuTheme" parent="@style/Widget.Material3.ActionBar.Solid">
-        <item name="android:textColorSecondary">?attr/colorTextSecondary</item>
-        <item name="android:actionMenuTextColor">?attr/colorTextPrimary</item>
-        <item name="android:backgroundTint">?attr/colorBgSurface</item>
-        <item name="android:textColor">?attr/colorTextPrimary</item>
-        <item name="colorControlNormal">?attr/colorTextPrimary</item>
-        <item name="selectableItemBackground">?android:selectableItemBackground</item>
-        <item name="colorControlHighlight">?attr/colorAccentPrimary</item>
-        <item name="selectableItemBackgroundBorderless">?android:selectableItemBackground</item>
-    </style>
-
-    <style name="titleTextAppearance" parent="TextAppearance.MaterialComponents.Headline1">
-        <item name="android:textColor">?attr/colorTextPrimary</item>
-        <item name="fontFamily">@font/inter</item>
-        <item name="android:textSize">15sp</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:textAllCaps">false</item>
-    </style>
-
-    <style name="subtitleTextAppearance" parent="TextAppearance.MaterialComponents.Headline1">
-        <item name="android:textColor">?attr/colorTextSecondary</item>
-        <item name="fontFamily">@font/inter</item>
-        <item name="android:textSize">12sp</item>
-        <item name="android:textAllCaps">false</item>
-    </style>
-
-    <style name="IconButtonTheme" parent="Widget.Material3.Button.TonalButton">
-        <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="fontFamily">@font/inter</item>
-        <item name="android:textSize">16sp</item>
-        <item name="android:textColor">?attr/colorTextPrimary</item>
-        <item name="cornerRadius">14dp</item>
-        <item name="iconTint">?attr/colorAccentPrimary</item>
-        <item name="strokeWidth">1dp</item>
-        <item name="strokeColor">?attr/colorBorderGlass</item>
-    </style>
-
-    <style name="Widget.Material3.Button.TonalButton.Icon.Only" parent="Widget.Material3.Button.IconButton">
-        <item name="materialThemeOverlay">@style/ThemeOverlay.Material3.Button.TonalButton</item>
-    </style>
-
-    <!-- Shape for Glass Dialogs -->
-    <style name="ShapeAppearance.DriveStream.Dialog" parent="ShapeAppearance.Material3.Corner.Medium">
-        <item name="cornerSize">18dp</item>
-    </style>
-
-    <!-- Unified Glass / Theme Dialog Overlay for Audio, Subtitle, Speed and Chapters -->
-    <style name="ThemeOverlay.DriveStream.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
-        <item name="colorSurface">?attr/colorBgSurface</item>
-        <item name="colorOnSurface">?attr/colorTextPrimary</item>
-        <item name="colorOnSurfaceVariant">?attr/colorTextSecondary</item>
-        <item name="colorPrimary">?attr/colorAccentPrimary</item>
-        <item name="colorSecondary">?attr/colorAccentSecondary</item>
-        <item name="colorControlActivated">?attr/colorAccentPrimary</item>
-        <item name="fontFamily">@font/inter</item>
-        <item name="android:fontFamily">@font/inter</item>
-        <item name="materialAlertDialogTitleTextStyle">@style/DriveStream.Dialog.Title</item>
-        <item name="materialAlertDialogBodyTextStyle">@style/DriveStream.Dialog.Body</item>
-        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.DriveStream.Dialog</item>
-        <item name="buttonBarPositiveButtonStyle">@style/DriveStream.Dialog.Button</item>
-        <item name="buttonBarNegativeButtonStyle">@style/DriveStream.Dialog.Button</item>
-        <item name="buttonBarNeutralButtonStyle">@style/DriveStream.Dialog.Button</item>
-    </style>
-
-    <style name="DriveStream.Dialog.Title" parent="MaterialAlertDialog.Material3.Title.Text">
-        <item name="android:textColor">?attr/colorTextPrimary</item>
-        <item name="fontFamily">@font/inter</item>
-        <item name="android:fontFamily">@font/inter</item>
-        <item name="android:textSize">18sp</item>
-        <item name="android:textStyle">bold</item>
-    </style>
-
-    <style name="DriveStream.Dialog.Body" parent="MaterialAlertDialog.Material3.Body.Text">
-        <item name="android:textColor">?attr/colorTextPrimary</item>
-        <item name="fontFamily">@font/inter</item>
-        <item name="android:fontFamily">@font/inter</item>
-        <item name="android:textSize">14sp</item>
-    </style>
-
-    <style name="DriveStream.Dialog.Button" parent="Widget.Material3.Button.TextButton.Dialog">
-        <item name="android:textColor">?attr/colorAccentPrimary</item>
-        <item name="fontFamily">@font/inter</item>
-        <item name="android:fontFamily">@font/inter</item>
-        <item name="android:textSize">14sp</item>
-        <item name="android:textStyle">bold</item>
-    </style>
-
-</resources>
+    <style name="TextAppearance.IntelligentMendel.BodyLarge" parent="TextAppearance.Material3.BodyLarge">
+        <item name="fontFamily">sans-serif</item
