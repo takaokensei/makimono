@@ -30,6 +30,7 @@ import zechs.drive.stream.utils.AppTheme
 import zechs.drive.stream.utils.BackupSerializer
 import zechs.drive.stream.utils.VideoPlayer
 import zechs.drive.stream.utils.state.Resource
+import zechs.drive.stream.utils.ext.resolveThemeColor
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import zechs.drive.stream.data.repository.MalRepository
@@ -185,7 +186,7 @@ class SettingsFragment : BaseFragment() {
                 setSelection(text?.length ?: 0)
                 isSingleLine = true
             }
-            MaterialAlertDialogBuilder(requireContext())
+            MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
                 .setTitle("Pasta da biblioteca")
                 .setMessage("Deixe vazio para usar a raiz do Meu Drive.")
                 .setView(input)
@@ -204,7 +205,7 @@ class SettingsFragment : BaseFragment() {
             val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_theme_selector, null)
             val container = dialogView.findViewById<LinearLayout>(R.id.llThemeContainer)
 
-            val dialog = MaterialAlertDialogBuilder(requireContext())
+            val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
                 .setView(dialogView)
                 .create()
 
@@ -448,14 +449,18 @@ class SettingsFragment : BaseFragment() {
         fun updateMalUi() {
             val isLoggedIn = malSessionManager.isLoggedIn()
             val username = malSessionManager.getUsername()
+            val activeTint = requireContext().resolveThemeColor(R.attr.colorAccentPrimary)
+            val inactiveTint = requireContext().resolveThemeColor(R.attr.colorTextSecondary)
             if (isLoggedIn) {
                 binding.tvMalTitle.text = "MyAnimeList"
                 binding.tvMalSubtitle.text = "Conectado como: ${username ?: "Usuário"} • Toque para desconectar"
-                binding.ivMalIcon.setImageResource(R.drawable.ic_unlock_24)
+                binding.ivMalIcon.setImageResource(R.drawable.ic_mal_24)
+                binding.ivMalIcon.imageTintList = android.content.res.ColorStateList.valueOf(activeTint)
             } else {
                 binding.tvMalTitle.text = "MyAnimeList"
                 binding.tvMalSubtitle.text = "Conectar conta para scrobble automático"
-                binding.ivMalIcon.setImageResource(R.drawable.ic_lock_24)
+                binding.ivMalIcon.setImageResource(R.drawable.ic_mal_24)
+                binding.ivMalIcon.imageTintList = android.content.res.ColorStateList.valueOf(inactiveTint)
             }
             binding.switchMalSync.isChecked = malSessionManager.isSyncEnabled()
             binding.settingMalSyncToggle.isVisible = isLoggedIn
@@ -466,6 +471,10 @@ class SettingsFragment : BaseFragment() {
 
         updateMalUi()
 
+        binding.settingMalSyncToggle.setOnClickListener {
+            binding.switchMalSync.toggle()
+        }
+
         binding.switchMalSync.setOnCheckedChangeListener { _, isChecked ->
             malSessionManager.setSyncEnabled(isChecked)
             showSnackBar(if (isChecked) "Sincronização com o MyAnimeList ativada" else "Sincronização com o MyAnimeList pausada")
@@ -473,7 +482,7 @@ class SettingsFragment : BaseFragment() {
 
         binding.settingMalAccount.setOnClickListener {
             if (malSessionManager.isLoggedIn()) {
-                MaterialAlertDialogBuilder(requireContext())
+                MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
                     .setTitle("Desconectar do MyAnimeList?")
                     .setMessage("O scrobble automático de episódios será desativado.")
                     .setPositiveButton("Desconectar") { dialog, _ ->
@@ -522,7 +531,7 @@ class SettingsFragment : BaseFragment() {
                     }
                     fields.addView(clientId)
                     fields.addView(clientSecret)
-                    MaterialAlertDialogBuilder(requireContext())
+                    MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
                         .setTitle("Configurar MyAnimeList")
                         .setMessage("Crie uma aplicação OAuth no MyAnimeList e informe as credenciais. Elas serão armazenadas criptografadas.")
                         .setView(fields)
@@ -594,7 +603,7 @@ class SettingsFragment : BaseFragment() {
             "Mesclar com perfis existentes (Recomendado)",
             "Substituir todos os dados existentes"
         )
-        MaterialAlertDialogBuilder(requireContext())
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
             .setTitle("Restaurar Backup")
             .setMessage("Escolha como deseja aplicar os dados do arquivo de backup:")
             .setItems(options) { _, which ->

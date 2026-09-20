@@ -636,7 +636,7 @@
                     android:layout_height="48dp"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_search_24"
-                    app:tint="#334155" />
+                    app:tint="?attr/colorTextSecondary" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -644,7 +644,7 @@
                     android:layout_marginTop="12dp"
                     android:fontFamily="@font/inter"
                     android:text="Nenhum anime encontrado"
-                    android:textColor="#64748B"
+                    android:textColor="?attr/colorTextSecondary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
 
@@ -667,7 +667,7 @@
                     android:layout_height="52dp"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_play_24"
-                    app:tint="#22D3EE" />
+                    app:tint="?attr/colorAccentPrimary" />
 
                 <TextView
                     android:id="@+id/tvEmptyMessage"
@@ -676,7 +676,7 @@
                     android:layout_marginTop="16dp"
                     android:fontFamily="@font/inter"
                     android:text="Nenhum anime em andamento"
-                    android:textColor="#F1F5F9"
+                    android:textColor="?attr/colorTextPrimary"
                     android:textSize="16sp"
                     android:textStyle="bold" />
 
@@ -687,7 +687,7 @@
                     android:layout_marginTop="6dp"
                     android:fontFamily="@font/inter"
                     android:text="@string/home_empty_message"
-                    android:textColor="#94A3B8"
+                    android:textColor="?attr/colorTextSecondary"
                     android:textSize="13sp" />
 
                 <com.google.android.material.button.MaterialButton
@@ -695,13 +695,13 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:backgroundTint="#1E293B"
+                    android:backgroundTint="?attr/colorBgSurface"
                     android:fontFamily="@font/inter"
                     android:text="@string/home_explore_animes"
-                    android:textColor="#22D3EE"
+                    android:textColor="?attr/colorAccentPrimary"
                     android:textSize="13sp"
                     app:cornerRadius="8dp"
-                    app:strokeColor="#22D3EE"
+                    app:strokeColor="?attr/colorAccentPrimary"
                     app:strokeWidth="1dp" />
 
                 <com.google.android.material.button.MaterialButton
@@ -709,14 +709,14 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:backgroundTint="#1E293B"
+                    android:backgroundTint="?attr/colorBgSurface"
                     android:fontFamily="@font/inter"
                     android:text="Tentar Novamente"
-                    android:textColor="#22D3EE"
+                    android:textColor="?attr/colorAccentPrimary"
                     android:textSize="13sp"
                     android:visibility="gone"
                     app:cornerRadius="8dp"
-                    app:strokeColor="#22D3EE"
+                    app:strokeColor="?attr/colorAccentPrimary"
                     app:strokeWidth="1dp" />
 
             </LinearLayout>

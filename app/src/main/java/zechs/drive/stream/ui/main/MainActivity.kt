@@ -462,6 +462,10 @@ class MainActivity : AppCompatActivity() {
         binding.vinhetaContainer.setOnClickListener {
             dismissVinheta()
         }
+
+        binding.btnSkipVinheta.setOnClickListener {
+            dismissVinheta()
+        }
     }
 
     private fun dismissVinheta() {

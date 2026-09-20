@@ -37,6 +37,32 @@
             app:surface_type="surface_view"
             app:use_controller="false" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSkipVinheta"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_gravity="bottom|end"
+            android:layout_marginEnd="24dp"
+            android:layout_marginBottom="28dp"
+            android:backgroundTint="#4D000000"
+            android:clickable="true"
+            android:focusable="true"
+            android:fontFamily="@font/inter"
+            android:letterSpacing="0.06"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:text="PULAR"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            app:cornerRadius="20dp"
+            app:icon="@drawable/ic_forward_skip_24"
+            app:iconGravity="textEnd"
+            app:iconSize="16dp"
+            app:iconTint="#FFFFFF"
+            app:strokeColor="#33FFFFFF"
+            app:strokeWidth="1dp" />
+
     </FrameLayout>
 
 </FrameLayout>

@@ -433,7 +433,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:contentDescription="@null"
-                    android:src="@drawable/ic_lock_24"
+                    android:src="@drawable/ic_mal_24"
                     app:tint="?attr/colorAccentPrimary" />
 
                 <LinearLayout

@@ -854,7 +854,7 @@
                         android:layout_height="56dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_search_24"
-                        app:tint="#12A0C7" />
+                        app:tint="?attr/colorAccentPrimary" />
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -862,7 +862,7 @@
                         android:layout_marginTop="14dp"
                         android:fontFamily="@font/inter"
                         android:text="Nenhum título encontrado"
-                        android:textColor="#F0F0F0"
+                        android:textColor="?attr/colorTextPrimary"
                         android:textSize="17sp"
                         android:textStyle="bold" />
 
@@ -872,7 +872,7 @@
                         android:layout_marginTop="6dp"
                         android:fontFamily="@font/inter"
                         android:text="Tente outro termo de pesquisa."
-                        android:textColor="#8AAEB7"
+                        android:textColor="?attr/colorTextSecondary"
                         android:textSize="13sp" />
 
                 </LinearLayout>
@@ -893,7 +893,7 @@
                         android:layout_height="64dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_play_24"
-                        app:tint="#12A0C7" />
+                        app:tint="?attr/colorAccentPrimary" />
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -901,7 +901,7 @@
                         android:layout_marginTop="14dp"
                         android:fontFamily="@font/inter"
                         android:text="Sua biblioteca está pronta"
-                        android:textColor="#F0F0F0"
+                        android:textColor="?attr/colorTextPrimary"
                         android:textSize="18sp"
                         android:textStyle="bold" />
 
@@ -911,7 +911,7 @@
                         android:layout_marginTop="6dp"
                         android:fontFamily="@font/inter"
                         android:text="Abra o catálogo para começar a assistir."
-                        android:textColor="#8AAEB7"
+                        android:textColor="?attr/colorTextSecondary"
                         android:textSize="13sp" />
 
                     <com.google.android.material.button.MaterialButton
@@ -921,9 +921,9 @@
                         android:layout_marginTop="16dp"
                         android:fontFamily="@font/inter"
                         android:text="Explorar catálogo"
-                        android:textColor="#0B0E14"
+                        android:textColor="?attr/colorBgBase"
                         android:textSize="13sp"
-                        app:backgroundTint="#12A0C7"
+                        app:backgroundTint="?attr/colorAccentPrimary"
                         app:cornerRadius="6dp" />
 
                 </LinearLayout>
