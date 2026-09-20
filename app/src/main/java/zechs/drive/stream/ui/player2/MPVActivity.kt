@@ -757,6 +757,14 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     }
 
     private fun checkChapterAutoSkip(currentTimeSeconds: Double) {
+        if (controlsLocked || isNextEpisodeCardShowing) {
+            binding.netflixSkipRow.animate().cancel()
+            binding.netflixSkipRow.visibility = View.GONE
+            controller.skipIntroRow.animate().cancel()
+            controller.skipIntroRow.visibility = View.GONE
+            return
+        }
+
         val specialChapter = parsedChapters.firstOrNull { chapter ->
             chapter.type != ChapterType.OTHER &&
                     currentTimeSeconds >= chapter.startTimeSeconds &&
@@ -1888,6 +1896,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             card.visibility = View.GONE
             card.translationY = 0f
         }.start()
+        val currentPos = (player.timePos ?: 0).toDouble()
+        checkChapterAutoSkip(currentPos)
     }
 
     private fun playNextEpisodeDirectly() {

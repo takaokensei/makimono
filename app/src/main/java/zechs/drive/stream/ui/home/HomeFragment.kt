@@ -916,12 +916,15 @@ class HomeFragment : BaseFragment() {
                 launch {
                     viewModel.libraryLoadError.collect { message ->
                         if (!message.isNullOrBlank()) {
-                            com.google.android.material.snackbar.Snackbar
-                                .make(binding.root, message, com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
-                                .setAction("Tentar de novo") {
-                                    viewModel.loadAnimeLibrary(forceRefresh = true)
-                                }
-                                .show()
+                            val isFullScreenErrorActive = viewModel.homeState.value is HomeViewModel.HomeState.Error
+                            if (!isFullScreenErrorActive) {
+                                com.google.android.material.snackbar.Snackbar
+                                    .make(binding.root, message, com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
+                                    .setAction("Tentar de novo") {
+                                        viewModel.loadAnimeLibrary(forceRefresh = true)
+                                    }
+                                    .show()
+                            }
                         }
                     }
                 }

@@ -14,21 +14,24 @@
         android:layout_gravity="center_horizontal|center_vertical"
         android:layout_margin="8dp"
         android:drawablePadding="8dp"
-        android:fontFamily="@font/open_sans"
+        android:fontFamily="@font/inter"
         android:text="@string/something_went_wrong"
         android:textAlignment="center"
-        android:textColor="@color/textColor_74"
-        android:textSize="18sp"
-        app:drawableTint="@color/textColor_87"
+        android:textColor="?attr/colorTextSecondary"
+        android:textSize="16sp"
+        app:drawableTint="?attr/colorAccentPrimary"
         app:drawableTopCompat="@drawable/ic_error_72" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnRetry"
-        style="@style/Widget.Material3.Button.ElevatedButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="12dp"
+        android:fontFamily="@font/inter"
         android:text="@string/retry"
+        android:textColor="?attr/colorBgBase"
+        app:backgroundTint="?attr/colorAccentPrimary"
+        app:cornerRadius="8dp"
         android:visibility="gone"
         tools:visibility="visible" />
 

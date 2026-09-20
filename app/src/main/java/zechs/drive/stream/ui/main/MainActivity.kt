@@ -285,11 +285,30 @@ class MainActivity : AppCompatActivity() {
         if (currentAppliedTheme == null) {
             currentAppliedTheme = appTheme
             if (appTheme != AppTheme.TOKYO_NIGHT) {
-                recreate()
+                smoothRecreate()
             }
         } else if (currentAppliedTheme != appTheme) {
             currentAppliedTheme = appTheme
-            recreate()
+            smoothRecreate()
+        }
+    }
+
+    private fun smoothRecreate() {
+        recreate()
+        @Suppress("DEPRECATION")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            overrideActivityTransition(
+                OVERRIDE_TRANSITION_OPEN,
+                android.R.anim.fade_in,
+                android.R.anim.fade_out
+            )
+            overrideActivityTransition(
+                OVERRIDE_TRANSITION_CLOSE,
+                android.R.anim.fade_in,
+                android.R.anim.fade_out
+            )
+        } else {
+            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         }
     }
 
