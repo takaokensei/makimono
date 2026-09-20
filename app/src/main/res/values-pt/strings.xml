@@ -28,6 +28,7 @@
     <string name="unlock">Desbloquear</string>
     <string name="logout">Sair da conta</string>
     <string name="log_out_dialog_title">Deseja realmente sair da sua conta?</string>
+    <string name="log_out_dialog_message">Isso irá desconectar sua conta e remover os tokens salvos deste dispositivo.</string>
     <string name="no">Não</string>
     <string name="yes">Sim</string>
     <string name="rewind_10_seconds">Retroceder 10 segundos</string>

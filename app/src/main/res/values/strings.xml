@@ -27,6 +27,7 @@
     <string name="unlock">Unlock</string>
     <string name="logout">Logout</string>
     <string name="log_out_dialog_title">Are you sure you want to log out?</string>
+    <string name="log_out_dialog_message">This will disconnect your account and clear the saved session tokens on this device.</string>
     <string name="no">No</string>
     <string name="yes">Yes</string>
     <string name="rewind_10_seconds">Rewind 10 seconds</string>

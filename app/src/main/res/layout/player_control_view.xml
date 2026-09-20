@@ -183,7 +183,7 @@
             android:layout_height="18dp"
             android:contentDescription="@null"
             android:src="@drawable/ic_skip_next_24"
-            app:tint="#67E8F9" />
+            app:tint="?attr/colorAccentPrimary" />
 
         <TextView
             android:id="@+id/btnSkipIntro"
@@ -192,7 +192,7 @@
             android:layout_marginStart="8dp"
             android:fontFamily="@font/inter"
             android:text="Pular Abertura"
-            android:textColor="#67E8F9"
+            android:textColor="?attr/colorAccentPrimary"
             android:textSize="13sp"
             android:textStyle="bold" />
 
@@ -208,9 +208,9 @@
         android:clipChildren="false"
         android:clipToPadding="false"
         android:orientation="vertical"
-        android:paddingStart="36dp"
+        android:paddingStart="16dp"
         android:paddingTop="18dp"
-        android:paddingEnd="36dp"
+        android:paddingEnd="16dp"
         android:paddingBottom="16dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
@@ -238,15 +238,15 @@
                     android:id="@+id/btnSubtitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="16dp"
+                    android:layout_marginEnd="10dp"
                     android:background="@drawable/bg_player_action_vertical"
                     android:clickable="true"
                     android:focusable="true"
                     android:gravity="center"
                     android:orientation="vertical"
-                    android:paddingStart="10dp"
+                    android:paddingStart="8dp"
                     android:paddingTop="4dp"
-                    android:paddingEnd="10dp"
+                    android:paddingEnd="8dp"
                     android:paddingBottom="4dp">
 
                     <ImageView
@@ -272,15 +272,15 @@
                     android:id="@+id/btnAudio"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="16dp"
+                    android:layout_marginEnd="10dp"
                     android:background="@drawable/bg_player_action_vertical"
                     android:clickable="true"
                     android:focusable="true"
                     android:gravity="center"
                     android:orientation="vertical"
-                    android:paddingStart="10dp"
+                    android:paddingStart="8dp"
                     android:paddingTop="4dp"
-                    android:paddingEnd="10dp"
+                    android:paddingEnd="8dp"
                     android:paddingBottom="4dp">
 
                     <ImageView
@@ -306,15 +306,15 @@
                     android:id="@+id/btnSpeed"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="16dp"
+                    android:layout_marginEnd="10dp"
                     android:background="@drawable/bg_player_action_vertical"
                     android:clickable="true"
                     android:focusable="true"
                     android:gravity="center"
                     android:orientation="vertical"
-                    android:paddingStart="10dp"
+                    android:paddingStart="8dp"
                     android:paddingTop="4dp"
-                    android:paddingEnd="10dp"
+                    android:paddingEnd="8dp"
                     android:paddingBottom="4dp">
 
                     <ImageView
@@ -354,13 +354,13 @@
                 <!-- Previous Episode -->
                 <ImageButton
                     android:id="@+id/btnPrevEp"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:clickable="true"
                     android:contentDescription="Episódio Anterior"
                     android:focusable="true"
-                    android:padding="8dp"
+                    android:padding="12dp"
                     android:scaleType="fitCenter"
                     android:src="@drawable/ic_skip_previous_24"
                     app:tint="#D4D4D4" />
@@ -368,14 +368,14 @@
                 <!-- Rewind 10s -->
                 <ImageButton
                     android:id="@+id/exo_rew"
-                    android:layout_width="42dp"
-                    android:layout_height="42dp"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
                     android:layout_marginStart="8dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:clickable="true"
                     android:contentDescription="@string/rewind_10_seconds"
                     android:focusable="true"
-                    android:padding="9dp"
+                    android:padding="12dp"
                     android:scaleType="fitCenter"
                     android:src="@drawable/ic_rewind_skip_24"
                     app:tint="#FFFFFFFF" />
@@ -409,14 +409,14 @@
                 <!-- Fast Forward 10s -->
                 <ImageButton
                     android:id="@+id/exo_ffwd"
-                    android:layout_width="42dp"
-                    android:layout_height="42dp"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
                     android:layout_marginEnd="8dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:clickable="true"
                     android:contentDescription="@string/skip_10_seconds"
                     android:focusable="true"
-                    android:padding="9dp"
+                    android:padding="12dp"
                     android:scaleType="fitCenter"
                     android:src="@drawable/ic_forward_skip_24"
                     app:tint="#FFFFFFFF" />
@@ -424,13 +424,13 @@
                 <!-- Next Episode -->
                 <ImageButton
                     android:id="@+id/btnNextEp"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:clickable="true"
                     android:contentDescription="Próximo Episódio"
                     android:focusable="true"
-                    android:padding="8dp"
+                    android:padding="12dp"
                     android:scaleType="fitCenter"
                     android:src="@drawable/ic_skip_next_24"
                     app:tint="#D4D4D4" />
@@ -453,15 +453,15 @@
                     android:id="@+id/btnEpisodes"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="16dp"
+                    android:layout_marginEnd="10dp"
                     android:background="@drawable/bg_player_action_vertical"
                     android:clickable="true"
                     android:focusable="true"
                     android:gravity="center"
                     android:orientation="vertical"
-                    android:paddingStart="10dp"
+                    android:paddingStart="8dp"
                     android:paddingTop="4dp"
-                    android:paddingEnd="10dp"
+                    android:paddingEnd="8dp"
                     android:paddingBottom="4dp">
 
                     <ImageView
@@ -487,15 +487,15 @@
                     android:id="@+id/btnChapter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="16dp"
+                    android:layout_marginEnd="10dp"
                     android:background="@drawable/bg_player_action_vertical"
                     android:clickable="true"
                     android:focusable="true"
                     android:gravity="center"
                     android:orientation="vertical"
-                    android:paddingStart="10dp"
+                    android:paddingStart="8dp"
                     android:paddingTop="4dp"
-                    android:paddingEnd="10dp"
+                    android:paddingEnd="8dp"
                     android:paddingBottom="4dp">
 
                     <ImageView
@@ -521,15 +521,15 @@
                     android:id="@+id/btnResize"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="16dp"
+                    android:layout_marginEnd="10dp"
                     android:background="@drawable/bg_player_action_vertical"
                     android:clickable="true"
                     android:focusable="true"
                     android:gravity="center"
                     android:orientation="vertical"
-                    android:paddingStart="10dp"
+                    android:paddingStart="8dp"
                     android:paddingTop="4dp"
-                    android:paddingEnd="10dp"
+                    android:paddingEnd="8dp"
                     android:paddingBottom="4dp">
 
                     <ImageView
@@ -555,15 +555,15 @@
                     android:id="@+id/btnRotate"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="16dp"
+                    android:layout_marginEnd="10dp"
                     android:background="@drawable/bg_player_action_vertical"
                     android:clickable="true"
                     android:focusable="true"
                     android:gravity="center"
                     android:orientation="vertical"
-                    android:paddingStart="10dp"
+                    android:paddingStart="8dp"
                     android:paddingTop="4dp"
-                    android:paddingEnd="10dp"
+                    android:paddingEnd="8dp"
                     android:paddingBottom="4dp">
 
                     <ImageView
@@ -596,9 +596,9 @@
                     android:focusable="true"
                     android:gravity="center"
                     android:orientation="vertical"
-                    android:paddingStart="10dp"
+                    android:paddingStart="8dp"
                     android:paddingTop="4dp"
-                    android:paddingEnd="10dp"
+                    android:paddingEnd="8dp"
                     android:paddingBottom="4dp">
 
                     <ImageView

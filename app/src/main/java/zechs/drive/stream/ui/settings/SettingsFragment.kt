@@ -62,6 +62,9 @@ class SettingsFragment : BaseFragment() {
     @Inject
     lateinit var backupSerializer: BackupSerializer
 
+    @Inject
+    lateinit var sessionManager: zechs.drive.stream.utils.SessionManager
+
     private val exportBackupLauncher = registerForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
@@ -108,11 +111,13 @@ class SettingsFragment : BaseFragment() {
         setupMalIntegration()
         setupPlaybackExperience()
         setupBackupRestore()
+        setupLogOut()
         setupTvFocus()
     }
 
     private fun setupTvFocus() {
-        if (resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE) return
+        val isTv = zechs.drive.stream.utils.DeviceUi.isTenFootExperience(requireContext())
+        if (!isTv && resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE) return
 
         val rows = listOfNotNull(
             binding.settingSelectProfile,
@@ -127,7 +132,8 @@ class SettingsFragment : BaseFragment() {
             binding.settingAutoSkipToggle,
             binding.settingGesturesToggle,
             binding.settingExportBackup,
-            binding.settingImportBackup
+            binding.settingImportBackup,
+            binding.settingLogOut
         )
 
         rows.forEachIndexed { index, row ->
@@ -634,6 +640,26 @@ class SettingsFragment : BaseFragment() {
             message,
             Snackbar.LENGTH_SHORT
         ).show()
+    }
+
+    private fun setupLogOut() {
+        binding.settingLogOut?.setOnClickListener {
+            MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+                .setTitle(getString(R.string.log_out_dialog_title))
+                .setMessage(getString(R.string.log_out_dialog_message))
+                .setNegativeButton(getString(R.string.no)) { dialog, _ -> dialog.dismiss() }
+                .setPositiveButton(getString(R.string.yes)) { dialog, _ ->
+                    dialog.dismiss()
+                    lifecycleScope.launch {
+                        sessionManager.resetDataStore()
+                        val activity = requireActivity()
+                        activity.finish()
+                        kotlinx.coroutines.delay(250L)
+                        activity.startActivity(activity.intent)
+                    }
+                }
+                .show()
+        }
     }
 
     override fun onDestroyView() {
