@@ -5,10 +5,10 @@
     android:id="@+id/hudCard"
     android:layout_width="340dp"
     android:layout_height="wrap_content"
-    app:cardBackgroundColor="#CC141622"
+    app:cardBackgroundColor="?attr/colorBgGlass"
     app:cardCornerRadius="16dp"
     app:cardElevation="16dp"
-    app:strokeColor="#33FFFFFF"
+    app:strokeColor="?attr/colorBorderGlass"
     app:strokeWidth="1dp">
 
     <LinearLayout
@@ -55,7 +55,7 @@
             android:layout_height="1dp"
             android:layout_marginTop="10dp"
             android:layout_marginBottom="10dp"
-            android:background="#22FFFFFF" />
+            android:background="?attr/colorBorderGlass" />
 
         <!-- Video Info Row -->
         <TextView
@@ -73,7 +73,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:fontFamily="@font/inter"
-            android:textColor="#FFFFFFFF"
+            android:textColor="?attr/colorTextPrimary"
             android:textSize="13sp"
             tools:text="HEVC (H.265) • HW MediaCodec" />
 
@@ -92,7 +92,7 @@
             android:layout_height="1dp"
             android:layout_marginTop="10dp"
             android:layout_marginBottom="10dp"
-            android:background="#22FFFFFF" />
+            android:background="?attr/colorBorderGlass" />
 
         <!-- Audio Info Row -->
         <TextView
@@ -110,7 +110,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:fontFamily="@font/inter"
-            android:textColor="#FFFFFFFF"
+            android:textColor="?attr/colorTextPrimary"
             android:textSize="13sp"
             tools:text="AAC • 2.0 Estéreo (48.0 kHz)" />
 
@@ -119,7 +119,7 @@
             android:layout_height="1dp"
             android:layout_marginTop="10dp"
             android:layout_marginBottom="10dp"
-            android:background="#22FFFFFF" />
+            android:background="?attr/colorBorderGlass" />
 
         <!-- Subtitle Info Row -->
         <TextView
@@ -137,7 +137,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:fontFamily="@font/inter"
-            android:textColor="#FFFFFFFF"
+            android:textColor="?attr/colorTextPrimary"
             android:textSize="13sp"
             tools:text="★ [Drive] Português (BR) (SRT)" />
 
@@ -146,7 +146,7 @@
             android:layout_height="1dp"
             android:layout_marginTop="10dp"
             android:layout_marginBottom="10dp"
-            android:background="#22FFFFFF" />
+            android:background="?attr/colorBorderGlass" />
 
         <!-- Buffer / Health Row -->
         <LinearLayout
@@ -174,10 +174,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:fontFamily="@font/inter"
-                android:textColor="#4CAF50"
+                android:textColor="?attr/colorStatusSuccess"
                 android:textSize="11sp"
                 android:textStyle="bold"
-                tools:text="🟢 Saudável" />
+                tools:text="Saudável" />
         </LinearLayout>
 
         <TextView
@@ -186,7 +186,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:fontFamily="@font/inter"
-            android:textColor="#FFFFFFFF"
+            android:textColor="?attr/colorTextPrimary"
             android:textSize="13sp"
             tools:text="28.4s adiantados em RAM" />
 

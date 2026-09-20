@@ -49,6 +49,7 @@ import kotlinx.coroutines.withContext
 import android.app.UiModeManager
 import android.content.pm.PackageManager
 import android.view.MotionEvent
+import zechs.drive.stream.utils.DeviceUi
 import zechs.drive.stream.R
 import zechs.drive.stream.data.model.PlaylistItem
 import zechs.drive.stream.data.model.SubtitleItem
@@ -324,8 +325,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             btnSpeed.setOnClickListener { pickSpeed() }
             btnResize.setOnClickListener { player.cycleScale() }
 
-            val isTvDevice = packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
-                || (getSystemService(Context.UI_MODE_SERVICE) as? UiModeManager)?.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION
+            val isTvDevice = DeviceUi.isTenFootExperience(this@MPVActivity)
             btnRotate.visibility = if (isTvDevice) View.GONE else View.VISIBLE
 
             btnRotate.setOnClickListener {

@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#080A10">
+    android:background="?attr/colorBgBase">
 
     <ImageView
         android:id="@+id/ivFantasyBg"
@@ -50,7 +50,7 @@
         android:layout_marginBottom="32dp"
         android:fontFamily="@font/inter"
         android:text="Quem está assistindo?"
-        android:textColor="#FFFFFF"
+        android:textColor="?attr/colorTextPrimary"
         android:textSize="@dimen/profile_title_size"
         android:textStyle="bold"
         app:layout_constraintBottom_toTopOf="@+id/rvProfiles"
@@ -85,7 +85,7 @@
         android:letterSpacing="0.08"
         android:paddingHorizontal="32dp"
         android:text="GERENCIAR PERFIS"
-        android:textColor="#FFFFFF"
+        android:textColor="?attr/colorTextPrimary"
         android:textSize="13sp"
         android:textStyle="bold"
         app:backgroundTint="@null"
@@ -104,7 +104,7 @@
         android:fontFamily="@font/inter"
         android:padding="8dp"
         android:text="Configurações"
-        android:textColor="#8A99AD"
+        android:textColor="?attr/colorTextSecondary"
         android:textSize="13sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

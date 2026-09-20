@@ -40,6 +40,7 @@ import zechs.drive.stream.ui.files.adapter.FilesAdapter
 import zechs.drive.stream.ui.files.adapter.FilesDataModel
 import zechs.drive.stream.ui.main.MainViewModel
 import zechs.drive.stream.ui.player.PlayerActivity
+import zechs.drive.stream.ui.player.PlayerLauncher
 import zechs.drive.stream.ui.player2.MPVActivity
 import zechs.drive.stream.ui.player.GlassMenuItem
 import zechs.drive.stream.ui.player.PlayerGlassMenuDialog
@@ -607,34 +608,34 @@ class FilesFragment : BaseFragment() {
     private fun launchExo(file: DriveFile) {
         val playlist = getFolderPlaylist()
         val subtitles = getFolderSubtitles()
-        Intent(
-            context, PlayerActivity::class.java
-        ).apply {
-            putExtra("fileId", file.id)
-            putExtra("title", file.name)
-            putExtra("seriesTitle", args.name)
-            putExtra("thumbnailLink", file.thumbnailLink)
-            putExtra("theme", mainViewModel.currentThemeIndex)
-            putExtra("playlist", playlist)
-            putExtra("subtitles", subtitles)
-        }.also { startActivity(it) }
+        PlayerLauncher.launch(
+            context = requireContext(),
+            playerType = VideoPlayer.EXO_PLAYER,
+            fileId = file.id,
+            title = file.name,
+            seriesTitle = args.name,
+            thumbnailLink = file.thumbnailLink,
+            themeIndex = mainViewModel.currentThemeIndex,
+            playlist = playlist,
+            subtitles = subtitles
+        )
     }
 
     private fun launchMpv(fileToken: FilesViewModel.FileToken) {
         val playlist = getFolderPlaylist()
         val subtitles = getFolderSubtitles()
-        Intent(
-            context, MPVActivity::class.java
-        ).apply {
-            putExtra("fileId", fileToken.fileId)
-            putExtra("title", fileToken.fileName)
-            putExtra("seriesTitle", args.name)
-            putExtra("accessToken", fileToken.accessToken)
-            putExtra("thumbnailLink", fileToken.thumbnailLink)
-            putExtra("theme", mainViewModel.currentThemeIndex)
-            putExtra("playlist", playlist)
-            putExtra("subtitles", subtitles)
-        }.also { startActivity(it) }
+        PlayerLauncher.launch(
+            context = requireContext(),
+            playerType = VideoPlayer.MPV,
+            fileId = fileToken.fileId,
+            title = fileToken.fileName,
+            seriesTitle = args.name,
+            accessToken = fileToken.accessToken,
+            thumbnailLink = fileToken.thumbnailLink,
+            themeIndex = mainViewModel.currentThemeIndex,
+            playlist = playlist,
+            subtitles = subtitles
+        )
     }
 
     private val scrollListener = object : RecyclerView.OnScrollListener() {

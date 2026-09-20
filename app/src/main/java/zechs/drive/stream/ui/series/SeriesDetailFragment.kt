@@ -31,6 +31,7 @@ import zechs.drive.stream.databinding.FragmentSeriesDetailBinding
 import zechs.drive.stream.ui.BaseFragment
 import zechs.drive.stream.ui.main.MainViewModel
 import zechs.drive.stream.ui.player.PlayerActivity
+import zechs.drive.stream.ui.player.PlayerLauncher
 import zechs.drive.stream.ui.player2.MPVActivity
 import zechs.drive.stream.ui.series.adapter.SeriesDetailEpisodeAdapter
 import zechs.drive.stream.ui.series.adapter.SeriesDetailSeasonAdapter
@@ -469,33 +470,17 @@ class SeriesDetailFragment : BaseFragment() {
             -1L
         }
 
-        when (mainViewModel.currentPlayerIndex) {
-            VideoPlayer.EXO_PLAYER -> {
-                val intent = Intent(requireContext(), PlayerActivity::class.java).apply {
-                    putExtra("fileId", fileId)
-                    putExtra("title", file.name)
-                    putExtra("seriesTitle", args.name)
-                    putExtra("thumbnailLink", thumb)
-                    putExtra("theme", mainViewModel.currentThemeIndex)
-                    putExtra("playlist", playlist)
-                    putExtra("startPosition", startPos)
-                }
-                startActivity(intent)
-            }
-
-            VideoPlayer.MPV -> {
-                val intent = Intent(requireContext(), MPVActivity::class.java).apply {
-                    putExtra("fileId", fileId)
-                    putExtra("title", file.name)
-                    putExtra("seriesTitle", args.name)
-                    putExtra("thumbnailLink", thumb)
-                    putExtra("theme", mainViewModel.currentThemeIndex)
-                    putExtra("playlist", playlist)
-                    putExtra("startPosition", startPos)
-                }
-                startActivity(intent)
-            }
-        }
+        PlayerLauncher.launch(
+            context = requireContext(),
+            playerType = mainViewModel.currentPlayerIndex,
+            fileId = fileId,
+            title = file.name,
+            seriesTitle = args.name,
+            thumbnailLink = thumb,
+            themeIndex = mainViewModel.currentThemeIndex,
+            playlist = playlist,
+            startPosition = startPos
+        )
     }
 
     private fun formatRating(rating: String?): String? {

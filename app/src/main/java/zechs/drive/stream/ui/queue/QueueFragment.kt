@@ -131,31 +131,17 @@ class QueueFragment : Fragment() {
     private fun launchVideoPlayer(file: DriveFile, startPosition: Long = -1L) {
         val fileId = file.id
         val thumb = file.thumbnailLarge ?: file.posterUrl ?: file.thumbnailLink
-        when (mainViewModel.currentPlayerIndex) {
-            zechs.drive.stream.utils.VideoPlayer.EXO_PLAYER -> {
-                val intent = Intent(requireContext(), zechs.drive.stream.ui.player.PlayerActivity::class.java).apply {
-                    putExtra("fileId", fileId)
-                    putExtra("title", file.name)
-                    putExtra("thumbnailLink", thumb)
-                    putExtra("theme", mainViewModel.currentThemeIndex)
-                    if (startPosition > 0L) {
-                        putExtra("startPosition", startPosition)
-                    }
-                }
-                startActivity(intent)
-            }
-            zechs.drive.stream.utils.VideoPlayer.MPV -> {
-                Toast.makeText(requireContext(), getString(R.string.starting_mpv), Toast.LENGTH_SHORT).show()
-                val intent = Intent(requireContext(), zechs.drive.stream.ui.player2.MPVActivity::class.java).apply {
-                    putExtra("fileId", fileId)
-                    putExtra("title", file.name)
-                    putExtra("thumbnailLink", thumb)
-                    if (startPosition > 0L) {
-                        putExtra("startPosition", startPosition)
-                    }
-                }
-                startActivity(intent)
-            }
+        if (mainViewModel.currentPlayerIndex == zechs.drive.stream.utils.VideoPlayer.MPV) {
+            Toast.makeText(requireContext(), getString(R.string.starting_mpv), Toast.LENGTH_SHORT).show()
         }
+        zechs.drive.stream.ui.player.PlayerLauncher.launch(
+            context = requireContext(),
+            playerType = mainViewModel.currentPlayerIndex,
+            fileId = fileId,
+            title = file.name,
+            thumbnailLink = thumb,
+            themeIndex = mainViewModel.currentThemeIndex,
+            startPosition = startPosition
+        )
     }
 }
