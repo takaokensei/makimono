@@ -80,7 +80,7 @@ class SessionManager @Inject constructor(
             return client
         }
 
-        return zechs.drive.stream.utils.util.Constants.DEFAULT_CLIENT
+        return zechs.drive.stream.utils.util.Constants.DEFAULT_CLIENT.takeIf { it.clientId.isNotEmpty() }
     }
 
     suspend fun saveAccessToken(data: TokenResponse) {
