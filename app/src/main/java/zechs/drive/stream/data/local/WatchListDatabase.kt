@@ -27,6 +27,7 @@ abstract class WatchListDatabase : RoomDatabase() {
     abstract fun getWatchQueueDao(): WatchQueueDao
     abstract fun getCatalogDao(): CatalogDao
     abstract fun getFollowedFolderDao(): FollowedFolderDao
+    abstract fun getProfileCleanupDao(): ProfileCleanupDao
 
     companion object {
         /**

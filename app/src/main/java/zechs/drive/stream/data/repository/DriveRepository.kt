@@ -133,11 +133,13 @@ class DriveRepository @Inject constructor(
         val boundedPageSize = pageSize.coerceIn(1, 100)
 
         repeat(boundedPages) {
-            when (val response = getFiles(query, pageToken, boundedPageSize, orderBy)) {
+            val remaining = MAX_PAGINATED_FILES - collected.size
+            if (remaining <= 0) return Resource.Success(collected)
+
+            val effectivePageSize = minOf(boundedPageSize, remaining)
+            when (val response = getFiles(query, pageToken, effectivePageSize, orderBy)) {
                 is Resource.Success -> {
-                    val remaining = MAX_PAGINATED_FILES - collected.size
-                    collected += response.data.files.take(remaining.coerceAtLeast(0))
-                    if (collected.size >= MAX_PAGINATED_FILES) return Resource.Success(collected)
+                    collected.addAll(response.data.files)
                     pageToken = response.data.nextPageToken
                     if (pageToken.isNullOrBlank()) return Resource.Success(collected)
                 }
@@ -204,11 +206,9 @@ class DriveRepository @Inject constructor(
 
         return try {
             val token = tokenApi.get().getAccessToken(
-                request = RefreshTokenRequest(
-                    clientId = client.clientId,
-                    clientSecret = client.clientSecret,
-                    refreshToken = refreshToken
-                )
+                clientId = client.clientId,
+                clientSecret = client.clientSecret,
+                refreshToken = refreshToken
             )
             Log.d(TAG, "Received access token (len=${token.accessToken.length})")
             sessionManager.saveAccessToken(token)
@@ -235,12 +235,10 @@ class DriveRepository @Inject constructor(
         return try {
             Log.d(TAG, "Requesting refresh token from authorization code")
             val token = tokenApi.get().getRefreshToken(
-                request = AuthorizationTokenRequest(
-                    clientId = client.clientId,
-                    clientSecret = client.clientSecret,
-                    redirectUri = client.redirectUri,
-                    authCode = authorizationCode
-                )
+                clientId = client.clientId,
+                clientSecret = client.clientSecret,
+                redirectUri = client.redirectUri,
+                authCode = authorizationCode
             )
 
             Log.d(TAG, "Received refresh token (len=${token.refreshToken.length})")
@@ -297,7 +295,7 @@ class DriveRepository @Inject constructor(
                     404 -> "Item não encontrado no Drive"
                     else -> "Falha ao atualizar ($code)"
                 }
-                Log.e(TAG, "updateFile error ($code): ${update.errorBody()?.string()}")
+                Log.e(TAG, "updateFile error ($code): ${update.errorBody()?.use { it.string() }}")
                 Resource.Error(errorMsg)
             }
         } catch (e: Exception) {

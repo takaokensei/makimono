@@ -2,12 +2,18 @@ package zechs.drive.stream.utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import dagger.Lazy
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 import zechs.drive.stream.R
+import zechs.drive.stream.data.local.ProfileDataCleaner
 import zechs.drive.stream.data.model.UserProfile
 import java.util.UUID
 import javax.inject.Inject
@@ -15,7 +21,8 @@ import javax.inject.Singleton
 
 @Singleton
 class ProfileManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val profileDataCleaner: Lazy<ProfileDataCleaner>
 ) {
 
     companion object {
@@ -24,12 +31,16 @@ class ProfileManager @Inject constructor(
         private const val KEY_ACTIVE_ID = "active_profile_id"
 
         val DEFAULT_PROFILES = listOf(
-            UserProfile(id = "profile-1", name = "Perfil principal", avatarResName = "avatar_caua", isDefault = true),
+            UserProfile(id = "profile-1", name = "Perfil principal", avatarResName = "avatar_anime", isDefault = true),
             UserProfile(id = "profile-2", name = "Perfil secundário", avatarResName = "avatar_anime", isDefault = false)
         )
     }
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    // Escopo próprio para a cascata de exclusão de dados (P0-03): sobrevive
+    // à tela que disparou a exclusão e executa em IO.
+    private val cleanerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _profilesFlow = MutableStateFlow<List<UserProfile>>(loadProfiles())
     val profilesFlow = _profilesFlow.asStateFlow()
@@ -52,7 +63,7 @@ class ProfileManager @Inject constructor(
                     UserProfile(
                         id = obj.getString("id"),
                         name = obj.getString("name"),
-                        avatarResName = obj.optString("avatarResName", "avatar_caua"),
+                        avatarResName = obj.optString("avatarResName", "avatar_anime"),
                         isDefault = obj.optBoolean("isDefault", false),
                         libraryRootId = obj.optString("libraryRootId").takeIf { it.isNotBlank() },
                         libraryRootName = obj.optString("libraryRootName").takeIf { it.isNotBlank() },
@@ -151,6 +162,15 @@ class ProfileManager @Inject constructor(
         if (_activeProfileFlow.value.id == id) {
             setActiveProfile(updated.first().id)
         }
+        // P0-03: apaga em cascata todos os dados Room do perfil (histórico,
+        // favoritos, fila e pastas seguidas) para não vazar dados entre perfis.
+        cleanerScope.launch {
+            try {
+                profileDataCleaner.get().deleteAllDataForProfile(id)
+            } catch (e: Exception) {
+                android.util.Log.e("ProfileManager", "Falha ao apagar dados do perfil $id", e)
+            }
+        }
         return true
     }
 
@@ -167,7 +187,7 @@ class ProfileManager @Inject constructor(
         return when (avatarName) {
             "avatar_caua" -> R.drawable.avatar_caua
             "avatar_anime" -> R.drawable.avatar_anime
-            else -> R.drawable.avatar_caua
+            else -> R.drawable.avatar_anime
         }
     }
 }

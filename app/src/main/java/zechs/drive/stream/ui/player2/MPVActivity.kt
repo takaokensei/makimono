@@ -158,10 +158,12 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     private var currentFileId: String = ""
     private var currentTitle: String = ""
     private var currentThumbnailLink: String? = null
-    private var currentAccessToken: String = ""
     private var playlist = mutableListOf<PlaylistItem>()
     private var nextEpisode: PlaylistItem? = null
     private var prevEpisode: PlaylistItem? = null
+    // ARCH: mesmo PlaybackCoordinator do player Exo — comportamento idêntico
+    // de prev/next nas duas engines (P1-01, etapa 1).
+    private val playbackCoordinator = zechs.drive.stream.ui.player.engine.PlaybackCoordinator()
     private var nextEpisodeCanceled = false
     private var isNextEpisodeCardShowing = false
     private var countdownJob: Job? = null
@@ -200,6 +202,16 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         binding = ActivityMpvBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // P2-10: substitui onBackPressed() deprecado pelo dispatcher moderno.
+        onBackPressedDispatcher.addCallback(object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (!handleBackNavigation()) {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
+
         hideSystemUI()
 
         player = binding.player
@@ -215,7 +227,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         currentFileId = intent.getStringExtra("fileId") ?: ""
         currentTitle = intent.getStringExtra("title") ?: ""
         currentThumbnailLink = intent.getStringExtra("thumbnailLink")
-        currentAccessToken = intent.getStringExtra("accessToken") ?: ""
 
         @Suppress("DEPRECATION")
         val rawPlaylist = intent.getSerializableExtra("playlist") as? ArrayList<PlaylistItem>
@@ -484,31 +495,11 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     }
 
     private fun updateNextEpisode() {
-        if (playlist.isEmpty()) {
-            nextEpisode = null
-            prevEpisode = null
-            if (::controller.isInitialized) {
-                controller.btnPrevEp.isEnabled = false
-                controller.btnPrevEp.alpha = 0.35f
-                controller.btnNextEp.isEnabled = false
-                controller.btnNextEp.alpha = 0.35f
-            }
-            mediaSessionHelper?.updatePlaybackState(
-                isPlaying = if (::player.isInitialized) !(player.paused ?: true) else false,
-                positionMs = if (::player.isInitialized) ((player.timePos ?: 0) * 1000L).coerceAtLeast(0L) else 0L,
-                speed = (MPVLib.getPropertyDouble("speed") ?: 1.0).toFloat(),
-                canSkipNext = false,
-                canSkipPrevious = false
-            )
-            return
-        }
-        val currentIndex = playlist.indexOfFirst { it.fileId == currentFileId }
-        nextEpisode = if (currentIndex != -1 && currentIndex + 1 < playlist.size) {
-            playlist[currentIndex + 1]
-        } else null
-        prevEpisode = if (currentIndex > 0) {
-            playlist[currentIndex - 1]
-        } else null
+        playbackCoordinator.setPlaylist(playlist, currentFileId)
+        val coordinatorState = playbackCoordinator.state.value
+        nextEpisode = coordinatorState.nextEpisode
+        prevEpisode = coordinatorState.prevEpisode
+
         if (::controller.isInitialized) {
             controller.btnPrevEp.isEnabled = prevEpisode != null
             controller.btnPrevEp.alpha = if (prevEpisode != null) 1.0f else 0.35f
@@ -522,7 +513,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             canSkipNext = nextEpisode != null,
             canSkipPrevious = prevEpisode != null
         )
-        Log.d(TAG, "updateNextEpisode: currentIndex=$currentIndex, prevEpisode=${prevEpisode?.title}, nextEpisode=${nextEpisode?.title}")
+        Log.d(TAG, "updateNextEpisode: prevEpisode=${prevEpisode?.title}, nextEpisode=${nextEpisode?.title}")
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
@@ -642,20 +633,20 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         return super.dispatchKeyEvent(event)
     }
 
-    override fun onBackPressed() {
+    private fun handleBackNavigation(): Boolean {
         if (binding.nextEpisodeCard.root.isVisible) {
             dismissNextEpisodeCard()
-            return
+            return true
         }
         if (controller.root.isVisible) {
             hideControls()
-            return
+            return true
         }
         if (binding.netflixSkipRow.isVisible) {
             binding.netflixSkipRow.visibility = View.GONE
-            return
+            return true
         }
-        super.onBackPressed()
+        return false
     }
 
     private var isHidingControls = false
@@ -981,8 +972,10 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
 
         val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") }
         val title = currentTitle.ifBlank { intent.getStringExtra("title") }
-        val accessToken = currentAccessToken.ifBlank {
-            tokenProvider.get().getCachedToken() ?: intent.getStringExtra("accessToken")
+        // P0-04: token obtido do TokenProvider (cache + refresh sob mutex);
+        // sem fallback para extras de Intent nem cache desatualizado.
+        val accessToken = kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+            tokenProvider.get().validToken()
         }
 
         if (fileId == null || accessToken == null) {
@@ -2123,12 +2116,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         val currentAid = player.aid
         val targetAudio = audioTracks.firstOrNull { track ->
             if (track.mpvId == -1) return@firstOrNull false
-            val lang = (track.lang ?: "").lowercase()
-            val title = (track.title ?: "").lowercase()
-            val name = track.name.lowercase()
-            lang in listOf("ja", "jpn", "jp", "japanese") ||
-                    title.contains("jap") || title.contains("jpn") ||
-                    name.contains("jap") || name.contains("jpn")
+            zechs.drive.stream.utils.SubtitleSelectionPolicy.isJapanese(track.lang, track.title, track.name)
         }
         if (targetAudio != null && targetAudio.mpvId != currentAid) {
             Log.d(TAG, "MPV auto-selected Japanese audio: ${targetAudio.name} (id=${targetAudio.mpvId})")
@@ -2139,22 +2127,13 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         val currentSid = player.sid
         val ptSubs = subTracks.filter { track ->
             if (track.mpvId == -1) return@filter false
-            val lang = (track.lang ?: "").lowercase()
-            val title = (track.title ?: "").lowercase()
-            val name = track.name.lowercase()
-            lang in listOf("pt", "por", "pt-br", "pt_br", "pob", "portuguese") ||
-                    title.contains("portugu") || title.contains("pt-br") || title.contains("pt_br") || title.contains("brazil") ||
-                    name.contains("portugu") || name.contains("pt-br") || name.contains("pt_br") || name.contains("brazil")
+            zechs.drive.stream.utils.SubtitleSelectionPolicy.isPortuguese(track.lang, track.title, track.name)
         }
 
         val targetSub = ptSubs.maxByOrNull { track ->
-            val label = ((track.title ?: "") + " " + track.name).lowercase()
-            when {
-                label.contains("[drive]") -> 25
-                label.contains("brasil") || label.contains("brazil") || label.contains("pt-br") || label.contains("pt_br") -> 15
-                label.contains("forced") || label.contains("forçada") || label.contains("signs") -> 5
-                else -> 10
-            }
+            // P2-08: mesma pontuação do player Exo, em regra única testada.
+            zechs.drive.stream.utils.SubtitleSelectionPolicy
+                .scorePortuguese("${track.title} ${track.name}")
         }
 
         if (targetSub != null && targetSub.mpvId != currentSid) {

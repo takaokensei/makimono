@@ -256,6 +256,16 @@ class PlayerActivity : AppCompatActivity() {
         binding = ActivityPlayerBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // P2-10: substitui onBackPressed() deprecado pelo dispatcher moderno.
+        onBackPressedDispatcher.addCallback(object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (!handleBackNavigation()) {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
+
         hideSystemUI()
 
         playerView = binding.playerView
@@ -1048,24 +1058,24 @@ class PlayerActivity : AppCompatActivity() {
         return super.dispatchKeyEvent(event)
     }
 
-    override fun onBackPressed() {
+    private fun handleBackNavigation(): Boolean {
         if (isKodiHudVisible) {
             toggleKodiInfoHud()
-            return
+            return true
         }
         if (binding.nextEpisodeCard.root.isVisible) {
             dismissNextEpisodeCard()
-            return
+            return true
         }
         if (playerView.isControllerVisible) {
             animateHideController()
-            return
+            return true
         }
         if (binding.netflixSkipRow.isVisible) {
             binding.netflixSkipRow.visibility = View.GONE
-            return
+            return true
         }
-        super.onBackPressed()
+        return false
     }
 
     private var isHidingControls = false
@@ -1262,8 +1272,14 @@ class PlayerActivity : AppCompatActivity() {
 
             lifecycleScope.launch {
                 try {
-                    val token = tokenProvider.get().validToken()
-                    val chapters = MatroskaChapterParser.extractChapters(streamUri.toString(), token)
+                    val token = withContext(Dispatchers.IO) { tokenProvider.get().validToken() }
+                    // P2-04: extração de capítulos MKV não pode travar o
+                    // startup do episódio — IO explícito + timeout de 5s.
+                    val chapters = kotlinx.coroutines.withTimeoutOrNull(5_000L) {
+                        withContext(Dispatchers.IO) {
+                            MatroskaChapterParser.extractChapters(streamUri.toString(), token)
+                        }
+                    } ?: emptyList()
                     parsedChapters = chapters
                     Log.d(TAG, "Extracted ${chapters.size} chapters from MKV")
                     if (::player.isInitialized) {
@@ -2495,20 +2511,12 @@ class PlayerActivity : AppCompatActivity() {
                 val lang = format.language?.lowercase() ?: ""
                 val label = (format.label ?: "").lowercase()
 
-                val isPortuguese = lang in listOf("pt", "por", "pt-br", "pt_br", "pob", "portuguese") ||
-                        label.contains("portugu") || label.contains("pt-br") || label.contains("pt_br") ||
-                        label.contains("brazil") || label.contains("ptbr")
+                val isPortuguese = zechs.drive.stream.utils.SubtitleSelectionPolicy.isPortuguese(lang, label)
 
                 if (isPortuguese) {
-                    var score = 10
-                    if (label.contains("[drive]")) {
-                        score = 25
-                    } else if (label.contains("forced") || label.contains("forçada") || label.contains("forçado") ||
-                        label.contains("signs") || label.contains("músicas") || label.contains("songs")) {
-                        score = 5
-                    } else if (label.contains("brasil") || label.contains("brazil") || label.contains("pt-br") || label.contains("pt_br")) {
-                        score = 15
-                    }
+                    // P2-08: regra de pontuação única, compartilhada com o MPV.
+                    val score = zechs.drive.stream.utils.SubtitleSelectionPolicy
+                        .scorePortuguese("$lang $label")
 
                     if (score > bestSubScore) {
                         bestSubScore = score
@@ -2554,13 +2562,13 @@ class PlayerActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 Toast.makeText(this@PlayerActivity, getString(R.string.switching_to_mpv), Toast.LENGTH_SHORT).show()
-                val token = tokenProvider.get().validToken()
-                if (!token.isNullOrEmpty()) {
+                // P0-04: o token de acesso não transita mais em extras de
+                // Intent; o MPVActivity o obtém via TokenProvider.
+                run {
                     val mpvIntent = Intent(this@PlayerActivity, MPVActivity::class.java).apply {
                         putExtra("fileId", fileId)
                         putExtra("title", title)
                         putExtra("thumbnailLink", thumbnailLink)
-                        putExtra("accessToken", token)
                         putExtra("theme", theme)
                         putExtra("playlist", ArrayList(playlist))
                         putExtra("subtitles", ArrayList(folderSubtitles))
@@ -2573,7 +2581,6 @@ class PlayerActivity : AppCompatActivity() {
                     startActivity(mpvIntent)
                     return@launch
                 }
-                Toast.makeText(this@PlayerActivity, "Falha ao obter token para abrir no MPV", Toast.LENGTH_LONG).show()
             } catch (e: Exception) {
                 Log.e(TAG, "Error launching MPV fallback", e)
             }

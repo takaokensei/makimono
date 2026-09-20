@@ -116,13 +116,16 @@ class MalRepository @Inject constructor(
                 Log.d(TAG, "MAL token refreshed successfully")
                 return@withContext body.accessToken
             } else {
+                // P0-02: refresh falhou — devolver null (chamadores já orientam
+                // re-login), nunca o token expirado: o retorno anterior mascarava
+                // a falha e causava 401s silenciosos em todos os chamadores.
                 Log.w(TAG, "Failed to refresh MAL token: ${response.code()}")
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e(TAG, "Error refreshing MAL token", e)
         }
-        return@withContext currentToken
+        return@withContext null
     }
 
     suspend fun fetchUserProfile(): MalUserProfile? = withContext(Dispatchers.IO) {
