@@ -1,4 +1,4 @@
-﻿package zechs.drive.stream.data.repository
+package zechs.drive.stream.data.repository
 
 import android.util.Log
 import kotlinx.coroutines.sync.Mutex
@@ -24,13 +24,23 @@ class DefaultTokenProvider @Inject constructor(
 
     companion object {
         private const val TAG = "DefaultTokenProvider"
+        // 60-second safety window before actual expiration
+        private const val EXPIRY_SAFETY_WINDOW_SECONDS = 60L
     }
 
-    private val cachedTokenRef = AtomicReference<String?>(null)
+    private data class CachedToken(val token: String, val expiryEpochSeconds: Long)
+
+    private val cachedTokenRef = AtomicReference<CachedToken?>(null)
     private val refreshMutex = Mutex()
 
+    private fun isExpired(cached: CachedToken): Boolean {
+        val now = System.currentTimeMillis() / 1000
+        return now >= (cached.expiryEpochSeconds - EXPIRY_SAFETY_WINDOW_SECONDS)
+    }
+
     override fun getCachedToken(): String? {
-        return cachedTokenRef.get()
+        val cached = cachedTokenRef.get() ?: return null
+        return if (!isExpired(cached)) cached.token else null
     }
 
     override fun invalidateToken() {
@@ -39,14 +49,14 @@ class DefaultTokenProvider @Inject constructor(
 
     override suspend fun validToken(): String? {
         val current = cachedTokenRef.get()
-        if (!current.isNullOrEmpty()) {
-            return current
+        if (current != null && !isExpired(current) && current.token.isNotEmpty()) {
+            return current.token
         }
 
         return refreshMutex.withLock {
             val existing = cachedTokenRef.get()
-            if (!existing.isNullOrEmpty()) {
-                return@withLock existing
+            if (existing != null && !isExpired(existing) && existing.token.isNotEmpty()) {
+                return@withLock existing.token
             }
 
             val client = sessionManager.fetchClient()
@@ -58,7 +68,8 @@ class DefaultTokenProvider @Inject constructor(
             val response = driveRepository.get().fetchAccessToken(client, forceRefresh = false)
             if (response is Resource.Success && response.data != null) {
                 val token = response.data.accessToken
-                cachedTokenRef.set(token)
+                val expiry = response.data.expiresIn
+                cachedTokenRef.set(CachedToken(token, expiry))
                 token
             } else {
                 Log.w(TAG, "Failed to retrieve valid token: ${response.message}")
@@ -79,7 +90,8 @@ class DefaultTokenProvider @Inject constructor(
             val response = driveRepository.get().fetchAccessToken(client, forceRefresh = true)
             if (response is Resource.Success && response.data != null) {
                 val token = response.data.accessToken
-                cachedTokenRef.set(token)
+                val expiry = response.data.expiresIn
+                cachedTokenRef.set(CachedToken(token, expiry))
                 token
             } else {
                 Log.w(TAG, "Failed to force refresh token: ${response.message}")

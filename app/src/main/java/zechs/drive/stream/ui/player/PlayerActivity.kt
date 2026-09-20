@@ -2605,6 +2605,32 @@ class PlayerActivity : AppCompatActivity() {
             else -> error.message
         }
 
+        // 0. Mid-stream HTTP 401 recovery: automatically refresh token and resume playback
+        val isHttp401 = (exoException?.type == TYPE_SOURCE) &&
+                ((exoException.sourceException as? com.google.android.exoplayer2.upstream.HttpDataSource.InvalidResponseCodeException)?.responseCode == 401 ||
+                        error.message?.contains("401") == true ||
+                        errorDetailed?.contains("401") == true)
+
+        if (isHttp401 && ::player.isInitialized) {
+            Log.w(TAG, "HTTP 401 mid-stream error encountered. Invalidating token and attempting transparent resume...")
+            val resumePos = player.currentPosition
+            lifecycleScope.launch {
+                try {
+                    tokenProvider.get().invalidateToken()
+                    val newToken = tokenProvider.get().validToken()
+                    if (!newToken.isNullOrEmpty()) {
+                        Log.i(TAG, "Token successfully refreshed after 401 mid-stream. Resuming playback at ${resumePos}ms")
+                        playMedia(startAtPositionMs = resumePos)
+                        return@launch
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to recover from 401 mid-stream", e)
+                }
+                errorSnackbar(errorGeneral, errorDetailed, canOpenMpv = true)
+            }
+            return
+        }
+
         // 1. Subtitle error resilience: recover automatically if ASS/SSA subtitles fail
         val isSubtitleError = (exoException?.type == TYPE_RENDERER) && (
                 mimeType.startsWith("text/") ||

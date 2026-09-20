@@ -274,29 +274,46 @@ class DriveRepository @Inject constructor(
         return Resource.Error(error)
     }
 
+    private suspend fun <T> executeWithTokenRetry(block: suspend (accessToken: String) -> T): T {
+        val accessToken = getOrFetchAccessToken() ?: throw IOException("Access token is null")
+        return try {
+            block(accessToken)
+        } catch (unauthorized: HttpException) {
+            if (unauthorized.code() != 401) throw unauthorized
+            val client = sessionManager.fetchClient() ?: throw unauthorized
+            val refreshed = fetchAccessToken(client, forceRefresh = true)
+            if (refreshed is Resource.Success) {
+                block(refreshed.data.accessToken)
+            } else {
+                throw unauthorized
+            }
+        }
+    }
+
     suspend fun updateFile(
         fileId: String,
         starred: Boolean
     ): Resource<Unit> {
-        val accessToken = getOrFetchAccessToken()
-            ?: return Resource.Error("Access token can not be null")
         return try {
-            val update = driveApi.updateFile(
-                fileId = fileId,
-                fileUpdateRequest = FileUpdateRequest(starred = starred),
-                accessToken = "Bearer $accessToken"
-            )
-            if (update.isSuccessful) {
-                Resource.Success(Unit)
-            } else {
-                val code = update.code()
-                val errorMsg = when (code) {
-                    403 -> "Permissão insuficiente (necessário escopo de escrita no Google Drive)"
-                    404 -> "Item não encontrado no Drive"
-                    else -> "Falha ao atualizar ($code)"
+            executeWithTokenRetry { token ->
+                val update = driveApi.updateFile(
+                    fileId = fileId,
+                    fileUpdateRequest = FileUpdateRequest(starred = starred),
+                    accessToken = "Bearer $token"
+                )
+                if (update.isSuccessful) {
+                    Resource.Success(Unit)
+                } else {
+                    val code = update.code()
+                    if (code == 401) throw HttpException(update)
+                    val errorMsg = when (code) {
+                        403 -> "Permissão insuficiente (necessário escopo de escrita no Google Drive)"
+                        404 -> "Item não encontrado no Drive"
+                        else -> "Falha ao atualizar ($code)"
+                    }
+                    Log.e(TAG, "updateFile error ($code): ${update.errorBody()?.use { it.string() }}")
+                    Resource.Error(errorMsg)
                 }
-                Log.e(TAG, "updateFile error ($code): ${update.errorBody()?.use { it.string() }}")
-                Resource.Error(errorMsg)
             }
         } catch (e: Exception) {
             doOnError(e)
@@ -304,14 +321,15 @@ class DriveRepository @Inject constructor(
     }
 
     suspend fun getFileSiblings(fileId: String): List<PlaylistItem> {
-        val accessToken = getOrFetchAccessToken() ?: return emptyList()
         return try {
-            val file = retryWithBackoff {
-                driveApi.getFile(
-                    accessToken = "Bearer $accessToken",
-                    fileId = fileId,
-                    fields = "id, name, parents"
-                )
+            val file = executeWithTokenRetry { token ->
+                retryWithBackoff {
+                    driveApi.getFile(
+                        accessToken = "Bearer $token",
+                        fileId = fileId,
+                        fields = "id, name, parents"
+                    )
+                }
             }
             val parentId = file.parents?.firstOrNull() ?: return emptyList()
             val query = "'$parentId' in parents and trashed=false and mimeType contains 'video/'"
@@ -339,14 +357,15 @@ class DriveRepository @Inject constructor(
     }
 
     suspend fun getFolderSubtitles(fileId: String): List<SubtitleItem> {
-        val accessToken = getOrFetchAccessToken() ?: return emptyList()
         return try {
-            val file = retryWithBackoff {
-                driveApi.getFile(
-                    accessToken = "Bearer $accessToken",
-                    fileId = fileId,
-                    fields = "id, name, parents"
-                )
+            val file = executeWithTokenRetry { token ->
+                retryWithBackoff {
+                    driveApi.getFile(
+                        accessToken = "Bearer $token",
+                        fileId = fileId,
+                        fields = "id, name, parents"
+                    )
+                }
             }
             val parentId = file.parents?.firstOrNull() ?: return emptyList()
             val query = "'$parentId' in parents and trashed=false and mimeType != 'application/vnd.google-apps.folder'"
@@ -384,22 +403,24 @@ class DriveRepository @Inject constructor(
             Log.d(TAG, "Subtitle already in cache: ${destFile.absolutePath}")
             return destFile
         }
-        val accessToken = getOrFetchAccessToken() ?: return null
         return try {
-            val response = driveApi.downloadFile("Bearer $accessToken", sub.id)
-            val body = response.body()
-            if (response.isSuccessful && body != null) {
-                destFile.parentFile?.mkdirs()
-                body.byteStream().use { input ->
-                    destFile.outputStream().use { output ->
-                        input.copyTo(output)
+            executeWithTokenRetry { token ->
+                val response = driveApi.downloadFile("Bearer $token", sub.id)
+                val body = response.body()
+                if (response.isSuccessful && body != null) {
+                    destFile.parentFile?.mkdirs()
+                    body.byteStream().use { input ->
+                        destFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
                     }
+                    Log.d(TAG, "Subtitle downloaded successfully (${destFile.length()} bytes): ${destFile.absolutePath}")
+                    destFile
+                } else {
+                    if (response.code() == 401) throw HttpException(response)
+                    Log.w(TAG, "Failed to download subtitle fileId=${sub.id}: code=${response.code()}")
+                    null
                 }
-                Log.d(TAG, "Subtitle downloaded successfully (${destFile.length()} bytes): ${destFile.absolutePath}")
-                destFile
-            } else {
-                Log.w(TAG, "Failed to download subtitle fileId=${sub.id}: code=${response.code()}")
-                null
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e

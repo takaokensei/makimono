@@ -935,7 +935,10 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     private val audioFocusChangeListener = OnAudioFocusChangeListener { type ->
         Log.v(TAG, "Audio focus changed: $type")
         when (type) {
-            AUDIOFOCUS_LOSS,
+            AUDIOFOCUS_LOSS -> {
+                player.paused = true
+                audioFocusRestore = {}
+            }
             AUDIOFOCUS_LOSS_TRANSIENT -> {
                 // loss can occur in addition to ducking, so remember the old callback
                 val oldRestore = audioFocusRestore
@@ -1037,7 +1040,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             "http-header-fields",
             "Authorization: Bearer $accessToken"
         )
-        MPVLib.command(arrayOf("loadfile", playUri))
         player.play(playUri)
 
         // Load external Drive subtitles (.ass, .srt, etc.)
@@ -2198,29 +2200,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         updateOrientation(newConfig)
-    }
-
-    private fun launchExoFallback() {
-        val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") ?: return }
-        val title = currentTitle.ifBlank { intent.getStringExtra("title") ?: return }
-        val thumbnailLink = currentThumbnailLink ?: intent.getStringExtra("thumbnailLink")
-        val theme = intent.getIntExtra("theme", 0)
-        val currentPos = (player.timePos ?: 0) * 1000L
-
-        val exoIntent = Intent(this, zechs.drive.stream.ui.player.PlayerActivity::class.java).apply {
-            putExtra("fileId", fileId)
-            putExtra("title", title)
-            putExtra("thumbnailLink", thumbnailLink)
-            putExtra("theme", theme)
-            putExtra("playlist", ArrayList(playlist))
-            putExtra("subtitles", ArrayList(folderSubtitles))
-            if (currentPos > 0) {
-                putExtra("startPosition", currentPos)
-            }
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        finish()
-        startActivity(exoIntent)
     }
 
     override fun onDestroy() {

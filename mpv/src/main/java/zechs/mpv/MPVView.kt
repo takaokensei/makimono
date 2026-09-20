@@ -20,6 +20,8 @@ class MPVView(
         internal const val TAG = "mpv"
     }
 
+    private var isInitialized = false
+
     fun initialize(configDir: String) {
         MPVLib.create(this.context)
         MPVLib.setOptionString("config", "yes")
@@ -27,6 +29,7 @@ class MPVView(
 
         initOptions(configDir)
         MPVLib.init()
+        isInitialized = true
 
         holder.addCallback(this)
         observeProperties()
@@ -94,14 +97,22 @@ class MPVView(
     }
 
     fun play(path: String) {
-        this.playUri = path
+        if (holder.surface?.isValid == true) {
+            this.playUri = null
+            MPVLib.command(arrayOf("loadfile", path))
+        } else {
+            this.playUri = path
+        }
     }
 
     // Called when back button is pressed, or app is shutting down
     fun destroy() {
         // Disable surface callbacks to avoid using uninitialized mpv state
         holder.removeCallback(this)
-        MPVLib.destroy()
+        if (isInitialized) {
+            isInitialized = false
+            MPVLib.destroy()
+        }
     }
 
     private fun observeProperties() {
