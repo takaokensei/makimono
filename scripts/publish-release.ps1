@@ -1,5 +1,10 @@
 # scripts/publish-release.ps1
-# Script para criar a GitHub Release e fazer upload dos APKs e checksums
+# Script para criar a GitHub Release e fazer upload dos APKs e checksums SHA-256
+
+param(
+    [string]$tag = "v1.5.1",
+    [string]$repo = "takaokensei/makimono"
+)
 
 Add-Type -TypeDefinition @"
 using System;
@@ -62,9 +67,19 @@ $headers = @{
 $user = Invoke-RestMethod -Uri "https://api.github.com/user" -Headers $headers -Method Get
 Write-Host "Autenticado como: $($user.login)" -ForegroundColor Green
 
-# 2. Verificar se a release ja existe
-$tag = "v1.5.0"
-$repo = "takaokensei/makimono"
+# 2. Gerar .sha256 se nao existirem
+$apkDir = "app/build/outputs/apk/release"
+$apks = Get-ChildItem -Path $apkDir | Where-Object { $_.Name.EndsWith(".apk") }
+foreach ($apk in $apks) {
+    $shaPath = "$($apk.FullName).sha256"
+    if (-not (Test-Path $shaPath)) {
+        $hash = (Get-FileHash -Path $apk.FullName -Algorithm SHA256).Hash.ToLower()
+        "$hash  $($apk.Name)" | Out-File -FilePath $shaPath -Encoding utf8
+        Write-Host "Gerado checksum para $($apk.Name): $hash" -ForegroundColor DarkGray
+    }
+}
+
+# 3. Verificar se a release ja existe
 $release = $null
 
 try {
@@ -73,34 +88,24 @@ try {
 } catch {
     Write-Host "Criando nova release $tag..." -ForegroundColor Cyan
     $releaseBody = @"
-# ⛩️ Makimono v1.5.0 — Complete UX/UI Overhaul
+# ⛩️ Makimono $tag — UI/UX Overhaul & Stability Release
 
-Revisão integral de experiência de usuário, interface e navegabilidade:
+Esta versão consolida o redesenho integral de UI/UX (Fases P0, P1, P2 e P3), injeção direta de credenciais via BuildConfig e melhorias críticas de reprodução contínua.
 
 ### 🌟 Destaques da Versão
-- **Interface Estilo Streaming:** Shelves e cards com proporção 2:3/16:9, suporte a foco contínuo no controle remoto de Smart TVs.
-- **Customizador de Legendas:** Janela completa com ajuste de cores, fontes (sans, serif, mono, rounded), outline, delay e gap bridging.
-- **Fila de Reprodução ("Assistir Depois"):** Reordenação por drag-and-drop e navegação dedicada.
-- **Acessibilidade e Usabilidade:** Alvos de toque padronizados em >= 48dp, 5 temas completos (Tokyo Night, Dracula, Nord, Catppuccin, Estuary).
-- **Segurança e Verificação:** Atualizador in-app fail-closed com verificação de checksum SHA-256 obrigatória.
-
----
-
-### 📦 Checksums SHA-256 dos APKs
-
-| Arquivo | SHA-256 Checksum |
-|---|---|
-| ``makimono-v1.5.0-arm64-v8a-release.apk`` | ``bfa63ece50e1da485df91f57f461064c126f7b8359caf97075bbbaaeb789d2c4`` |
-| ``makimono-v1.5.0-armeabi-v7a-release.apk`` | ``5ad1a4c241f0ec6afa3010249e4ce90c2c3ae918ccda7dcbce74866157019868`` |
-| ``makimono-v1.5.0-universal-release.apk`` | ``e2ac79fe29df67e3c5936b4c92fc7483b6514403e653801899ebb4bc7f878fa6`` |
-| ``makimono-v1.5.0-x86-release.apk`` | ``0136d18184b1080e791e192f8cce474740fdd7f82fa3dddcbe4e10a4be0aa247`` |
-| ``makimono-v1.5.0-x86_64-release.apk`` | ``0135117a71cff345f87ab1496a623b927465c53c8503c219ae7651afd4cb60c6`` |
+- **Início vs Animes:** Separação arquitetural entre a tela de Início (Hub com Hero e prateleiras de Continuar Assistindo e Fila) e o Catálogo completo de Animes.
+- **Busca Não-Destrutiva:** Preservação automática de contexto anterior ao pesquisar títulos.
+- **Botão Pular na Vinheta:** Botão explícito "PULAR" glass com fade-in na splash cinematográfica para smartphones e Android TV.
+- **MyAnimeList Integrado:** Ícone oficial vetorial estilizado com alternância por clique em toda a linha de sincronização.
+- **Diálogos Glass Padronizados:** 100% dos diálogos com overlay translúcido escuro de alto contraste.
+- **Player & Controles:** Alvos de toque de 48dp mínimos, exclusão de sobreposição entre o card de próximo episódio e o botão de pular encerramento, e transições de tema suaves.
+- **Recuperação de Token em Stream:** Recuperação automática de erro 401 durante streaming longo de vídeos do Drive.
 "@
 
     $bodyObj = @{
         tag_name         = $tag
         target_commitish = "main"
-        name             = "Makimono v1.5.0 - Complete UX/UI Overhaul"
+        name             = "Makimono $tag — UI/UX Overhaul & Stability Release"
         body             = $releaseBody
         draft            = $false
         prerelease       = $false
@@ -129,8 +134,7 @@ Revisão integral de experiência de usuário, interface e navegabilidade:
     Write-Host "Release criada com sucesso! ID: $($release.id)" -ForegroundColor Green
 }
 
-# 3. Upload dos arquivos (APKs e .sha256)
-$apkDir = "app/build/outputs/apk/release"
+# 4. Upload dos arquivos (APKs e .sha256)
 $files = Get-ChildItem -Path $apkDir | Where-Object { $_.Name.EndsWith(".apk") -or $_.Name.EndsWith(".sha256") }
 
 $uploadUrlBase = ($release.upload_url -replace '\{\?name,label\}', '')
@@ -169,6 +173,6 @@ foreach ($file in $files) {
 }
 
 Write-Host "`n=======================================================" -ForegroundColor Green
-Write-Host "Release v1.5.0 publicada com sucesso no GitHub!" -ForegroundColor Green
+Write-Host "Release $tag publicada com sucesso no GitHub!" -ForegroundColor Green
 Write-Host "URL: $($release.html_url)" -ForegroundColor Cyan
 Write-Host "=======================================================" -ForegroundColor Green
