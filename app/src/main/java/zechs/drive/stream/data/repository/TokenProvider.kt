@@ -68,7 +68,7 @@ class DefaultTokenProvider @Inject constructor(
             val response = driveRepository.get().fetchAccessToken(client, forceRefresh = false)
             if (response is Resource.Success && response.data != null) {
                 val token = response.data.accessToken
-                val expiry = response.data.expiresIn
+                val expiry = (System.currentTimeMillis() / 1000) + response.data.expiresIn
                 cachedTokenRef.set(CachedToken(token, expiry))
                 token
             } else {
@@ -90,7 +90,7 @@ class DefaultTokenProvider @Inject constructor(
             val response = driveRepository.get().fetchAccessToken(client, forceRefresh = true)
             if (response is Resource.Success && response.data != null) {
                 val token = response.data.accessToken
-                val expiry = response.data.expiresIn
+                val expiry = (System.currentTimeMillis() / 1000) + response.data.expiresIn
                 cachedTokenRef.set(CachedToken(token, expiry))
                 token
             } else {
