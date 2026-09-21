@@ -1,0 +1,35 @@
+{
+  "focusedJvm": [
+    {
+      "name": "zechs.drive.stream.BackupSerializerTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0"
+    },
+    {
+      "name": "zechs.drive.stream.ProfileImageUrlTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0"
+    },
+    {
+      "name": "zechs.drive.stream.WatchListProfileIsolationTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0"
+    }
+  ],
+  "fullSuite": {
+    "tests": 133,
+    "passed": 129,
+    "failures": "4 in unchanged TokenProviderTest"
+  },
+  "instrumentation": {
+    "tests": 3,
+    "passed": 3,
+    "suites": [
+      "ProfileMigrationTest (2)",
+      "PlayerOsdLayoutTest (1, widths 360/640/960dp)"
+    ]
+  }
+}

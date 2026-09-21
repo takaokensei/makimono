@@ -208,14 +208,8 @@ class HomeFragment : BaseFragment() {
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         if (!isLandscape) return 2
 
-        val density = resources.displayMetrics.density
-        val tenFoot = zechs.drive.stream.utils.DeviceUi.isTenFootExperience(requireContext())
-        val railWidth = if (tenFoot) (240f * density).toInt() else 0
-        val safeMargins = ((if (tenFoot) 64f else 32f) * density).toInt()
-        val minimumCardWidth = ((if (tenFoot) 220f else 160f) * density).toInt()
-        val usableWidth = (resources.displayMetrics.widthPixels - railWidth - safeMargins)
-            .coerceAtLeast(minimumCardWidth * 2)
-        return (usableWidth / minimumCardWidth).coerceIn(if (tenFoot) 3 else 2, if (tenFoot) 6 else 4)
+        val contentWidth = resources.configuration.screenWidthDp - 128 - 44
+        return (contentWidth / 108).coerceIn(3, 8)
     }
 
     private fun setupTenFootFocusChain() {
@@ -524,6 +518,7 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun isCollapsibleRail(): Boolean {
+        if (binding.sidebarDimOverlay == null) return false
         if (zechs.drive.stream.utils.DeviceUi.isTenFootExperience(requireContext())) {
             return false
         }
@@ -545,11 +540,15 @@ class HomeFragment : BaseFragment() {
         binding.tvShelfViewQueue?.visibility = if (hasQueue) View.VISIBLE else View.GONE
         binding.tvQueueShelfLabel?.visibility = if (hasQueue) View.VISIBLE else View.GONE
         binding.rvWatchQueueShelf?.visibility = if (hasQueue) View.VISIBLE else View.GONE
-        binding.tvShelfLabel?.text = "CONTINUAR ASSISTINDO"
+        binding.tvShelfLabel?.text = "Continuar assistindo"
     }
 
     override fun onResume() {
         super.onResume()
+        findNavController().currentBackStackEntry?.savedStateHandle?.remove<String>("homeTab")?.let { tab ->
+            selectTab(tab)
+            viewModel.filterStarred(tab == "Favoritos")
+        }
         viewModel.getRecentWatches()
         viewModel.getWatchHistory()
         viewModel.getLastWatched()
@@ -745,7 +744,10 @@ class HomeFragment : BaseFragment() {
                 profileManager.activeProfileFlow.collect { profile ->
                     binding.tvUserName?.text = profile.name
                     val avatarRes = profileManager.getAvatarDrawableRes(profile.avatarResName)
-                    binding.ivUserAvatar?.setImageResource(avatarRes)
+                    binding.ivUserAvatar?.let { avatar ->
+                        com.bumptech.glide.Glide.with(this@HomeFragment).load(profile.avatarUrl)
+                            .placeholder(avatarRes).error(avatarRes).into(avatar)
+                    }
                 }
             }
         }
@@ -756,6 +758,8 @@ class HomeFragment : BaseFragment() {
 
     private fun selectTab(tab: String) {
         currentTab = tab
+        binding.root.findViewById<View>(R.id.tvHomeCatalogTitle)?.visibility =
+            if (tab == "Início") View.VISIBLE else View.GONE
         val hasRecent = viewModel.recentWatches.value.isNotEmpty()
 
         binding.apply {
@@ -764,12 +768,12 @@ class HomeFragment : BaseFragment() {
                     val hasFeatured = viewModel.featuredAnime.value != null
                     featuredHeroContainer?.visibility = if (hasFeatured) View.VISIBLE else View.GONE
                     refreshInicioShelfUi()
-                    rvAnimeLibrary.visibility = View.GONE
+                    rvAnimeLibrary.visibility = View.VISIBLE
                     layoutEmpty.visibility = View.GONE
                     containerViewToggle?.visibility = View.GONE
                     containerItemCount.visibility = View.GONE
                     val hasQueue = viewModel.watchQueue.value.isNotEmpty()
-                    layoutHomeEmpty?.visibility = if (!hasRecent && !hasFeatured && !hasQueue && !viewModel.isLoadingAnime.value) View.VISIBLE else View.GONE
+                    layoutHomeEmpty?.visibility = if (!hasRecent && !hasFeatured && !hasQueue && viewModel.animeLibrary.value.isEmpty() && !viewModel.isLoadingAnime.value) View.VISIBLE else View.GONE
                 }
                 "Animes" -> {
                     featuredHeroContainer?.visibility = View.GONE
@@ -897,12 +901,12 @@ class HomeFragment : BaseFragment() {
                             val isEmpty = animes.isEmpty() && !viewModel.isLoadingAnime.value
                             binding.layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
                         } else if (currentTab == "Início") {
-                            binding.rvAnimeLibrary.visibility = View.GONE
+                            binding.rvAnimeLibrary.visibility = View.VISIBLE
                             binding.containerItemCount.visibility = View.GONE
                             val hasRecent = viewModel.recentWatches.value.isNotEmpty()
                             val hasFeatured = viewModel.featuredAnime.value != null
                             val hasQueue = viewModel.watchQueue.value.isNotEmpty()
-                            binding.layoutHomeEmpty?.visibility = if (!hasRecent && !hasFeatured && !hasQueue && !viewModel.isLoadingAnime.value) View.VISIBLE else View.GONE
+                            binding.layoutHomeEmpty?.visibility = if (!hasRecent && !hasFeatured && !hasQueue && viewModel.animeLibrary.value.isEmpty() && !viewModel.isLoadingAnime.value) View.VISIBLE else View.GONE
                         }
                     }
                 }
@@ -992,7 +996,7 @@ class HomeFragment : BaseFragment() {
                         val hasFeatured = viewModel.featuredAnime.value != null
                         val hasQueue = viewModel.watchQueue.value.isNotEmpty()
                         refreshInicioShelfUi()
-                        binding.layoutHomeEmpty?.visibility = if (!hasRecent && !hasFeatured && !hasQueue && !viewModel.isLoadingAnime.value) View.VISIBLE else View.GONE
+                        binding.layoutHomeEmpty?.visibility = if (!hasRecent && !hasFeatured && !hasQueue && viewModel.animeLibrary.value.isEmpty() && !viewModel.isLoadingAnime.value) View.VISIBLE else View.GONE
                         binding.containerItemCount.visibility = View.GONE
                     }
                 }

@@ -421,6 +421,8 @@ class PlayerActivity : AppCompatActivity() {
             setOrientation(this@PlayerActivity, orientation)
         }
 
+        PlayerQuickOptions.bind(playerView)
+
         gestureHelper = PlayerGestureHelper(
             activity = this,
             hudBinding = binding.gestureHud,

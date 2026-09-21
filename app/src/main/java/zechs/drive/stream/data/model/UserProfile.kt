@@ -12,5 +12,9 @@ data class UserProfile(
     val isDefault: Boolean = false,
     val libraryRootId: String? = null,
     val libraryRootName: String? = null,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val avatarUrl: String? = null,
+    val backgroundUrl: String? = null,
+    val isAdmin: Boolean = false,
+    val isKids: Boolean = false
 )

@@ -317,6 +317,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             exoFfwd.setOnClickListener { skipForward() }
             exoRew.setOnClickListener { rewindBackward() }
             btnSkipIntro.setOnClickListener { performSkipIntroOrCredits() }
+            skipIntroRow.setOnClickListener { performSkipIntroOrCredits() }
             btnSkipIntroBack.setOnClickListener { skipRelative(-90) }
             btnAudio.setOnClickListener { pickAudio() }
             btnSubtitle.setOnClickListener { pickSub() }
@@ -333,6 +334,17 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                 Log.d(TAG, "orientation=${orientation}")
                 setOrientation(this@MPVActivity, orientation)
             }
+
+            btnInfo.setOnClickListener {
+                val properties = listOf("video-codec" to "Vídeo", "video-params/w" to "Largura",
+                    "video-params/h" to "Altura", "container-fps" to "FPS", "audio-codec" to "Áudio",
+                    "audio-params/channel-count" to "Canais", "audio-params/samplerate" to "Hz",
+                    "demuxer-cache-duration" to "Buffer (s)")
+                zechs.drive.stream.ui.player.PlayerGlassMenuDialog(this@MPVActivity, "Informações técnicas",
+                    properties.map { (key, label) -> zechs.drive.stream.ui.player.GlassMenuItem(
+                        key, label, MPVLib.getPropertyString(key) ?: "Indisponível") }) {}.show()
+            }
+            zechs.drive.stream.ui.player.PlayerQuickOptions.bind(root)
 
             btnLock.setOnClickListener {
                 controlsLocked = true

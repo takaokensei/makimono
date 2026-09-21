@@ -230,7 +230,7 @@ sealed class FilesViewHolder(
                 // Dynamically set aspect ratio: 16:9 for video episodes, 2:3 for anime series poster cards
                 val params = framePosterContainer.layoutParams as? androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
                 if (params != null) {
-                    val targetRatio = if (isVideo && !hasPoster) "H,16:9" else "H,2:3"
+                    val targetRatio = if (isVideo) "H,16:9" else "H,2:3"
                     if (params.dimensionRatio != targetRatio) {
                         params.dimensionRatio = targetRatio
                         framePosterContainer.layoutParams = params

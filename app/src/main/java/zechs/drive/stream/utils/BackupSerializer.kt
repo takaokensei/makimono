@@ -80,6 +80,7 @@ class BackupSerializer @Inject constructor(
     // -------------------------------------------------------------------------
 
     suspend fun exportBackupJson(): String {
+        profileManager.awaitReady()
         val profiles = profileManager.getProfiles()
         val profileBackups = mutableListOf<UserProfileBackup>()
 
@@ -130,6 +131,8 @@ class BackupSerializer @Inject constructor(
                     id = p.id,
                     name = p.name,
                     avatarResName = p.avatarResName,
+                    avatarUrl = p.avatarUrl, backgroundUrl = p.backgroundUrl,
+                    isAdmin = p.isAdmin, isKids = p.isKids,
                     isDefault = p.isDefault,
                     libraryRootId = p.libraryRootId,
                     libraryRootName = p.libraryRootName,
@@ -164,6 +167,7 @@ class BackupSerializer @Inject constructor(
     // -------------------------------------------------------------------------
 
     suspend fun importBackupJson(jsonString: String, mode: ImportMode = ImportMode.MERGE): ImportResult {
+        profileManager.awaitReady()
         if (jsonString.length > MAX_BACKUP_SIZE_BYTES) {
             return ImportResult(isSuccess = false, errorMessage = "Tamanho do arquivo excede o limite máximo permitido (5MB)")
         }
@@ -197,6 +201,8 @@ class BackupSerializer @Inject constructor(
                 id = pb.id,
                 name = pb.name,
                 avatarResName = pb.avatarResName,
+                avatarUrl = pb.avatarUrl, backgroundUrl = pb.backgroundUrl,
+                isAdmin = pb.isAdmin, isKids = pb.isKids,
                 isDefault = pb.isDefault,
                 libraryRootId = pb.libraryRootId,
                 libraryRootName = pb.libraryRootName
@@ -316,7 +322,11 @@ data class UserProfileBackup(
     val watchList: List<WatchListItemBackup> = emptyList(),
     val favorites: List<FavoriteItemBackup> = emptyList(),
     val watchQueue: List<WatchQueueItemBackup> = emptyList(),
-    val followedFolders: List<FollowedFolderBackup> = emptyList()
+    val followedFolders: List<FollowedFolderBackup> = emptyList(),
+    val avatarUrl: String? = null,
+    val backgroundUrl: String? = null,
+    val isAdmin: Boolean = false,
+    val isKids: Boolean = false
 )
 
 @Keep

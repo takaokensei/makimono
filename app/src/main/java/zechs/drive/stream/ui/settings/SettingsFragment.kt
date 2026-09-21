@@ -192,8 +192,10 @@ class SettingsFragment : BaseFragment() {
                 .setView(input)
                 .setPositiveButton("Salvar") { _, _ ->
                     val name = input.text?.toString()?.trim().orEmpty()
-                    profileManager.setLibraryRoot(null, name.ifBlank { null })
-                    refreshValue()
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        profileManager.setLibraryRoot(null, name.ifBlank { null })
+                        refreshValue()
+                    }
                 }
                 .setNegativeButton("Cancelar", null)
                 .show()

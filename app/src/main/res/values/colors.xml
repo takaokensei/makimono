@@ -52,18 +52,14 @@
     <color name="mocha_warning">#FAB387</color>
     <color name="mocha_danger">#F38BA8</color>
 
-    <!-- Theme 5: Kodi Estuary - exact values from estuary_colors_defaults.xml
-         (docs/kodi_reference/estuary_colors_defaults.xml), not approximations:
-         background=#FF000000, primary_background=#FF0E597E,
-         dialog_tint=#FF1A2123, button_focus=#FF12A0C7. See
-         KODI_ESTUARY_DESIGN_ANALYSIS.md for the full source mapping table. -->
-    <color name="estuary_bg_base">#000000</color>
-    <color name="estuary_bg_surface">#1A2123</color>
-    <color name="estuary_bg_glass">#B31A2123</color>
-    <color name="estuary_border_glass">#60FFFFFF</color>
+    <!-- Estuary-derived Makimono dark/cyan palette. -->
+    <color name="estuary_bg_base">#030B14</color>
+    <color name="estuary_bg_surface">#0B1928</color>
+    <color name="estuary_bg_glass">#D90B1928</color>
+    <color name="estuary_border_glass">#604D91AD</color>
     <color name="estuary_text_primary">#F0F0F0</color>
-    <color name="estuary_text_secondary">#A0A0A0</color>
-    <color name="estuary_accent_primary">#12A0C7</color>
+    <color name="estuary_text_secondary">#ACC0D6</color>
+    <color name="estuary_accent_primary">#22D3EE</color>
     <color name="estuary_accent_secondary">#0E597E</color>
     <color name="estuary_success">#4CBB6C</color>
     <color name="estuary_warning">#FFB70F</color>

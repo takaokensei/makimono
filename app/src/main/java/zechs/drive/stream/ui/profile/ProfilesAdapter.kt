@@ -19,7 +19,8 @@ sealed class ProfileUiModel {
 class ProfilesAdapter(
     private val onProfileSelected: (UserProfile) -> Unit,
     private val onAddProfileClicked: () -> Unit,
-    private val onEditProfileClicked: (UserProfile) -> Unit
+    private val onEditProfileClicked: (UserProfile) -> Unit,
+    private val onProfileFocused: (UserProfile) -> Unit = {}
 ) : ListAdapter<ProfileUiModel, ProfilesAdapter.ProfileViewHolder>(DiffCallback) {
 
     init {
@@ -61,13 +62,15 @@ class ProfilesAdapter(
 
         init {
             binding.cardProfileRoot.setOnFocusChangeListener { view, hasFocus ->
-                val scale = if (hasFocus) 1.08f else 1.0f
+                val scale = if (hasFocus) 1.035f else 1.0f
                 view.animate()
                     .scaleX(scale)
                     .scaleY(scale)
                     .setDuration(180L)
                     .start()
-                binding.avatarContainer.isSelected = hasFocus
+                binding.cardProfileRoot.isSelected = hasFocus
+                if (hasFocus) (currentList.getOrNull(bindingAdapterPosition) as? ProfileUiModel.ProfileItem)
+                    ?.profile?.let(onProfileFocused)
             }
         }
 
@@ -82,17 +85,24 @@ class ProfilesAdapter(
                         "avatar_caua" -> R.drawable.avatar_caua
                         else -> R.drawable.avatar_caua
                     }
-                    binding.ivProfileAvatar.setImageResource(avatarRes)
+                    com.bumptech.glide.Glide.with(binding.ivProfileAvatar)
+                        .load(profile.avatarUrl).placeholder(avatarRes).error(avatarRes)
+                        .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.AUTOMATIC)
+                        .into(binding.ivProfileAvatar)
+                    binding.tvProfileRole.text = listOfNotNull(
+                        "Admin".takeIf { profile.isAdmin }, "Kids".takeIf { profile.isKids }).joinToString(" · ")
+                    binding.tvProfileRole.isVisible = profile.isAdmin || profile.isKids
                     binding.ivProfileAvatar.isVisible = true
                     binding.ivAddIcon.isVisible = false
 
-                    binding.avatarContainer.background = ContextCompat.getDrawable(
+                    binding.cardProfileRoot.background = ContextCompat.getDrawable(
                         itemView.context,
-                        R.drawable.item_profile_avatar_ring
+                        R.drawable.bg_profile_surface
                     )
 
                     // Tick indicator
-                    binding.badgeStatusTick.isVisible = item.isActive && !isManageMode
+                    binding.badgeStatusTick.isVisible = false
+                    binding.cardProfileRoot.contentDescription = "${profile.name}${if (item.isActive) ", perfil ativo" else ""}"
 
                     // Manage mode edit icon
                     binding.ivEditBadge.isVisible = isManageMode
@@ -106,6 +116,8 @@ class ProfilesAdapter(
                     }
                 }
                 is ProfileUiModel.AddProfileItem -> {
+                    binding.tvProfileRole.isVisible = false
+                    com.bumptech.glide.Glide.with(binding.ivProfileAvatar).clear(binding.ivProfileAvatar)
                     binding.tvProfileName.text = "Adicionar perfil"
                     binding.ivProfileAvatar.setImageDrawable(null)
                     binding.ivProfileAvatar.isVisible = false
@@ -113,9 +125,9 @@ class ProfilesAdapter(
                     binding.badgeStatusTick.isVisible = false
                     binding.ivEditBadge.isVisible = false
 
-                    binding.avatarContainer.background = ContextCompat.getDrawable(
+                    binding.cardProfileRoot.background = ContextCompat.getDrawable(
                         itemView.context,
-                        R.drawable.item_profile_add_ring
+                        R.drawable.bg_profile_surface
                     )
 
                     binding.cardProfileRoot.setOnClickListener {

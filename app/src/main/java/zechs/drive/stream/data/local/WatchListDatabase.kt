@@ -14,12 +14,15 @@ import zechs.drive.stream.data.model.WatchQueueItem
         FavoriteFolder::class,
         WatchQueueItem::class,
         CatalogEntry::class,
-        FollowedFolder::class
+        FollowedFolder::class,
+        ProfileEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 abstract class WatchListDatabase : RoomDatabase() {
+
+    abstract fun getProfileDao(): ProfileDao
 
     abstract fun getWatchListDao(): WatchListDao
     abstract fun getFolderMetadataDao(): FolderMetadataDao
@@ -30,6 +33,16 @@ abstract class WatchListDatabase : RoomDatabase() {
     abstract fun getProfileCleanupDao(): ProfileCleanupDao
 
     companion object {
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""CREATE TABLE IF NOT EXISTS `profiles` (
+                    `id` TEXT NOT NULL, `nome` TEXT NOT NULL, `avatarUrl` TEXT,
+                    `backgroundUrl` TEXT, `isAdmin` INTEGER NOT NULL, `isKids` INTEGER NOT NULL,
+                    `avatarResName` TEXT NOT NULL, `isDefault` INTEGER NOT NULL,
+                    `libraryRootId` TEXT, `libraryRootName` TEXT, `createdAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`id`))""")
+            }
+        }
         /**
          * v1 -> v2: added WatchList.thumbnailLink
          */

@@ -7,6 +7,11 @@ import com.google.android.material.transition.MaterialSharedAxis
 
 abstract class BaseFragment : Fragment() {
 
+    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        zechs.drive.stream.utils.TvFocusRing.install(view)
+    }
+
     /**
      * Base fragment class currently only for
      * transition animation

@@ -116,6 +116,17 @@ class FilesFragment : BaseFragment() {
         }
 
         setupRecyclerView()
+        fun returnHome(tab: String) {
+            val nav = findNavController()
+            nav.getBackStackEntry(R.id.homeFragment).savedStateHandle["homeTab"] = tab
+            nav.popBackStack(R.id.homeFragment, false)
+        }
+        binding.root.findViewById<View>(R.id.filesHome)?.setOnClickListener { returnHome("Início") }
+        binding.root.findViewById<View>(R.id.filesBrand)?.setOnClickListener { returnHome("Início") }
+        binding.root.findViewById<View>(R.id.filesCatalog)?.setOnClickListener { returnHome("Animes") }
+        binding.root.findViewById<View>(R.id.filesFavorites)?.setOnClickListener { returnHome("Favoritos") }
+        binding.root.findViewById<View>(R.id.filesFolders)?.setOnClickListener { binding.etSearch.requestFocus() }
+        binding.root.findViewById<View>(R.id.filesSettings)?.setOnClickListener { findNavController().navigate(R.id.settingsFragment) }
         setupSearchAndLayoutToggle()
         setupFilesObserver()
         mpvObserver()
@@ -268,7 +279,7 @@ class FilesFragment : BaseFragment() {
 
     private fun setupSearchAndLayoutToggle() {
         val prefs = requireContext().getSharedPreferences("FILES_PREFS", android.content.Context.MODE_PRIVATE)
-        isGridMode = prefs.getBoolean("IS_GRID_MODE", false)
+        isGridMode = prefs.getBoolean("IS_GRID_MODE", resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE)
         updateLayoutMode()
 
         binding.btnToggleGrid.setOnClickListener {
@@ -300,7 +311,7 @@ class FilesFragment : BaseFragment() {
         val spanCount = if (hasVideoFiles) {
             when {
                 screenWidthDp >= 1200 -> 4
-                screenWidthDp >= 840 -> 3
+                screenWidthDp >= 840 -> 4
                 screenWidthDp >= 600 -> 3
                 screenWidthDp >= 400 -> 2
                 else -> 1

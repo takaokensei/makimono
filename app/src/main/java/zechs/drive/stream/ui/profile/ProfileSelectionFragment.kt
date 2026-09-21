@@ -32,6 +32,10 @@ class ProfileSelectionFragment : BaseFragment() {
     @Inject
     lateinit var profileManager: ProfileManager
 
+    @Inject lateinit var posterResolver: zechs.drive.stream.data.remote.ProfileArtCatalog
+
+    private var focusedProfileId: String? = null
+
     private lateinit var profilesAdapter: ProfilesAdapter
 
     override fun onCreateView(
@@ -62,11 +66,18 @@ class ProfileSelectionFragment : BaseFragment() {
             },
             onEditProfileClicked = { profile ->
                 showEditProfileDialog(profile)
+            },
+            onProfileFocused = { profile ->
+                focusedProfileId = profile.id
+                com.bumptech.glide.Glide.with(this).load(profile.backgroundUrl)
+                    .placeholder(R.drawable.bg_profile_fantasy).error(R.drawable.bg_profile_fantasy)
+                    .into(binding.ivFantasyBg)
             }
         )
 
         val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         binding.rvProfiles.apply {
+            if (isLandscape) layoutParams = layoutParams.apply { height = ViewGroup.LayoutParams.WRAP_CONTENT }
             adapter = profilesAdapter
             layoutManager = if (isLandscape) {
                 LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
@@ -90,7 +101,18 @@ class ProfileSelectionFragment : BaseFragment() {
     private fun observeProfiles() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                try { profileManager.awaitReady() }
+                catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                catch (_: Exception) {
+                    binding.tvProfilesTitle.text = "Não foi possível abrir os perfis. Reinicie o app para tentar novamente."
+                    binding.btnManageProfiles.isEnabled = false
+                    return@repeatOnLifecycle
+                }
                 profileManager.profilesFlow.collect { profiles ->
+                    com.bumptech.glide.Glide.with(this@ProfileSelectionFragment)
+                        .load(profileManager.getActiveProfile().backgroundUrl)
+                        .placeholder(R.drawable.bg_profile_fantasy).error(R.drawable.bg_profile_fantasy)
+                        .into(binding.ivFantasyBg)
                     val activeId = profileManager.getActiveProfile().id
                     val items = mutableListOf<ProfileUiModel>()
                     profiles.forEach { profile ->
@@ -98,9 +120,11 @@ class ProfileSelectionFragment : BaseFragment() {
                     }
                     items.add(ProfileUiModel.AddProfileItem)
                     profilesAdapter.submitList(items) {
-                        binding.rvProfiles.doOnPreDraw {
+                        val selectionBinding = _binding ?: return@submitList
+                        selectionBinding.rvProfiles.doOnPreDraw {
+                            if (_binding == null) return@doOnPreDraw
                             val targetPos = items.indexOfFirst {
-                                it is ProfileUiModel.ProfileItem && it.isActive
+                                it is ProfileUiModel.ProfileItem && it.profile.id == (focusedProfileId ?: activeId)
                             }.takeIf { it != -1 } ?: 0
                             val child = binding.rvProfiles.layoutManager?.findViewByPosition(targetPos)
                             child?.requestFocus()
@@ -112,37 +136,16 @@ class ProfileSelectionFragment : BaseFragment() {
     }
 
     private fun showAddProfileDialog() {
-        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_add_profile, null)
-        val etName = dialogView.findViewById<EditText>(R.id.etNewProfileName)
-        var selectedAvatar = "avatar_caua"
-
-        val rgAvatar = dialogView.findViewById<RadioGroup>(R.id.rgAvatarChoice)
-        rgAvatar?.setOnCheckedChangeListener { _, checkedId ->
-            selectedAvatar = if (checkedId == R.id.rbAvatarAnime) "avatar_anime" else "avatar_caua"
-        }
-
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Novo Perfil")
-            .setView(dialogView)
-            .setPositiveButton("Criar") { _, _ ->
-                val name = etName?.text?.toString()?.trim()
-                if (!name.isNullOrBlank()) {
-                    val created = profileManager.addProfile(name, selectedAvatar)
-                    profileManager.setActiveProfile(created.id)
-                    findNavController().navigateSafe(R.id.action_profileSelectionFragment_to_homeFragment)
-                }
-            }
-            .setNegativeButton("Cancelar", null)
-            .show()
+        ProfileEditorDialog(this, profileManager, posterResolver).show(null)
     }
 
     private fun showEditProfileDialog(profile: UserProfile) {
-        val options = arrayOf("Renomear", "Excluir Perfil")
+        val options = arrayOf("Editar nome, imagens e status", "Excluir Perfil")
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(profile.name)
             .setItems(options) { _, which ->
                 when (which) {
-                    0 -> showRenameDialog(profile)
+                    0 -> ProfileEditorDialog(this, profileManager, posterResolver).show(profile)
                     1 -> {
                         if (profileManager.getProfiles().size <= 1) {
                             android.widget.Toast.makeText(
@@ -155,33 +158,21 @@ class ProfileSelectionFragment : BaseFragment() {
                                 .setTitle("Excluir " + profile.name + "?")
                                 .setMessage("O perfil e suas preferências locais serão removidos.")
                                 .setPositiveButton("Excluir") { _, _ ->
-                                    profileManager.deleteProfile(profile.id)
+                                    viewLifecycleOwner.lifecycleScope.launch {
+                                        try { profileManager.deleteProfile(profile.id) }
+                                        catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                                        catch (_: Exception) {
+                                            android.widget.Toast.makeText(context, "Falha ao excluir perfil", android.widget.Toast.LENGTH_LONG).show()
+                                        }
+                                    }
                                 }
                                 .setNegativeButton("Cancelar", null)
-                                .show()
+                                .show().also { dialog -> dialog.window?.decorView?.let(zechs.drive.stream.utils.TvFocusRing::install) }
                         }
                     }
                 }
             }
-            .show()
-    }
-
-    private fun showRenameDialog(profile: UserProfile) {
-        val input = EditText(requireContext()).apply {
-            setText(profile.name)
-            setSelection(profile.name.length)
-        }
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Renomear Perfil")
-            .setView(input)
-            .setPositiveButton("Salvar") { _, _ ->
-                val newName = input.text.toString().trim()
-                if (newName.isNotBlank()) {
-                    profileManager.updateProfile(profile.id, newName, profile.avatarResName)
-                }
-            }
-            .setNegativeButton("Cancelar", null)
-            .show()
+            .show().also { dialog -> dialog.window?.decorView?.let(zechs.drive.stream.utils.TvFocusRing::install) }
     }
 
     override fun onDestroyView() {

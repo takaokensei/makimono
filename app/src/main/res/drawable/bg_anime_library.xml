@@ -1,16 +1,2 @@
-<?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item>
-        <bitmap
-            android:gravity="fill"
-            android:src="@drawable/kodi_primary_bg" />
-    </item>
-    <item>
-        <shape android:shape="rectangle">
-            <gradient
-                android:angle="0"
-                android:endColor="#E6000000"
-                android:startColor="#26000000" />
-        </shape>
-    </item>
-</layer-list>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"><gradient
+android:angle="0" android:startColor="#030B14" android:endColor="#091A2C" /></shape>

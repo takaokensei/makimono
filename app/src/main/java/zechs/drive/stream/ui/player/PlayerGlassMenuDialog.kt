@@ -43,6 +43,9 @@ class PlayerGlassMenuDialog(
     private var dialog: AlertDialog? = null
     private var binding: DialogPlayerGlassMenuBinding? = null
     private var adapter: GlassMenuAdapter? = null
+    private var onDismiss: (() -> Unit)? = null
+
+    fun setOnDismiss(action: () -> Unit) = apply { onDismiss = action }
 
     fun setActionButton(text: String, onClick: (PlayerGlassMenuDialog) -> Unit) = apply {
         this.actionButtonText = text
@@ -60,6 +63,7 @@ class PlayerGlassMenuDialog(
     }
 
     fun show(): PlayerGlassMenuDialog {
+        val previousFocus = (context as? android.app.Activity)?.currentFocus
         val inflater = LayoutInflater.from(context)
         val dialogBinding = DialogPlayerGlassMenuBinding.inflate(inflater)
         binding = dialogBinding
@@ -133,7 +137,7 @@ class PlayerGlassMenuDialog(
             dialogBinding.rvDialogItems.scrollToPosition(selectedIndex)
         }
 
-        dialog = AlertDialog.Builder(context)
+        dialog = AlertDialog.Builder(context, R.style.ThemeOverlay_Makimono_Glass)
             .setView(dialogBinding.root)
             .create()
 
@@ -143,6 +147,18 @@ class PlayerGlassMenuDialog(
         }
 
         dialog?.show()
+        zechs.drive.stream.utils.TvFocusRing.install(dialogBinding.root)
+        dialog?.setOnDismissListener {
+            onDismiss?.invoke() ?: previousFocus?.takeIf { it.isAttachedToWindow && it.isShown }?.requestFocus()
+        }
+        dialog?.window?.apply {
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            val width = minOf((520 * context.resources.displayMetrics.density).toInt(),
+                (context.resources.displayMetrics.widthPixels * 0.92f).toInt())
+            setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
+            dialogBinding.root.setCardBackgroundColor(Color.TRANSPARENT)
+            zechs.drive.stream.utils.FrostedWindow.apply(this)
+        }
         dialogBinding.rvDialogItems.post {
             val targetPos = if (selectedIndex >= 0) selectedIndex else 0
             val targetHolder = dialogBinding.rvDialogItems.findViewHolderForAdapterPosition(targetPos)

@@ -34,6 +34,7 @@ class BackupSerializerTest {
 
     @Before
     fun setUp() {
+        coJustRun { profileManager.awaitReady() }
         backupSerializer = BackupSerializer(
             profileManager,
             watchListRepository,
@@ -155,7 +156,7 @@ class BackupSerializerTest {
         coJustRun { followedFolderRepository.follow(any(), any(), any()) }
         coJustRun { followedFolderRepository.updateLastKnownCount(any(), any(), any()) }
         every { profileManager.getProfiles() } returns emptyList()
-        justRun { profileManager.restoreProfiles(any()) }
+        coJustRun { profileManager.restoreProfiles(any()) }
 
         val result = backupSerializer.importBackupJson(validJson)
 
@@ -178,7 +179,7 @@ class BackupSerializerTest {
         coVerify(exactly = 1) {
             followedFolderRepository.follow("folder_dn", "Death Note", "caua")
         }
-        verify(exactly = 1) {
+        coVerify(exactly = 1) {
             profileManager.restoreProfiles(match { it.size == 1 && it.first().id == "caua" })
         }
     }
