@@ -1,12 +1,9 @@
 package zechs.drive.stream.ui.profile
 
-import android.content.res.ColorStateList
-import android.graphics.Color
 import android.view.LayoutInflater
-import android.widget.ImageButton
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DecodeFormat
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
@@ -19,7 +16,10 @@ import zechs.drive.stream.data.model.UserProfile
 import zechs.drive.stream.data.remote.ProfileArt
 import zechs.drive.stream.data.remote.ProfileArtCatalog
 import zechs.drive.stream.databinding.DialogProfileEditorBinding
+import zechs.drive.stream.databinding.ItemProfileCatalogCardBinding
+import zechs.drive.stream.utils.GlideApp
 import zechs.drive.stream.utils.ProfileManager
+import zechs.drive.stream.utils.TvFocusRing
 import java.net.URI
 import java.util.UUID
 
@@ -41,8 +41,8 @@ class ProfileEditorDialog(
         var search: Job? = null
         var currentTab = CatalogTab.AVATARS
 
-        val dialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_Makimono_Glass)
-            .setBackground(androidx.core.content.ContextCompat.getDrawable(context, R.drawable.bg_player_bottom_panel))
+        val dialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
+            .setBackground(ContextCompat.getDrawable(context, R.drawable.bg_player_bottom_panel))
             .setTitle(if (profile == null) "Novo perfil" else "Editar perfil")
             .setView(b.root)
             .setPositiveButton("Salvar", null)
@@ -62,64 +62,67 @@ class ProfileEditorDialog(
         fun populateArtGrid(items: List<ProfileArt>, isWallpaperView: Boolean) {
             b.catalogImages.removeAllViews()
             val density = context.resources.displayMetrics.density
-            val itemHeight = if (isWallpaperView) (70 * density).toInt() else (90 * density).toInt()
+            val itemHeight = if (isWallpaperView) (76 * density).toInt() else (96 * density).toInt()
             val colCount = if (isWallpaperView) 2 else 4
             b.catalogImages.columnCount = colCount
 
-            // Compressed & cached Glide options
             val glideOptions = RequestOptions()
                 .format(DecodeFormat.PREFER_RGB_565)
                 .diskCacheStrategy(DiskCacheStrategy.ALL)
-                .override(if (isWallpaperView) 400 else 180, if (isWallpaperView) 225 else 180)
+                .placeholder(R.drawable.ic_image_placeholder_24)
+                .error(R.drawable.ic_image_placeholder_24)
+                .override(if (isWallpaperView) 480 else 200, if (isWallpaperView) 270 else 200)
                 .centerCrop()
 
+            val inflater = LayoutInflater.from(context)
+
             items.forEach { art ->
-                val label = art.label
-                val url = art.url
-                val button = ImageButton(context).apply {
-                    contentDescription = if (art.isWallpaper) label else "Usar avatar de $label"
+                val cardBinding = ItemProfileCatalogCardBinding.inflate(inflater, b.catalogImages, false)
+                cardBinding.frameArtContainer.layoutParams.height = itemHeight
+                cardBinding.cardArtRoot.apply {
+                    contentDescription = if (art.isWallpaper) art.label else "Avatar de ${art.label}"
                     isFocusable = true
-                    setBackgroundResource(R.drawable.bg_player_action_vertical)
-                    setPadding(4, 4, 4, 4)
-                    scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
+                    isClickable = true
                     layoutParams = android.widget.GridLayout.LayoutParams().apply {
                         width = 0
-                        height = itemHeight
+                        height = android.widget.GridLayout.LayoutParams.WRAP_CONTENT
                         columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f)
-                        setMargins(4, 4, 4, 4)
+                        setMargins((3 * density).toInt(), (3 * density).toInt(), (3 * density).toInt(), (3 * density).toInt())
                     }
                     setOnClickListener {
                         if (art.isWallpaper) {
-                            b.backgroundUrl.setText(url)
-                            b.catalogStatus.text = "Wallpaper selecionado: $label"
+                            b.backgroundUrl.setText(art.url)
+                            b.catalogStatus.text = "Wallpaper: ${art.label}"
                         } else {
-                            b.avatarUrl.setText(url)
-                            b.catalogStatus.text = "Avatar selecionado: $label"
+                            b.avatarUrl.setText(art.url)
+                            b.catalogStatus.text = "Avatar: ${art.label}"
                         }
                     }
                 }
-                b.catalogImages.addView(button)
-                Glide.with(fragment)
-                    .load(url)
+
+                GlideApp.with(fragment)
+                    .load(art.url)
                     .apply(glideOptions)
-                    .error(R.drawable.ic_folder_24)
-                    .into(button)
+                    .into(cardBinding.ivArtImage)
+
+                b.catalogImages.addView(cardBinding.root)
             }
         }
 
         fun switchTab(tab: CatalogTab) {
             currentTab = tab
-            val cyan = Color.parseColor("#22D3EE")
-            val muted = Color.parseColor("#ACC0D6")
-
             if (tab == CatalogTab.AVATARS) {
-                b.btnTabAvatars.setTextColor(cyan)
-                b.btnTabWallpapers.setTextColor(muted)
+                b.btnTabAvatars.setBackgroundResource(R.drawable.glass_pill_accent_bg)
+                b.btnTabAvatars.setTextColor(android.graphics.Color.parseColor("#22D3EE"))
+                b.btnTabWallpapers.setBackgroundResource(R.drawable.glass_pill_button_bg)
+                b.btnTabWallpapers.setTextColor(android.graphics.Color.parseColor("#ACC0D6"))
                 b.catalogStatus.text = "Avatares populares selecionáveis:"
                 populateArtGrid(resolver.getPresetAvatars(), isWallpaperView = false)
             } else {
-                b.btnTabAvatars.setTextColor(muted)
-                b.btnTabWallpapers.setTextColor(cyan)
+                b.btnTabAvatars.setBackgroundResource(R.drawable.glass_pill_button_bg)
+                b.btnTabAvatars.setTextColor(android.graphics.Color.parseColor("#ACC0D6"))
+                b.btnTabWallpapers.setBackgroundResource(R.drawable.glass_pill_accent_bg)
+                b.btnTabWallpapers.setTextColor(android.graphics.Color.parseColor("#22D3EE"))
                 b.catalogStatus.text = "Papéis de parede populares selecionáveis:"
                 populateArtGrid(resolver.getPresetWallpapers(), isWallpaperView = true)
             }
@@ -158,8 +161,7 @@ class ProfileEditorDialog(
         }
 
         dialog.setOnShowListener {
-            zechs.drive.stream.utils.FrostedWindow.apply(dialog.window!!)
-            zechs.drive.stream.utils.TvFocusRing.install(dialog.window!!.decorView)
+            TvFocusRing.install(dialog.window!!.decorView)
             dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val name = b.profileName.text.toString().trim()
                 if (name.isBlank()) {
