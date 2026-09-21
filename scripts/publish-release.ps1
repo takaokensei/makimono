@@ -2,8 +2,9 @@
 # Script para criar a GitHub Release e fazer upload dos APKs e checksums SHA-256
 
 param(
-    [string]$tag = "v1.5.1",
-    [string]$repo = "takaokensei/makimono"
+    [string]$tag = "v1.5.2",
+    [string]$repo = "takaokensei/makimono",
+    [string]$apkDir = "app/build/outputs/apk/debug"
 )
 
 Add-Type -TypeDefinition @"
@@ -68,8 +69,7 @@ $user = Invoke-RestMethod -Uri "https://api.github.com/user" -Headers $headers -
 Write-Host "Autenticado como: $($user.login)" -ForegroundColor Green
 
 # 2. Gerar .sha256 se nao existirem
-$apkDir = "app/build/outputs/apk/release"
-$apks = Get-ChildItem -Path $apkDir | Where-Object { $_.Name.EndsWith(".apk") }
+$apks = Get-ChildItem -Path $apkDir | Where-Object { $_.Name.EndsWith(".apk") -and -not $_.Name.Contains("androidTest") }
 foreach ($apk in $apks) {
     $shaPath = "$($apk.FullName).sha256"
     if (-not (Test-Path $shaPath)) {
@@ -88,24 +88,28 @@ try {
 } catch {
     Write-Host "Criando nova release $tag..." -ForegroundColor Cyan
     $releaseBody = @"
-# ⛩️ Makimono $tag — UI/UX Overhaul & Stability Release
+# ⛩️ Makimono $tag — UI Modernization & Subtitle Engine v4
 
-Esta versão consolida o redesenho integral de UI/UX (Fases P0, P1, P2 e P3), injeção direta de credenciais via BuildConfig e melhorias críticas de reprodução contínua.
+Esta versão traz a modernização visual do Makimono no nível streaming profissional (Netflix/Crunchyroll), com menu flutuante em Frosted Glass no Player, gerenciamento avançado de perfis com Room Database e novo motor de legendas v4 com eliminação total de sobreposições de falas simultâneas.
 
 ### 🌟 Destaques da Versão
-- **Início vs Animes:** Separação arquitetural entre a tela de Início (Hub com Hero e prateleiras de Continuar Assistindo e Fila) e o Catálogo completo de Animes.
-- **Busca Não-Destrutiva:** Preservação automática de contexto anterior ao pesquisar títulos.
-- **Botão Pular na Vinheta:** Botão explícito "PULAR" glass com fade-in na splash cinematográfica para smartphones e Android TV.
-- **MyAnimeList Integrado:** Ícone oficial vetorial estilizado com alternância por clique em toda a linha de sincronização.
-- **Diálogos Glass Padronizados:** 100% dos diálogos com overlay translúcido escuro de alto contraste.
-- **Player & Controles:** Alvos de toque de 48dp mínimos, exclusão de sobreposição entre o card de próximo episódio e o botão de pular encerramento, e transições de tema suaves.
-- **Recuperação de Token em Stream:** Recuperação automática de erro 401 durante streaming longo de vídeos do Drive.
+- **Motor de Legendas v4:** Algoritmo de resolução de sobreposições simultâneas que divide o tempo em intervalos elementares e empilha as falas em quebra de linha única, sem colisões de texto na tela.
+- **Player OSD & Menu Glass:** Hierarquia com *Progressive Disclosure* — transporte central ergonômico com glow ciano neon em foco e menu rápido de configurações em vidro translúcido (Velocidade, Proporção, Capítulos, Info Técnica).
+- **Módulo de Perfis ("Quem está assistindo?"):** Gerenciador de múltiplos perfis com persistência via Room (`ProfileEntity`), catálogo remoto de avatares/wallpapers de animes e editor de perfil com foco D-Pad para Android TV.
+- **Explorador de Arquivos & Breadcrumbs:** Nova organização com subpastas no topo e grid de vídeos com badges de resolução (1080p/4K), formato (`MKV`), áudio (`5.1`) e tamanho.
+- **Identidade Visual Torii:** Novo ícone vetorizado e paleta neon dark consistente em todas as telas e diálogos.
+
+### 📦 APKs Incluídos (Debug Build):
+- `makimono-v1.5.2-arm64-v8a-debug.apk` (TV Box moderna, Fire TV Stick 4K, Smartphones)
+- `makimono-v1.5.2-armeabi-v7a-debug.apk` (TVs e dispositivos 32-bit)
+- `makimono-v1.5.2-x86_64-debug.apk` (Emuladores PC 64-bit)
+- `makimono-v1.5.2-x86-debug.apk` (Emuladores PC 32-bit)
 "@
 
     $bodyObj = @{
         tag_name         = $tag
         target_commitish = "main"
-        name             = "Makimono $tag — UI/UX Overhaul & Stability Release"
+        name             = "Makimono $tag — UI Modernization & Subtitle Engine v4"
         body             = $releaseBody
         draft            = $false
         prerelease       = $false
