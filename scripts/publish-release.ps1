@@ -88,28 +88,28 @@ try {
 } catch {
     Write-Host "Criando nova release $tag..." -ForegroundColor Cyan
     $releaseBody = @"
-# ⛩️ Makimono $tag — UI Modernization & Subtitle Engine v4
+# Makimono $tag - UI Modernization and Subtitle Engine v4
 
-Esta versão traz a modernização visual do Makimono no nível streaming profissional (Netflix/Crunchyroll), com menu flutuante em Frosted Glass no Player, gerenciamento avançado de perfis com Room Database e novo motor de legendas v4 com eliminação total de sobreposições de falas simultâneas.
+Esta versao traz a modernizacao visual do Makimono no nivel streaming profissional (Netflix/Crunchyroll), com menu flutuante em Frosted Glass no Player, gerenciamento avancado de perfis com Room Database e novo motor de legendas v4 com eliminacao total de sobreposicoes de falas simultaneas.
 
-### 🌟 Destaques da Versão
-- **Motor de Legendas v4:** Algoritmo de resolução de sobreposições simultâneas que divide o tempo em intervalos elementares e empilha as falas em quebra de linha única, sem colisões de texto na tela.
-- **Player OSD & Menu Glass:** Hierarquia com *Progressive Disclosure* — transporte central ergonômico com glow ciano neon em foco e menu rápido de configurações em vidro translúcido (Velocidade, Proporção, Capítulos, Info Técnica).
-- **Módulo de Perfis ("Quem está assistindo?"):** Gerenciador de múltiplos perfis com persistência via Room (`ProfileEntity`), catálogo remoto de avatares/wallpapers de animes e editor de perfil com foco D-Pad para Android TV.
-- **Explorador de Arquivos & Breadcrumbs:** Nova organização com subpastas no topo e grid de vídeos com badges de resolução (1080p/4K), formato (`MKV`), áudio (`5.1`) e tamanho.
-- **Identidade Visual Torii:** Novo ícone vetorizado e paleta neon dark consistente em todas as telas e diálogos.
+### Destaques da Versao
+- **Motor de Legendas v4:** Algoritmo de resolucao de sobreposicoes simultaneas que divide o tempo em intervalos elementares e empilha as falas em quebra de linha unica, sem colisoes de texto na tela.
+- **Player OSD & Menu Glass:** Hierarquia com Progressive Disclosure - transporte central ergonomico com glow ciano neon em foco e menu rapido de configuracoes em vidro translucido (Velocidade, Proporcao, Capitulos, Info Tecnica).
+- **Modulo de Perfis (Quem esta assistindo?):** Gerenciador de multiplos perfis com persistencia via Room (ProfileEntity), catalogo remoto de avatares/wallpapers de animes e editor de perfil com foco D-Pad para Android TV.
+- **Explorador de Arquivos & Breadcrumbs:** Nova organizacao com subpastas no topo e grid de videos com badges de resolucao (1080p/4K), formato (MKV), audio (5.1) e tamanho.
+- **Identidade Visual Torii:** Novo icone vetorizado e paleta neon dark consistente em todas as telas e dialogos.
 
-### 📦 APKs Incluídos (Debug Build):
-- `makimono-v1.5.2-arm64-v8a-debug.apk` (TV Box moderna, Fire TV Stick 4K, Smartphones)
-- `makimono-v1.5.2-armeabi-v7a-debug.apk` (TVs e dispositivos 32-bit)
-- `makimono-v1.5.2-x86_64-debug.apk` (Emuladores PC 64-bit)
-- `makimono-v1.5.2-x86-debug.apk` (Emuladores PC 32-bit)
+### APKs Incluidos (Debug Build):
+- makimono-v1.5.2-arm64-v8a-debug.apk (TV Box moderna, Fire TV Stick 4K, Smartphones)
+- makimono-v1.5.2-armeabi-v7a-debug.apk (TVs e dispositivos 32-bit)
+- makimono-v1.5.2-x86_64-debug.apk (Emuladores PC 64-bit)
+- makimono-v1.5.2-x86-debug.apk (Emuladores PC 32-bit)
 "@
 
     $bodyObj = @{
         tag_name         = $tag
         target_commitish = "main"
-        name             = "Makimono $tag — UI Modernization & Subtitle Engine v4"
+        name             = "Makimono $tag - UI Modernization & Subtitle Engine v4"
         body             = $releaseBody
         draft            = $false
         prerelease       = $false
@@ -139,7 +139,7 @@ Esta versão traz a modernização visual do Makimono no nível streaming profis
 }
 
 # 4. Upload dos arquivos (APKs e .sha256)
-$files = Get-ChildItem -Path $apkDir | Where-Object { $_.Name.EndsWith(".apk") -or $_.Name.EndsWith(".sha256") }
+$files = Get-ChildItem -Path $apkDir | Where-Object { ($_.Name.EndsWith(".apk") -or $_.Name.EndsWith(".sha256")) -and -not $_.Name.Contains("androidTest") }
 
 $uploadUrlBase = ($release.upload_url -replace '\{\?name,label\}', '')
 
@@ -159,7 +159,8 @@ foreach ($file in $files) {
     $contentType = if ($file.Name.EndsWith(".apk")) { "application/vnd.android.package-archive" } else { "text/plain" }
     $uploadUri = "${uploadUrlBase}?name=$($file.Name)"
 
-    Write-Host "  Enviando $($file.Name) ($([math]::Round($file.Length / 1MB, 2)) MB)..."
+    $fileMb = [math]::Round($file.Length / 1048576, 2)
+    Write-Host "  Enviando $($file.Name) ($fileMb MB)..."
     
     $atFile = "@" + $file.FullName
     $httpResult = curl.exe -s -w "`nHTTP_STATUS:%{http_code}" -X POST `

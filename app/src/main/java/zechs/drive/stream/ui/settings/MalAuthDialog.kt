@@ -58,10 +58,7 @@ class MalAuthDialog(
             return sb.toString()
         }
 
-        fun codeChallenge(verifier: String): String = Base64.encodeToString(
-            MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray(StandardCharsets.US_ASCII)),
-            Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP
-        )
+        fun codeChallenge(verifier: String): String = verifier
     }
 
     private var _binding: DialogMalAuthBinding? = null
@@ -212,8 +209,8 @@ class MalAuthDialog(
             .buildUpon()
             .appendQueryParameter("response_type", "code")
             .appendQueryParameter("client_id", clientId)
-            .appendQueryParameter("code_challenge", codeChallenge(codeVerifier))
-            .appendQueryParameter("code_challenge_method", "S256")
+            .appendQueryParameter("code_challenge", codeVerifier)
+            .appendQueryParameter("code_challenge_method", "plain")
             .appendQueryParameter("redirect_uri", Constants.MAL_REDIRECT_URI)
             .build()
             .toString()
@@ -459,8 +456,8 @@ class MalAuthDialog(
         val malAuthUrl = "https://myanimelist.net/v1/oauth2/authorize?" +
                 "response_type=code&" +
                 "client_id=${clientId}&" +
-                "code_challenge=${codeChallenge(codeVerifier)}&" +
-                "code_challenge_method=S256&" +
+                "code_challenge=${codeVerifier}&" +
+                "code_challenge_method=plain&" +
                 "redirect_uri=${Constants.MAL_REDIRECT_URI}"
 
         return """
