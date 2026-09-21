@@ -9,7 +9,6 @@
     android:clickable="true"
     android:focusable="true"
     android:descendantFocusability="afterDescendants"
-    android:nextFocusUp="@id/btnGridStar"
     android:foreground="@drawable/shelf_item_focus_border"
     app:cardBackgroundColor="?attr/colorBgSurface"
     app:cardCornerRadius="16dp"
