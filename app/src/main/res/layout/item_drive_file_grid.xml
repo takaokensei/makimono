@@ -85,7 +85,6 @@
                     android:background="@drawable/glass_circle_button_bg"
                     android:contentDescription="Favoritar"
                     android:focusable="true"
-                    android:nextFocusDown="@id/cardGridItem"
                     android:minWidth="48dp"
                     android:minHeight="48dp"
                     android:padding="12dp"
