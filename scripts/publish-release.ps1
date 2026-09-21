@@ -2,7 +2,7 @@
 # Script para criar a GitHub Release e fazer upload dos APKs e checksums SHA-256
 
 param(
-    [string]$tag = "v1.5.2",
+    [string]$tag = "v1.5.3",
     [string]$repo = "takaokensei/makimono",
     [string]$apkDir = "app/build/outputs/apk/debug"
 )
