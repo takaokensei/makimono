@@ -130,6 +130,11 @@ sealed class FilesViewHolder(
                     text = item.humanSize
                 }
 
+                root.isFocusable = true
+                root.isClickable = true
+                btnStar.isFocusable = false
+                btnStar.isFocusableInTouchMode = false
+
                 root.setOnClickListener {
                     filesAdapter.onClickListener.invoke(item)
                 }
@@ -323,6 +328,13 @@ sealed class FilesViewHolder(
                     }
                     ivGridFallbackIcon.setImageResource(iconRes)
                 }
+
+                root.isFocusable = true
+                root.isClickable = true
+                btnGridStar.isFocusable = false
+                btnGridStar.isFocusableInTouchMode = false
+                ivPlayOverlay.isFocusable = false
+                ivPlayOverlay.isFocusableInTouchMode = false
 
                 // Center quick play overlay click
                 ivPlayOverlay.setOnClickListener {
