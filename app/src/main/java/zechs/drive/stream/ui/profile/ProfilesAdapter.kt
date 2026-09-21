@@ -87,7 +87,8 @@ class ProfilesAdapter(
                     }
                     com.bumptech.glide.Glide.with(binding.ivProfileAvatar)
                         .load(profile.avatarUrl).placeholder(avatarRes).error(avatarRes)
-                        .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.AUTOMATIC)
+                        .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
+                        .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
                         .into(binding.ivProfileAvatar)
                     binding.tvProfileRole.text = listOfNotNull(
                         "Admin".takeIf { profile.isAdmin }, "Kids".takeIf { profile.isKids }).joinToString(" · ")

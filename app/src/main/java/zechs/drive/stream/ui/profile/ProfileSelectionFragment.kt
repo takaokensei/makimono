@@ -4,22 +4,27 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
-import android.widget.RadioGroup
+import androidx.core.view.doOnPreDraw
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.core.view.doOnPreDraw
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DecodeFormat
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import zechs.drive.stream.R
 import zechs.drive.stream.data.model.UserProfile
+import zechs.drive.stream.data.remote.ProfileArtCatalog
 import zechs.drive.stream.databinding.FragmentProfileSelectionBinding
 import zechs.drive.stream.ui.BaseFragment
 import zechs.drive.stream.utils.ProfileManager
+import zechs.drive.stream.utils.TvFocusRing
 import zechs.drive.stream.utils.ext.navigateSafe
 import javax.inject.Inject
 
@@ -32,10 +37,10 @@ class ProfileSelectionFragment : BaseFragment() {
     @Inject
     lateinit var profileManager: ProfileManager
 
-    @Inject lateinit var posterResolver: zechs.drive.stream.data.remote.ProfileArtCatalog
+    @Inject
+    lateinit var posterResolver: ProfileArtCatalog
 
     private var focusedProfileId: String? = null
-
     private lateinit var profilesAdapter: ProfilesAdapter
 
     override fun onCreateView(
@@ -69,8 +74,12 @@ class ProfileSelectionFragment : BaseFragment() {
             },
             onProfileFocused = { profile ->
                 focusedProfileId = profile.id
-                com.bumptech.glide.Glide.with(this).load(profile.backgroundUrl)
-                    .placeholder(R.drawable.bg_profile_fantasy).error(R.drawable.bg_profile_fantasy)
+                Glide.with(this)
+                    .load(profile.backgroundUrl)
+                    .placeholder(R.drawable.bg_profile_fantasy)
+                    .error(R.drawable.bg_profile_fantasy)
+                    .format(DecodeFormat.PREFER_RGB_565)
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .into(binding.ivFantasyBg)
             }
         )
@@ -82,7 +91,7 @@ class ProfileSelectionFragment : BaseFragment() {
             layoutManager = if (isLandscape) {
                 LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
             } else {
-                androidx.recyclerview.widget.GridLayoutManager(requireContext(), 2)
+                GridLayoutManager(requireContext(), 2)
             }
         }
     }
@@ -102,16 +111,19 @@ class ProfileSelectionFragment : BaseFragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 try { profileManager.awaitReady() }
-                catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                catch (e: CancellationException) { throw e }
                 catch (_: Exception) {
                     binding.tvProfilesTitle.text = "Não foi possível abrir os perfis. Reinicie o app para tentar novamente."
                     binding.btnManageProfiles.isEnabled = false
                     return@repeatOnLifecycle
                 }
                 profileManager.profilesFlow.collect { profiles ->
-                    com.bumptech.glide.Glide.with(this@ProfileSelectionFragment)
+                    Glide.with(this@ProfileSelectionFragment)
                         .load(profileManager.getActiveProfile().backgroundUrl)
-                        .placeholder(R.drawable.bg_profile_fantasy).error(R.drawable.bg_profile_fantasy)
+                        .placeholder(R.drawable.bg_profile_fantasy)
+                        .error(R.drawable.bg_profile_fantasy)
+                        .format(DecodeFormat.PREFER_RGB_565)
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
                         .into(binding.ivFantasyBg)
                     val activeId = profileManager.getActiveProfile().id
                     val items = mutableListOf<ProfileUiModel>()
@@ -160,19 +172,19 @@ class ProfileSelectionFragment : BaseFragment() {
                                 .setPositiveButton("Excluir") { _, _ ->
                                     viewLifecycleOwner.lifecycleScope.launch {
                                         try { profileManager.deleteProfile(profile.id) }
-                                        catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                                        catch (e: CancellationException) { throw e }
                                         catch (_: Exception) {
                                             android.widget.Toast.makeText(context, "Falha ao excluir perfil", android.widget.Toast.LENGTH_LONG).show()
                                         }
                                     }
                                 }
                                 .setNegativeButton("Cancelar", null)
-                                .show().also { dialog -> dialog.window?.decorView?.let(zechs.drive.stream.utils.TvFocusRing::install) }
+                                .show().also { dialog -> dialog.window?.decorView?.let(TvFocusRing::install) }
                         }
                     }
                 }
             }
-            .show().also { dialog -> dialog.window?.decorView?.let(zechs.drive.stream.utils.TvFocusRing::install) }
+            .show().also { dialog -> dialog.window?.decorView?.let(TvFocusRing::install) }
     }
 
     override fun onDestroyView() {

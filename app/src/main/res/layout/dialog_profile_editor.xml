@@ -1,33 +1,175 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="wrap_content"
-    android:fillViewport="true" android:background="@android:color/transparent">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="vertical" android:padding="24dp">
-        <EditText android:textColor="#F1F7FF" android:textColorHint="#ACC0D6" android:id="@+id/profileName" android:layout_width="match_parent" android:layout_height="56dp"
-            android:hint="Nome do perfil" android:inputType="textPersonName" android:maxLength="32"
-            android:singleLine="true" android:background="@drawable/glass_input_bg" android:padding="12dp" />
-        <EditText android:textColor="#F1F7FF" android:textColorHint="#ACC0D6" android:id="@+id/avatarUrl" android:layout_width="match_parent" android:layout_height="56dp"
-            android:layout_marginTop="12dp" android:hint="URL HTTPS do avatar (opcional)" android:inputType="textUri"
-            android:singleLine="true" android:background="@drawable/glass_input_bg" android:padding="12dp" />
-        <EditText android:textColor="#F1F7FF" android:textColorHint="#ACC0D6" android:id="@+id/backgroundUrl" android:layout_width="match_parent" android:layout_height="56dp"
-            android:layout_marginTop="12dp" android:hint="URL HTTPS do papel de parede (opcional)" android:inputType="textUri"
-            android:singleLine="true" android:background="@drawable/glass_input_bg" android:padding="12dp" />
-        <CheckBox android:textColor="#F1F7FF" android:buttonTint="#22D3EE" android:id="@+id/isAdmin" android:layout_width="match_parent" android:layout_height="48dp"
-            android:text="Admin" android:background="@drawable/bg_player_action_vertical" />
-        <CheckBox android:textColor="#F1F7FF" android:buttonTint="#22D3EE" android:id="@+id/isKids" android:layout_width="match_parent" android:layout_height="48dp"
-            android:text="Kids" android:background="@drawable/bg_player_action_vertical" />
-        <TextView android:textColor="#ACC0D6" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="Admin e Kids identificam o perfil; não ativam bloqueio por PIN nem filtro de conteúdo."
-            android:textSize="14sp" android:paddingVertical="8dp" />
-        <EditText android:textColor="#F1F7FF" android:textColorHint="#ACC0D6" android:id="@+id/catalogQuery" android:layout_width="match_parent" android:layout_height="56dp"
-            android:hint="Buscar anime no catálogo" android:inputType="text" android:singleLine="true"
-            android:background="@drawable/glass_input_bg" android:padding="12dp" />
-        <Button android:textColor="#22D3EE" android:id="@+id/searchCatalog" android:layout_width="match_parent" android:layout_height="48dp"
-            android:text="Buscar imagens" android:background="@drawable/bg_player_action_vertical" />
-        <TextView android:textColor="#ACC0D6" android:id="@+id/catalogStatus" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:accessibilityLiveRegion="polite" android:paddingVertical="8dp" android:text="Busque um anime para escolher avatar ou wallpaper." />
-        <GridLayout android:id="@+id/catalogImages" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:columnCount="3" android:clipChildren="false" android:padding="6dp" />
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:fillViewport="true"
+    android:background="@android:color/transparent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <EditText
+            android:id="@+id/profileName"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:background="@drawable/glass_input_bg"
+            android:hint="Nome do perfil"
+            android:inputType="textPersonName"
+            android:maxLength="32"
+            android:padding="12dp"
+            android:singleLine="true"
+            android:textColor="#F1F7FF"
+            android:textColorHint="#ACC0D6" />
+
+        <EditText
+            android:id="@+id/avatarUrl"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/glass_input_bg"
+            android:hint="URL HTTPS do avatar (ou escolha abaixo)"
+            android:inputType="textUri"
+            android:padding="12dp"
+            android:singleLine="true"
+            android:textColor="#F1F7FF"
+            android:textColorHint="#ACC0D6" />
+
+        <EditText
+            android:id="@+id/backgroundUrl"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/glass_input_bg"
+            android:hint="URL HTTPS do wallpaper (ou escolha abaixo)"
+            android:inputType="textUri"
+            android:padding="12dp"
+            android:singleLine="true"
+            android:textColor="#F1F7FF"
+            android:textColorHint="#ACC0D6" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <CheckBox
+                android:id="@+id/isAdmin"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_player_action_vertical"
+                android:buttonTint="#22D3EE"
+                android:text="Admin"
+                android:textColor="#F1F7FF" />
+
+            <View
+                android:layout_width="12dp"
+                android:layout_height="1dp" />
+
+            <CheckBox
+                android:id="@+id/isKids"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_player_action_vertical"
+                android:buttonTint="#22D3EE"
+                android:text="Kids"
+                android:textColor="#F1F7FF" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingVertical="6dp"
+            android:text="Galeria de Avatares e Papéis de Parede:"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <!-- Filter selection buttons: Avatares / Wallpapers -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnTabAvatars"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_player_action_vertical"
+                android:text="👤 Avatares"
+                android:textColor="#22D3EE"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/btnTabWallpapers"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_player_action_vertical"
+                android:text="🖼️ Papéis de Parede"
+                android:textColor="#ACC0D6"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- Live search bar for custom anime search -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/catalogQuery"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_weight="1"
+                android:background="@drawable/glass_input_bg"
+                android:hint="Buscar outro anime..."
+                android:inputType="text"
+                android:padding="10dp"
+                android:singleLine="true"
+                android:textColor="#F1F7FF"
+                android:textColorHint="#ACC0D6"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/searchCatalog"
+                android:layout_width="wrap_content"
+                android:layout_height="46dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_player_action_vertical"
+                android:paddingHorizontal="16dp"
+                android:text="Buscar"
+                android:textColor="#22D3EE"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/catalogStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:accessibilityLiveRegion="polite"
+            android:paddingVertical="6dp"
+            android:text="Selecione uma imagem abaixo para aplicar:"
+            android:textColor="#ACC0D6"
+            android:textSize="12sp" />
+
+        <GridLayout
+            android:id="@+id/catalogImages"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:columnCount="4"
+            android:padding="4dp" />
+
     </LinearLayout>
 </ScrollView>
