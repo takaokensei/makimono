@@ -7,3 +7,7 @@ Capturas: [Home com título longo e gêneros](home.png), [catálogo após rolage
 Validação: 145 testes JVM e 4 instrumentados passaram. O teste do destaque preenche título longo, título nativo, gêneros e sinopse e verifica que ambos os botões ficam dentro do card. O teste do player cobre 960 → 360 → 640 → 960dp. Release R8 nas quatro arquiteturas; x86_64 instalado e iniciado com sucesso. Assinatura conferida contra o APK publicado v1.5.7.
 
 Ainda pendentes: TV física, autenticação/reprodução de ponta a ponta, fontes ampliadas e refinamento completo de detalhes, configurações e fidelidade aos mockups.
+
+## Detalhes — v1.5.9
+
+[Captura da tela revisada](details-v159.png), com dados de teste. Backdrop e scrims têm limites compartilhados e terminam antes dos episódios. CTA com título explícito, metadados vazios ocultos, abas discretas e cartões com títulos em duas linhas. Teste instrumentado em 640/960/1280 dp passou para conteúdo curto e longo; 145 testes JVM passaram. Validação em TV física permanece pendente.

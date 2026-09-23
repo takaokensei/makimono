@@ -6,6 +6,7 @@ param(
     [Parameter(Mandatory=$true)][string]$targetCommit,
     [Parameter(Mandatory=$true)][string]$notesFile,
     [string]$repo = "takaokensei/makimono",
+    [string]$title = "",
     [string]$apkDir = "app/build/outputs/apk/release"
 )
 $ErrorActionPreference = "Stop"
@@ -76,7 +77,8 @@ Write-Host "Autenticado como: $($user.login)" -ForegroundColor Green
 $apks = @(Get-ChildItem -LiteralPath $apkDir -File | Where-Object { $_.Name -like "makimono-$tag-*-release.apk" })
 if ($apks.Count -ne 4) { throw "Expected four release APKs for $tag, got $($apks.Count)" }
 $notes = Get-Content -LiteralPath $notesFile -Raw -Encoding utf8
-$body = @{tag_name=$tag; target_commitish=$targetCommit; name="Makimono $tag — Refinamentos de biblioteca e TV"; body=$notes; draft=$true; prerelease=$false} | ConvertTo-Json
+if (-not $title) { $title = "Makimono $tag" }
+$body = @{tag_name=$tag; target_commitish=$targetCommit; name=$title; body=$notes; draft=$true; prerelease=$false} | ConvertTo-Json
 $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases" -Headers $headers -Method Post -ContentType "application/json; charset=utf-8" -Body ([System.Text.Encoding]::UTF8.GetBytes($body))
 $uploadBase = $release.upload_url -replace '\{\?name,label\}', ''
 foreach ($apk in $apks) {

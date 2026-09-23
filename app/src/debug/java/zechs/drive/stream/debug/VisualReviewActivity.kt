@@ -107,16 +107,19 @@ class VisualReviewActivity : Activity() {
         text(R.id.tvRomajiTitle,"SOUSOU NO FRIEREN")
         text(R.id.tvJapaneseTitle,"葬送のフリーレン");show(R.id.tvJapaneseTitle)
         text(R.id.tvSynopsis,"Após a derrota do Rei Demônio, Frieren parte em uma nova jornada para compreender as pessoas que fizeram parte de sua vida.")
-        text(R.id.tvReleaseYear,"2023");text(R.id.tvSeriesStatus,"Completo");text(R.id.tvMalScore,"9.4")
+        text(R.id.tvReleaseYear,"2023");text(R.id.tvSeriesStatus,"Completo");show(R.id.tvSeriesStatus);text(R.id.tvMalScore,"9.4");show(R.id.layoutRating)
         text(R.id.tvPrimaryActionTitle,"Reproduzir S01E01")
         text(R.id.tvAgeRating,"12+")
         val seasons=findViewById<RecyclerView>(R.id.rvSeasonTabs)
         seasons.adapter=FixtureAdapter(R.layout.item_series_season_tab,2) { v,p ->
-            v.findViewById<TextView>(R.id.tvTabTitle).text="${p+1}ª temporada"
+            v.findViewById<TextView>(R.id.tvTabTitle).text=listOf("1ª temporada", "Especiais e OVAs")[p]
+            v.isSelected = p == 0
         }
         val rv=findViewById<RecyclerView>(R.id.rvEpisodes)
         rv.adapter=FixtureAdapter(R.layout.item_series_episode_card,12) { v,p ->
-            v.findViewById<TextView>(R.id.tvEpisodeTitle).text="O fim da viagem"
+            v.findViewById<TextView>(R.id.tvEpisodeTitle).text=listOf("O fim da viagem", "A magia da memória", "Uma nova jornada")[p % 3]
+            v.findViewById<TextView>(R.id.tvEpisodeDuration).text="24 min"
+            v.findViewById<View>(R.id.pbEpisodeProgress).visibility=View.GONE
             v.findViewById<TextView>(R.id.tvEpNumberBadge).text="Ep. ${p+1}"
             Glide.with(this).load(backdrop).into(v.findViewById(R.id.ivEpisodeThumb))
         }

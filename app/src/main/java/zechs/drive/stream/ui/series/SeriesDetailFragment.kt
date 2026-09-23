@@ -157,7 +157,10 @@ class SeriesDetailFragment : BaseFragment() {
         binding.btnSearch.nextFocusLeftId = binding.btnBack.id
 
         // Connect to season tabs
-        binding.btnMarkWatched.nextFocusDownId = binding.rvSeasonTabs.id
+        listOf(binding.btnPrimaryAction, binding.btnTrailer, binding.btnFavorite, binding.btnFollow, binding.btnMarkWatched).forEach {
+            it.nextFocusDownId = binding.rvSeasonTabs.id
+            it.nextFocusUpId = binding.btnBack.id
+        }
         binding.rvSeasonTabs.nextFocusUpId = binding.btnMarkWatched.id
 
         // Connect season tabs to episodes
@@ -175,8 +178,7 @@ class SeriesDetailFragment : BaseFragment() {
                             binding.tvEmptyEpisodes.visibility = View.GONE
                             binding.btnRetry.visibility = View.GONE
                             binding.tvRomajiTitle.text = state.seriesTitle.ifBlank { args.name }
-                            binding.tvEnglishSubtitle.text = state.seriesTitle.ifBlank { args.name }
-                                .uppercase(Locale.ROOT)
+                            binding.tvEnglishSubtitle.visibility = View.GONE
                             state.posterUrl?.let { poster ->
                                 MediaImageLoader.poster(binding.ivSeriesPosterCard, poster)
                                 MediaImageLoader.backdrop(binding.ivHeroBackdrop, poster)
@@ -219,12 +221,13 @@ class SeriesDetailFragment : BaseFragment() {
         }
 
         // Dynamic Color Gradient Tint from AniList dominant color
+        binding.viewDynamicColorTint.setBackgroundColor(android.graphics.Color.TRANSPARENT)
         val dominantHex = state.aniListMetadata?.dominantColor
         if (!dominantHex.isNullOrBlank()) {
             try {
                 val parsedColor = android.graphics.Color.parseColor(dominantHex)
                 val tintColor = android.graphics.Color.argb(
-                    75,
+                    28,
                     android.graphics.Color.red(parsedColor),
                     android.graphics.Color.green(parsedColor),
                     android.graphics.Color.blue(parsedColor)
@@ -256,7 +259,8 @@ class SeriesDetailFragment : BaseFragment() {
         val englishSubtitle = state.aniListMetadata?.titleEnglish
             ?: state.animeEntry?.titleEnglish
             ?: canonicalTitle
-        binding.tvEnglishSubtitle.text = englishSubtitle.uppercase(Locale.ROOT)
+        binding.tvEnglishSubtitle.text = englishSubtitle
+        binding.tvEnglishSubtitle.visibility = if (englishSubtitle.isNotBlank() && !englishSubtitle.equals(canonicalTitle, true) && !englishSubtitle.equals(japaneseTitle, true)) View.VISIBLE else View.GONE
 
         // 3. Meta Row 1
         val ageRating = formatRating(state.animeEntry?.rating)
@@ -276,6 +280,7 @@ class SeriesDetailFragment : BaseFragment() {
         }
 
         val statusRaw = state.animeEntry?.status
+        binding.tvSeriesStatus.visibility = if (statusRaw.isNullOrBlank()) View.GONE else View.VISIBLE
         binding.tvSeriesStatus.text = when {
             statusRaw.isNullOrBlank() -> "—"
             statusRaw.contains("Finished", true) -> "Completo"
@@ -283,6 +288,8 @@ class SeriesDetailFragment : BaseFragment() {
         }
 
         val scoreVal = state.aniListMetadata?.score ?: state.animeEntry?.score
+        binding.layoutRating.visibility = if (scoreVal != null) View.VISIBLE else View.GONE
+        binding.metaRow1.visibility = if (ageRating != null || releaseYear != null || !statusRaw.isNullOrBlank() || scoreVal != null) View.VISIBLE else View.GONE
         if (scoreVal != null) {
             binding.tvMalScore.visibility = View.VISIBLE
             binding.tvMalScore.text = String.format(Locale.US, "%.1f", scoreVal)
@@ -309,7 +316,10 @@ class SeriesDetailFragment : BaseFragment() {
         }
 
         // 5. Action Buttons
+        val canResume = state.continueWatchingItem?.progressPercent in 1..94
+        binding.tvPrimaryActionTitle.text = if (canResume) "Continuar assistindo" else "Reproduzir"
         binding.tvPrimaryActionSubtitle.text = state.continueWatchingSubtitle
+        binding.tvPrimaryActionSubtitle.visibility = if (state.continueWatchingSubtitle.isBlank()) View.GONE else View.VISIBLE
         binding.btnPrimaryAction.setOnClickListener {
             state.continueWatchingItem?.let { playEpisode(it) }
                 ?: Toast.makeText(requireContext(), getString(R.string.no_episodes_available), Toast.LENGTH_SHORT).show()

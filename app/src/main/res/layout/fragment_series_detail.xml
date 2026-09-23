@@ -240,7 +240,8 @@
 
             <!-- Subtitle / English Title -->
             <TextView
-                android:id="@+id/tvEnglishSubtitle"
+                android:visibility="gone"
+            android:id="@+id/tvEnglishSubtitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
@@ -290,16 +291,9 @@
                     tools:text="2015" />
 
                 <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:layout_marginEnd="8dp"
-                    android:text="|"
-                    android:textColor="#475569"
-                    android:textSize="12sp" />
-
-                <TextView
-                    android:id="@+id/tvSeriesStatus"
+            android:visibility="gone"
+            android:id="@+id/tvSeriesStatus"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/glass_meta_pill_bg"
@@ -311,18 +305,11 @@
                     android:textSize="11sp"
                     tools:text="Completo" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_marginEnd="8dp"
-                    android:text="|"
-                    android:textColor="#475569"
-                    android:textSize="12sp" />
-
                 <!-- Rating pill -->
                 <LinearLayout
-                    android:id="@+id/layoutRating"
+                    android:layout_marginStart="10dp"
+            android:visibility="gone"
+            android:id="@+id/layoutRating"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
@@ -480,8 +467,8 @@
                 <LinearLayout
                     android:id="@+id/btnPrimaryAction"
                     android:layout_width="wrap_content"
-                    android:layout_height="48dp"
-                    android:background="@drawable/btn_primary_action_bg"
+                    android:layout_height="44dp"
+                    android:background="@drawable/detail_primary_action_bg"
                     android:clickable="true"
                     android:focusable="true"
                     android:focusableInTouchMode="true"
@@ -496,7 +483,7 @@
                         android:layout_height="22dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_play_24"
-                        app:tint="#22D3EE" />
+                        app:tint="#03121C" />
 
                     <LinearLayout
                         android:layout_width="wrap_content"
@@ -505,22 +492,25 @@
                         android:orientation="vertical">
 
                         <TextView
-                            android:id="@+id/tvPrimaryActionTitle"
+                            android:text="Reproduzir"
+            android:textStyle="bold"
+            android:id="@+id/tvPrimaryActionTitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-bold"
                             android:includeFontPadding="false"
-                            android:textColor="#FFFFFF"
+                            android:textColor="#03121C"
                             android:textSize="13sp"
                             tools:text="Continuar Assistindo" />
 
                         <TextView
-                            android:id="@+id/tvPrimaryActionSubtitle"
+                            android:maxLines="1"
+            android:id="@+id/tvPrimaryActionSubtitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif"
                             android:includeFontPadding="false"
-                            android:textColor="#94A3B8"
+                            android:textColor="#164451"
                             android:textSize="10sp"
                             tools:text="Ep. 4 • 14:28 restante" />
 
