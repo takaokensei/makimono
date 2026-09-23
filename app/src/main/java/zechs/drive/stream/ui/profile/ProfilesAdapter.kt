@@ -61,6 +61,7 @@ class ProfilesAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
 
         init {
+            if (android.os.Build.VERSION.SDK_INT >= 26) binding.cardProfileRoot.defaultFocusHighlightEnabled = false
             binding.cardProfileRoot.setOnFocusChangeListener { view, hasFocus ->
                 val scale = if (hasFocus) 1.035f else 1.0f
                 view.animate()
@@ -92,7 +93,8 @@ class ProfilesAdapter(
                         .into(binding.ivProfileAvatar)
                     binding.tvProfileRole.text = listOfNotNull(
                         "Admin".takeIf { profile.isAdmin }, "Kids".takeIf { profile.isKids }).joinToString(" · ")
-                    binding.tvProfileRole.isVisible = profile.isAdmin || profile.isKids
+                    binding.tvProfileRole.visibility = if (profile.isAdmin || profile.isKids)
+                        android.view.View.VISIBLE else android.view.View.INVISIBLE
                     binding.ivProfileAvatar.isVisible = true
                     binding.ivAddIcon.isVisible = false
 
@@ -117,7 +119,7 @@ class ProfilesAdapter(
                     }
                 }
                 is ProfileUiModel.AddProfileItem -> {
-                    binding.tvProfileRole.isVisible = false
+                    binding.tvProfileRole.visibility = android.view.View.INVISIBLE
                     com.bumptech.glide.Glide.with(binding.ivProfileAvatar).clear(binding.ivProfileAvatar)
                     binding.tvProfileName.text = "Adicionar perfil"
                     binding.ivProfileAvatar.setImageDrawable(null)

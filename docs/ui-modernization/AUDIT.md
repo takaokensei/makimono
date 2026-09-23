@@ -1,3 +1,7 @@
+Atualização 23/09/2026: ver [revisão e validação da v1.5.8](review-2026-09-23/README.md).
+
+> Atualização de 22/09/2026: veja [a revisão sobre a v1.5.7](review-2026-09-22/README.md), com novas capturas e 145 testes JVM passando. Os resultados abaixo registram a rodada anterior.
+
 # Makimono — auditoria e modernização Android TV/Mobile
 
 Data: 20/09/2026. Referências: os cinco mockups fornecidos pelo usuário. A avaliação inicial resulta da inspeção do código anterior às alterações, não de uma pesquisa com usuários. Os mockups orientam a estética; dados, disponibilidade e funcionalidades vêm do app.

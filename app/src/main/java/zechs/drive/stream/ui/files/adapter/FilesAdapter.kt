@@ -13,7 +13,8 @@ class FilesAdapter(
     val onClickListener: (DriveFile) -> Unit,
     val onLongClickListener: (DriveFile) -> Unit,
     val onStarClickListener: (DriveFile, Boolean) -> Unit,
-    val onPlayClickListener: ((DriveFile) -> Unit)? = null
+    val onPlayClickListener: ((DriveFile) -> Unit)? = null,
+    val compactCatalog: Boolean = false
 ) : ListAdapter<FilesDataModel, FilesViewHolder>(FilesItemDiffCallback()) {
 
     init {

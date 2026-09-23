@@ -47,20 +47,33 @@ class VisualReviewActivity : Activity() {
         val label = TextView(this).apply { text = "PRÉVIA · DADOS DE TESTE"; textSize = 8f; setTextColor(0xff9bb2c9.toInt()); setPadding(8,2,8,2); setBackgroundColor(0xcc030c16.toInt()) }
         addContentView(label, android.widget.FrameLayout.LayoutParams(-2,-2,android.view.Gravity.BOTTOM or android.view.Gravity.END))
     }
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        recreate()
+    }
     private fun home() {
         setContentView(R.layout.fragment_home)
         show(R.id.featuredHeroContainer);show(R.id.shelfHeaderRow);show(R.id.rvContinueWatchingShelf)
         findViewById<View>(R.id.containerViewToggle)?.visibility=View.GONE
         findViewById<View>(R.id.containerItemCount)?.visibility=View.GONE
         text(R.id.tvFeaturedOverline,"SOUSOU NO FRIEREN")
-        text(R.id.tvFeaturedTitle,"葬送のフリーレン")
+        text(R.id.tvFeaturedTitle,"Sousou no Frieren: Beyond Journey’s End")
         text(R.id.tvFeaturedJapaneseTitle,"Fantasia  ·  Aventura")
         text(R.id.tvFeaturedSynopsis,"Após a derrota do Rei Demônio, a elfa Frieren continua sua jornada, descobrindo o mundo e compreendendo o verdadeiro significado das amizades.")
+        val genres = findViewById<android.widget.LinearLayout>(R.id.layoutFeaturedGenres)
+        listOf("Fantasia", "Aventura", "Drama").forEach { genre ->
+            genres.addView(TextView(this).apply { text = genre; textSize = 10f; setTextColor(0xffb9cadf.toInt()); setPadding(8,4,12,4) })
+        }
         art(R.id.ivFeaturedBackdrop)
+        findViewById<ImageView>(R.id.ivUserAvatar)?.let { avatar ->
+            avatar.imageTintList = null
+            Glide.with(this).load(poster).circleCrop().into(avatar)
+        }
         text(R.id.tvUserName,"Cauã")
         val grid=findViewById<RecyclerView>(R.id.rvAnimeLibrary)
-        grid.layoutManager=GridLayoutManager(this,7)
-        grid.adapter=FilesAdapter({},{},{_,_->}).apply { isGridMode=true;submitList(files(14,false)) }
+        grid.layoutManager=GridLayoutManager(this,((resources.configuration.screenWidthDp-172)/132).coerceIn(3,7))
+        grid.adapter=FilesAdapter({},{},{_,_->},compactCatalog=true).apply { isGridMode=true;submitList(files(14,false)) }
         val shelf=findViewById<RecyclerView>(R.id.rvContinueWatchingShelf)
         shelf.layoutManager=LinearLayoutManager(this,RecyclerView.HORIZONTAL,false)
         shelf.adapter=FixtureAdapter(R.layout.item_continue_watching_shelf,6) { v,p ->
@@ -96,6 +109,11 @@ class VisualReviewActivity : Activity() {
         text(R.id.tvSynopsis,"Após a derrota do Rei Demônio, Frieren parte em uma nova jornada para compreender as pessoas que fizeram parte de sua vida.")
         text(R.id.tvReleaseYear,"2023");text(R.id.tvSeriesStatus,"Completo");text(R.id.tvMalScore,"9.4")
         text(R.id.tvPrimaryActionTitle,"Reproduzir S01E01")
+        text(R.id.tvAgeRating,"12+")
+        val seasons=findViewById<RecyclerView>(R.id.rvSeasonTabs)
+        seasons.adapter=FixtureAdapter(R.layout.item_series_season_tab,2) { v,p ->
+            v.findViewById<TextView>(R.id.tvTabTitle).text="${p+1}ª temporada"
+        }
         val rv=findViewById<RecyclerView>(R.id.rvEpisodes)
         rv.adapter=FixtureAdapter(R.layout.item_series_episode_card,12) { v,p ->
             v.findViewById<TextView>(R.id.tvEpisodeTitle).text="O fim da viagem"
@@ -111,6 +129,10 @@ class VisualReviewActivity : Activity() {
         val controls=layoutInflater.inflate(R.layout.player_control_view,frame,false)
         frame.addView(controls);setContentView(frame);PlayerQuickOptions.bind(controls)
         text(R.id.tvPlayerTitle,"SOUSOU NO FRIEREN")
+        text(com.google.android.exoplayer2.ui.R.id.exo_position,"12:45");text(com.google.android.exoplayer2.ui.R.id.exo_duration,"24:10")
+        findViewById<com.google.android.exoplayer2.ui.DefaultTimeBar>(com.google.android.exoplayer2.ui.R.id.exo_progress).apply {
+            setDuration(1450000);setPosition(765000)
+        }
     }
     private inner class FixtureAdapter(val layout: Int,val count: Int,val bind: (View,Int)->Unit):RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         override fun getItemCount()=count

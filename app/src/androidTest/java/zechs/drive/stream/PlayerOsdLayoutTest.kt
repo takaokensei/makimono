@@ -15,9 +15,10 @@ class PlayerOsdLayoutTest {
         instrumentation.runOnMainSync {
             val context = ContextThemeWrapper(instrumentation.targetContext, R.style.Theme_Fullscreen_KodiEstuary)
             val density = context.resources.displayMetrics.density
-            for (widthDp in listOf(360, 640, 960)) {
-                val root = LayoutInflater.from(context).inflate(R.layout.player_control_view, null)
-                PlayerQuickOptions.bind(root)
+            val root = LayoutInflater.from(context).inflate(R.layout.player_control_view, null)
+            PlayerQuickOptions.bind(root)
+            // Reuse the view to cover rotation from wide to compact and back.
+            for (widthDp in listOf(960, 360, 640, 960)) {
                 val width = (widthDp * density).toInt()
                 val height = (640 * density).toInt()
                 // The first pass selects compact or wide constraints; the second resolves them.
@@ -31,6 +32,10 @@ class PlayerOsdLayoutTest {
                 }
                 for (i in groups.indices) for (j in i + 1 until groups.size) {
                     assertFalse("OSD overlaps at ${widthDp}dp: ${groups[i]} / ${groups[j]}", Rect.intersects(groups[i], groups[j]))
+                }
+                val row = root.findViewById<View>(R.id.controlsRow)
+                groups.forEach { bounds ->
+                    assertTrue("OSD clipped at ${widthDp}dp: $bounds", bounds.left >= 0 && bounds.right <= row.width)
                 }
                 for (id in listOf(R.id.btnSpeed, R.id.btnResize, R.id.btnChapter, R.id.btnInfo, R.id.btnRotate)) {
                     assertEquals(View.GONE, root.findViewById<View>(id).visibility)

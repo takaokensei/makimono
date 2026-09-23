@@ -2,10 +2,14 @@
 # Script para criar a GitHub Release e fazer upload dos APKs e checksums SHA-256
 
 param(
-    [string]$tag = "v1.5.5",
+    [Parameter(Mandatory=$true)][string]$tag,
+    [Parameter(Mandatory=$true)][string]$targetCommit,
+    [Parameter(Mandatory=$true)][string]$notesFile,
     [string]$repo = "takaokensei/makimono",
     [string]$apkDir = "app/build/outputs/apk/release"
 )
+$ErrorActionPreference = "Stop"
+
 
 Add-Type -TypeDefinition @"
 using System;
@@ -68,116 +72,26 @@ $headers = @{
 $user = Invoke-RestMethod -Uri "https://api.github.com/user" -Headers $headers -Method Get
 Write-Host "Autenticado como: $($user.login)" -ForegroundColor Green
 
-# 2. Gerar .sha256 se nao existirem
-$apks = Get-ChildItem -Path $apkDir | Where-Object { $_.Name.EndsWith(".apk") -and -not $_.Name.Contains("androidTest") }
+# Only this version's signed release APKs; never upload stale builds or test APKs.
+$apks = @(Get-ChildItem -LiteralPath $apkDir -File | Where-Object { $_.Name -like "makimono-$tag-*-release.apk" })
+if ($apks.Count -ne 4) { throw "Expected four release APKs for $tag, got $($apks.Count)" }
+$notes = Get-Content -LiteralPath $notesFile -Raw -Encoding utf8
+$body = @{tag_name=$tag; target_commitish=$targetCommit; name="Makimono $tag — Refinamentos de biblioteca e TV"; body=$notes; draft=$true; prerelease=$false} | ConvertTo-Json
+$release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases" -Headers $headers -Method Post -ContentType "application/json; charset=utf-8" -Body ([System.Text.Encoding]::UTF8.GetBytes($body))
+$uploadBase = $release.upload_url -replace '\{\?name,label\}', ''
 foreach ($apk in $apks) {
-    $shaPath = "$($apk.FullName).sha256"
-    if (-not (Test-Path $shaPath)) {
-        $hash = (Get-FileHash -Path $apk.FullName -Algorithm SHA256).Hash.ToLower()
-        "$hash  $($apk.Name)" | Out-File -FilePath $shaPath -Encoding utf8
-        Write-Host "Gerado checksum para $($apk.Name): $hash" -ForegroundColor DarkGray
+    $hash = (Get-FileHash -LiteralPath $apk.FullName -Algorithm SHA256).Hash.ToLower()
+    $checksum = "$($apk.FullName).sha256"
+    [System.IO.File]::WriteAllText($checksum, "$hash  $($apk.Name)`n", [System.Text.UTF8Encoding]::new($false))
+    foreach ($path in @($apk.FullName, $checksum)) {
+        $file = Get-Item -LiteralPath $path
+        $uploadUri = "${uploadBase}?name=$([uri]::EscapeDataString($file.Name))"
+        $asset = Invoke-RestMethod -Uri $uploadUri -Headers $headers -Method Post -ContentType "application/octet-stream" -InFile $file.FullName
+        if ($asset.size -ne $file.Length -or $asset.state -ne "uploaded") { throw "Asset validation failed: $($file.Name)" }
+        Write-Host "Uploaded $($file.Name) ($($file.Length) bytes)"
     }
 }
-
-# 3. Verificar se a release ja existe
-$release = $null
-
-try {
-    $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/tags/$tag" -Headers $headers -Method Get
-    Write-Host "Release $tag ja existe (ID: $($release.id)). Atualizando assets..." -ForegroundColor Yellow
-} catch {
-    Write-Host "Criando nova release $tag..." -ForegroundColor Cyan
-    $releaseBody = @"
-# Makimono $tag - UI Modernization and Subtitle Engine v4
-
-Esta versao traz a modernizacao visual do Makimono no nivel streaming profissional (Netflix/Crunchyroll), com menu flutuante em Frosted Glass no Player, gerenciamento avancado de perfis com Room Database e novo motor de legendas v4 com eliminacao total de sobreposicoes de falas simultaneas.
-
-### Destaques da Versao
-- **Motor de Legendas v4:** Algoritmo de resolucao de sobreposicoes simultaneas que divide o tempo em intervalos elementares e empilha as falas em quebra de linha unica, sem colisoes de texto na tela.
-- **Player OSD & Menu Glass:** Hierarquia com Progressive Disclosure - transporte central ergonomico com glow ciano neon em foco e menu rapido de configuracoes em vidro translucido (Velocidade, Proporcao, Capitulos, Info Tecnica).
-- **Modulo de Perfis (Quem esta assistindo?):** Gerenciador de multiplos perfis com persistencia via Room (ProfileEntity), catalogo remoto de avatares/wallpapers de animes e editor de perfil com foco D-Pad para Android TV.
-- **Explorador de Arquivos & Breadcrumbs:** Nova organizacao com subpastas no topo e grid de videos com badges de resolucao (1080p/4K), formato (MKV), audio (5.1) e tamanho.
-- **Identidade Visual Torii:** Novo icone vetorizado e paleta neon dark consistente em todas as telas e dialogos.
-
-### APKs Incluidos (Debug Build):
-- makimono-v1.5.2-arm64-v8a-debug.apk (TV Box moderna, Fire TV Stick 4K, Smartphones)
-- makimono-v1.5.2-armeabi-v7a-debug.apk (TVs e dispositivos 32-bit)
-- makimono-v1.5.2-x86_64-debug.apk (Emuladores PC 64-bit)
-- makimono-v1.5.2-x86-debug.apk (Emuladores PC 32-bit)
-"@
-
-    $bodyObj = @{
-        tag_name         = $tag
-        target_commitish = "main"
-        name             = "Makimono $tag - UI Modernization & Subtitle Engine v4"
-        body             = $releaseBody
-        draft            = $false
-        prerelease       = $false
-    } | ConvertTo-Json -Depth 5
-
-    $tempJson = [System.IO.Path]::GetTempFileName()
-    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-    [System.IO.File]::WriteAllText($tempJson, $bodyObj, $utf8NoBom)
-    
-    $atJson = "@" + $tempJson
-    $jsonOutput = curl.exe -s -X POST `
-        -H "Authorization: Bearer $token" `
-        -H "User-Agent: Makimono-Release-Agent" `
-        -H "Accept: application/vnd.github.v3+json" `
-        -H "Content-Type: application/json; charset=utf-8" `
-        --data $atJson `
-        "https://api.github.com/repos/$repo/releases"
-        
-    Remove-Item $tempJson -Force
-    $release = $jsonOutput | ConvertFrom-Json
-
-    if (-not $release.id) {
-        Write-Error "Falha ao criar release: $jsonOutput"
-        exit 1
-    }
-    Write-Host "Release criada com sucesso! ID: $($release.id)" -ForegroundColor Green
-}
-
-# 4. Upload dos arquivos (APKs e .sha256)
-$files = Get-ChildItem -Path $apkDir | Where-Object { ($_.Name.EndsWith(".apk") -or $_.Name.EndsWith(".sha256")) -and -not $_.Name.Contains("androidTest") }
-
-$uploadUrlBase = ($release.upload_url -replace '\{\?name,label\}', '')
-
-# Recarrega release para obter lista atualizada de assets
-$release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/$($release.id)" -Headers $headers -Method Get
-
-foreach ($file in $files) {
-    Write-Host "`nProcessando: $($file.Name)..." -ForegroundColor Cyan
-
-    # Se ja existe um asset com esse nome, deletar antes
-    $existingAsset = $release.assets | Where-Object { $_.name -eq $file.Name }
-    if ($existingAsset) {
-        Write-Host "  Removendo asset antigo: $($existingAsset.name) (ID: $($existingAsset.id))..." -ForegroundColor Yellow
-        Invoke-RestMethod -Uri $existingAsset.url -Headers $headers -Method Delete
-    }
-
-    $contentType = if ($file.Name.EndsWith(".apk")) { "application/vnd.android.package-archive" } else { "text/plain" }
-    $uploadUri = "${uploadUrlBase}?name=$($file.Name)"
-
-    $fileMb = [math]::Round($file.Length / 1048576, 2)
-    Write-Host "  Enviando $($file.Name) ($fileMb MB)..."
-    
-    $atFile = "@" + $file.FullName
-    $httpResult = curl.exe -s -w "`nHTTP_STATUS:%{http_code}" -X POST `
-        -H "Authorization: Bearer $token" `
-        -H "User-Agent: Makimono-Release-Agent" `
-        -H "Content-Type: $contentType" `
-        --data-binary $atFile `
-        "$uploadUri"
-
-    if ($httpResult -match "HTTP_STATUS:201") {
-        Write-Host "  [OK] $($file.Name) enviado com sucesso!" -ForegroundColor Green
-    } else {
-        Write-Host "  [FALHA] Falha ao enviar $($file.Name):`n$httpResult" -ForegroundColor Red
-    }
-}
-
-Write-Host "`n=======================================================" -ForegroundColor Green
-Write-Host "Release $tag publicada com sucesso no GitHub!" -ForegroundColor Green
-Write-Host "URL: $($release.html_url)" -ForegroundColor Cyan
-Write-Host "=======================================================" -ForegroundColor Green
+$verified = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/$($release.id)" -Headers $headers
+if (@($verified.assets).Count -ne 8) { throw "Release must contain four APKs and four checksums" }
+$published = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/$($release.id)" -Headers $headers -Method Patch -ContentType "application/json" -Body '{"draft":false}'
+Write-Host "Published: $($published.html_url)"

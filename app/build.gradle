@@ -52,6 +52,7 @@ if (!hasReleaseSigningConfig) {
 }
 
 android {
+    sourceSets.androidTest.assets.srcDirs += files("$projectDir/schemas")
 
     namespace "zechs.drive.stream"
 
@@ -66,17 +67,18 @@ android {
         applicationId "zechs.drive.stream"
         minSdk 21
         targetSdk 33
-        versionCode 45
-        versionName "1.5.7"
+        versionCode 46
+        versionName "1.5.8"
         archivesBaseName = "makimono-v${versionName}"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         def driveClientId = localProperties.getProperty("drive.clientId", "")
-        def driveClientSecret = localProperties.getProperty("drive.clientSecret", "")
-        def driveRefreshToken = localProperties.getProperty("drive.refreshToken", "")
+        def distributionBuild = project.hasProperty("distributionBuild")
+        def driveClientSecret = distributionBuild ? "" : localProperties.getProperty("drive.clientSecret", "")
+        def driveRefreshToken = distributionBuild ? "" : localProperties.getProperty("drive.refreshToken", "")
         def malClientId = localProperties.getProperty("mal.clientId", "")
-        def malClientSecret = localProperties.getProperty("mal.clientSecret", "")
+        def malClientSecret = distributionBuild ? "" : localProperties.getProperty("mal.clientSecret", "")
 
         buildConfigField "String", "DRIVE_CLIENT_ID", "\"${driveClientId}\""
         buildConfigField "String", "DRIVE_CLIENT_SECRET", "\"${driveClientSecret}\""

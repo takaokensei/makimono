@@ -90,7 +90,8 @@ class HomeFragment : BaseFragment() {
             onPlayClickListener = { file ->
                 // Botão play central: iniciar imediatamente!
                 handleQuickPlay(file)
-            }
+            },
+            compactCatalog = true
         )
     }
 
@@ -209,7 +210,7 @@ class HomeFragment : BaseFragment() {
         if (!isLandscape) return 2
 
         val contentWidth = resources.configuration.screenWidthDp - 128 - 44
-        return (contentWidth / 108).coerceIn(3, 8)
+        return (contentWidth / 132).coerceIn(3, 7)
     }
 
     private fun setupTenFootFocusChain() {
@@ -241,15 +242,30 @@ class HomeFragment : BaseFragment() {
         search.nextFocusLeftId = binding.btnNavInicio.id
         play?.nextFocusLeftId = binding.btnNavInicio.id
         play?.nextFocusRightId = info?.id ?: View.NO_ID
-        play?.nextFocusDownId = continueShelf.id
         info?.nextFocusLeftId = play?.id ?: View.NO_ID
-        info?.nextFocusDownId = continueShelf.id
-        continueShelf.nextFocusUpId = play?.id ?: search.id
-        continueShelf.nextFocusDownId = queueShelf?.id ?: catalog.id
-        queueShelf?.nextFocusUpId = continueShelf.id
-        queueShelf?.nextFocusDownId = catalog.id
-        catalog.nextFocusUpId = queueShelf?.id ?: continueShelf.id
         catalog.nextFocusLeftId = binding.btnNavInicio.id
+        // Shelves arrive asynchronously and may be absent for a new profile.
+        // Rebuild vertical links after layout so no explicit link points at a hidden row.
+        val root = binding.root
+        val focusLayoutListener = android.view.ViewTreeObserver.OnGlobalLayoutListener {
+            val rows = listOfNotNull(continueShelf, queueShelf, catalog).filter { it.isShown }
+            val heroTarget = play?.takeIf { it.isShown } ?: search
+            play?.nextFocusDownId = rows.firstOrNull()?.id ?: View.NO_ID
+            info?.nextFocusDownId = rows.firstOrNull()?.id ?: View.NO_ID
+            search.nextFocusDownId = play?.takeIf { it.isShown }?.id ?: rows.firstOrNull()?.id ?: View.NO_ID
+            rows.forEachIndexed { index, row ->
+                row.nextFocusUpId = rows.getOrNull(index - 1)?.id ?: heroTarget.id
+                row.nextFocusDownId = rows.getOrNull(index + 1)?.id ?: View.NO_ID
+            }
+        }
+        root.viewTreeObserver.addOnGlobalLayoutListener(focusLayoutListener)
+        root.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) = Unit
+            override fun onViewDetachedFromWindow(v: View) {
+                if (v.viewTreeObserver.isAlive) v.viewTreeObserver.removeOnGlobalLayoutListener(focusLayoutListener)
+                v.removeOnAttachStateChangeListener(this)
+            }
+        })
     }
 
     private fun setupAnimeGrid() {
@@ -259,7 +275,36 @@ class HomeFragment : BaseFragment() {
         binding.rvAnimeLibrary.adapter = animeAdapter
     }
 
+    private var catalogSort = 0
+
+    private fun submitCatalog() {
+        val source = viewModel.filteredAnimes.value
+        val titles = compareBy<DriveFile> { zechs.drive.stream.data.remote.AnimePosterResolver.cleanAnimeTitle(it.name).lowercase(java.util.Locale.ROOT) }
+        val ordered = when (catalogSort) {
+            1 -> source.sortedWith(titles)
+            2 -> source.sortedWith(titles.reversed())
+            else -> source
+        }
+        animeAdapter.submitList(ordered.map { FilesDataModel.File(it) })
+    }
+
     private fun setupHeaderSearch() {
+        val prefs = requireContext().getSharedPreferences("catalog_presentation", android.content.Context.MODE_PRIVATE)
+        catalogSort = prefs.getInt("sort", 0).coerceIn(0, 2)
+        binding.root.findViewById<View>(R.id.btnCatalogSort)?.setOnClickListener { button ->
+            MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+                .setTitle("Ordenar catálogo")
+                .setSingleChoiceItems(arrayOf("Ordem da biblioteca", "Nome: A–Z", "Nome: Z–A"), catalogSort) { dialog, choice ->
+                    catalogSort = choice
+                    prefs.edit().putInt("sort", choice).apply()
+                    submitCatalog()
+                    binding.rvAnimeLibrary.scrollToPosition(0)
+                    dialog.dismiss()
+                }
+                .setOnDismissListener { button.requestFocus() }
+                .show()
+        }
+
         binding.etSearchAnime.doAfterTextChanged { editable ->
             val query = editable?.toString().orEmpty()
             binding.btnClearSearch.visibility = if (query.isNotBlank()) View.VISIBLE else View.GONE
@@ -745,8 +790,10 @@ class HomeFragment : BaseFragment() {
                     binding.tvUserName?.text = profile.name
                     val avatarRes = profileManager.getAvatarDrawableRes(profile.avatarResName)
                     binding.ivUserAvatar?.let { avatar ->
+                        avatar.imageTintList = null
+                        avatar.clearColorFilter()
                         com.bumptech.glide.Glide.with(this@HomeFragment).load(profile.avatarUrl)
-                            .placeholder(avatarRes).error(avatarRes).into(avatar)
+                            .placeholder(avatarRes).error(avatarRes).circleCrop().into(avatar)
                     }
                 }
             }
@@ -890,8 +937,7 @@ class HomeFragment : BaseFragment() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
                     viewModel.filteredAnimes.collect { animes ->
-                        val dataModels = animes.map { FilesDataModel.File(it) }
-                        animeAdapter.submitList(dataModels)
+                        submitCatalog()
                         if (currentTab == "Animes") {
                             binding.tvItemCount.text = "${animes.size} animes"
                             val isEmpty = animes.isEmpty() && !viewModel.isLoadingAnime.value

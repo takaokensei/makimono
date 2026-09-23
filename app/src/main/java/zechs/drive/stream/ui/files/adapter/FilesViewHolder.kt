@@ -235,7 +235,20 @@ sealed class FilesViewHolder(
                 // Dynamically set aspect ratio: 16:9 for video episodes, 2:3 for anime series poster cards
                 val params = framePosterContainer.layoutParams as? androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
                 if (params != null) {
-                    val targetRatio = if (isVideo) "H,16:9" else "H,2:3"
+                    val compact = filesAdapter.compactCatalog &&
+                        root.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                    val targetRatio = when {
+                        isVideo -> "H,16:9"
+                        compact -> "H,2:3"
+                        else -> "H,2:3"
+                    }
+                    if (compact) {
+                        // Keep the touch target while letting the artwork dominate the shelf.
+                        btnGridStar.background = null
+                        val inset = (16 * root.resources.displayMetrics.density).toInt()
+                        btnGridStar.setPadding(inset, inset, inset, inset)
+                        tvGridFileName.textSize = 12f
+                    }
                     if (params.dimensionRatio != targetRatio) {
                         params.dimensionRatio = targetRatio
                         framePosterContainer.layoutParams = params
@@ -289,7 +302,7 @@ sealed class FilesViewHolder(
 
                 tvGridTypeBadge.apply {
                     // Show type badge (e.g. ANIME)
-                    isVisible = isFolder || (resTag == null && codecTag == null)
+                    isVisible = !isFolder && resTag == null && codecTag == null
                     text = when {
                         isFolder -> "ANIME"
                         isVideo -> "VÍDEO"

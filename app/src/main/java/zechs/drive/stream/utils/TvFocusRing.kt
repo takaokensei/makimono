@@ -10,6 +10,8 @@ import zechs.drive.stream.R
 /** An overlay leaves existing click, focus, ripple and card animations untouched. */
 object TvFocusRing {
     fun install(root: View) {
+        if (root.getTag(R.id.tv_focus_ring_installed) == true) return
+        root.setTag(R.id.tv_focus_ring_installed, true)
         var target: View? = null
         var ring: Drawable? = null
         fun clear() {
@@ -25,7 +27,7 @@ object TvFocusRing {
             }
             return false
         }
-        val listener = ViewTreeObserver.OnGlobalFocusChangeListener { _, focused ->
+        fun update(focused: View?) {
             clear()
             if (focused != null && belongsToRoot(focused)) {
                 target = focused
@@ -36,7 +38,9 @@ object TvFocusRing {
                 }
             }
         }
+        val listener = ViewTreeObserver.OnGlobalFocusChangeListener { _, focused -> update(focused) }
         val layout = ViewTreeObserver.OnGlobalLayoutListener {
+            if (target !== root.findFocus()) update(root.findFocus())
             target?.let { ring?.setBounds(0, 0, it.width, it.height) }
         }
         root.viewTreeObserver.addOnGlobalFocusChangeListener(listener)
@@ -45,6 +49,7 @@ object TvFocusRing {
             override fun onViewAttachedToWindow(v: View) = Unit
             override fun onViewDetachedFromWindow(v: View) {
                 clear()
+                v.setTag(R.id.tv_focus_ring_installed, null)
                 if (v.viewTreeObserver.isAlive) {
                     v.viewTreeObserver.removeOnGlobalFocusChangeListener(listener)
                     v.viewTreeObserver.removeOnGlobalLayoutListener(layout)
