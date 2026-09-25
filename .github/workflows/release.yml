@@ -38,6 +38,21 @@ jobs:
       - name: Setup local.properties (Optional Secrets)
         run: |
           touch local.properties
+          if [ -n "${{ secrets.DRIVE_CLIENT_ID }}" ]; then
+            echo "drive.clientId=${{ secrets.DRIVE_CLIENT_ID }}" >> local.properties
+          fi
+          if [ -n "${{ secrets.DRIVE_CLIENT_SECRET }}" ]; then
+            echo "drive.clientSecret=${{ secrets.DRIVE_CLIENT_SECRET }}" >> local.properties
+          fi
+          if [ -n "${{ secrets.DRIVE_REFRESH_TOKEN }}" ]; then
+            echo "drive.refreshToken=${{ secrets.DRIVE_REFRESH_TOKEN }}" >> local.properties
+          fi
+          if [ -n "${{ secrets.MAL_CLIENT_ID }}" ]; then
+            echo "mal.clientId=${{ secrets.MAL_CLIENT_ID }}" >> local.properties
+          fi
+          if [ -n "${{ secrets.MAL_CLIENT_SECRET }}" ]; then
+            echo "mal.clientSecret=${{ secrets.MAL_CLIENT_SECRET }}" >> local.properties
+          fi
 
       - name: Validate Release Secrets
         run: |

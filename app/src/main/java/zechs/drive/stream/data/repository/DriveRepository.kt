@@ -61,13 +61,14 @@ class DriveRepository @Inject constructor(
         return block()
     }
 
-    private suspend fun getOrFetchAccessToken(): String? {
-        val client = sessionManager.fetchClient() ?: return null
-        val tokenResponse = fetchAccessToken(client)
-        if (tokenResponse is Resource.Success) {
-            return tokenResponse.data.accessToken
+    private suspend fun getOrFetchAccessToken(): Resource<String> {
+        val client = sessionManager.fetchClient()
+            ?: return Resource.Error("Cliente do Google Drive não configurado. Conecte sua conta em Configurações.")
+        return when (val tokenResponse = fetchAccessToken(client)) {
+            is Resource.Success -> Resource.Success(tokenResponse.data.accessToken)
+            is Resource.Error -> Resource.Error(tokenResponse.message ?: "Falha ao obter token de acesso do Google Drive")
+            is Resource.Loading -> Resource.Loading()
         }
-        return null
     }
 
     suspend fun getFiles(
@@ -76,8 +77,11 @@ class DriveRepository @Inject constructor(
         pageSize: Int,
         orderBy: String = "folder, name"
     ): Resource<FilesResponse> {
-        val accessToken = getOrFetchAccessToken()
-            ?: return Resource.Error("Access token can not be null")
+        val accessToken = when (val tokenRes = getOrFetchAccessToken()) {
+            is Resource.Success -> tokenRes.data
+            is Resource.Error -> return Resource.Error(tokenRes.message ?: "Token de acesso não disponível")
+            is Resource.Loading -> return Resource.Loading()
+        }
         return try {
             val files = requestFiles(accessToken, query, pageToken, pageSize, orderBy)
             Resource.Success(files)
@@ -96,7 +100,7 @@ class DriveRepository @Inject constructor(
                     doOnError(retryError)
                 }
             } else {
-                doOnError(unauthorized)
+                Resource.Error(refreshed.message ?: "Sessão expirada. Faça login novamente nas configurações.")
             }
         } catch (e: Exception) {
             doOnError(e)
@@ -155,8 +159,11 @@ class DriveRepository @Inject constructor(
         pageToken: String?,
         pageSize: Int,
     ): Resource<DriveResponse> {
-        val accessToken = getOrFetchAccessToken()
-            ?: return Resource.Error("Access token can not be null")
+        val accessToken = when (val tokenRes = getOrFetchAccessToken()) {
+            is Resource.Success -> tokenRes.data
+            is Resource.Error -> return Resource.Error(tokenRes.message ?: "Token de acesso não disponível")
+            is Resource.Loading -> return Resource.Loading()
+        }
         return try {
             val drives = driveApi.getDrives(
                 pageSize = pageSize,
@@ -202,7 +209,7 @@ class DriveRepository @Inject constructor(
         }
 
         val refreshToken = sessionManager.fetchRefreshToken()
-            ?: return Resource.Error("Refresh token can not be null")
+            ?: return Resource.Error("Sessão do Google Drive ausente ou expirada. Conecte sua conta em Configurações.")
 
         return try {
             val token = tokenApi.get().getAccessToken(
@@ -214,7 +221,13 @@ class DriveRepository @Inject constructor(
             sessionManager.saveAccessToken(token)
             Resource.Success(token)
         } catch (e: Exception) {
-            doOnError(e)
+            if (e is HttpException && e.code() == 400) {
+                val errorBody = try { e.response()?.errorBody()?.string() } catch (_: Exception) { null }
+                Log.e(TAG, "Google OAuth 400 Bad Request: $errorBody", e)
+                Resource.Error("Sessão do Google Drive expirada ou revogada. Por favor, faça login novamente nas configurações.")
+            } else {
+                doOnError(e)
+            }
         }
     }
 
@@ -275,7 +288,11 @@ class DriveRepository @Inject constructor(
     }
 
     private suspend fun <T> executeWithTokenRetry(block: suspend (accessToken: String) -> T): T {
-        val accessToken = getOrFetchAccessToken() ?: throw IOException("Access token is null")
+        val accessToken = when (val tokenRes = getOrFetchAccessToken()) {
+            is Resource.Success -> tokenRes.data
+            is Resource.Error -> throw IOException(tokenRes.message ?: "Access token is null")
+            is Resource.Loading -> throw IOException("Loading access token")
+        }
         return try {
             block(accessToken)
         } catch (unauthorized: HttpException) {

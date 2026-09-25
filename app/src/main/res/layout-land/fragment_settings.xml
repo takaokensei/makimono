@@ -9,21 +9,21 @@
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
-        android:layout_height="88dp"
+        android:layout_height="56dp"
         android:background="@android:color/transparent"
         android:elevation="0dp">
 
         <com.google.android.material.appbar.CollapsingToolbarLayout
             android:id="@+id/collapsingToolbarLayout"
             android:layout_width="match_parent"
-            android:layout_height="88dp"
-            android:background="?attr/colorBgSurface"
+            android:layout_height="56dp"
+            android:background="?attr/colorBgBase"
             app:layout_scrollFlags="noScroll">
 
             <com.google.android.material.appbar.MaterialToolbar
                 android:id="@+id/toolbar"
                 android:layout_width="match_parent"
-                android:layout_height="88dp"
+                android:layout_height="56dp"
                 android:paddingStart="28dp"
                 android:paddingEnd="28dp"
                 app:navigationIcon="@drawable/ic_back_24"

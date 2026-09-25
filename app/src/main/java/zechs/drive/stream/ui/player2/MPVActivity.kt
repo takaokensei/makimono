@@ -206,10 +206,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         // P2-10: substitui onBackPressed() deprecado pelo dispatcher moderno.
         onBackPressedDispatcher.addCallback(object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (!handleBackNavigation()) {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
-                }
+                finish()
             }
         })
 
@@ -220,10 +217,10 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
 
         controller
             .playerToolbar
-            .setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
+            .setNavigationOnClickListener { finish() }
         controller
             .btnBack
-            .setOnClickListener { onBackPressedDispatcher.onBackPressed() }
+            .setOnClickListener { finish() }
 
         currentFileId = intent.getStringExtra("fileId") ?: ""
         currentTitle = intent.getStringExtra("title") ?: ""
@@ -324,7 +321,10 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             btnEpisodes.setOnClickListener { showEpisodesDrawer() }
             btnChapter.setOnClickListener { pickChapter() }
             btnSpeed.setOnClickListener { pickSpeed() }
-            btnResize.setOnClickListener { player.cycleScale() }
+            btnResize.setOnClickListener {
+                player.cycleScale()
+                zechs.drive.stream.utils.TvFocusRing.clear(binding.root)
+            }
 
             val isTvDevice = DeviceUi.isTenFootExperience(this@MPVActivity)
             btnRotate.visibility = if (isTvDevice) View.GONE else View.VISIBLE
@@ -536,6 +536,13 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // Consume the complete BACK gesture so PlayerView cannot hide/reopen the OSD.
+        // Give the focused exit button priority over skip-intro/next-episode shortcuts.
+        val activateExit = event.keyCode in listOf(KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_BUTTON_A) && controller.btnBack.isFocused
+        if (event.keyCode == KeyEvent.KEYCODE_BACK || activateExit) {
+            if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) finish()
+            return true
+        }
         if (event.action == KeyEvent.ACTION_DOWN) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_CENTER,
@@ -618,21 +625,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                     return true
                 }
 
-                KeyEvent.KEYCODE_BACK -> {
-                    if (binding.nextEpisodeCard.root.isVisible) {
-                        dismissNextEpisodeCard()
-                        return true
-                    }
-                    if (controller.root.isVisible) {
-                        hideControls()
-                        return true
-                    }
-                    if (binding.netflixSkipRow.isVisible) {
-                        binding.netflixSkipRow.visibility = View.GONE
-                        return true
-                    }
-                }
-
                 KeyEvent.KEYCODE_MEDIA_REWIND,
                 KeyEvent.KEYCODE_BUTTON_L1,
                 KeyEvent.KEYCODE_PAGE_UP -> {
@@ -643,22 +635,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             }
         }
         return super.dispatchKeyEvent(event)
-    }
-
-    private fun handleBackNavigation(): Boolean {
-        if (binding.nextEpisodeCard.root.isVisible) {
-            dismissNextEpisodeCard()
-            return true
-        }
-        if (controller.root.isVisible) {
-            hideControls()
-            return true
-        }
-        if (binding.netflixSkipRow.isVisible) {
-            binding.netflixSkipRow.visibility = View.GONE
-            return true
-        }
-        return false
     }
 
     private var isHidingControls = false
@@ -696,6 +672,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
 
     private fun hideControls() {
         if (!controller.root.isVisible || isHidingControls) return
+        zechs.drive.stream.utils.TvFocusRing.clear(binding.root)
         isHidingControls = true
         val density = resources.displayMetrics.density
         val animDuration = 220L

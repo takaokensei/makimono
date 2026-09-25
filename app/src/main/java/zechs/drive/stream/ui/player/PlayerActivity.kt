@@ -260,10 +260,7 @@ class PlayerActivity : AppCompatActivity() {
         // P2-10: substitui onBackPressed() deprecado pelo dispatcher moderno.
         onBackPressedDispatcher.addCallback(object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (!handleBackNavigation()) {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
-                }
+                finish()
             }
         })
 
@@ -303,10 +300,10 @@ class PlayerActivity : AppCompatActivity() {
 
         // Back button
         toolbar.setNavigationOnClickListener {
-            onBackPressedDispatcher.onBackPressed()
+            finish()
         }
         btnBack.setOnClickListener {
-            onBackPressedDispatcher.onBackPressed()
+            finish()
         }
 
         btnPrevEp.setOnClickListener {
@@ -363,6 +360,7 @@ class PlayerActivity : AppCompatActivity() {
                 Snackbar.make(playerView, modeLabel, 1000).apply {
                     anchorView = progressViewGroup
                 }.show()
+                zechs.drive.stream.utils.TvFocusRing.clear(playerView)
             }
         }
 
@@ -889,6 +887,9 @@ class PlayerActivity : AppCompatActivity() {
 
         playerView.setControllerVisibilityListener { visibility ->
             val isVisible = visibility == View.VISIBLE
+            if (!isVisible) {
+                zechs.drive.stream.utils.TvFocusRing.clear(playerView)
+            }
 
             val targetCardY = if (isVisible) -resources.getDimensionPixelOffset(R.dimen.next_episode_card_offset).toFloat() else 0f
             if (binding.nextEpisodeCard.root.isVisible) {
@@ -928,6 +929,13 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // Consume the complete BACK gesture so PlayerView cannot hide/reopen the OSD.
+        // Give the focused exit button priority over skip-intro/next-episode shortcuts.
+        val activateExit = event.keyCode in listOf(KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_BUTTON_A) && btnBack.isFocused
+        if (event.keyCode == KeyEvent.KEYCODE_BACK || activateExit) {
+            if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) finish()
+            return true
+        }
         if (event.action == KeyEvent.ACTION_DOWN) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_CENTER,
@@ -1029,25 +1037,6 @@ class PlayerActivity : AppCompatActivity() {
                     return true
                 }
 
-                KeyEvent.KEYCODE_BACK -> {
-                    if (isKodiHudVisible) {
-                        toggleKodiInfoHud()
-                        return true
-                    }
-                    if (binding.nextEpisodeCard.root.isVisible) {
-                        dismissNextEpisodeCard()
-                        return true
-                    }
-                    if (playerView.isControllerVisible) {
-                        animateHideController()
-                        return true
-                    }
-                    if (binding.netflixSkipRow.isVisible) {
-                        binding.netflixSkipRow.visibility = View.GONE
-                        return true
-                    }
-                }
-
                 KeyEvent.KEYCODE_MEDIA_REWIND,
                 KeyEvent.KEYCODE_BUTTON_L1,
                 KeyEvent.KEYCODE_PAGE_UP -> {
@@ -1060,30 +1049,11 @@ class PlayerActivity : AppCompatActivity() {
         return super.dispatchKeyEvent(event)
     }
 
-    private fun handleBackNavigation(): Boolean {
-        if (isKodiHudVisible) {
-            toggleKodiInfoHud()
-            return true
-        }
-        if (binding.nextEpisodeCard.root.isVisible) {
-            dismissNextEpisodeCard()
-            return true
-        }
-        if (playerView.isControllerVisible) {
-            animateHideController()
-            return true
-        }
-        if (binding.netflixSkipRow.isVisible) {
-            binding.netflixSkipRow.visibility = View.GONE
-            return true
-        }
-        return false
-    }
-
     private var isHidingControls = false
 
     private fun animateHideController(onComplete: (() -> Unit)? = null) {
         if (!::playerView.isInitialized || !playerView.isControllerVisible || isHidingControls) return
+        zechs.drive.stream.utils.TvFocusRing.clear(playerView)
         isHidingControls = true
         val density = resources.displayMetrics.density
         val animDuration = 220L

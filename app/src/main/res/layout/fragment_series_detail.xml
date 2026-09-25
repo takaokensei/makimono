@@ -19,7 +19,7 @@
 
         <!-- 1. Hero Backdrop Image (Subtle ambient layer) -->
         <ImageView
-            android:id="@+id/ivHeroBackdrop"
+            android:id="@+id/ivHeroBackdrop" android:cropToPadding="true"
             android:layout_width="0dp"
             android:layout_height="480dp"
             android:alpha="0.22"
