@@ -260,7 +260,9 @@ class PlayerActivity : AppCompatActivity() {
         // P2-10: substitui onBackPressed() deprecado pelo dispatcher moderno.
         onBackPressedDispatcher.addCallback(object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                finish()
+                if (!handleBackNavigation()) {
+                    finish()
+                }
             }
         })
 
@@ -929,11 +931,25 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        // Consume the complete BACK gesture so PlayerView cannot hide/reopen the OSD.
         // Give the focused exit button priority over skip-intro/next-episode shortcuts.
-        val activateExit = event.keyCode in listOf(KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_BUTTON_A) && btnBack.isFocused
-        if (event.keyCode == KeyEvent.KEYCODE_BACK || activateExit) {
+        val activateExit = event.keyCode in listOf(
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER,
+            KeyEvent.KEYCODE_BUTTON_A
+        ) && btnBack.isFocused
+
+        if (activateExit) {
             if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) finish()
+            return true
+        }
+
+        if (event.keyCode == KeyEvent.KEYCODE_BACK) {
+            if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) {
+                if (!handleBackNavigation()) {
+                    finish()
+                }
+            }
             return true
         }
         if (event.action == KeyEvent.ACTION_DOWN) {
@@ -1047,6 +1063,26 @@ class PlayerActivity : AppCompatActivity() {
             }
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    private fun handleBackNavigation(): Boolean {
+        if (isKodiHudVisible) {
+            toggleKodiInfoHud()
+            return true
+        }
+        if (binding.nextEpisodeCard.root.isVisible) {
+            dismissNextEpisodeCard(isManualCancel = true)
+            return true
+        }
+        if (::playerView.isInitialized && playerView.isControllerVisible) {
+            animateHideController()
+            return true
+        }
+        if (binding.netflixSkipRow.isVisible) {
+            binding.netflixSkipRow.visibility = View.GONE
+            return true
+        }
+        return false
     }
 
     private var isHidingControls = false
