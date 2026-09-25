@@ -76,7 +76,7 @@ Write-Host "Autenticado como: $($user.login)" -ForegroundColor Green
 # Only this version's signed release APKs; never upload stale builds or test APKs.
 $apks = @(Get-ChildItem -LiteralPath $apkDir -File | Where-Object { $_.Name -like "makimono-$tag-*-release.apk" })
 if ($apks.Count -ne 4) { throw "Expected four release APKs for $tag, got $($apks.Count)" }
-$notes = Get-Content -LiteralPath $notesFile -Raw -Encoding utf8
+$notes = [System.IO.File]::ReadAllText((Resolve-Path $notesFile).Path, [System.Text.Encoding]::UTF8)
 if (-not $title) { $title = "Makimono $tag" }
 $body = @{tag_name=$tag; target_commitish=$targetCommit; name=$title; body=$notes; draft=$true; prerelease=$false} | ConvertTo-Json
 $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases" -Headers $headers -Method Post -ContentType "application/json; charset=utf-8" -Body ([System.Text.Encoding]::UTF8.GetBytes($body))
