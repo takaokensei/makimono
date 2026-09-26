@@ -8,6 +8,8 @@ import android.media.AudioManager.*
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.KeyEvent
 import android.view.View
@@ -168,6 +170,12 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     private var nextEpisodeCanceled = false
     private var isNextEpisodeCardShowing = false
     private var countdownJob: Job? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var ignoreNextCenterKeyUp = false
+    private var cumulativeSeekSeconds = 0
+    private val resetSeekAccumulatorRunnable = Runnable {
+        cumulativeSeekSeconds = 0
+    }
     private var folderSubtitles = mutableListOf<SubtitleItem>()
     private val addedSubtitleFileIds = mutableSetOf<String>()
     private var isFileLoaded = false
@@ -509,7 +517,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     }
 
     private fun updateNextEpisode() {
-        playbackCoordinator.setPlaylist(playlist, currentFileId)
+        playbackCoordinator.setPlaylist(playlist, currentFileId, currentTitle)
         val coordinatorState = playbackCoordinator.state.value
         nextEpisode = coordinatorState.nextEpisode
         prevEpisode = coordinatorState.prevEpisode
@@ -559,12 +567,35 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             }
             return true
         }
+
+        if (event.action == KeyEvent.ACTION_UP) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_CENTER,
+                KeyEvent.KEYCODE_ENTER,
+                KeyEvent.KEYCODE_NUMPAD_ENTER,
+                KeyEvent.KEYCODE_BUTTON_A -> {
+                    if (ignoreNextCenterKeyUp) {
+                        ignoreNextCenterKeyUp = false
+                        return true
+                    }
+                }
+                KeyEvent.KEYCODE_DPAD_LEFT,
+                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    if (!controller.root.isVisible) {
+                        return true
+                    }
+                }
+            }
+        }
+
         if (event.action == KeyEvent.ACTION_DOWN) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_CENTER,
                 KeyEvent.KEYCODE_ENTER,
                 KeyEvent.KEYCODE_NUMPAD_ENTER,
                 KeyEvent.KEYCODE_BUTTON_A -> {
+                    if (event.repeatCount > 0) return true
+
                     if (binding.nextEpisodeCard.root.isVisible) {
                         if (binding.nextEpisodeCard.btnCancelNextEpisode.isFocused) {
                             dismissNextEpisodeCard(isManualCancel = true)
@@ -578,6 +609,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                         return true
                     }
                     if (!controller.root.isVisible) {
+                        ignoreNextCenterKeyUp = true
                         showControlsWithFocus()
                         return true
                     }
@@ -585,16 +617,24 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
 
                 KeyEvent.KEYCODE_DPAD_LEFT -> {
                     if (!controller.root.isVisible) {
+                        mainHandler.removeCallbacks(resetSeekAccumulatorRunnable)
+                        if (cumulativeSeekSeconds > 0) cumulativeSeekSeconds = 0
+                        cumulativeSeekSeconds -= 10
                         rewindBackward()
-                        configSnackbar("<< -10s", 500)
+                        gestureHelper.showSeekRipple(cumulativeSeekSeconds)
+                        mainHandler.postDelayed(resetSeekAccumulatorRunnable, 1200L)
                         return true
                     }
                 }
 
                 KeyEvent.KEYCODE_DPAD_RIGHT -> {
                     if (!controller.root.isVisible) {
+                        mainHandler.removeCallbacks(resetSeekAccumulatorRunnable)
+                        if (cumulativeSeekSeconds < 0) cumulativeSeekSeconds = 0
+                        cumulativeSeekSeconds += 10
                         skipForward()
-                        configSnackbar("+10s >>", 500)
+                        gestureHelper.showSeekRipple(cumulativeSeekSeconds)
+                        mainHandler.postDelayed(resetSeekAccumulatorRunnable, 1200L)
                         return true
                     }
                 }
@@ -796,12 +836,15 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
 
         if (specialChapter != null) {
             val isOpOrRecap = specialChapter.type == ChapterType.OPENING || specialChapter.type == ChapterType.RECAP
+            val isEnding = specialChapter.type == ChapterType.ENDING
             val isAutoSkip = malSessionManager.get().isAutoSkipEnabled()
-            if (isAutoSkip && isOpOrRecap && !hasAutoSkippedCurrentInterval) {
+            if (isAutoSkip && (isOpOrRecap || isEnding) && !hasAutoSkippedCurrentInterval) {
                 if (currentTimeSeconds in specialChapter.startTimeSeconds..(specialChapter.startTimeSeconds + 3.5)) {
                     hasAutoSkippedCurrentInterval = true
                     MPVLib.command(arrayOf("seek", specialChapter.endTimeSeconds.toString(), "absolute"))
-                    gestureHelper.showNotification("⏩ Abertura pulada automaticamente (AniSkip)")
+                    val notifyText = if (isEnding) "⏩ Encerramento pulado automaticamente (AniSkip)"
+                                     else "⏩ Abertura pulada automaticamente (AniSkip)"
+                    gestureHelper.showNotification(notifyText)
                     return
                 }
             }
@@ -809,7 +852,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             val skipLabel = when (specialChapter.type) {
                 ChapterType.RECAP -> "Pular Recap"
                 ChapterType.OPENING -> "Pular Abertura"
-                ChapterType.ENDING -> "Pular Créditos"
+                ChapterType.ENDING -> "Pular Encerramento"
                 else -> "Pular"
             }
 
@@ -862,7 +905,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             val snackText = when (chapter.type) {
                 ChapterType.RECAP -> "⏩ Recap pulado"
                 ChapterType.OPENING -> "⏩ Abertura pulada"
-                ChapterType.ENDING -> "⏩ Créditos pulados"
+                ChapterType.ENDING -> "⏩ Encerramento pulado"
                 else -> "⏩ Capítulo pulado"
             }
             configSnackbar(snackText)
@@ -1888,19 +1931,26 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             dismissNextEpisodeCard(isManualCancel = true)
         }
 
+        card.btnPlayNextEpisodeNow.post {
+            card.btnPlayNextEpisodeNow.requestFocus()
+        }
+
         countdownJob?.cancel()
         countdownJob = lifecycleScope.launch {
+            val totalCountdownSeconds = 10
             while (isActive && isNextEpisodeCardShowing) {
                 val timePosDouble = MPVLib.getPropertyDouble("time-pos") ?: (player.timePos ?: 0).toDouble()
                 val durationDouble = (player.duration ?: 0).toDouble()
                 val remainingDouble = (durationDouble - timePosDouble).coerceAtLeast(0.0)
                 val sec = kotlin.math.ceil(remainingDouble).toInt().coerceAtLeast(0)
                 card.tvNextEpisodeCountdown.text = "A SEGUIR • ${sec}s"
+                val progressPercent = ((sec.toFloat() / totalCountdownSeconds.toFloat()) * 100).toInt().coerceIn(0, 100)
+                card.pbNextEpisodeCountdown.progress = progressPercent
                 if (sec <= 0 || remainingDouble <= 1.0) {
                     playNextEpisodeDirectly()
                     break
                 }
-                delay(300L)
+                delay(150L)
             }
         }
     }

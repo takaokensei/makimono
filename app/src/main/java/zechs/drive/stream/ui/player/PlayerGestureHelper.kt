@@ -308,6 +308,16 @@ class PlayerGestureHelper(
         return true
     }
 
+    fun showSeekRipple(deltaSeconds: Int) {
+        if (deltaSeconds > 0) {
+            hudBinding.tvDoubleTapRightText.text = "+${deltaSeconds}s"
+            showDoubleTapBubble(hudBinding.doubleTapRightBubble)
+        } else if (deltaSeconds < 0) {
+            hudBinding.tvDoubleTapLeftText.text = "${deltaSeconds}s"
+            showDoubleTapBubble(hudBinding.doubleTapLeftBubble)
+        }
+    }
+
     private fun showDoubleTapBubble(bubble: View) {
         bubble.animate().cancel()
         bubble.alpha = 0f

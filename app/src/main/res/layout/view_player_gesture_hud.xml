@@ -191,6 +191,7 @@
             app:tint="#FFFFFFFF" />
 
         <TextView
+            android:id="@+id/tvDoubleTapLeftText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
@@ -219,6 +220,7 @@
         tools:visibility="visible">
 
         <TextView
+            android:id="@+id/tvDoubleTapRightText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"

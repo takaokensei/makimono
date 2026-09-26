@@ -357,7 +357,10 @@ class DriveRepository @Inject constructor(
                         PlaylistItem(it.id, it.name, it.thumbnailLink)
                     }
                     list.sortedWith { a, b ->
-                        zechs.drive.stream.utils.EpisodeParser.naturalCompare(a.title, b.title)
+                        zechs.drive.stream.utils.SeasonEpisodeGrouper.compareItems(
+                            a.title, zechs.drive.stream.utils.EpisodeParser.parse(a.title),
+                            b.title, zechs.drive.stream.utils.EpisodeParser.parse(b.title)
+                        )
                     }
                 }
                 is Resource.Error -> {

@@ -359,86 +359,58 @@ object EpisodeParser {
 
     /**
      * Natural string comparator so "Episode 2" sorts before "Episode 10".
+     * Splits strings into runs of digits and non-digits for intuitive ordering.
      */
     fun naturalCompare(a: String, b: String): Int {
         var ia = 0
         var ib = 0
-        var ca: Char
-        var cb: Char
+        val lenA = a.length
+        val lenB = b.length
 
-        while (true) {
-            var nzaCount = 0
-            var nzbCount = 0
+        while (ia < lenA && ib < lenB) {
+            val ca = a[ia]
+            val cb = b[ib]
 
-            ca = charAt(a, ia)
-            cb = charAt(b, ib)
+            if (ca.isDigit() && cb.isDigit()) {
+                var endA = ia
+                while (endA < lenA && a[endA].isDigit()) endA++
+                var endB = ib
+                while (endB < lenB && b[endB].isDigit()) endB++
 
-            // skip leading spaces
-            while (Character.isSpaceChar(ca)) {
+                val strA = a.substring(ia, endA)
+                val strB = b.substring(ib, endB)
+
+                val trimA = strA.trimStart('0')
+                val trimB = strB.trimStart('0')
+
+                val numLenA = trimA.length
+                val numLenB = trimB.length
+
+                if (numLenA != numLenB) {
+                    return numLenA - numLenB
+                }
+
+                val numCmp = trimA.compareTo(trimB)
+                if (numCmp != 0) {
+                    return numCmp
+                }
+
+                if (strA.length != strB.length) {
+                    return strA.length - strB.length
+                }
+
+                ia = endA
+                ib = endB
+            } else {
+                val cmp = ca.lowercaseChar().compareTo(cb.lowercaseChar())
+                if (cmp != 0) {
+                    return cmp
+                }
                 ia++
-                ca = charAt(a, ia)
-            }
-            while (Character.isSpaceChar(cb)) {
                 ib++
-                cb = charAt(b, ib)
             }
-
-            // process digit run
-            if (Character.isDigit(ca) && Character.isDigit(cb)) {
-                if (ca == '0') {
-                    while (charAt(a, ia) == '0') {
-                        nzaCount++
-                        ia++
-                    }
-                }
-                if (cb == '0') {
-                    while (charAt(b, ib) == '0') {
-                        nzbCount++
-                        ib++
-                    }
-                }
-
-                var numStartA = ia
-                var numStartB = ib
-
-                while (Character.isDigit(charAt(a, ia))) ia++
-                while (Character.isDigit(charAt(b, ib))) ib++
-
-                val lenA = ia - numStartA
-                val lenB = ib - numStartB
-
-                if (lenA != lenB) {
-                    return lenA - lenB
-                }
-
-                while (numStartA < ia) {
-                    if (a[numStartA] != b[numStartB]) {
-                        return a[numStartA] - b[numStartB]
-                    }
-                    numStartA++
-                    numStartB++
-                }
-
-                if (nzaCount != nzbCount) {
-                    return nzaCount - nzbCount
-                }
-            }
-
-            if (ca == '\u0000' && cb == '\u0000') {
-                return a.length - b.length
-            }
-
-            val cmp = ca.lowercaseChar().compareTo(cb.lowercaseChar())
-            if (cmp != 0) {
-                return cmp
-            }
-
-            ia++
-            ib++
         }
-    }
 
-    private fun charAt(s: String, i: Int): Char {
-        return if (i >= s.length) '\u0000' else s[i]
+        return (lenA - ia) - (lenB - ib)
     }
 }

@@ -7,6 +7,8 @@ import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.graphics.Color
 import android.graphics.Typeface
@@ -238,9 +240,14 @@ class PlayerActivity : AppCompatActivity() {
     private var hasScrobbledThisEp: Boolean = false
     private var hasPromptedRating: Boolean = false
 
-    // Configs
     private var speed = arrayOf("0.25x", "0.5x", "Normal", "1.25x", "1.5x", "2x")
     private var orientation = Orientation.LANDSCAPE
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var ignoreNextCenterKeyUp = false
+    private var cumulativeSeekSeconds = 0
+    private val resetSeekAccumulatorRunnable = Runnable {
+        cumulativeSeekSeconds = 0
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val themeValue = intent.getIntExtra("theme", 0)
@@ -605,7 +612,7 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun updateNextEpisode() {
-        playbackCoordinator.setPlaylist(playlist, currentFileId)
+        playbackCoordinator.setPlaylist(playlist, currentFileId, currentTitle)
         if (playlist.isEmpty()) {
             nextEpisode = null
             prevEpisode = null
@@ -952,12 +959,35 @@ class PlayerActivity : AppCompatActivity() {
             }
             return true
         }
+
+        if (event.action == KeyEvent.ACTION_UP) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_CENTER,
+                KeyEvent.KEYCODE_ENTER,
+                KeyEvent.KEYCODE_NUMPAD_ENTER,
+                KeyEvent.KEYCODE_BUTTON_A -> {
+                    if (ignoreNextCenterKeyUp) {
+                        ignoreNextCenterKeyUp = false
+                        return true
+                    }
+                }
+                KeyEvent.KEYCODE_DPAD_LEFT,
+                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    if (!playerView.isControllerVisible) {
+                        return true
+                    }
+                }
+            }
+        }
+
         if (event.action == KeyEvent.ACTION_DOWN) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_CENTER,
                 KeyEvent.KEYCODE_ENTER,
                 KeyEvent.KEYCODE_NUMPAD_ENTER,
                 KeyEvent.KEYCODE_BUTTON_A -> {
+                    if (event.repeatCount > 0) return true
+
                     if (binding.nextEpisodeCard.root.isVisible) {
                         if (binding.nextEpisodeCard.btnCancelNextEpisode.isFocused) {
                             dismissNextEpisodeCard(isManualCancel = true)
@@ -971,6 +1001,7 @@ class PlayerActivity : AppCompatActivity() {
                         return true
                     }
                     if (!playerView.isControllerVisible) {
+                        ignoreNextCenterKeyUp = true
                         playerView.showController()
                         btnPlayPause.post { btnPlayPause.requestFocus() }
                         return true
@@ -979,16 +1010,24 @@ class PlayerActivity : AppCompatActivity() {
 
                 KeyEvent.KEYCODE_DPAD_LEFT -> {
                     if (!playerView.isControllerVisible) {
+                        mainHandler.removeCallbacks(resetSeekAccumulatorRunnable)
+                        if (cumulativeSeekSeconds > 0) cumulativeSeekSeconds = 0
+                        cumulativeSeekSeconds -= 10
                         seekRelative(-10_000L)
-                        gestureHelper.showNotification("⏪ -10s")
+                        gestureHelper.showSeekRipple(cumulativeSeekSeconds)
+                        mainHandler.postDelayed(resetSeekAccumulatorRunnable, 1200L)
                         return true
                     }
                 }
 
                 KeyEvent.KEYCODE_DPAD_RIGHT -> {
                     if (!playerView.isControllerVisible) {
+                        mainHandler.removeCallbacks(resetSeekAccumulatorRunnable)
+                        if (cumulativeSeekSeconds < 0) cumulativeSeekSeconds = 0
+                        cumulativeSeekSeconds += 10
                         seekRelative(10_000L)
-                        gestureHelper.showNotification("⏩ +10s")
+                        gestureHelper.showSeekRipple(cumulativeSeekSeconds)
+                        mainHandler.postDelayed(resetSeekAccumulatorRunnable, 1200L)
                         return true
                     }
                 }
@@ -1565,19 +1604,26 @@ class PlayerActivity : AppCompatActivity() {
             dismissNextEpisodeCard(isManualCancel = true)
         }
 
+        card.btnPlayNextEpisodeNow.post {
+            card.btnPlayNextEpisodeNow.requestFocus()
+        }
+
         countdownJob?.cancel()
         countdownJob = lifecycleScope.launch {
+            val totalCountdownSeconds = 10
             while (isActive && isNextEpisodeCardShowing) {
                 if (::player.isInitialized) {
                     val remainingMs = player.duration - player.currentPosition
                     val sec = kotlin.math.ceil(remainingMs / 1000.0).toInt().coerceAtLeast(0)
                     card.tvNextEpisodeCountdown.text = "A SEGUIR • ${sec}s"
+                    val progressPercent = ((sec.toFloat() / totalCountdownSeconds.toFloat()) * 100).toInt().coerceIn(0, 100)
+                    card.pbNextEpisodeCountdown.progress = progressPercent
                     if (sec <= 0 || remainingMs <= 1_000L) {
                         playNextEpisodeDirectly()
                         break
                     }
                 }
-                delay(300L)
+                delay(150L)
             }
         }
     }
@@ -1742,13 +1788,18 @@ class PlayerActivity : AppCompatActivity() {
         if (specialChapter != null) {
             val isOpOrRecap = specialChapter.type == MatroskaChapterParser.ChapterType.OPENING ||
                     specialChapter.type == MatroskaChapterParser.ChapterType.RECAP
+            val isEnding = specialChapter.type == MatroskaChapterParser.ChapterType.ENDING
             val isAutoSkip = malSessionManager.get().isAutoSkipEnabled()
-            if (isAutoSkip && isOpOrRecap && !hasAutoSkippedCurrentInterval) {
+            if (isAutoSkip && (isOpOrRecap || isEnding) && !hasAutoSkippedCurrentInterval) {
                 if (positionMs in specialChapter.startTimeMs..(specialChapter.startTimeMs + 3_500L)) {
                     hasAutoSkippedCurrentInterval = true
                     player.seekTo(specialChapter.endTimeMs)
-                    gestureHelper.showNotification("⏩ Abertura pulada automaticamente (AniSkip)")
-                    showAniSkipPill("Abertura pulada (AniSkip)")
+                    val notifyText = if (isEnding) "⏩ Encerramento pulado automaticamente (AniSkip)"
+                                     else "⏩ Abertura pulada automaticamente (AniSkip)"
+                    val pillText = if (isEnding) "Encerramento pulado (AniSkip)"
+                                   else "Abertura pulada (AniSkip)"
+                    gestureHelper.showNotification(notifyText)
+                    showAniSkipPill(pillText)
                     return
                 }
             }
@@ -1756,7 +1807,7 @@ class PlayerActivity : AppCompatActivity() {
             val label = when (specialChapter.type) {
                 MatroskaChapterParser.ChapterType.RECAP -> "Pular Recap"
                 MatroskaChapterParser.ChapterType.OPENING -> "Pular Abertura"
-                MatroskaChapterParser.ChapterType.ENDING -> "Pular Créditos"
+                MatroskaChapterParser.ChapterType.ENDING -> "Pular Encerramento"
                 else -> "Pular"
             }
             btnSkipIntro.text = label
@@ -1808,7 +1859,7 @@ class PlayerActivity : AppCompatActivity() {
             val label = when (chapter.type) {
                 MatroskaChapterParser.ChapterType.RECAP -> "⏩ Recap pulado"
                 MatroskaChapterParser.ChapterType.OPENING -> "⏩ Abertura pulada"
-                MatroskaChapterParser.ChapterType.ENDING -> "⏩ Créditos pulados"
+                MatroskaChapterParser.ChapterType.ENDING -> "⏩ Encerramento pulado"
                 else -> "⏩ Capítulo pulado"
             }
             Snackbar.make(playerView, label, 750).apply {
