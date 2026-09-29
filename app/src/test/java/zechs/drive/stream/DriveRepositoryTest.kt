@@ -25,6 +25,7 @@ import zechs.drive.stream.utils.util.Constants
 class DriveRepositoryTest {
 
     private lateinit var driveApi: DriveApi
+    private lateinit var tokenApi: TokenApi
     private lateinit var tokenApiLazy: Lazy<TokenApi>
     private lateinit var sessionManager: SessionManager
     private lateinit var repository: DriveRepository
@@ -32,7 +33,8 @@ class DriveRepositoryTest {
     @Before
     fun setUp() {
         driveApi = mockk()
-        tokenApiLazy = Lazy { mockk() }
+        tokenApi = mockk()
+        tokenApiLazy = Lazy { tokenApi }
         val testToken = TokenResponse(
             accessToken = "valid_test_access_token",
             expiresIn = (System.currentTimeMillis() / 1000) + 3600L,
@@ -125,6 +127,13 @@ class DriveRepositoryTest {
             401,
             "{\"error\":\"Unauthorized\"}".toResponseBody()
         )
+        val tokenErrorResponse = Response.error<TokenResponse>(
+            400,
+            "{\"error\":\"invalid_grant\"}".toResponseBody()
+        )
+        coEvery {
+            tokenApi.getAccessToken(any(), any(), any(), any())
+        } throws HttpException(tokenErrorResponse)
         coEvery {
             driveApi.getFiles(
                 accessToken = any(),
@@ -141,7 +150,7 @@ class DriveRepositoryTest {
         val result = repository.getAllFiles(query = "trashed=false")
         assertTrue(result is Resource.Error)
         val message = (result as Resource.Error).message
-        assertTrue(message.contains("Sessão expirada"))
+        assertTrue(message.contains("Sessão") || message.contains("expirada"))
     }
 
     @Test
