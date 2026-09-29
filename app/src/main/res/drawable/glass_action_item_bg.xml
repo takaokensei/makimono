@@ -4,18 +4,32 @@
     <item>
         <selector>
             <item android:state_focused="true">
-                <shape android:shape="rectangle">
-                    <corners android:radius="14dp" />
-                    <solid android:color="?attr/colorBgGlass" />
-                    <stroke
-                        android:width="2dp"
-                        android:color="?attr/colorAccentPrimary" />
-                </shape>
+                <layer-list>
+                    <!-- Outer luminous cyan halo -->
+                    <item>
+                        <shape>
+                            <solid android:color="#2600E5FF" />
+                            <corners android:radius="14dp" />
+                            <stroke android:width="3.5dp" android:color="#8000E5FF" />
+                        </shape>
+                    </item>
+                    <!-- Inner crisp high-contrast white border -->
+                    <item android:left="1.5dp" android:top="1.5dp" android:right="1.5dp" android:bottom="1.5dp">
+                        <shape>
+                            <solid android:color="@android:color/transparent" />
+                            <corners android:radius="13dp" />
+                            <stroke android:width="2dp" android:color="#FFFFFFFF" />
+                        </shape>
+                    </item>
+                </layer-list>
             </item>
             <item android:state_pressed="true">
                 <shape android:shape="rectangle">
                     <corners android:radius="14dp" />
-                    <solid android:color="?attr/colorBgGlass" />
+                    <solid android:color="#3300E5FF" />
+                    <stroke
+                        android:width="1.5dp"
+                        android:color="#00E5FF" />
                 </shape>
             </item>
             <item>

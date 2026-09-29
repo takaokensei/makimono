@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import zechs.drive.stream.R
 import zechs.drive.stream.data.model.DriveFile
+import zechs.drive.stream.data.model.PlaylistItem
 import zechs.drive.stream.data.model.WatchList
 import zechs.drive.stream.data.model.WatchQueueItem
 import zechs.drive.stream.databinding.FragmentHomeBinding
@@ -1288,6 +1289,12 @@ class HomeFragment : BaseFragment() {
     private fun launchVideoPlayer(file: DriveFile, startPosition: Long = -1L) {
         val fileId = file.id
         val thumb = file.thumbnailLarge ?: file.posterUrl ?: file.thumbnailLink
+        val catalogPlaylist: ArrayList<PlaylistItem>? = run {
+            val videoFiles = animeAdapter.currentList.mapNotNull { (it as? FilesDataModel.File)?.driveFile }.filter { it.isVideoFile }
+            if (videoFiles.size > 1 && videoFiles.any { it.id == fileId }) {
+                ArrayList(videoFiles.map { PlaylistItem(it.id, it.name, it.thumbnailLarge ?: it.thumbnailLink) })
+            } else null
+        }
         when (mainViewModel.currentPlayerIndex) {
             VideoPlayer.EXO_PLAYER -> {
                 PlayerLauncher.launch(
@@ -1297,6 +1304,7 @@ class HomeFragment : BaseFragment() {
                     title = file.name,
                     thumbnailLink = thumb,
                     themeIndex = mainViewModel.currentThemeIndex,
+                    playlist = catalogPlaylist,
                     startPosition = startPosition
                 )
             }

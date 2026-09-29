@@ -99,7 +99,7 @@
                     android:layout_weight="1"
                     android:background="@drawable/glass_pill_accent_bg"
                     android:text="👤 Avatares Populares"
-                    android:textColor="#22D3EE"
+                    android:textColor="#040C16"
                     android:textSize="12sp"
                     android:textStyle="bold" />
 
@@ -111,7 +111,7 @@
                     android:layout_weight="1"
                     android:background="@drawable/glass_pill_button_bg"
                     android:text="🖼️ Wallpapers Populares"
-                    android:textColor="#ACC0D6"
+                    android:textColor="#CBD5E1"
                     android:textSize="12sp" />
             </LinearLayout>
 

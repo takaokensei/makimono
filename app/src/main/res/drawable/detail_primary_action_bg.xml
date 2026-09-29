@@ -1,5 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
- <item android:state_focused="true"><shape><solid android:color="#67EBFF"/><stroke android:width="2dp" android:color="#24DCFA"/><corners android:radius="10dp"/></shape></item>
- <item android:state_pressed="true"><shape><solid android:color="#67EBFF"/><corners android:radius="10dp"/></shape></item>
- <item><shape><solid android:color="#26D4EC"/><stroke android:width="1dp" android:color="#39556D"/><corners android:radius="10dp"/></shape></item>
+    <item android:state_focused="true">
+        <layer-list>
+            <item>
+                <shape>
+                    <solid android:color="#4000E5FF"/>
+                    <corners android:radius="12dp"/>
+                    <stroke android:width="4dp" android:color="#8000E5FF"/>
+                </shape>
+            </item>
+            <item android:left="2dp" android:top="2dp" android:right="2dp" android:bottom="2dp">
+                <shape>
+                    <solid android:color="#FF00E5FF"/>
+                    <corners android:radius="10dp"/>
+                    <stroke android:width="2.5dp" android:color="#FFFFFFFF"/>
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+    <item android:state_pressed="true">
+        <shape>
+            <solid android:color="#CC00E5FF"/>
+            <corners android:radius="10dp"/>
+        </shape>
+    </item>
+    <item>
+        <shape>
+            <solid android:color="#FF00E5FF"/>
+            <corners android:radius="10dp"/>
+        </shape>
+    </item>
 </selector>

@@ -4,6 +4,7 @@ import android.app.Activity
 import android.widget.SeekBar
 import androidx.appcompat.app.AlertDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import zechs.drive.stream.R
 import zechs.drive.stream.databinding.DialogMalRatingBinding
 
 object MalRatingDialog {
@@ -53,10 +54,17 @@ object MalRatingDialog {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
-        val dialog = MaterialAlertDialogBuilder(activity)
+        val dialog = MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_DriveStream_Dialog)
             .setView(binding.root)
             .setCancelable(false)
             .create()
+
+        dialog.setOnShowListener {
+            dialog.window?.let { w ->
+                zechs.drive.stream.utils.TvFocusRing.install(w.decorView)
+            }
+            binding.btnSubmitRating.requestFocus()
+        }
 
         binding.btnSubmitRating.setOnClickListener {
             dialog.dismiss()

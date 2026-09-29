@@ -113,16 +113,16 @@ class ProfileEditorDialog(
             currentTab = tab
             if (tab == CatalogTab.AVATARS) {
                 b.btnTabAvatars.setBackgroundResource(R.drawable.glass_pill_accent_bg)
-                b.btnTabAvatars.setTextColor(android.graphics.Color.parseColor("#22D3EE"))
+                b.btnTabAvatars.setTextColor(android.graphics.Color.parseColor("#040C16"))
                 b.btnTabWallpapers.setBackgroundResource(R.drawable.glass_pill_button_bg)
-                b.btnTabWallpapers.setTextColor(android.graphics.Color.parseColor("#ACC0D6"))
+                b.btnTabWallpapers.setTextColor(android.graphics.Color.parseColor("#CBD5E1"))
                 b.catalogStatus.text = "Avatares populares selecionáveis:"
                 populateArtGrid(resolver.getPresetAvatars(), isWallpaperView = false)
             } else {
                 b.btnTabAvatars.setBackgroundResource(R.drawable.glass_pill_button_bg)
-                b.btnTabAvatars.setTextColor(android.graphics.Color.parseColor("#ACC0D6"))
+                b.btnTabAvatars.setTextColor(android.graphics.Color.parseColor("#CBD5E1"))
                 b.btnTabWallpapers.setBackgroundResource(R.drawable.glass_pill_accent_bg)
-                b.btnTabWallpapers.setTextColor(android.graphics.Color.parseColor("#22D3EE"))
+                b.btnTabWallpapers.setTextColor(android.graphics.Color.parseColor("#040C16"))
                 b.catalogStatus.text = "Papéis de parede populares selecionáveis:"
                 populateArtGrid(resolver.getPresetWallpapers(), isWallpaperView = true)
             }

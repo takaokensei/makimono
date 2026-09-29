@@ -120,6 +120,8 @@ class SettingsFragment : BaseFragment() {
         val isTv = zechs.drive.stream.utils.DeviceUi.isTenFootExperience(requireContext())
         if (!isTv && resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE) return
 
+        zechs.drive.stream.utils.TvFocusRing.install(binding.root)
+
         val rows = listOfNotNull(
             binding.settingSelectProfile,
             binding.settingLibraryRoot,
@@ -185,8 +187,10 @@ class SettingsFragment : BaseFragment() {
                 setText(profileManager.getLibraryRoot().second.orEmpty())
                 setSelection(text?.length ?: 0)
                 isSingleLine = true
+                setBackgroundResource(R.drawable.glass_input_bg)
+                setPadding(32, 24, 32, 24)
             }
-            MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+            val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
                 .setTitle("Pasta da biblioteca")
                 .setMessage("Deixe vazio para usar a raiz do Meu Drive.")
                 .setView(input)
@@ -198,7 +202,12 @@ class SettingsFragment : BaseFragment() {
                     }
                 }
                 .setNegativeButton("Cancelar", null)
-                .show()
+                .create()
+            dialog.setOnShowListener {
+                dialog.window?.let { w -> zechs.drive.stream.utils.TvFocusRing.install(w.decorView) }
+                input.requestFocus()
+            }
+            dialog.show()
         }
     }
 
@@ -210,6 +219,12 @@ class SettingsFragment : BaseFragment() {
             val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
                 .setView(dialogView)
                 .create()
+
+            dialog.setOnShowListener {
+                dialog.window?.let { w -> zechs.drive.stream.utils.TvFocusRing.install(w.decorView) }
+                val targetIndex = mainViewModel.currentThemeIndex.coerceAtLeast(0)
+                container.getChildAt(targetIndex)?.requestFocus()
+            }
 
             AppTheme.entries.forEach { theme ->
                 val itemBinding = ItemThemePreviewBinding.inflate(LayoutInflater.from(requireContext()), container, false)
@@ -251,12 +266,12 @@ class SettingsFragment : BaseFragment() {
             getString(R.string.mpv)
         )
         binding.settingDefaultPlayer.setOnClickListener {
-            MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog).apply {
-                setTitle(getString(R.string.default_player))
-                setSingleChoiceItems(
+            val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+                .setTitle(getString(R.string.default_player))
+                .setSingleChoiceItems(
                     players.toTypedArray(),
                     mainViewModel.currentPlayerIndex.value
-                ) { dialog, item ->
+                ) { d, item ->
                     val player = when (item) {
                         VideoPlayer.EXO_PLAYER.value -> VideoPlayer.EXO_PLAYER
                         VideoPlayer.MPV.value -> VideoPlayer.MPV
@@ -264,9 +279,13 @@ class SettingsFragment : BaseFragment() {
                     }
                     mainViewModel.setPlayer(player)
                     binding.tvPlayerCurrentValue.text = players[item]
-                    dialog.dismiss()
+                    d.dismiss()
                 }
-            }.also { it.show() }
+                .create()
+            dialog.setOnShowListener {
+                dialog.window?.let { w -> zechs.drive.stream.utils.TvFocusRing.install(w.decorView) }
+            }
+            dialog.show()
         }
     }
 
@@ -328,7 +347,7 @@ class SettingsFragment : BaseFragment() {
         updateCacheDisplay()
 
         binding.settingClearCache.setOnClickListener {
-            MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+            val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
                 .setTitle("Limpar Cache de Mídia e Legendas?")
                 .setMessage("Isso liberará espaço em disco removendo miniaturas temporárias e legendas baixadas. Seus perfis, favoritos e histórico de reprodução NÃO serão apagados.")
                 .setPositiveButton("Limpar") { dialog, _ ->
@@ -371,7 +390,13 @@ class SettingsFragment : BaseFragment() {
                     }
                 }
                 .setNegativeButton("Cancelar") { dialog, _ -> dialog.dismiss() }
-                .show()
+                .create()
+
+            dialog.setOnShowListener {
+                dialog.window?.let { w -> zechs.drive.stream.utils.TvFocusRing.install(w.decorView) }
+                dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)?.requestFocus()
+            }
+            dialog.show()
         }
     }
 
@@ -484,7 +509,7 @@ class SettingsFragment : BaseFragment() {
 
         binding.settingMalAccount.setOnClickListener {
             if (malSessionManager.isLoggedIn()) {
-                MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+                val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
                     .setTitle("Desconectar do MyAnimeList?")
                     .setMessage("O scrobble automático de episódios será desativado.")
                     .setPositiveButton("Desconectar") { dialog, _ ->
@@ -494,7 +519,13 @@ class SettingsFragment : BaseFragment() {
                         showSnackBar("Conta do MyAnimeList desconectada")
                     }
                     .setNegativeButton("Cancelar") { dialog, _ -> dialog.dismiss() }
-                    .show()
+                    .create()
+
+                dialog.setOnShowListener {
+                    dialog.window?.let { w -> zechs.drive.stream.utils.TvFocusRing.install(w.decorView) }
+                    dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)?.requestFocus()
+                }
+                dialog.show()
             } else {
                 val openAuth = {
                     val authDialog = MalAuthDialog(
@@ -524,16 +555,20 @@ class SettingsFragment : BaseFragment() {
                         hint = "Client ID"
                         setText(malSessionManager.getClientId())
                         isSingleLine = true
+                        setBackgroundResource(R.drawable.glass_input_bg)
+                        setPadding(32, 24, 32, 24)
                     }
                     val clientSecret = android.widget.EditText(requireContext()).apply {
                         hint = "Client Secret"
                         setText(malSessionManager.getClientSecret())
                         inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
                         isSingleLine = true
+                        setBackgroundResource(R.drawable.glass_input_bg)
+                        setPadding(32, 24, 32, 24)
                     }
                     fields.addView(clientId)
                     fields.addView(clientSecret)
-                    MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+                    val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
                         .setTitle("Configurar MyAnimeList")
                         .setMessage("Crie uma aplicação OAuth no MyAnimeList e informe as credenciais. Elas serão armazenadas criptografadas.")
                         .setView(fields)
@@ -546,7 +581,13 @@ class SettingsFragment : BaseFragment() {
                             }
                         }
                         .setNegativeButton("Cancelar", null)
-                        .show()
+                        .create()
+
+                    dialog.setOnShowListener {
+                        dialog.window?.let { w -> zechs.drive.stream.utils.TvFocusRing.install(w.decorView) }
+                        clientId.requestFocus()
+                    }
+                    dialog.show()
                 } else {
                     openAuth()
                 }
@@ -605,7 +646,7 @@ class SettingsFragment : BaseFragment() {
             "Mesclar com perfis existentes (Recomendado)",
             "Substituir todos os dados existentes"
         )
-        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+        val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
             .setTitle("Restaurar Backup")
             .setMessage("Escolha como deseja aplicar os dados do arquivo de backup:")
             .setItems(options) { _, which ->
@@ -617,7 +658,12 @@ class SettingsFragment : BaseFragment() {
                 executeImport(uri, mode)
             }
             .setNegativeButton("Cancelar", null)
-            .show()
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.window?.let { w -> zechs.drive.stream.utils.TvFocusRing.install(w.decorView) }
+        }
+        dialog.show()
     }
 
     private fun executeImport(uri: android.net.Uri, mode: BackupSerializer.ImportMode) {
@@ -655,7 +701,7 @@ class SettingsFragment : BaseFragment() {
 
     private fun setupLogOut() {
         binding.settingLogOut?.setOnClickListener {
-            MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+            val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
                 .setTitle(getString(R.string.log_out_dialog_title))
                 .setMessage(getString(R.string.log_out_dialog_message))
                 .setNegativeButton(getString(R.string.no)) { dialog, _ -> dialog.dismiss() }
@@ -669,7 +715,13 @@ class SettingsFragment : BaseFragment() {
                         activity.startActivity(activity.intent)
                     }
                 }
-                .show()
+                .create()
+
+            dialog.setOnShowListener {
+                dialog.window?.let { w -> zechs.drive.stream.utils.TvFocusRing.install(w.decorView) }
+                dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)?.requestFocus()
+            }
+            dialog.show()
         }
     }
 

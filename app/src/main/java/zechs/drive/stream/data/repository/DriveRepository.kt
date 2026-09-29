@@ -349,12 +349,17 @@ class DriveRepository @Inject constructor(
                 }
             }
             val parentId = file.parents?.firstOrNull() ?: return emptyList()
-            val query = "'$parentId' in parents and trashed=false and mimeType contains 'video/'"
+            val query = "'$parentId' in parents and trashed=false and mimeType != 'application/vnd.google-apps.folder'"
 
             when (val res = getAllFiles(query = query, pageSize = 100, orderBy = "name")) {
                 is Resource.Success -> {
-                    val list = res.data.map {
-                        PlaylistItem(it.id, it.name, it.thumbnailLink)
+                    val list = res.data.map { it.toDriveFile() }.filter { it.isVideoFile }.map {
+                        val effectiveId = if (it.isShortcut && !it.shortcutDetails.targetId.isNullOrEmpty()) {
+                            it.shortcutDetails.targetId
+                        } else {
+                            it.id
+                        }
+                        PlaylistItem(effectiveId, it.name, it.thumbnailLink)
                     }
                     list.sortedWith { a, b ->
                         zechs.drive.stream.utils.SeasonEpisodeGrouper.compareItems(

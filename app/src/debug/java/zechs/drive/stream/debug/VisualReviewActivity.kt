@@ -39,7 +39,19 @@ class VisualReviewActivity : Activity() {
             "files" -> fileScreen()
             "details" -> details()
             "player" -> player()
+            "settings" -> settingsScreen()
             else -> home()
+        }
+        val dialogType = intent.getStringExtra("dialog")
+        if (dialogType != null) {
+            window.decorView.postDelayed({
+                when(dialogType) {
+                    "subtitles" -> zechs.drive.stream.ui.player.SubtitleStyleDialog.show(this, zechs.drive.stream.utils.SubtitleStyle()) {}
+                    "rating" -> zechs.drive.stream.ui.player.MalRatingDialog.show(this, "Sousou no Frieren", 28, {})
+                    "theme" -> showThemeDialog()
+                    "glass_menu" -> showGlassMenu()
+                }
+            }, 400)
         }
         val root = findViewById<ViewGroup>(android.R.id.content)
         TvFocusRing.install(root)
@@ -59,11 +71,22 @@ class VisualReviewActivity : Activity() {
         findViewById<View>(R.id.containerItemCount)?.visibility=View.GONE
         text(R.id.tvFeaturedOverline,"SOUSOU NO FRIEREN")
         text(R.id.tvFeaturedTitle,"Sousou no Frieren: Beyond Journey’s End")
-        text(R.id.tvFeaturedJapaneseTitle,"Fantasia  ·  Aventura")
+        text(R.id.tvFeaturedJapaneseTitle,"葬送のフリーレン")
         text(R.id.tvFeaturedSynopsis,"Após a derrota do Rei Demônio, a elfa Frieren continua sua jornada, descobrindo o mundo e compreendendo o verdadeiro significado das amizades.")
         val genres = findViewById<android.widget.LinearLayout>(R.id.layoutFeaturedGenres)
+        genres?.removeAllViews()
         listOf("Fantasia", "Aventura", "Drama").forEach { genre ->
-            genres.addView(TextView(this).apply { text = genre; textSize = 10f; setTextColor(0xffb9cadf.toInt()); setPadding(8,4,12,4) })
+            genres?.addView(TextView(this).apply {
+                text = genre
+                textSize = 10.5f
+                setTextColor(0xFFCBD5E1.toInt())
+                setBackgroundResource(R.drawable.tag_genre_pill_bg)
+                setPadding(16, 6, 16, 6)
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { marginEnd = 14 }
+            })
         }
         art(R.id.ivFeaturedBackdrop)
         findViewById<ImageView>(R.id.ivUserAvatar)?.let { avatar ->
@@ -81,7 +104,7 @@ class VisualReviewActivity : Activity() {
             v.findViewById<TextView>(R.id.tvShelfItemRemaining).text="7 min restantes"
             Glide.with(this).load(backdrop).into(v.findViewById(R.id.ivShelfItemThumb))
         }
-        findViewById<View>(R.id.btnFeaturedPlay).requestFocus()
+        findViewById<View>(R.id.btnFeaturedPlay)?.postDelayed({ findViewById<View>(R.id.btnFeaturedPlay)?.requestFocus() }, 300)
     }
     private fun profiles() {
         setContentView(R.layout.fragment_profile_selection)
@@ -123,7 +146,7 @@ class VisualReviewActivity : Activity() {
             v.findViewById<TextView>(R.id.tvEpNumberBadge).text="Ep. ${p+1}"
             Glide.with(this).load(backdrop).into(v.findViewById(R.id.ivEpisodeThumb))
         }
-        findViewById<View>(R.id.btnPrimaryAction).requestFocus()
+        findViewById<View>(R.id.btnPrimaryAction)?.postDelayed({ findViewById<View>(R.id.btnPrimaryAction)?.requestFocus() }, 300)
     }
     private fun player() {
         val frame=android.widget.FrameLayout(this)
@@ -131,11 +154,72 @@ class VisualReviewActivity : Activity() {
         frame.addView(image,ViewGroup.LayoutParams(-1,-1));Glide.with(this).load(backdrop).into(image)
         val controls=layoutInflater.inflate(R.layout.player_control_view,frame,false)
         frame.addView(controls);setContentView(frame);PlayerQuickOptions.bind(controls)
+        controls.findViewById<View>(com.google.android.exoplayer2.ui.R.id.exo_play_pause)?.postDelayed({
+            controls.findViewById<View>(com.google.android.exoplayer2.ui.R.id.exo_play_pause)?.requestFocus()
+        }, 300)
         text(R.id.tvPlayerTitle,"SOUSOU NO FRIEREN")
         text(com.google.android.exoplayer2.ui.R.id.exo_position,"12:45");text(com.google.android.exoplayer2.ui.R.id.exo_duration,"24:10")
         findViewById<com.google.android.exoplayer2.ui.DefaultTimeBar>(com.google.android.exoplayer2.ui.R.id.exo_progress).apply {
             setDuration(1450000);setPosition(765000)
         }
+    }
+    private fun settingsScreen() {
+        setContentView(R.layout.fragment_settings)
+        text(R.id.tvCurrentProfileName, "Perfil ativo: Cauã (Admin)")
+        text(R.id.tvLibraryRootValue, "Meu Drive › Animes")
+        text(R.id.tvThemeCurrentValue, "Kodi Estuary (Petróleo / Ciano)")
+        text(R.id.tvPlayerCurrentValue, "ExoPlayer (Nativo Android)")
+        text(R.id.tvSubtitleSizeValue, "Grande (24sp · Branco · Borda)")
+        text(R.id.tvCacheSizeValue, "142.4 MB em cache (Posters, capas e legendas)")
+        text(R.id.lastCheckedLabel, "Última verificação: hoje, 16:30")
+        text(R.id.tvMalSubtitle, "Conectado como: CauaVitor • Toque para desconectar")
+        findViewById<ImageView>(R.id.ivSettingProfileAvatar)?.setImageResource(R.drawable.avatar_caua)
+        findViewById<View>(R.id.settingSelectProfile)?.postDelayed({
+            findViewById<View>(R.id.settingSelectProfile)?.requestFocus()
+        }, 300)
+    }
+    private fun showThemeDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_theme_selector, null)
+        val container = dialogView.findViewById<android.widget.LinearLayout>(R.id.llThemeContainer)
+        val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog)
+            .setView(dialogView)
+            .create()
+        dialog.setOnShowListener {
+            dialog.window?.let { w -> TvFocusRing.install(w.decorView) }
+            container.getChildAt(0)?.requestFocus()
+        }
+        zechs.drive.stream.utils.AppTheme.entries.forEach { theme ->
+            val itemBinding = zechs.drive.stream.databinding.ItemThemePreviewBinding.inflate(layoutInflater, container, false)
+            itemBinding.apply {
+                tvThemeName.text = theme.displayName
+                tvThemeSubtitle.text = theme.subtitle
+                swatchBase.background = androidx.core.content.ContextCompat.getDrawable(this@VisualReviewActivity, R.drawable.glass_circle_button_bg)?.mutate()?.apply {
+                    setTint(android.graphics.Color.parseColor(theme.bgBaseHex))
+                }
+                swatchSurface.background = androidx.core.content.ContextCompat.getDrawable(this@VisualReviewActivity, R.drawable.glass_circle_button_bg)?.mutate()?.apply {
+                    setTint(android.graphics.Color.parseColor(theme.bgSurfaceHex))
+                }
+                swatchAccent.background = androidx.core.content.ContextCompat.getDrawable(this@VisualReviewActivity, R.drawable.glass_circle_button_bg)?.mutate()?.apply {
+                    setTint(android.graphics.Color.parseColor(theme.accentPrimaryHex))
+                }
+                swatchSecondary.background = androidx.core.content.ContextCompat.getDrawable(this@VisualReviewActivity, R.drawable.glass_circle_button_bg)?.mutate()?.apply {
+                    setTint(android.graphics.Color.parseColor(theme.accentSecondaryHex))
+                }
+                ivSelected.visibility = if (theme == zechs.drive.stream.utils.AppTheme.KODI_ESTUARY) View.VISIBLE else View.GONE
+                cardTheme.setOnClickListener { dialog.dismiss() }
+            }
+            container.addView(itemBinding.root)
+        }
+        dialog.show()
+    }
+
+    private fun showGlassMenu() {
+        val items = listOf(
+            zechs.drive.stream.ui.player.GlassMenuItem("1", "Faixa de Áudio 1", "Japonês (FLAC 2.0)", isSelected = true),
+            zechs.drive.stream.ui.player.GlassMenuItem("2", "Faixa de Áudio 2", "Português Brasileiro (AAC 2.0)"),
+            zechs.drive.stream.ui.player.GlassMenuItem("3", "Faixa de Áudio 3", "Inglês (AC3 5.1)")
+        )
+        zechs.drive.stream.ui.player.PlayerGlassMenuDialog(this, "Selecionar Áudio", items) {}.show()
     }
     private inner class FixtureAdapter(val layout: Int,val count: Int,val bind: (View,Int)->Unit):RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         override fun getItemCount()=count

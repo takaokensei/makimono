@@ -18,7 +18,17 @@ data class DriveFile(
 ) {
     val humanSize = size?.let { Converter.toHumanSize(it) }
 
-    val isVideoFile = mimeType.startsWith("video/")
+    val isVideoFile = mimeType.startsWith("video/") ||
+            mimeType == "application/x-matroska" ||
+            name.endsWith(".mkv", ignoreCase = true) ||
+            name.endsWith(".mp4", ignoreCase = true) ||
+            name.endsWith(".webm", ignoreCase = true) ||
+            name.endsWith(".avi", ignoreCase = true) ||
+            name.endsWith(".mov", ignoreCase = true) ||
+            name.endsWith(".m4v", ignoreCase = true) ||
+            name.endsWith(".ts", ignoreCase = true) ||
+            (shortcutDetails.targetMimeType?.startsWith("video/") == true) ||
+            shortcutDetails.targetMimeType == "application/x-matroska"
 
     val isSubtitleFile = name.endsWith(".ass", ignoreCase = true) ||
             name.endsWith(".srt", ignoreCase = true) ||
@@ -36,7 +46,10 @@ data class DriveFile(
 
     val isShortcutFolder = shortcutDetails.targetMimeType == "application/vnd.google-apps.folder"
 
-    val isShortcutVideo = shortcutDetails.targetMimeType?.startsWith("video/") ?: false
+    val isShortcutVideo = (shortcutDetails.targetMimeType?.startsWith("video/") == true) ||
+            shortcutDetails.targetMimeType == "application/x-matroska" ||
+            name.endsWith(".mkv", ignoreCase = true) ||
+            name.endsWith(".mp4", ignoreCase = true)
 
     val iconLink128 = iconLink?.replace("16", "128")
 

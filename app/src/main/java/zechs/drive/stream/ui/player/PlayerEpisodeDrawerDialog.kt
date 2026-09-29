@@ -109,6 +109,9 @@ class PlayerEpisodeDrawerDialog(
         }
 
         d.show()
+        d.window?.let { w ->
+            zechs.drive.stream.utils.TvFocusRing.install(w.decorView)
+        }
 
         // Fetch official franchise relations and canonical episode titles via Tenrai API asynchronously
         if (tenraiService != null) {
