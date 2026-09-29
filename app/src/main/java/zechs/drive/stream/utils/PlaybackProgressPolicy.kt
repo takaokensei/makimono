@@ -72,6 +72,12 @@ object PlaybackProgressPolicy {
      * Determines if the current playback position should be saved to the database.
      * Prevents saving accidental quick clicks or zero-duration media.
      */
+    /** Completed or invalid records must never seek to EOF and trigger an autoplay chain. */
+    fun resumePosition(watchedDurationMs: Long, totalDurationMs: Long): Long {
+        if (watchedDurationMs <= 0L || totalDurationMs <= 0L) return 0L
+        return if (isFinished(watchedDurationMs, totalDurationMs)) 0L else watchedDurationMs.coerceAtMost(totalDurationMs)
+    }
+
     fun shouldSave(watchedDurationMs: Long, totalDurationMs: Long): Boolean {
         if (watchedDurationMs <= 0L || totalDurationMs <= 0L) return false
         return calculateProgress(watchedDurationMs, totalDurationMs) >= MIN_SAVE_PROGRESS_PERCENT

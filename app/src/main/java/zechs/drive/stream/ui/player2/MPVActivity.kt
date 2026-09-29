@@ -1040,25 +1040,32 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         playMedia()
     }
 
+    private var mediaLoadJob: kotlinx.coroutines.Job? = null
+
     private fun playMedia() {
+        mediaLoadJob?.cancel()
+        mediaLoadJob = lifecycleScope.launch {
+            val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId").orEmpty() }
+            val title = currentTitle.ifBlank { intent.getStringExtra("title").orEmpty() }
+            val accessToken = withContext(Dispatchers.IO) { tokenProvider.get().validToken() }
+            if (isFinishing || fileId != currentFileId) return@launch
+            if (fileId.isBlank() || accessToken == null) {
+                Toast.makeText(this@MPVActivity, "Sessão do Drive indisponível. Entre novamente na conta.", Toast.LENGTH_LONG).show()
+                finish()
+                return@launch
+            }
+            val explicitStart = intent.getLongExtra("startPosition", -1L)
+            intent.removeExtra("startPosition")
+            val resumeMs = if (explicitStart >= 0L) explicitStart else viewModel.resumePosition(fileId)
+            if (isFinishing || fileId != currentFileId) return@launch
+            prepareMedia(fileId, title, accessToken, resumeMs)
+        }
+    }
+
+    private fun prepareMedia(fileId: String, title: String, accessToken: String, resumeMs: Long) {
         hasScrobbledThisEp = false
         hasPromptedRating = false
         currentMalAnime = null
-
-        val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") }
-        val title = currentTitle.ifBlank { intent.getStringExtra("title") }
-        // P0-04: token obtido do TokenProvider (cache + refresh sob mutex);
-        // sem fallback para extras de Intent nem cache desatualizado.
-        val accessToken = kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
-            tokenProvider.get().validToken()
-        }
-
-        if (fileId == null || accessToken == null) {
-            Log.d(TAG, "FileId & AccessToken both are required. exiting...")
-            finish()
-            return
-        }
-
         val parsed = EpisodeParser.parse(title ?: "")
         currentEpNumber = parsed.episode?.toInt() ?: 1
 
@@ -1112,6 +1119,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             "http-header-fields",
             "Authorization: Bearer $accessToken"
         )
+        MPVLib.setOptionString("start", (resumeMs / 1000.0).toString())
         player.play(playUri)
 
         // Load external Drive subtitles (.ass, .srt, etc.)
@@ -1119,19 +1127,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             loadMatchingExternalSubtitles()
         } else {
             viewModel.fetchSubtitles(fileId)
-        }
-
-        val explicitStart = intent.getLongExtra("startPosition", -1L)
-        if (explicitStart >= 0L) {
-            if (explicitStart > 0L) {
-                resumeVideo(explicitStart)
-            }
-        } else {
-            viewModel.getWatchPosition(fileId) { startPos ->
-                if (startPos > 5_000L) {
-                    resumeVideo(startPos)
-                }
-            }
         }
 
     }

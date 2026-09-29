@@ -1338,6 +1338,7 @@ class PlayerActivity : AppCompatActivity() {
             }
 
             val passedStartMs = intent.getLongExtra("startPosition", -1L)
+            intent.removeExtra("startPosition")
             val effectiveStartMs = startAtPositionMs ?: if (passedStartMs >= 0L) passedStartMs else null
 
             player.apply {
@@ -1364,7 +1365,7 @@ class PlayerActivity : AppCompatActivity() {
 
             if (effectiveStartMs == null) {
                 viewModel.getWatchPosition(fileId) { startPosition ->
-                    if (startPosition > 5_000L) {
+                    if (currentFileId == fileId && !isFinishing && startPosition > 5_000L) {
                         resumeVideo(startPosition)
                     }
                 }
