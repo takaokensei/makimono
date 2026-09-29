@@ -17,7 +17,7 @@
     android:focusable="true"
     android:foreground="@drawable/shelf_item_focus_border"
     app:cardBackgroundColor="?attr/colorBgSurface"
-    app:cardCornerRadius="8dp"
+    app:cardCornerRadius="12dp"
     app:cardElevation="0dp"
     app:strokeColor="@color/shelf_card_stroke_color"
     app:strokeWidth="0dp">
