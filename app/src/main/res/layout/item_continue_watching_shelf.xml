@@ -17,7 +17,7 @@
     android:focusable="true"
     android:foreground="@drawable/shelf_item_focus_border"
     app:cardBackgroundColor="?attr/colorBgSurface"
-    app:cardCornerRadius="8dp"
+    app:cardCornerRadius="12dp"
     app:cardElevation="0dp"
     app:strokeColor="@color/shelf_card_stroke_color"
     app:strokeWidth="0dp">
@@ -55,11 +55,11 @@
 
             <ImageView
                 android:id="@+id/ivPlayBadge"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
                 android:background="@drawable/glass_circle_button_bg"
                 android:contentDescription="@null"
-                android:padding="12dp"
+                android:padding="7dp"
                 android:src="@drawable/ic_play_24"
                 app:tint="#22D3EE" />
 
@@ -148,13 +148,16 @@
 
         </LinearLayout>
 
-        <!-- Accent progress bar pinned to bottom edge of card -->
+        <!-- Accent progress bar pinned near bottom edge of card with side margin to prevent clipping -->
         <ProgressBar
             android:id="@+id/pbShelfItemProgress"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
             android:layout_height="4dp"
             android:layout_gravity="bottom"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="6dp"
             android:max="100"
             android:progress="60"
             android:progressTint="?attr/colorAccentPrimary"

@@ -244,6 +244,17 @@ class PlayerActivity : AppCompatActivity() {
     private var orientation = Orientation.LANDSCAPE
     private val mainHandler = Handler(Looper.getMainLooper())
     private var ignoreNextCenterKeyUp = false
+    private var isCenterLongPressSpeeding = false
+    private var speedBeforeCenterHold = 1.0f
+    private val centerLongPressRunnable = Runnable {
+        if (!isControlsShowing() && !controlsLocked && ::player.isInitialized && player.isPlaying) {
+            isCenterLongPressSpeeding = true
+            speedBeforeCenterHold = player.playbackParameters.speed
+            player.playbackParameters = com.google.android.exoplayer2.PlaybackParameters(2.0f)
+            gestureHelper.showSpeedPill()
+            ignoreNextCenterKeyUp = true
+        }
+    }
     private var cumulativeSeekSeconds = 0
     private val resetSeekAccumulatorRunnable = Runnable {
         cumulativeSeekSeconds = 0
@@ -951,7 +962,13 @@ class PlayerActivity : AppCompatActivity() {
             return true
         }
 
-        if (event.keyCode == KeyEvent.KEYCODE_BACK) {
+        val isBackKey = event.keyCode in listOf(
+            KeyEvent.KEYCODE_BACK,
+            KeyEvent.KEYCODE_ESCAPE,
+            KeyEvent.KEYCODE_BUTTON_B
+        )
+
+        if (isBackKey) {
             if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) {
                 if (!handleBackNavigation()) {
                     finish()
@@ -966,14 +983,29 @@ class PlayerActivity : AppCompatActivity() {
                 KeyEvent.KEYCODE_ENTER,
                 KeyEvent.KEYCODE_NUMPAD_ENTER,
                 KeyEvent.KEYCODE_BUTTON_A -> {
+                    mainHandler.removeCallbacks(centerLongPressRunnable)
+                    if (isCenterLongPressSpeeding) {
+                        isCenterLongPressSpeeding = false
+                        if (::player.isInitialized) {
+                            player.playbackParameters = com.google.android.exoplayer2.PlaybackParameters(speedBeforeCenterHold)
+                        }
+                        gestureHelper.hideSpeedPill()
+                        ignoreNextCenterKeyUp = true
+                        return true
+                    }
                     if (ignoreNextCenterKeyUp) {
                         ignoreNextCenterKeyUp = false
+                        return true
+                    }
+                    if (!isControlsShowing()) {
+                        animateShowController()
+                        btnPlayPause.post { btnPlayPause.requestFocus() }
                         return true
                     }
                 }
                 KeyEvent.KEYCODE_DPAD_LEFT,
                 KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                    if (!playerView.isControllerVisible) {
+                    if (!isControlsShowing()) {
                         return true
                     }
                 }
@@ -986,8 +1018,6 @@ class PlayerActivity : AppCompatActivity() {
                 KeyEvent.KEYCODE_ENTER,
                 KeyEvent.KEYCODE_NUMPAD_ENTER,
                 KeyEvent.KEYCODE_BUTTON_A -> {
-                    if (event.repeatCount > 0) return true
-
                     if (binding.nextEpisodeCard.root.isVisible) {
                         if (binding.nextEpisodeCard.btnCancelNextEpisode.isFocused) {
                             dismissNextEpisodeCard(isManualCancel = true)
@@ -1000,16 +1030,20 @@ class PlayerActivity : AppCompatActivity() {
                         performSkipIntroOrCredits()
                         return true
                     }
-                    if (!playerView.isControllerVisible) {
-                        ignoreNextCenterKeyUp = true
-                        playerView.showController()
-                        btnPlayPause.post { btnPlayPause.requestFocus() }
+                    if (!isControlsShowing()) {
+                        if (event.repeatCount == 0) {
+                            mainHandler.removeCallbacks(centerLongPressRunnable)
+                            mainHandler.postDelayed(centerLongPressRunnable, 350L)
+                        } else if (event.repeatCount > 0 && !isCenterLongPressSpeeding) {
+                            mainHandler.removeCallbacks(centerLongPressRunnable)
+                            centerLongPressRunnable.run()
+                        }
                         return true
                     }
                 }
 
                 KeyEvent.KEYCODE_DPAD_LEFT -> {
-                    if (!playerView.isControllerVisible) {
+                    if (!isControlsShowing()) {
                         mainHandler.removeCallbacks(resetSeekAccumulatorRunnable)
                         if (cumulativeSeekSeconds > 0) cumulativeSeekSeconds = 0
                         cumulativeSeekSeconds -= 10
@@ -1021,7 +1055,7 @@ class PlayerActivity : AppCompatActivity() {
                 }
 
                 KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                    if (!playerView.isControllerVisible) {
+                    if (!isControlsShowing()) {
                         mainHandler.removeCallbacks(resetSeekAccumulatorRunnable)
                         if (cumulativeSeekSeconds < 0) cumulativeSeekSeconds = 0
                         cumulativeSeekSeconds += 10
@@ -1104,6 +1138,13 @@ class PlayerActivity : AppCompatActivity() {
         return super.dispatchKeyEvent(event)
     }
 
+    private fun isControlsShowing(): Boolean {
+        return (::playerView.isInitialized && playerView.isControllerVisible) ||
+                (::controlsScrollView.isInitialized && controlsScrollView.isVisible) ||
+                (::mainControlsRoot.isInitialized && mainControlsRoot.alpha > 0.05f) ||
+                isHidingControls
+    }
+
     private fun handleBackNavigation(): Boolean {
         if (isKodiHudVisible) {
             toggleKodiInfoHud()
@@ -1113,12 +1154,12 @@ class PlayerActivity : AppCompatActivity() {
             dismissNextEpisodeCard(isManualCancel = true)
             return true
         }
-        if (::playerView.isInitialized && playerView.isControllerVisible) {
-            animateHideController()
-            return true
-        }
         if (binding.netflixSkipRow.isVisible) {
             binding.netflixSkipRow.visibility = View.GONE
+            return true
+        }
+        if (isControlsShowing()) {
+            animateHideController()
             return true
         }
         return false
@@ -1127,12 +1168,18 @@ class PlayerActivity : AppCompatActivity() {
     private var isHidingControls = false
 
     private fun animateHideController(onComplete: (() -> Unit)? = null) {
-        if (!::playerView.isInitialized || !playerView.isControllerVisible || isHidingControls) return
+        if (!::playerView.isInitialized) return
         zechs.drive.stream.utils.TvFocusRing.clear(playerView)
         isHidingControls = true
         val density = resources.displayMetrics.density
         val animDuration = 220L
         val topScrim = playerView.findViewById<View>(R.id.topScrim)
+
+        titleBlock.animate().cancel()
+        controlsScrollView.animate().cancel()
+        mainControlsRoot.animate().cancel()
+        skipIntroRow.animate().cancel()
+        topScrim?.animate()?.cancel()
 
         titleBlock.animate().translationY(-30f * density).alpha(0f).setDuration(animDuration).start()
         controlsScrollView.animate().translationY(50f * density).alpha(0f).setDuration(animDuration).start()
@@ -1154,7 +1201,8 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun animateShowController() {
-        if (!::playerView.isInitialized || playerView.isControllerVisible) return
+        if (!::playerView.isInitialized) return
+        isHidingControls = false
         val density = resources.displayMetrics.density
         val animDuration = 220L
         val topScrim = playerView.findViewById<View>(R.id.topScrim)
@@ -1167,6 +1215,11 @@ class PlayerActivity : AppCompatActivity() {
         topScrim?.alpha = 0f
 
         playerView.showController()
+
+        titleBlock.animate().cancel()
+        controlsScrollView.animate().cancel()
+        mainControlsRoot.animate().cancel()
+        topScrim?.animate()?.cancel()
 
         titleBlock.animate().translationY(0f).alpha(1f).setDuration(animDuration).start()
         controlsScrollView.animate().translationY(0f).alpha(1f).setDuration(animDuration).start()
@@ -1270,8 +1323,8 @@ class PlayerActivity : AppCompatActivity() {
             player = this@PlayerActivity.player
             // Always hide controls on touch so the UI doesn't get stuck visible
             controllerHideOnTouch = true
-            // Auto-show controls when playback starts/resumes so the user sees them immediately
-            controllerAutoShow = true
+            // Keep controllerAutoShow false so seeks do not force the OSD to pop up
+            controllerAutoShow = false
             // Auto-hide controls after 4.5 seconds of inactivity so UI disappears naturally
             controllerShowTimeoutMs = 4500
         }
@@ -1338,6 +1391,7 @@ class PlayerActivity : AppCompatActivity() {
             }
 
             val passedStartMs = intent.getLongExtra("startPosition", -1L)
+            intent.removeExtra("startPosition")
             val effectiveStartMs = startAtPositionMs ?: if (passedStartMs >= 0L) passedStartMs else null
 
             player.apply {
@@ -1364,7 +1418,7 @@ class PlayerActivity : AppCompatActivity() {
 
             if (effectiveStartMs == null) {
                 viewModel.getWatchPosition(fileId) { startPosition ->
-                    if (startPosition > 5_000L) {
+                    if (currentFileId == fileId && !isFinishing && startPosition > 5_000L) {
                         resumeVideo(startPosition)
                     }
                 }
@@ -2808,7 +2862,7 @@ class PlayerActivity : AppCompatActivity() {
     ) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
         playerView.apply {
-            controllerAutoShow = !isInPictureInPictureMode
+            controllerAutoShow = false
             if (isInPictureInPictureMode) hideController() else showController()
         }
         if (onStopCalled) {

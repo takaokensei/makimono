@@ -57,13 +57,19 @@ class PlayerViewModel @Inject constructor(
             Log.d(TAG, "Video not found in database")
         } else {
             Log.d(TAG, "Starting at ${video.watchedDuration}")
-            _startDuration.send(video.watchedDuration)
+            _startDuration.send(zechs.drive.stream.utils.PlaybackProgressPolicy.resumePosition(video.watchedDuration, video.totalDuration))
         }
+    }
+
+    suspend fun resumePosition(videoId: String): Long = kotlinx.coroutines.withContext(Dispatchers.IO) {
+        watchListRepository.getWatch(videoId)?.let {
+            zechs.drive.stream.utils.PlaybackProgressPolicy.resumePosition(it.watchedDuration, it.totalDuration)
+        } ?: 0L
     }
 
     fun getWatchPosition(videoId: String, onResult: (Long) -> Unit) = viewModelScope.launch(Dispatchers.IO) {
         val video = watchListRepository.getWatch(videoId)
-        val pos = video?.watchedDuration ?: 0L
+        val pos = video?.let { zechs.drive.stream.utils.PlaybackProgressPolicy.resumePosition(it.watchedDuration, it.totalDuration) } ?: 0L
         kotlinx.coroutines.withContext(Dispatchers.Main) {
             onResult(pos)
         }

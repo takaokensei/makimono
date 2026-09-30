@@ -472,7 +472,7 @@ class SeriesDetailFragment : BaseFragment() {
         val file = item.file
         val fileId = file.id
         val thumb = file.thumbnailLarge ?: file.thumbnailLink ?: file.posterUrl
-        val startPos = if (startFromBeginning) {
+        val startPos = if (startFromBeginning || item.progressPercent >= 95) {
             0L
         } else if (item.progressPercent in 1..94) {
             item.watchedDuration

@@ -300,15 +300,16 @@ sealed class FilesViewHolder(
                     text = codecTag
                 }
 
+                val ext = item.name.substringAfterLast('.', "").uppercase()
                 tvGridTypeBadge.apply {
-                    // Show type badge (e.g. ANIME)
-                    isVisible = !isFolder && resTag == null && codecTag == null
-                    text = when {
-                        isFolder -> "ANIME"
-                        isVideo -> "VÍDEO"
+                    val badgeText = when {
+                        isFolder -> "PASTA"
+                        ext.isNotEmpty() && ext.length in 2..4 -> ext
                         item.isSubtitleFile -> "LEGENDA"
-                        else -> "ARQUIVO"
+                        else -> null
                     }
+                    isVisible = badgeText != null && resTag == null && codecTag == null
+                    text = badgeText.orEmpty()
                 }
 
                 // Quick play overlay: show for videos with clear affordance, hidden for folders

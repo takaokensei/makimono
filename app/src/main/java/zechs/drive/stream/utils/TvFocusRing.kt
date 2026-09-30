@@ -69,6 +69,7 @@ object TvFocusRing {
                     state = intArrayOf(android.R.attr.state_focused)
                     setBounds(0, 0, targetView.width, targetView.height)
                     targetView.overlay.add(this)
+                    targetView.invalidate()
                 }
             }
         }
@@ -79,13 +80,19 @@ object TvFocusRing {
             if (target !== currentFocus || (target != null && !isValidFocusTarget(target))) {
                 update(currentFocus)
             } else {
-                target?.let { ring?.setBounds(0, 0, it.width, it.height) }
+                target?.let {
+                    ring?.setBounds(0, 0, it.width, it.height)
+                    it.invalidate()
+                }
             }
         }
         root.viewTreeObserver.addOnGlobalFocusChangeListener(listener)
         root.viewTreeObserver.addOnGlobalLayoutListener(layout)
+        root.post { update(root.findFocus()) }
         root.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-            override fun onViewAttachedToWindow(v: View) = Unit
+            override fun onViewAttachedToWindow(v: View) {
+                root.post { update(root.findFocus()) }
+            }
             override fun onViewDetachedFromWindow(v: View) {
                 clear()
                 clearCallbacks.remove(v)

@@ -175,7 +175,7 @@ object SubtitleStyleDialog {
 
         refreshPreview()
 
-        MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
+        val dialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
             .setTitle("Personalizar legendas")
             .setView(binding.root)
             .setNegativeButton("Cancelar", null)
@@ -187,7 +187,15 @@ object SubtitleStyleDialog {
                     bridgeGapMs = binding.sliderGap.value.toLong()
                 ))
             }
-            .show()
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.window?.let { w ->
+                zechs.drive.stream.utils.TvFocusRing.install(w.decorView)
+            }
+            binding.sliderSize.requestFocus()
+        }
+        dialog.show()
     }
 
     private fun positionLabel(fraction: Float): String {
@@ -220,13 +228,20 @@ object SubtitleStyleDialog {
         val items = colorNames.toTypedArray()
         val initialIndex = colors.indexOfFirst { it == initialColor }.coerceAtLeast(0)
         
-        android.app.AlertDialog.Builder(context)
+        val colorDialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
             .setTitle("Escolher cor")
-            .setSingleChoiceItems(items, initialIndex) { dialog, which ->
+            .setSingleChoiceItems(items, initialIndex) { d, which ->
                 onColorSelected(colors[which])
-                dialog.dismiss()
+                d.dismiss()
             }
             .setNegativeButton("Cancelar", null)
-            .show()
+            .create()
+
+        colorDialog.setOnShowListener {
+            colorDialog.window?.let { w ->
+                zechs.drive.stream.utils.TvFocusRing.install(w.decorView)
+            }
+        }
+        colorDialog.show()
     }
 }

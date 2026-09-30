@@ -308,6 +308,21 @@ class PlayerGestureHelper(
         return true
     }
 
+    fun showSpeedPill() {
+        hudBinding.gestureSpeedPill.animate().cancel()
+        hudBinding.gestureSpeedPill.alpha = 0f
+        hudBinding.gestureSpeedPill.visibility = View.VISIBLE
+        hudBinding.gestureSpeedPill.animate().alpha(1f).setDuration(180).start()
+    }
+
+    fun hideSpeedPill() {
+        hudBinding.gestureSpeedPill.animate()
+            .alpha(0f)
+            .setDuration(180)
+            .withEndAction { hudBinding.gestureSpeedPill.visibility = View.GONE }
+            .start()
+    }
+
     fun showSeekRipple(deltaSeconds: Int) {
         if (deltaSeconds > 0) {
             hudBinding.tvDoubleTapRightText.text = "+${deltaSeconds}s"

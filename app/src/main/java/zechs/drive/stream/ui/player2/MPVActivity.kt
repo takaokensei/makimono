@@ -172,6 +172,17 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     private var countdownJob: Job? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private var ignoreNextCenterKeyUp = false
+    private var isCenterLongPressSpeeding = false
+    private var speedBeforeCenterHold = 1.0
+    private val centerLongPressRunnable = Runnable {
+        if (!controller.root.isVisible && !controlsLocked && ::player.isInitialized) {
+            isCenterLongPressSpeeding = true
+            speedBeforeCenterHold = MPVLib.getPropertyDouble("speed") ?: 1.0
+            MPVLib.setPropertyDouble("speed", 2.0)
+            gestureHelper.showSpeedPill()
+            ignoreNextCenterKeyUp = true
+        }
+    }
     private var cumulativeSeekSeconds = 0
     private val resetSeekAccumulatorRunnable = Runnable {
         cumulativeSeekSeconds = 0
@@ -559,7 +570,13 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             return true
         }
 
-        if (event.keyCode == KeyEvent.KEYCODE_BACK) {
+        val isBackKey = event.keyCode in listOf(
+            KeyEvent.KEYCODE_BACK,
+            KeyEvent.KEYCODE_ESCAPE,
+            KeyEvent.KEYCODE_BUTTON_B
+        )
+
+        if (isBackKey) {
             if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) {
                 if (!handleBackNavigation()) {
                     finish()
@@ -574,8 +591,20 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                 KeyEvent.KEYCODE_ENTER,
                 KeyEvent.KEYCODE_NUMPAD_ENTER,
                 KeyEvent.KEYCODE_BUTTON_A -> {
+                    mainHandler.removeCallbacks(centerLongPressRunnable)
+                    if (isCenterLongPressSpeeding) {
+                        isCenterLongPressSpeeding = false
+                        MPVLib.setPropertyDouble("speed", speedBeforeCenterHold)
+                        gestureHelper.hideSpeedPill()
+                        ignoreNextCenterKeyUp = true
+                        return true
+                    }
                     if (ignoreNextCenterKeyUp) {
                         ignoreNextCenterKeyUp = false
+                        return true
+                    }
+                    if (!controller.root.isVisible) {
+                        showControlsWithFocus()
                         return true
                     }
                 }
@@ -594,8 +623,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                 KeyEvent.KEYCODE_ENTER,
                 KeyEvent.KEYCODE_NUMPAD_ENTER,
                 KeyEvent.KEYCODE_BUTTON_A -> {
-                    if (event.repeatCount > 0) return true
-
                     if (binding.nextEpisodeCard.root.isVisible) {
                         if (binding.nextEpisodeCard.btnCancelNextEpisode.isFocused) {
                             dismissNextEpisodeCard(isManualCancel = true)
@@ -609,8 +636,13 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                         return true
                     }
                     if (!controller.root.isVisible) {
-                        ignoreNextCenterKeyUp = true
-                        showControlsWithFocus()
+                        if (event.repeatCount == 0) {
+                            mainHandler.removeCallbacks(centerLongPressRunnable)
+                            mainHandler.postDelayed(centerLongPressRunnable, 350L)
+                        } else if (event.repeatCount > 0 && !isCenterLongPressSpeeding) {
+                            mainHandler.removeCallbacks(centerLongPressRunnable)
+                            centerLongPressRunnable.run()
+                        }
                         return true
                     }
                 }
@@ -698,12 +730,12 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             dismissNextEpisodeCard(isManualCancel = true)
             return true
         }
-        if (controller.root.isVisible) {
-            hideControls()
-            return true
-        }
         if (binding.netflixSkipRow.isVisible) {
             binding.netflixSkipRow.visibility = View.GONE
+            return true
+        }
+        if (controller.root.isVisible || isHidingControls) {
+            hideControls()
             return true
         }
         return false
@@ -712,10 +744,16 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     private var isHidingControls = false
 
     private fun showControlsWithFocus() {
-        if (controller.root.isVisible) return
+        if (controller.root.isVisible && !isHidingControls) return
+        isHidingControls = false
         val root = controller.root
         val density = resources.displayMetrics.density
         val animDuration = 220L
+
+        controller.titleBlock.animate().cancel()
+        controller.controlsScrollView.animate().cancel()
+        controller.mainControls.animate().cancel()
+        controller.topScrim.animate().cancel()
 
         controller.titleBlock.translationY = -25f * density
         controller.titleBlock.alpha = 0f
@@ -743,11 +781,17 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     }
 
     private fun hideControls() {
-        if (!controller.root.isVisible || isHidingControls) return
+        if (!controller.root.isVisible) return
         zechs.drive.stream.utils.TvFocusRing.clear(binding.root)
         isHidingControls = true
         val density = resources.displayMetrics.density
         val animDuration = 220L
+
+        controller.titleBlock.animate().cancel()
+        controller.controlsScrollView.animate().cancel()
+        controller.mainControls.animate().cancel()
+        controller.skipIntroRow.animate().cancel()
+        controller.topScrim.animate().cancel()
 
         controller.titleBlock.animate().translationY(-30f * density).alpha(0f).setDuration(animDuration).start()
         controller.controlsScrollView.animate().translationY(50f * density).alpha(0f).setDuration(animDuration).start()
@@ -1040,25 +1084,32 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         playMedia()
     }
 
+    private var mediaLoadJob: kotlinx.coroutines.Job? = null
+
     private fun playMedia() {
+        mediaLoadJob?.cancel()
+        mediaLoadJob = lifecycleScope.launch {
+            val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId").orEmpty() }
+            val title = currentTitle.ifBlank { intent.getStringExtra("title").orEmpty() }
+            val accessToken = withContext(Dispatchers.IO) { tokenProvider.get().validToken() }
+            if (isFinishing || fileId != currentFileId) return@launch
+            if (fileId.isBlank() || accessToken == null) {
+                Toast.makeText(this@MPVActivity, "Sessão do Drive indisponível. Entre novamente na conta.", Toast.LENGTH_LONG).show()
+                finish()
+                return@launch
+            }
+            val explicitStart = intent.getLongExtra("startPosition", -1L)
+            intent.removeExtra("startPosition")
+            val resumeMs = if (explicitStart >= 0L) explicitStart else viewModel.resumePosition(fileId)
+            if (isFinishing || fileId != currentFileId) return@launch
+            prepareMedia(fileId, title, accessToken, resumeMs)
+        }
+    }
+
+    private fun prepareMedia(fileId: String, title: String, accessToken: String, resumeMs: Long) {
         hasScrobbledThisEp = false
         hasPromptedRating = false
         currentMalAnime = null
-
-        val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") }
-        val title = currentTitle.ifBlank { intent.getStringExtra("title") }
-        // P0-04: token obtido do TokenProvider (cache + refresh sob mutex);
-        // sem fallback para extras de Intent nem cache desatualizado.
-        val accessToken = kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
-            tokenProvider.get().validToken()
-        }
-
-        if (fileId == null || accessToken == null) {
-            Log.d(TAG, "FileId & AccessToken both are required. exiting...")
-            finish()
-            return
-        }
-
         val parsed = EpisodeParser.parse(title ?: "")
         currentEpNumber = parsed.episode?.toInt() ?: 1
 
@@ -1112,6 +1163,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             "http-header-fields",
             "Authorization: Bearer $accessToken"
         )
+        MPVLib.setOptionString("start", (resumeMs / 1000.0).toString())
         player.play(playUri)
 
         // Load external Drive subtitles (.ass, .srt, etc.)
@@ -1119,19 +1171,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             loadMatchingExternalSubtitles()
         } else {
             viewModel.fetchSubtitles(fileId)
-        }
-
-        val explicitStart = intent.getLongExtra("startPosition", -1L)
-        if (explicitStart >= 0L) {
-            if (explicitStart > 0L) {
-                resumeVideo(explicitStart)
-            }
-        } else {
-            viewModel.getWatchPosition(fileId) { startPos ->
-                if (startPos > 5_000L) {
-                    resumeVideo(startPos)
-                }
-            }
         }
 
     }
