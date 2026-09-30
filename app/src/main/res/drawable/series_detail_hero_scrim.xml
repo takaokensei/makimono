@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Bottom fade: image stays vivid at the top and melts into the page background -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
     <gradient
         android:angle="270"
+        android:centerY="0.55"
         android:startColor="#00070A10"
-        android:centerColor="#80070A10"
+        android:centerColor="#99070A10"
         android:endColor="#FF070A10" />
 </shape>

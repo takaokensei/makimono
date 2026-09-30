@@ -1,38 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Focused & Selected -->
+    <!-- Focused & selected -->
     <item android:state_focused="true" android:state_selected="true">
         <shape android:shape="rectangle">
-            <corners android:radius="18dp" />
-            <solid android:color="#50FFFFFF" />
-            <stroke android:width="2dp" android:color="#22D3EE" />
+            <corners android:radius="16dp" />
+            <solid android:color="#4DFFFFFF" />
+            <stroke android:width="2dp" android:color="#FFFFFFFF" />
         </shape>
     </item>
-
     <!-- Focused only -->
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <corners android:radius="18dp" />
-            <solid android:color="#35FFFFFF" />
-            <stroke android:width="2dp" android:color="#22D3EE" />
+            <corners android:radius="16dp" />
+            <solid android:color="#33FFFFFF" />
+            <stroke android:width="2dp" android:color="#FFFFFFFF" />
         </shape>
     </item>
-
-    <!-- Selected (Active Tab) -->
+    <!-- Selected (active season): accent outline -->
     <item android:state_selected="true">
         <shape android:shape="rectangle">
-            <corners android:radius="18dp" />
-            <solid android:color="#33FFFFFF" />
-            <stroke android:width="1dp" android:color="#66FFFFFF" />
+            <corners android:radius="16dp" />
+            <solid android:color="#26FFFFFF" />
+            <stroke android:width="1.5dp" android:color="#22D3EE" />
         </shape>
     </item>
-
-    <!-- Normal (Inactive Tab) -->
+    <!-- Normal -->
     <item>
         <shape android:shape="rectangle">
-            <corners android:radius="18dp" />
+            <corners android:radius="16dp" />
             <solid android:color="#14FFFFFF" />
-            <stroke android:width="1dp" android:color="#1AFFFFFF" />
+            <stroke android:width="1dp" android:color="#14FFFFFF" />
         </shape>
     </item>
 </selector>

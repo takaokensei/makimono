@@ -410,10 +410,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="28dp"
                 android:fontFamily="@font/inter"
-                android:letterSpacing="0.12"
+                android:letterSpacing="0.16"
                 android:text="INTEGRAÇÕES"
-                android:textColor="?attr/colorAccentPrimary"
-                android:textSize="11sp"
+                android:textColor="#8FA3BA"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <LinearLayout
@@ -532,10 +532,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="28dp"
                 android:fontFamily="@font/inter"
-                android:letterSpacing="0.12"
+                android:letterSpacing="0.16"
                 android:text="REPRODUÇÃO E GESTOS"
-                android:textColor="?attr/colorAccentPrimary"
-                android:textSize="11sp"
+                android:textColor="#8FA3BA"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <LinearLayout
@@ -600,10 +600,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:fontFamily="@font/inter"
-                android:letterSpacing="0.08"
+                android:letterSpacing="0.16"
                 android:text="BACKUP &amp; DADOS"
-                android:textColor="?attr/colorAccentPrimary"
-                android:textSize="11sp"
+                android:textColor="#8FA3BA"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <!-- Exportar Backup -->

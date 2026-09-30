@@ -371,9 +371,11 @@ sealed class FilesViewHolder(
                 root.setOnFocusChangeListener { v, hasFocus ->
                     if (hasFocus) {
                         filesAdapter.onFocusItemListener?.invoke(v)
-                        v.animate().scaleX(1.05f).scaleY(1.05f).translationZ(12f).setDuration(140L).start()
+                        v.animate().scaleX(1.08f).scaleY(1.08f).translationZ(16f).setDuration(180L)
+                            .setInterpolator(android.view.animation.DecelerateInterpolator(1.4f)).start()
                     } else {
-                        v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(140L).start()
+                        v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(160L)
+                            .setInterpolator(android.view.animation.DecelerateInterpolator(1.4f)).start()
                     }
                 }
 

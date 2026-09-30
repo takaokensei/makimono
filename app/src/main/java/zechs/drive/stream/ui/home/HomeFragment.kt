@@ -62,6 +62,7 @@ class HomeFragment : BaseFragment() {
     private var previousTabBeforeSearch: String? = null
     private var isSidebarExpanded = false
     private var lastFocusedAnimeView: View? = null
+    private var heroAutoFocused = false
     private var lastFocusedItemId: String? = null
     private var lastProfileConfiguration: String? = null
 
@@ -870,7 +871,7 @@ class HomeFragment : BaseFragment() {
             val activeBg = R.drawable.nav_item_active_bg
             val normalTextColor = requireContext().resolveThemeColor(R.attr.colorTextSecondary)
             val activeTextColor = android.graphics.Color.WHITE
-            val normalIconColor = requireContext().resolveThemeColor(R.attr.colorAccentPrimary)
+            val normalIconColor = requireContext().resolveThemeColor(R.attr.colorTextSecondary)
             val activeIconColor = android.graphics.Color.WHITE
 
             // Início
@@ -1064,6 +1065,29 @@ class HomeFragment : BaseFragment() {
         }
     }
 
+    /**
+     * Streaming-style entry point: on TV / landscape shells the cursor starts on the
+     * hero's "Assistir agora" button instead of the sidebar's "Início" item. Runs once,
+     * and only if focus is still on the rail (or nowhere), so it never steals focus
+     * from something the user already navigated to.
+     */
+    private fun focusHeroOnFirstShow() {
+        if (heroAutoFocused || isCollapsibleRail()) return
+        heroAutoFocused = true
+        binding.featuredHeroContainer?.post {
+            if (view == null) return@post
+            val focused = binding.root.findFocus()
+            val rail = binding.root.findViewById<View>(R.id.navRail)
+            var insideRail = focused == null
+            var currentParent: android.view.ViewParent? = focused?.parent
+            while (!insideRail && currentParent != null) {
+                if (currentParent === rail) insideRail = true
+                currentParent = currentParent.parent
+            }
+            if (insideRail) binding.btnFeaturedPlay?.requestFocus()
+        }
+    }
+
     private fun observeFeaturedAnime() {
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -1072,6 +1096,7 @@ class HomeFragment : BaseFragment() {
                         if (currentTab == "Início") {
                             binding.featuredHeroContainer?.visibility = View.VISIBLE
                             binding.layoutHomeEmpty?.visibility = View.GONE
+                            focusHeroOnFirstShow()
                         }
                         binding.tvFeaturedTitle?.text = featured.title
 
@@ -1099,15 +1124,16 @@ class HomeFragment : BaseFragment() {
                         featured.genres.take(4).forEach { genreName ->
                             val pill = android.widget.TextView(requireContext()).apply {
                                 text = genreName
-                                textSize = 10f
-                                setTextColor(requireContext().resolveThemeColor(R.attr.colorTextSecondary))
+                                textSize = 11f
+                                setTextColor(android.graphics.Color.parseColor("#E6FFFFFF"))
                                 setBackgroundResource(R.drawable.tag_genre_pill_bg)
-                                setPadding(18, 6, 18, 6)
+                                val dp = resources.displayMetrics.density
+                                setPadding((10 * dp).toInt(), (4 * dp).toInt(), (10 * dp).toInt(), (4 * dp).toInt())
                                 val params = android.widget.LinearLayout.LayoutParams(
                                     android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
                                     android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
                                 ).apply {
-                                    marginEnd = 12
+                                    marginEnd = (8 * resources.displayMetrics.density).toInt()
                                 }
                                 layoutParams = params
                             }

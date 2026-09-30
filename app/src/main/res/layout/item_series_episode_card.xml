@@ -11,7 +11,7 @@
     android:focusableInTouchMode="true"
     android:foreground="@drawable/item_series_episode_focus_border"
     app:cardBackgroundColor="?attr/colorBgSurface"
-    app:cardCornerRadius="12dp"
+    app:cardCornerRadius="8dp"
     app:cardElevation="0dp"
     app:strokeColor="?attr/colorBorderGlass"
     app:strokeWidth="0dp">

@@ -1,2 +1,8 @@
-<shape xmlns:android="http://schemas.android.com/apk/res/android"><gradient
-android:angle="0" android:startColor="#030B14" android:endColor="#091A2C" /></shape>
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Near-black neutral canvas. The hero scrim ends on #070A10, the top of this gradient. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:angle="270"
+        android:startColor="#070A10"
+        android:endColor="#0B121B" />
+</shape>
