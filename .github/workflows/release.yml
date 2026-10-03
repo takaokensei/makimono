@@ -55,23 +55,45 @@ jobs:
           fi
 
       - name: Validate Release Secrets
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
-          if [ -z "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" ] || \
-             [ -z "${{ secrets.RELEASE_STORE_PASSWORD }}" ] || \
-             [ -z "${{ secrets.RELEASE_KEY_ALIAS }}" ] || \
-             [ -z "${{ secrets.RELEASE_KEY_PASSWORD }}" ]; then
+          if [ -z "$RELEASE_KEYSTORE_BASE64" ] || \
+             [ -z "$RELEASE_STORE_PASSWORD" ] || \
+             [ -z "$RELEASE_KEY_ALIAS" ] || \
+             [ -z "$RELEASE_KEY_PASSWORD" ]; then
             echo "::error::Missing required release signing secrets (RELEASE_KEYSTORE_BASE64, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD). Production release cannot be published without dedicated release keystore."
             exit 1
           fi
 
       - name: Setup release keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
-          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > release.keystore
+          # GitHub secrets may contain wrapped Base64. Strip whitespace before decoding.
+          if ! printf '%s' "$RELEASE_KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > release.keystore; then
+            echo "::error::RELEASE_KEYSTORE_BASE64 could not be decoded. Check that the secret contains only the Base64-encoded keystore."
+            exit 1
+          fi
+          if [ ! -s release.keystore ]; then
+            echo "::error::Decoded release keystore is empty."
+            exit 1
+          fi
+          if ! keytool -list -keystore release.keystore -storepass "$RELEASE_STORE_PASSWORD" -alias "$RELEASE_KEY_ALIAS" >/dev/null 2>&1; then
+            echo "::error::The keystore could not be opened with RELEASE_STORE_PASSWORD and RELEASE_KEY_ALIAS. Confirm the stored keystore, store password, and alias belong together."
+            exit 1
+          fi
           {
-            echo "release.storeFile=../release.keystore"
-            echo "release.storePassword=${{ secrets.RELEASE_STORE_PASSWORD }}"
-            echo "release.keyAlias=${{ secrets.RELEASE_KEY_ALIAS }}"
-            echo "release.keyPassword=${{ secrets.RELEASE_KEY_PASSWORD }}"
+            printf '%s\n' 'release.storeFile=../release.keystore'
+            printf 'release.storePassword=%s\n' "$RELEASE_STORE_PASSWORD"
+            printf 'release.keyAlias=%s\n' "$RELEASE_KEY_ALIAS"
+            printf 'release.keyPassword=%s\n' "$RELEASE_KEY_PASSWORD"
           } >> local.properties
 
       - name: Run lint checks
