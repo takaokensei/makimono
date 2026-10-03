@@ -61,6 +61,20 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
+        <!-- Keep the scrolling episode area opaque so the hero artwork never bleeds
+             through season tabs or episode cards. The existing hero scrim softens
+             the transition immediately above this surface. -->
+        <View
+            android:id="@+id/viewSeriesBodySurface"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="#0B0E14"
+            android:clickable="false"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/heroContentBlock" />
+
         <!-- 4. Top Header Bar -->
         <LinearLayout
             android:id="@+id/topHeaderBar"

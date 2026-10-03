@@ -664,6 +664,11 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
+        if (intent == null) return
+        setIntent(intent)
+        currentFileId = intent.getStringExtra("fileId") ?: ""
+        currentTitle = intent.getStringExtra("title") ?: ""
+        currentThumbnailLink = intent.getStringExtra("thumbnailLink")
         playMedia()
     }
 
@@ -1139,10 +1144,10 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun isControlsShowing(): Boolean {
+        if (isHidingControls) return false
         return (::playerView.isInitialized && playerView.isControllerVisible) ||
                 (::controlsScrollView.isInitialized && controlsScrollView.isVisible) ||
-                (::mainControlsRoot.isInitialized && mainControlsRoot.alpha > 0.05f) ||
-                isHidingControls
+                (::mainControlsRoot.isInitialized && mainControlsRoot.alpha > 0.05f && !isHidingControls)
     }
 
     private fun handleBackNavigation(): Boolean {

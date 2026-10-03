@@ -45,7 +45,9 @@ object PlayerLauncher {
             putExtra(EXTRA_THEME, themeIndex)
             playlist?.let { putExtra(EXTRA_PLAYLIST, it) }
             subtitles?.let { putExtra(EXTRA_SUBTITLES, it) }
-            if (startPosition > 0L) {
+            // Zero is an explicit "start from beginning" request; -1 means resume
+            // from the saved watch position (or begin at zero when none exists).
+            if (startPosition >= 0L) {
                 putExtra(EXTRA_START_POSITION, startPosition)
             }
         }

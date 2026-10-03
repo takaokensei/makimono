@@ -48,6 +48,20 @@ class PlaybackProgressPolicyTest {
     }
 
     @Test
+    fun `resumePosition starts completed or invalid records from beginning`() {
+        assertEquals(0L, PlaybackProgressPolicy.resumePosition(0L, 1_440_000L))
+        assertEquals(0L, PlaybackProgressPolicy.resumePosition(900_000L, 0L))
+        assertEquals(0L, PlaybackProgressPolicy.resumePosition(1_368_000L, 1_440_000L))
+        assertEquals(0L, PlaybackProgressPolicy.resumePosition(1_440_000L, 1_440_000L))
+    }
+
+    @Test
+    fun `resumePosition preserves valid partial progress and clamps corrupt overflow`() {
+        assertEquals(360_000L, PlaybackProgressPolicy.resumePosition(360_000L, 1_440_000L))
+        assertEquals(0L, PlaybackProgressPolicy.resumePosition(1_500_000L, 1_440_000L))
+    }
+
+    @Test
     fun `isFinished triggers within near-end window for long videos`() {
         // Video is 20 min (1_200_000 ms), 10 seconds remaining (99.1% but even at 94% with < 15s)
         val duration = 600_000L // 10 minutes

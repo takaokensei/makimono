@@ -190,6 +190,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     private var folderSubtitles = mutableListOf<SubtitleItem>()
     private val addedSubtitleFileIds = mutableSetOf<String>()
     private var isFileLoaded = false
+    private var pendingResumePositionMs = 0L
     private val pendingSubtitles = mutableListOf<Pair<java.io.File, SubtitleItem>>()
     private var currentSubtitleDelayMs = 0L
     private var currentAudioDelayMs = 0L
@@ -734,7 +735,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
             binding.netflixSkipRow.visibility = View.GONE
             return true
         }
-        if (controller.root.isVisible || isHidingControls) {
+        if (controller.root.isVisible && !isHidingControls) {
             hideControls()
             return true
         }
@@ -1081,6 +1082,11 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
 
     override fun onNewIntent(i: Intent?) {
         super.onNewIntent(i)
+        if (i == null) return
+        setIntent(i)
+        currentFileId = i.getStringExtra("fileId") ?: ""
+        currentTitle = i.getStringExtra("title") ?: ""
+        currentThumbnailLink = i.getStringExtra("thumbnailLink")
         playMedia()
     }
 
@@ -1158,12 +1164,12 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         val playUri = getStreamUrl(fileId)
         hasAutoSelectedMpvTracks = false
         isFileLoaded = false
+        pendingResumePositionMs = resumeMs.coerceAtLeast(0L)
         pendingSubtitles.clear()
         MPVLib.setOptionString(
             "http-header-fields",
             "Authorization: Bearer $accessToken"
         )
-        MPVLib.setOptionString("start", (resumeMs / 1000.0).toString())
         player.play(playUri)
 
         // Load external Drive subtitles (.ass, .srt, etc.)
@@ -2280,6 +2286,14 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
                 MPV_EVENT_FILE_LOADED -> {
                     isFileLoaded = true
                     runOnUiThread {
+                        // `start` is a per-file option and may be ignored after MPV has
+                        // already opened a previous playlist item. Apply the resume seek
+                        // only after the requested file is loaded.
+                        val resumeMs = pendingResumePositionMs
+                        pendingResumePositionMs = 0L
+                        if (resumeMs > 0L) {
+                            MPVLib.setPropertyDouble("time-pos", resumeMs / 1000.0)
+                        }
                         updateChapters()
                         pendingSubtitles.forEach { (cached, sub) ->
                             addSubtitleToMpv(cached, sub)
