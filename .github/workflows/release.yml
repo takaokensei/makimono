@@ -56,7 +56,7 @@ jobs:
 
       - name: Setup GitHub release read token
         env:
-          GITHUB_API_TOKEN: ${{ secrets.GITHUB_API_TOKEN }}
+          GITHUB_API_TOKEN: ${{ secrets.API_TOKEN_GITHUB }}
         run: |
           if [ -n "$GITHUB_API_TOKEN" ]; then
             printf 'github.releaseReadToken=%s\n' "$GITHUB_API_TOKEN" >> local.properties
@@ -64,7 +64,7 @@ jobs:
 
       - name: Validate Release Secrets
         env:
-          GITHUB_API_TOKEN: ${{ secrets.GITHUB_API_TOKEN }}
+          GITHUB_API_TOKEN: ${{ secrets.API_TOKEN_GITHUB }}
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
