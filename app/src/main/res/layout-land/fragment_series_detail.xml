@@ -6,7 +6,7 @@
         <View android:id="@+id/viewHeroVignette" android:layout_width="0dp" android:layout_height="0dp" android:background="@drawable/detail_backdrop_shade" app:layout_constraintBottom_toBottomOf="@id/ivHeroBackdrop" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toTopOf="@id/ivHeroBackdrop" />
         <LinearLayout android:id="@+id/topHeaderBar" android:layout_width="0dp" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:paddingStart="24dp" android:paddingTop="16dp" android:paddingEnd="24dp" android:paddingBottom="8dp" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toTopOf="parent" android:layout_marginStart="0dp" android:layout_marginEnd="0dp" android:layout_marginTop="0dp">
             <ImageView android:layout_width="32dp" android:layout_height="32dp" android:layout_marginEnd="20dp" android:src="@drawable/ic_makimono_torii" android:contentDescription="Makimono" />
-            <FrameLayout android:id="@+id/btnBack" android:layout_width="40dp" android:layout_height="40dp" android:background="@drawable/btn_secondary_action_bg" android:clickable="true" android:focusable="true" android:focusableInTouchMode="true" android:layout_marginEnd="12dp">
+            <FrameLayout android:id="@+id/btnBack" android:layout_width="48dp" android:layout_height="48dp" android:background="@drawable/btn_secondary_action_bg" android:clickable="true" android:focusable="true" android:focusableInTouchMode="true" android:layout_marginEnd="12dp">
                 <ImageView android:layout_width="20dp" android:layout_height="20dp" android:layout_gravity="center" android:contentDescription="@string/back" android:src="@drawable/ic_back_24" app:tint="@color/layout_literal_f8fafc" />
             </FrameLayout>
             <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
@@ -16,7 +16,7 @@
             </LinearLayout>
             <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1" />
             <View android:layout_width="16dp" android:layout_height="0dp" />
-            <FrameLayout android:id="@+id/btnSearch" android:layout_width="40dp" android:layout_height="40dp" android:background="@drawable/btn_secondary_action_bg" android:clickable="true" android:focusable="true" android:focusableInTouchMode="true">
+            <FrameLayout android:id="@+id/btnSearch" android:layout_width="48dp" android:layout_height="48dp" android:background="@drawable/btn_secondary_action_bg" android:clickable="true" android:focusable="true" android:focusableInTouchMode="true">
                 <ImageView android:layout_width="20dp" android:layout_height="20dp" android:layout_gravity="center" android:contentDescription="@string/search" android:src="@drawable/ic_search_24" app:tint="@color/layout_literal_f8fafc" />
             </FrameLayout>
         </LinearLayout>

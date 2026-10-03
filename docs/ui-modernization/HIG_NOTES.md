@@ -57,6 +57,15 @@ Before token changes, the general/tvOS portions of `Accessibility`, `Color`, `Da
 - Reserve enough surrounding space for focused lockups to grow without obscuring their neighbors. Make focus-aware image assets sharp at the larger size.
 - Profile imagery is circular in the monogram guidance; use a circular crop and initials fallback instead of a hard rectangular edge.
 
+## Buttons, collections and labels
+
+**Sources:** `Buttons _ Apple Developer Documentation.pdf` (6 pages), pp. 1–3; `Collections _ Apple Developer Documentation.pdf` (4 pages), pp. 1–2; `Labels _ Apple Developer Documentation.pdf` (3 pages), pp. 1–2; `Lockups _ Apple Developer Documentation.pdf` (4 pages), pp. 1–2. The supplied PDFs were re-opened for F2; source files remain outside the repository.
+
+- Buttons communicate through a coherent style, content and role. Give primary actions a clear hierarchy, use concise labels, and leave enough separation for touch and remote selection. The Buttons guide gives 44×44 pt as its general minimum hit region; this is an Apple-platform measure, so Makimono's implementation target is Android's 48dp.
+- Collections should use familiar rows and grids, give browsable content room to breathe, and preserve padding around images so focus does not collide with adjacent content. A focused lockup's content, header and footer should grow as one unit; groups should use consistent sizing.
+- Labels need to stay legible with custom fonts and communicate the action/context without forcing truncation of important information. Validate long strings separately from the current fixture's short titles.
+- Makimono represents transient D-pad focus with one theme-accent outline and a restrained tint on compact controls. Selected seasons use a quiet surface treatment so selection does not impersonate focus. Focused cards draw through the shared overlay so poster art remains visible; focus-safe spacing and focus return still require screen-by-screen validation.
+
 ## Materials
 
 **Source:** `Materials _ Apple Developer Documentation.pdf` (8 pages), general and tvOS sections, pp. 1–6 and 8. The supplied guide describes Liquid Glass as a tvOS navigation/control material; that visual system is not directly equivalent to Android blur.

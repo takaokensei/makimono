@@ -93,8 +93,8 @@
             <!-- Back Button -->
             <FrameLayout
                 android:id="@+id/btnBack"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:background="@drawable/btn_secondary_action_bg"
                 android:clickable="true"
                 android:focusable="true"
@@ -156,8 +156,8 @@
             <!-- Search Button -->
             <FrameLayout
                 android:id="@+id/btnSearch"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:background="@drawable/btn_secondary_action_bg"
                 android:clickable="true"
                 android:focusable="true"
@@ -481,7 +481,7 @@
                 <LinearLayout
                     android:id="@+id/btnPrimaryAction"
                     android:layout_width="wrap_content"
-                    android:layout_height="44dp"
+                    android:layout_height="48dp"
                     android:background="@drawable/detail_primary_action_bg"
                     android:clickable="true"
                     android:focusable="true"
@@ -535,7 +535,7 @@
                 <LinearLayout
                     android:id="@+id/btnTrailer"
                     android:layout_width="wrap_content"
-                    android:layout_height="44dp"
+                    android:layout_height="48dp"
                     android:layout_marginStart="12dp"
                     android:background="@drawable/btn_secondary_action_bg"
                     android:clickable="true"
@@ -567,7 +567,7 @@
                 <LinearLayout
                     android:id="@+id/btnFavorite"
                     android:layout_width="wrap_content"
-                    android:layout_height="44dp"
+                    android:layout_height="48dp"
                     android:layout_marginStart="12dp"
                     android:background="@drawable/btn_secondary_action_bg"
                     android:clickable="true"
@@ -601,7 +601,7 @@
                 <LinearLayout
                     android:id="@+id/btnFollow"
                     android:layout_width="wrap_content"
-                    android:layout_height="44dp"
+                    android:layout_height="48dp"
                     android:layout_marginStart="12dp"
                     android:background="@drawable/btn_secondary_action_bg"
                     android:clickable="true"
@@ -635,7 +635,7 @@
                 <LinearLayout
                     android:id="@+id/btnMarkWatched"
                     android:layout_width="wrap_content"
-                    android:layout_height="44dp"
+                    android:layout_height="48dp"
                     android:layout_marginStart="12dp"
                     android:background="@drawable/btn_secondary_action_bg"
                     android:clickable="true"

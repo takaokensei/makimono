@@ -1,36 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Focused: brighter glass + white ring + halo -->
-    <item android:state_focused="true">
-        <layer-list>
-            <item>
-                <shape>
-                    <solid android:color="#14FFFFFF"/>
-                    <corners android:radius="26dp"/>
-                    <stroke android:width="4dp" android:color="#33FFFFFF"/>
-                </shape>
-            </item>
-            <item android:left="2dp" android:top="2dp" android:right="2dp" android:bottom="2dp">
-                <shape>
-                    <solid android:color="#4DFFFFFF"/>
-                    <corners android:radius="24dp"/>
-                    <stroke android:width="2dp" android:color="#FFFFFFFF"/>
-                </shape>
-            </item>
-        </layer-list>
-    </item>
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
-            <solid android:color="#40FFFFFF"/>
-            <corners android:radius="24dp"/>
+            <solid android:color="#40FFFFFF" />
+            <corners android:radius="24dp" />
         </shape>
     </item>
-    <!-- Normal: frosted translucent pill, no border (Netflix "Mais informações") -->
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#40374151"/>
-            <corners android:radius="24dp"/>
-            <stroke android:width="1dp" android:color="#1FFFFFFF"/>
+            <solid android:color="#40374151" />
+            <corners android:radius="24dp" />
+            <stroke android:width="1dp" android:color="#1FFFFFFF" />
         </shape>
     </item>
 </selector>

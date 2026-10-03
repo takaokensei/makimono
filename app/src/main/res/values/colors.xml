@@ -11,7 +11,7 @@
     <color name="obsidian_accent_primary">#22D3EE</color>
     <color name="obsidian_accent_secondary">#4F8CFF</color>
     <color name="obsidian_on_primary">#0A0E14</color>
-    <color name="obsidian_focus_fill">#24FFFFFF</color>
+    <color name="obsidian_focus_fill">#2622D3EE</color>
     <color name="obsidian_hairline">#1AFFFFFF</color>
     <color name="obsidian_success">#54D18A</color>
     <color name="obsidian_warning">#F6C76A</color>
@@ -28,6 +28,7 @@
     <color name="tn_text_secondary">#AEB6D1</color>
     <color name="tn_text_tertiary">#7B82A3</color>
     <color name="tn_accent_primary">#7AA2F7</color>
+    <color name="tn_focus_fill">#267AA2F7</color>
     <color name="tn_accent_secondary">#BB9AF7</color>
     <color name="tn_success">#9ECE6A</color>
     <color name="tn_warning">#E0AF68</color>
@@ -42,6 +43,7 @@
     <color name="dracula_text_secondary">#C5CBE1</color>
     <color name="dracula_text_tertiary">#8390B7</color>
     <color name="dracula_accent_primary">#BD93F9</color>
+    <color name="dracula_focus_fill">#26BD93F9</color>
     <color name="dracula_accent_secondary">#FF79C6</color>
     <color name="dracula_success">#50FA7B</color>
     <color name="dracula_warning">#FFB86C</color>
@@ -56,6 +58,7 @@
     <color name="nord_text_secondary">#D7DBE3</color>
     <color name="nord_text_tertiary">#979DA9</color>
     <color name="nord_accent_primary">#88C0D0</color>
+    <color name="nord_focus_fill">#2688C0D0</color>
     <color name="nord_accent_secondary">#81A1C1</color>
     <color name="nord_success">#A3BE8C</color>
     <color name="nord_warning">#EBCB8B</color>
@@ -70,6 +73,7 @@
     <color name="mocha_text_secondary">#BEC5DC</color>
     <color name="mocha_text_tertiary">#8E95AF</color>
     <color name="mocha_accent_primary">#89B4FA</color>
+    <color name="mocha_focus_fill">#2689B4FA</color>
     <color name="mocha_accent_secondary">#CBA6F7</color>
     <color name="mocha_success">#A6E3A1</color>
     <color name="mocha_warning">#FAB387</color>
@@ -84,6 +88,7 @@
     <color name="estuary_text_secondary">#ACC0D6</color>
     <color name="estuary_text_tertiary">#819BB5</color>
     <color name="estuary_accent_primary">#22D3EE</color>
+    <color name="estuary_focus_fill">#2622D3EE</color>
     <color name="estuary_accent_secondary">#0E597E</color>
     <color name="estuary_success">#4CBB6C</color>
     <color name="estuary_warning">#FFB70F</color>

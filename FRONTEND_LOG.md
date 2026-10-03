@@ -231,3 +231,16 @@ Este documento é a memória persistente dos ciclos de auditoria, testes visuais
 | **Settings Inset** | 9.4 | **9.9** | Layout agrupado e centralizado em 820dp, ergonomia perfeita para TV a 3 metros. |
 | **D-pad & Focus Ring** | 9.6 | **9.9** | Dual luminous cyan halo padronizado com cantos squircle sincronizados nos cards. |
 | **Typography & Spacing** | 9.4 | **9.8** | Inter com pesos semânticos, contrastes WCAG AAA, respiro espacial consistente. |
+
+## F2 — Foco, controles e ergonomia (plano antes de editar)
+
+1. Reler as referências HIG de Buttons, Collections, Focus and selection, Labels e Lockups; aplicar seus princípios de hierarquia, estados legíveis e seleção sem confundir estado persistente com foco transitório.
+2. Auditar `TvFocusRing`, backgrounds/seletors, dimensões e estados dos alvos de Home e Series Details, preservando navegação, click listeners, ripple e exclusão de superfícies de vídeo.
+3. Substituir o halo branco duplo por um foco Obsidian ciano/azul, contido ao bounds do componente, com contraste suficiente e tratamento coerente para cards, ações e itens selecionados.
+4. Garantir alvos focáveis de pelo menos 48dp sem aumentar desproporcionalmente botões; rever padding, minHeight e foco visual nas ações da Home/Details.
+5. Repetir a navegação MuMu em D-pad e toque (hero → ações → prateleira, detalhes → ações → tabs/episódios); inspecionar screenshots e hierarquia para foco, corte e bounds.
+6. Atualizar matriz HIG e log com evidências e limitações, rodar verificações estáticas, `assembleDebug` e todos os testes; corrigir regressões antes de criar o commit local F2.
+
+**Execução F2 (validada):** `TvFocusRing` agora desenha uma única borda de 2dp com cores de foco do tema; botões compactos ganham preenchimento sutil e cards mantêm o conteúdo limpo. Superfícies de vídeo e contêineres `RecyclerView`, `ScrollView` e `ViewPager` são excluídos, depois que a primeira recaptura revelou o foco aplicado incorretamente à prateleira inteira. Seletor branco duplicado removido dos botões e abas; seleção de temporada continua preenchida de forma discreta enquanto o foco transitório usa o anel ciano. Aumentamos alvos auditados da Home, Details, navegação lateral e abas para 48dp. No MuMu 1920×1080, D-pad manteve o foco em `cardShelfItem` e o movimento DOWN dos Details alcançou `tabPillContainer`; toque no fundo da Home deixou de contornar o RecyclerView. Capturas e hierarquias finais em `docs/ui-audit/after-v2/f2/`. `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou (155 testes, 0 falhas/erros/skips); `check_layout_colors.py`, `check_contrast.py` e `git diff --check` também passaram. O APK de revisão foi instalado apenas em `zechs.drive.stream.visualreview`; `zechs.drive.stream` permaneceu instalado. Commit local F2 será criado após revisão do diff.
+
+**Status F2:** concluída; próxima fase F3 — corrigir clipping/scroll vertical da Home e fundos de conteúdo dos Details, começando por reproduzir os bounds no MuMu e registrar plano antes da edição.

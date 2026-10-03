@@ -14,13 +14,34 @@ F0 is a diagnostic baseline, not a passing conformance claim. “Gap” identifi
 | Safe margins | `values/dimens.xml`, `values-land/dimens.xml`, `values-sw600dp-land/dimens.xml` | Pass: shared 48dp horizontal / 30dp vertical tokens | F2–F5 visual checks for screens, clipping, and focus clearance |
 | Type/shape/motion tokens | `values/typography.xml`, `values/dimens.xml`, `values/motion_spec.xml`, `ContinuousCornerOutline.kt` | Foundation added; runtime application not yet proven | F2/F4/F5/F6 |
 | Theme compatibility | `AppThemeTest.kt`; original values 0–4 unchanged, Obsidian value 5 | Pass at model/resource mapping level | F5 theme selector and all surface variants |
-| D-pad and theme picker | `after-v2/f1/02_home_details_focus.png`, `03_home_shelf_focus.png`, `04_theme_picker_obsidian.png` and hierarchy XML | RIGHT reaches Details; DOWN reaches shelf card; five DOWN presses scroll to and focus Obsidian. Prior dialog clipped the added row and now has an accessible scroll viewport. The current ring is bright white and the focused button is 42dp tall, so F2 remains open. | F2 |
+| D-pad and theme picker | `after-v2/f1/02_home_details_focus.png`, `03_home_shelf_focus.png`, `04_theme_picker_obsidian.png` and hierarchy XML | RIGHT reaches Details; vertical navigation reaches shelf cards; five DOWN presses scroll to and focus Obsidian. The white ring/42dp action issue from this capture is closed in F2; shelf clipping remains for F3. | F2/F3 |
+
+## F2 focus and control verification
+
+Focus references re-opened for this phase: Buttons pp. 1–3, Collections pp. 1–2, Focus and selection pp. 1–6, Labels pp. 1–2, and Lockups pp. 1–2. Apple describes a 44×44 pt general button hit region; that unit is platform-specific. Makimono targets 48dp for the audited Android controls.
+
+| F2 area | Evidence | F2 status | Remaining phase |
+|---|---|---|---|
+| Theme-aware focus | `utils/TvFocusRing.kt`; theme `colorAccentPrimary`/`colorFocusFill`; `after-v2/f2/02_home_focus_right.png`, `03_home_focus_play.png`, `06_home_focus_up.png`, `07_details_focus_primary.png` | Removed the fixed white double ring from hero/details actions; one 2dp theme-accent ring is drawn by the shared overlay. Compact controls get a subtle accent fill; poster cards stay clear. Card focus is drawn by the helper rather than an unreliable CardView foreground selector. | Verify dialogs/player/list focus in F4–F6 |
+| Action target sizing | `fragment_home.xml` and its land/TV/sw720dp-land variants; `fragment_series_detail.xml` variants; both `item_series_season_tab.xml` variants | Home hero, nav/profile rail, details back/search/actions, and season tabs use 48dp bounds. Existing IDs and directional rules remain. | Audit remaining interactive targets and font-scale in F3–F6 |
+| Focus vs selection | `drawable/tab_season_pill_bg.xml`, `drawable/detail_season_tab_bg.xml`; detail screenshot | Selected season uses a quiet surface/hairline. Transient focus is the accent ring, so selection does not reuse the focus outline. | Recheck favorite/watched semantics in F3/F5 |
+| D-pad and touch routes | `after-v2/f2/14_home_focus_card_fixed.xml`, `15_details_focus_tab_final.xml`, `13_home_touch_details_fixed.xml` | Home D-pad focuses the individual `cardShelfItem`; touch no longer outlines the containing RecyclerView. Details DOWN reaches the first season tab. Production BACK/touch navigation remains for later route audits. | F3–F6 |
+
+## F2 measured visual evidence
+
+| Capture and hierarchy | Measured value | Interpretation |
+|---|---|---|
+| `after-v2/f2/06_home_focus_up.png` + `home-up.xml` | `cardShelfItem` focused at `[742,267][1148,496]` (203×114.5dp). | Single cyan perimeter is visible without a white inner ring; D-pad returns from catalog to the shelf. |
+| `after-v2/f2/09_details_final.png` + `details-final.xml` | Final `btnPrimaryAction` bounds `[336,469][658,553]` (322×84 px); XML target is 48dp high. | Primary action has the final target size and uses the shared theme-accent focus overlay. |
+| `after-v2/f2/15_details_focus_tab_final.png` + `15_details_focus_tab_final.xml` | DOWN from the primary action focuses `tabPillContainer` `[336,588][506,672]` (170×84 px); XML target is 48dp high. | Cyan ring identifies transient focus; the selected tab also has a quiet filled surface. Episode navigation continues through the next focus step. |
+| `after-v2/f2/13_home_touch_details_fixed.png` | Tap at `[700,528]`; no focused item or collection outline appears. | Touch on the hero background does not decorate the entire shelf. |
+| `after-v2/f2/14_home_focus_card_fixed.png` + `14_home_focus_card_fixed.xml` | `cardShelfItem` focused at `[308,759][714,988]` (406×229 px). | The individual card retains a single cyan outline after collection containers were excluded. |
 
 ## F1 measured visual evidence
 
 | Capture and hierarchy | Measured value | Interpretation |
 |---|---|---|
-| `after-v2/f1/home-focus-hierarchy.xml` | Focused `btnFeaturedInfo` bounds `[605,486][823,570]` = 109×42dp. | D-pad reaches the secondary action; the target falls 6dp below the phase's 48dp standard control target and has a double white ring. F2 will refine both. |
+| `after-v2/f1/home-focus-hierarchy.xml` | Focused `btnFeaturedInfo` bounds `[605,486][823,570]` = 109×42dp. | Historical F1 baseline: the target was below the 48dp standard control target and had a double white ring; both were addressed in F2. |
 | `after-v2/f1/home-down-hierarchy.xml` | Focused `cardShelfItem` bounds `[308,759][714,988]` = 203×114.5dp. `tvHomeCatalogTitle` is still at `[308,1077][1836,1080]` (1.5dp visible). | The path from hero controls to first shelf item works, while the next shelf remains clipped. Layout correction belongs to F3. |
 | `after-v2/f1/theme-picker-focus-hierarchy.xml` | Focused `cardTheme` bounds `[516,839][1403,1003]`; its label is Obsidian. | The new sixth theme can be reached by D-pad scrolling; the original five remain in place. |
 

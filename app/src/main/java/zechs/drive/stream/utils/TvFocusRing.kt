@@ -1,6 +1,9 @@
 package zechs.drive.stream.utils
 
+import android.graphics.Color
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
+import android.util.TypedValue
 import android.view.View
 import android.view.ViewTreeObserver
 import androidx.core.content.ContextCompat
@@ -51,7 +54,10 @@ object TvFocusRing {
             if (className.contains("PlayerView") ||
                 className.contains("MPVView") ||
                 className.contains("SurfaceView") ||
-                className.contains("TextureView")
+                className.contains("TextureView") ||
+                className.contains("RecyclerView") ||
+                className.contains("ScrollView") ||
+                className.contains("ViewPager")
             ) {
                 return false
             }
@@ -65,8 +71,18 @@ object TvFocusRing {
             if (isValidFocusTarget(focused)) {
                 val targetView = focused!!
                 target = targetView
-                ring = ContextCompat.getDrawable(root.context, R.drawable.shelf_item_focus_border)?.mutate()?.apply {
-                    state = intArrayOf(android.R.attr.state_focused)
+                val accent = root.context.resolveThemeColor(R.attr.colorAccentPrimary)
+                val fill = root.context.resolveThemeColor(R.attr.colorFocusFill)
+                val density = root.resources.displayMetrics.density
+                val cornerRadius = if (targetView.height <= 56 * density) {
+                    targetView.height / 2f
+                } else {
+                    12 * density
+                }
+                ring = GradientDrawable().apply {
+                    setColor(if (targetView.height <= 56 * density) fill else Color.TRANSPARENT)
+                    setStroke((2 * density).toInt().coerceAtLeast(1), accent)
+                    setCornerRadius(cornerRadius)
                     setBounds(0, 0, targetView.width, targetView.height)
                     targetView.overlay.add(this)
                     targetView.invalidate()
@@ -104,5 +120,14 @@ object TvFocusRing {
                 v.removeOnAttachStateChangeListener(this)
             }
         })
+    }
+
+    private fun android.content.Context.resolveThemeColor(attribute: Int): Int {
+        val value = TypedValue()
+        return if (theme.resolveAttribute(attribute, value, true)) {
+            if (value.resourceId != 0) ContextCompat.getColor(this, value.resourceId) else value.data
+        } else {
+            Color.WHITE
+        }
     }
 }

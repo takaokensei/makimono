@@ -1,35 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Focused & selected -->
-    <item android:state_focused="true" android:state_selected="true">
-        <shape android:shape="rectangle">
-            <corners android:radius="16dp" />
-            <solid android:color="#4DFFFFFF" />
-            <stroke android:width="2dp" android:color="#FFFFFFFF" />
-        </shape>
-    </item>
-    <!-- Focused only -->
-    <item android:state_focused="true">
-        <shape android:shape="rectangle">
-            <corners android:radius="16dp" />
-            <solid android:color="#33FFFFFF" />
-            <stroke android:width="2dp" android:color="#FFFFFFFF" />
-        </shape>
-    </item>
-    <!-- Selected (active season): accent outline -->
+    <!-- Selection is a quiet surface; focus gets the single accent ring from TvFocusRing. -->
     <item android:state_selected="true">
         <shape android:shape="rectangle">
-            <corners android:radius="16dp" />
-            <solid android:color="#26FFFFFF" />
-            <stroke android:width="1.5dp" android:color="#22D3EE" />
+            <corners android:radius="20dp" />
+            <solid android:color="?attr/colorBgSurface" />
+            <stroke android:width="1dp" android:color="?attr/colorBorderGlass" />
         </shape>
     </item>
-    <!-- Normal -->
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="20dp" />
+            <solid android:color="?attr/colorFocusFill" />
+        </shape>
+    </item>
     <item>
         <shape android:shape="rectangle">
-            <corners android:radius="16dp" />
-            <solid android:color="#14FFFFFF" />
-            <stroke android:width="1dp" android:color="#14FFFFFF" />
+            <corners android:radius="20dp" />
+            <solid android:color="?attr/colorBgGlass" />
+            <stroke android:width="1dp" android:color="?attr/colorBorderGlass" />
         </shape>
     </item>
 </selector>

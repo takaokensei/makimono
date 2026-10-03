@@ -53,7 +53,7 @@
         <item name="colorAccentPrimary">@color/tn_accent_primary</item>
         <item name="colorAccentSecondary">@color/tn_accent_secondary</item>
         <item name="colorOnPrimary">@color/obsidian_on_primary</item>
-        <item name="colorFocusFill">@color/obsidian_focus_fill</item>
+        <item name="colorFocusFill">@color/tn_focus_fill</item>
         <item name="colorStatusSuccess">@color/tn_success</item>
         <item name="colorStatusWarning">@color/tn_warning</item>
         <item name="colorStatusDanger">@color/tn_danger</item>
@@ -79,7 +79,7 @@
         <item name="colorAccentPrimary">@color/dracula_accent_primary</item>
         <item name="colorAccentSecondary">@color/dracula_accent_secondary</item>
         <item name="colorOnPrimary">@color/obsidian_on_primary</item>
-        <item name="colorFocusFill">@color/obsidian_focus_fill</item>
+        <item name="colorFocusFill">@color/dracula_focus_fill</item>
         <item name="colorStatusSuccess">@color/dracula_success</item>
         <item name="colorStatusWarning">@color/dracula_warning</item>
         <item name="colorStatusDanger">@color/dracula_danger</item>
@@ -105,7 +105,7 @@
         <item name="colorAccentPrimary">@color/nord_accent_primary</item>
         <item name="colorAccentSecondary">@color/nord_accent_secondary</item>
         <item name="colorOnPrimary">@color/obsidian_on_primary</item>
-        <item name="colorFocusFill">@color/obsidian_focus_fill</item>
+        <item name="colorFocusFill">@color/nord_focus_fill</item>
         <item name="colorStatusSuccess">@color/nord_success</item>
         <item name="colorStatusWarning">@color/nord_warning</item>
         <item name="colorStatusDanger">@color/nord_danger</item>
@@ -131,7 +131,7 @@
         <item name="colorAccentPrimary">@color/mocha_accent_primary</item>
         <item name="colorAccentSecondary">@color/mocha_accent_secondary</item>
         <item name="colorOnPrimary">@color/obsidian_on_primary</item>
-        <item name="colorFocusFill">@color/obsidian_focus_fill</item>
+        <item name="colorFocusFill">@color/mocha_focus_fill</item>
         <item name="colorStatusSuccess">@color/mocha_success</item>
         <item name="colorStatusWarning">@color/mocha_warning</item>
         <item name="colorStatusDanger">@color/mocha_danger</item>
@@ -157,7 +157,7 @@
         <item name="colorAccentPrimary">@color/estuary_accent_primary</item>
         <item name="colorAccentSecondary">@color/estuary_accent_secondary</item>
         <item name="colorOnPrimary">@color/obsidian_on_primary</item>
-        <item name="colorFocusFill">@color/obsidian_focus_fill</item>
+        <item name="colorFocusFill">@color/estuary_focus_fill</item>
         <item name="colorStatusSuccess">@color/estuary_success</item>
         <item name="colorStatusWarning">@color/estuary_warning</item>
         <item name="colorStatusDanger">@color/estuary_danger</item>
