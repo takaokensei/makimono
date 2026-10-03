@@ -14,7 +14,7 @@ F0 is a diagnostic baseline, not a passing conformance claim. “Gap” identifi
 | Safe margins | `values/dimens.xml`, `values-land/dimens.xml`, `values-sw600dp-land/dimens.xml` | Pass: shared 48dp horizontal / 30dp vertical tokens | F2–F5 visual checks for screens, clipping, and focus clearance |
 | Type/shape/motion tokens | `values/typography.xml`, `values/dimens.xml`, `values/motion_spec.xml`, `ContinuousCornerOutline.kt` | Foundation added; runtime application not yet proven | F2/F4/F5/F6 |
 | Theme compatibility | `AppThemeTest.kt`; original values 0–4 unchanged, Obsidian value 5 | Pass at model/resource mapping level | F5 theme selector and all surface variants |
-| D-pad and theme picker | `after-v2/f1/02_home_details_focus.png`, `03_home_shelf_focus.png`, `04_theme_picker_obsidian.png` and hierarchy XML | RIGHT reaches Details; vertical navigation reaches shelf cards; five DOWN presses scroll to and focus Obsidian. The white ring/42dp action issue from this capture is closed in F2; shelf clipping remains for F3. | F2/F3 |
+| D-pad and theme picker | `after-v2/f1/02_home_details_focus.png`, `03_home_shelf_focus.png`, `04_theme_picker_obsidian.png` and hierarchy XML | RIGHT reaches Details; vertical navigation reaches shelf cards; five DOWN presses scroll to and focus Obsidian. The white ring/undersized action issue was addressed in F2; F3 verifies full visibility of a focused catalog card. | F4–F6 |
 
 ## F2 focus and control verification
 
@@ -37,12 +37,20 @@ Focus references re-opened for this phase: Buttons pp. 1–3, Collections pp. 1�
 | `after-v2/f2/13_home_touch_details_fixed.png` | Tap at `[700,528]`; no focused item or collection outline appears. | Touch on the hero background does not decorate the entire shelf. |
 | `after-v2/f2/14_home_focus_card_fixed.png` + `14_home_focus_card_fixed.xml` | `cardShelfItem` focused at `[308,759][714,988]` (406×229 px). | The individual card retains a single cyan outline after collection containers were excluded. |
 
+## F3 viewport and surface verification
+
+| F3 area | Evidence | F3 status | Remaining phase |
+|---|---|---|---|
+| Collection clipping | Home `contentScrollView` in base/land/TV/sw720dp-land and Details `scrollView` in base/land set `clipChildren`/`clipToPadding` true; shelf/grid/episode rows retain local clipping behavior. | Scroll content is contained inside its viewport while card-level focus treatment remains visible. | Audit other screens and orientation changes in F4–F6 |
+| Focused Home item visibility | `after-v2/f3/05_home_focus_scrolled.png` + `05_home_focus_scrolled.xml` | `cardGridItem` fully visible at `[314,162][520,604]`; after DOWN from hero through the shelf, the page scrolls the complete focused tile into view. | Continue checking end-of-list, search and async updates in F4/F6 |
+| Details backdrop boundary | `after-v2/f3/02_details_after_clip.png` + `02_details_after_clip.xml` | In the fixture, `ivHeroBackdrop` ends at y=574 px and `rvSeasonTabs` begins at y=581 px. The user screenshot's art bleed did not reproduce in this layout; scroll viewport clipping is now explicit. | Recheck on production metadata and other themes in F4/F5 |
+
 ## F1 measured visual evidence
 
 | Capture and hierarchy | Measured value | Interpretation |
 |---|---|---|
 | `after-v2/f1/home-focus-hierarchy.xml` | Focused `btnFeaturedInfo` bounds `[605,486][823,570]` = 109×42dp. | Historical F1 baseline: the target was below the 48dp standard control target and had a double white ring; both were addressed in F2. |
-| `after-v2/f1/home-down-hierarchy.xml` | Focused `cardShelfItem` bounds `[308,759][714,988]` = 203×114.5dp. `tvHomeCatalogTitle` is still at `[308,1077][1836,1080]` (1.5dp visible). | The path from hero controls to first shelf item works, while the next shelf remains clipped. Layout correction belongs to F3. |
+| `after-v2/f1/home-down-hierarchy.xml` | Focused `cardShelfItem` bounds `[308,759][714,988]` = 203×114.5dp. `tvHomeCatalogTitle` is at `[308,1077][1836,1080]` (3 px visible). | Historical baseline showed the catalog below the initial fold; F3 now scrolls the full focused grid card into the viewport. |
 | `after-v2/f1/theme-picker-focus-hierarchy.xml` | Focused `cardTheme` bounds `[516,839][1403,1003]`; its label is Obsidian. | The new sixth theme can be reached by D-pad scrolling; the original five remain in place. |
 
 | Rule | Source | Diagnostic evidence / baseline finding | F0 status | Planned phase |
@@ -67,7 +75,7 @@ Focus references re-opened for this phase: Buttons pp. 1–3, Collections pp. 1�
 
 | Capture and hierarchy | Measured value | Interpretation |
 |---|---|---|
-| `after-v2/f0/02_home_shelf_focus.png` + `after-v2/f0/home-hierarchy.xml` | Display 1920×1080 px at 320 dpi = 960×540 dp. Focused `cardShelfItem` bounds `[308,759][714,988]` = 406×229 px (203×114.5 dp); `tvHomeCatalogTitle` bounds `[308,1077][1836,1080]` = 3 px / 1.5 dp visible at bottom edge. | Focused shelf item is identified by the hierarchy; the following catalog title is effectively clipped at the viewport edge. This is a clear F2 layout gap. |
+| `after-v2/f0/02_home_shelf_focus.png` + `after-v2/f0/home-hierarchy.xml` | Focused `cardShelfItem` bounds `[308,759][714,988]` = 406×229 px. `tvHomeCatalogTitle` bounds `[308,1077][1836,1080]` = 3 px visible at bottom edge. | Historical first-fold view showed only the top of the next section; F3 confirms D-pad scrolling reveals the focused catalog tile. |
 | `after-v2/f0/06_details_episode_focus.png` + `after-v2/f0/details-episode-hierarchy.xml` | Focused `cardEpisodeItem` bounds `[336,718][651,988]` = 315×270 px (157.5×135 dp); hierarchy confirms `focused=true`. | Confirms the previously mislabeled state now actually focuses episode 1; used as reproducibility evidence, not a claim that details layout conforms. |
 
 ## F0 rubric (0–10)

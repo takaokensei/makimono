@@ -28,6 +28,7 @@ import zechs.drive.stream.data.model.WatchList
 import zechs.drive.stream.data.model.WatchQueueItem
 import zechs.drive.stream.databinding.FragmentHomeBinding
 import zechs.drive.stream.ui.BaseFragment
+import zechs.drive.stream.ui.FocusedItemScroll
 import zechs.drive.stream.ui.files.adapter.FilesAdapter
 import zechs.drive.stream.ui.files.adapter.FilesDataModel
 import zechs.drive.stream.ui.home.adapter.ContinueWatchingAdapter
@@ -268,6 +269,8 @@ class HomeFragment : BaseFragment() {
                 v.removeOnAttachStateChangeListener(this)
             }
         })
+
+        FocusedItemScroll.install(viewport = binding.contentScrollView, rows = listOfNotNull(continueShelf, queueShelf, catalog))
     }
 
     private fun setupAnimeGrid() {

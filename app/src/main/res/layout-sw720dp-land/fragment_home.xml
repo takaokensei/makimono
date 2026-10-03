@@ -55,7 +55,7 @@
                     </LinearLayout>
                 </LinearLayout>
                 <FrameLayout android:id="@+id/workspaceContainer" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:clipChildren="false" android:clipToPadding="false">
-                    <androidx.core.widget.NestedScrollView android:id="@+id/contentScrollView" android:layout_width="match_parent" android:layout_height="match_parent" android:clipChildren="false" android:clipToPadding="false" android:fillViewport="true" android:focusable="false">
+                    <androidx.core.widget.NestedScrollView android:id="@+id/contentScrollView" android:layout_width="match_parent" android:layout_height="match_parent" android:clipChildren="true" android:clipToPadding="true" android:fillViewport="true" android:focusable="false">
                         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:clipChildren="false" android:clipToPadding="false" android:orientation="vertical">
                             <FrameLayout android:id="@+id/featuredHeroContainer" android:layout_width="match_parent" android:layout_height="@dimen/home_hero_height" android:visibility="gone" tools:visibility="visible">
                                 <zechs.drive.stream.ui.BackdropImageView android:id="@+id/ivFeaturedBackdrop" android:layout_width="match_parent" android:layout_height="match_parent" android:contentDescription="@null" android:scaleType="centerCrop" />

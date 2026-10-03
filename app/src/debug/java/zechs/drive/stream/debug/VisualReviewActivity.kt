@@ -17,6 +17,7 @@ import zechs.drive.stream.ui.files.adapter.FilesDataModel
 import zechs.drive.stream.ui.profile.ProfilesAdapter
 import zechs.drive.stream.ui.profile.ProfileUiModel
 import zechs.drive.stream.ui.player.PlayerQuickOptions
+import zechs.drive.stream.ui.FocusedItemScroll
 import zechs.drive.stream.utils.TvFocusRing
 
 /** Renders production XML and adapters with explicit fixtures, without touching account or Room. */
@@ -105,6 +106,7 @@ class VisualReviewActivity : Activity() {
             v.findViewById<TextView>(R.id.tvShelfItemRemaining).text="7 min restantes"
             Glide.with(this).load(backdrop).into(v.findViewById(R.id.ivShelfItemThumb))
         }
+        FocusedItemScroll.install(findViewById(R.id.contentScrollView), listOf(shelf, grid))
         findViewById<View>(R.id.btnFeaturedPlay)?.postDelayed({ findViewById<View>(R.id.btnFeaturedPlay)?.requestFocus() }, 300)
     }
     private fun profiles() {
