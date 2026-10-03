@@ -35,7 +35,7 @@
             android:paddingStart="18dp"
             android:paddingEnd="18dp"
             android:text="Pular Abertura"
-            android:textColor="#FFFFFFFF"
+            android:textColor="@color/layout_literal_ffffffff"
             android:textSize="13sp"
             android:textStyle="bold"
             android:elevation="6dp"
@@ -43,7 +43,7 @@
             app:icon="@drawable/ic_skip_next_24"
             app:iconGravity="textStart"
             app:iconSize="18dp"
-            app:iconTint="#FFFFFFFF" />
+            app:iconTint="@color/layout_literal_ffffffff" />
     </LinearLayout>
 
     <!-- Next Episode Countdown Card -->

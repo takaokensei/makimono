@@ -71,7 +71,7 @@
                         android:contentDescription="@null"
                         android:padding="4dp"
                         android:src="@drawable/ic_play_24"
-                        app:tint="#FFFFFF" />
+                        app:tint="@color/layout_literal_ffffff" />
 
                 </FrameLayout>
             </com.google.android.material.card.MaterialCardView>

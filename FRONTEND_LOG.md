@@ -26,6 +26,9 @@ Este documento é a memória persistente dos ciclos de auditoria, testes visuais
 7. Capturar amostras de superfície, texto, foco e estados claros/escuros no MuMu e corrigir toda falha antes de fechar a fase.
 8. Rodar `assembleDebug` e a suíte unitária completa sem cache; atualizar rubrica/matriz e só então criar o commit F1 local.
 
+**Execução F1 (validada):** os PDFs Accessibility, Color, Dark Mode, Focus and selection, Layout, Materials, Motion e Typography foram reavaliados nesta fase; referências locais permaneceram fora do repo. Adicionados Obsidian como tema 6 e tokens sem alterar os IDs salvos 0–4, margens TV 48dp/30dp, estilos Inter, raios/elevation, outline contínuo com fallback < Android 11 e motion 100/150/220/300/450ms. Corrigida a diferença de Estuary entre Kotlin/XML. Centralizados 76 hexes em 50 layouts e adicionados `tools/check_layout_colors.py` e `tools/check_contrast.py`; todos os layouts agora passam sem hex inline e os seis temas passam 7:1 para texto e 4,5:1 para texto de ação. A inspeção encontrou o seletor cortando o sexto tema; tornamos a lista rolável e verificamos que cinco presses DOWN alcançam/focam Obsidian. MuMu 1920×1080 confirmou a navegação hero→card; o anel branco de 42dp e o título da próxima fileira ainda cortado foram registrados para F2/F3. `assembleDebug testDebugUnitTest --rerun-tasks --no-daemon -PdistributionBuild` passou: 155 testes, 0 falhas/erros; APK x86_64 instalado na fixture separada. Capturas e hierarquias ficam em `docs/ui-audit/after-v2/f1/`. Próximo: fechar o commit local F1 e iniciar o redesign do foco (F2).
+
+
 ---
 
 ## Baseline Inicial (v1.6.2 — Commit 28b44f6 / ui/pro-polish)
@@ -179,7 +182,7 @@ Este documento é a memória persistente dos ciclos de auditoria, testes visuais
 * **Objetivo**: Elevar a UI/UX para o padrão Apple de design (simplicidade, robustez, hierarquia espacial, respiro, elegância visual e eliminação de ruídos cognitivos) sem remover features.
 * **Ações Executadas**:
   1. **Shell & Home Screen (Cinema Bleed)**:
-     - Hero banner expandido para sangria total nas bordas superior e direita ( dp insets).
+     - Hero banner expandido para sangria total nas bordas superior e direita (dp insets).
      - Vignette horizontal (540dp) e scrim inferior (180dp) em degradê obsidian suave (#070A10), integrando o artwork ao fundo.
      - Botão primário Apple TV: pílula sólida branca pura (#FFFFFFFF) com texto/ícone escuro (#070A10) e halo luminoso ao focar.
      - Botão secundário de detalhes em vidro fosco refinado (#24FFFFFF, borda sutil de 1px #33FFFFFF).

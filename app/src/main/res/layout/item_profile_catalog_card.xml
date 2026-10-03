@@ -8,10 +8,10 @@
     android:clickable="true"
     android:focusable="true"
     android:foreground="@drawable/shelf_item_focus_border"
-    app:cardBackgroundColor="#1F2335"
+    app:cardBackgroundColor="@color/layout_literal_1f2335"
     app:cardCornerRadius="12dp"
     app:cardElevation="0dp"
-    app:strokeColor="#24FFFFFF"
+    app:strokeColor="@color/layout_literal_24ffffff"
     app:strokeWidth="1dp">
 
     <FrameLayout

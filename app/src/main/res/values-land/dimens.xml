@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <dimen name="tv_overscan_margin">16dp</dimen>
-    <dimen name="tv_overscan_margin_vertical">16dp</dimen>
+    <dimen name="tv_overscan_margin">48dp</dimen>
+    <dimen name="tv_overscan_margin_vertical">30dp</dimen>
     <dimen name="tv_nav_rail_width">128dp</dimen>
     <dimen name="tv_shelf_card_width">232dp</dimen>
     <dimen name="tv_shelf_card_height">131dp</dimen>

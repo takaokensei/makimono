@@ -30,7 +30,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#59080A10"
+        android:background="@color/layout_literal_59080a10"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -116,7 +116,7 @@
             android:layout_height="16dp"
             android:contentDescription="@null"
             android:src="@drawable/ic_settings_24"
-            app:tint="#94A3B8" />
+            app:tint="@color/layout_literal_94a3b8" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -124,7 +124,7 @@
             android:layout_marginStart="8dp"
             android:fontFamily="@font/inter"
             android:text="Configurações"
-            android:textColor="#E2E8F0"
+            android:textColor="@color/layout_literal_e2e8f0"
             android:textSize="12sp"
             android:textStyle="bold" />
 

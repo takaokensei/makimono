@@ -2,6 +2,6 @@
     <application>
         <!-- Explicit development fixture renderer; absent from release builds. -->
         <activity android:name=".debug.VisualReviewActivity" android:exported="true"
-            android:screenOrientation="landscape" android:theme="@style/Theme.DriveStream.KodiEstuary" />
+            android:screenOrientation="landscape" android:theme="@style/Theme.DriveStream.Obsidian" />
     </application>
 </manifest>

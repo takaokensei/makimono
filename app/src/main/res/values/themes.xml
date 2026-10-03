@@ -1,10 +1,36 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <style name="Theme.App.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#000000</item>
+        <item name="windowSplashScreenBackground">@color/obsidian_bg_base</item>
         <item name="windowSplashScreenAnimatedIcon">@android:color/transparent</item>
-        <item name="postSplashScreenTheme">@style/Theme.DriveStream.KodiEstuary</item>
-        <item name="windowSplashScreenIconBackgroundColor">#000000</item>
+        <item name="postSplashScreenTheme">@style/Theme.DriveStream.Obsidian</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/obsidian_bg_base</item>
+    </style>
+
+    <!-- Default premium TV theme; existing five themes remain available. -->
+    <style name="Theme.DriveStream.Obsidian" parent="Theme.DriveStream.Base">
+        <item name="colorBgBase">@color/obsidian_bg_base</item>
+        <item name="colorBgSurface">@color/obsidian_bg_surface</item>
+        <item name="colorBgGlass">@color/obsidian_bg_glass</item>
+        <item name="colorBorderGlass">@color/obsidian_border_glass</item>
+        <item name="colorTextPrimary">@color/obsidian_text_primary</item>
+        <item name="colorTextSecondary">@color/obsidian_text_secondary</item>
+        <item name="colorTextTertiary">@color/obsidian_text_tertiary</item>
+        <item name="colorAccentPrimary">@color/obsidian_accent_primary</item>
+        <item name="colorAccentSecondary">@color/obsidian_accent_secondary</item>
+        <item name="colorOnPrimary">@color/obsidian_on_primary</item>
+        <item name="colorFocusFill">@color/obsidian_focus_fill</item>
+        <item name="colorStatusSuccess">@color/obsidian_success</item>
+        <item name="colorStatusWarning">@color/obsidian_warning</item>
+        <item name="colorStatusDanger">@color/obsidian_danger</item>
+        <item name="android:statusBarColor">@color/obsidian_bg_base</item>
+        <item name="android:navigationBarColor">@color/obsidian_bg_base</item>
+        <item name="android:windowBackground">@color/obsidian_bg_base</item>
+        <item name="colorSurface">@color/obsidian_bg_surface</item>
+        <item name="colorOnSurface">@color/obsidian_text_primary</item>
+        <item name="colorPrimary">@color/obsidian_accent_primary</item>
+        <item name="colorOnPrimary">@color/obsidian_on_primary</item>
+        <item name="colorSecondary">@color/obsidian_accent_secondary</item>
     </style>
 
     <!-- Base DriveStream Theme with Inter Typography -->
@@ -23,8 +49,11 @@
         <item name="colorBorderGlass">@color/tn_border_glass</item>
         <item name="colorTextPrimary">@color/tn_text_primary</item>
         <item name="colorTextSecondary">@color/tn_text_secondary</item>
+        <item name="colorTextTertiary">@color/tn_text_tertiary</item>
         <item name="colorAccentPrimary">@color/tn_accent_primary</item>
         <item name="colorAccentSecondary">@color/tn_accent_secondary</item>
+        <item name="colorOnPrimary">@color/obsidian_on_primary</item>
+        <item name="colorFocusFill">@color/obsidian_focus_fill</item>
         <item name="colorStatusSuccess">@color/tn_success</item>
         <item name="colorStatusWarning">@color/tn_warning</item>
         <item name="colorStatusDanger">@color/tn_danger</item>
@@ -46,8 +75,11 @@
         <item name="colorBorderGlass">@color/dracula_border_glass</item>
         <item name="colorTextPrimary">@color/dracula_text_primary</item>
         <item name="colorTextSecondary">@color/dracula_text_secondary</item>
+        <item name="colorTextTertiary">@color/dracula_text_tertiary</item>
         <item name="colorAccentPrimary">@color/dracula_accent_primary</item>
         <item name="colorAccentSecondary">@color/dracula_accent_secondary</item>
+        <item name="colorOnPrimary">@color/obsidian_on_primary</item>
+        <item name="colorFocusFill">@color/obsidian_focus_fill</item>
         <item name="colorStatusSuccess">@color/dracula_success</item>
         <item name="colorStatusWarning">@color/dracula_warning</item>
         <item name="colorStatusDanger">@color/dracula_danger</item>
@@ -69,8 +101,11 @@
         <item name="colorBorderGlass">@color/nord_border_glass</item>
         <item name="colorTextPrimary">@color/nord_text_primary</item>
         <item name="colorTextSecondary">@color/nord_text_secondary</item>
+        <item name="colorTextTertiary">@color/nord_text_tertiary</item>
         <item name="colorAccentPrimary">@color/nord_accent_primary</item>
         <item name="colorAccentSecondary">@color/nord_accent_secondary</item>
+        <item name="colorOnPrimary">@color/obsidian_on_primary</item>
+        <item name="colorFocusFill">@color/obsidian_focus_fill</item>
         <item name="colorStatusSuccess">@color/nord_success</item>
         <item name="colorStatusWarning">@color/nord_warning</item>
         <item name="colorStatusDanger">@color/nord_danger</item>
@@ -92,8 +127,11 @@
         <item name="colorBorderGlass">@color/mocha_border_glass</item>
         <item name="colorTextPrimary">@color/mocha_text_primary</item>
         <item name="colorTextSecondary">@color/mocha_text_secondary</item>
+        <item name="colorTextTertiary">@color/mocha_text_tertiary</item>
         <item name="colorAccentPrimary">@color/mocha_accent_primary</item>
         <item name="colorAccentSecondary">@color/mocha_accent_secondary</item>
+        <item name="colorOnPrimary">@color/obsidian_on_primary</item>
+        <item name="colorFocusFill">@color/obsidian_focus_fill</item>
         <item name="colorStatusSuccess">@color/mocha_success</item>
         <item name="colorStatusWarning">@color/mocha_warning</item>
         <item name="colorStatusDanger">@color/mocha_danger</item>
@@ -115,8 +153,11 @@
         <item name="colorBorderGlass">@color/estuary_border_glass</item>
         <item name="colorTextPrimary">@color/estuary_text_primary</item>
         <item name="colorTextSecondary">@color/estuary_text_secondary</item>
+        <item name="colorTextTertiary">@color/estuary_text_tertiary</item>
         <item name="colorAccentPrimary">@color/estuary_accent_primary</item>
         <item name="colorAccentSecondary">@color/estuary_accent_secondary</item>
+        <item name="colorOnPrimary">@color/obsidian_on_primary</item>
+        <item name="colorFocusFill">@color/obsidian_focus_fill</item>
         <item name="colorStatusSuccess">@color/estuary_success</item>
         <item name="colorStatusWarning">@color/estuary_warning</item>
         <item name="colorStatusDanger">@color/estuary_danger</item>
@@ -131,7 +172,7 @@
     </style>
 
     <!-- Legacy alias to TokyoNight -->
-    <style name="AppTheme" parent="Theme.DriveStream.TokyoNight" />
+    <style name="AppTheme" parent="Theme.DriveStream.Obsidian" />
 
     <!-- Fullscreen Player Themes inheriting Semantic Tokens -->
     <style name="Theme.Fullscreen" parent="Theme.DriveStream.TokyoNight">
@@ -170,6 +211,13 @@
     </style>
 
     <style name="Theme.Fullscreen.KodiEstuary" parent="Theme.DriveStream.KodiEstuary">
+        <item name="android:statusBarColor">@android:color/black</item>
+        <item name="android:navigationBarColor">@android:color/black</item>
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
+
+    <style name="Theme.Fullscreen.Obsidian" parent="Theme.DriveStream.Obsidian">
         <item name="android:statusBarColor">@android:color/black</item>
         <item name="android:navigationBarColor">@android:color/black</item>
         <item name="android:windowBackground">@android:color/black</item>

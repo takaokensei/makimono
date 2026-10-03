@@ -35,8 +35,8 @@
                 android:maxLength="32"
                 android:paddingHorizontal="14dp"
                 android:singleLine="true"
-                android:textColor="#F1F7FF"
-                android:textColorHint="#7B82A3"
+                android:textColor="@color/layout_literal_f1f7ff"
+                android:textColorHint="@color/layout_literal_7b82a3"
                 android:textSize="14sp" />
 
             <!-- Role Checkboxes -->
@@ -52,10 +52,10 @@
                     android:layout_height="40dp"
                     android:layout_weight="1"
                     android:background="@drawable/bg_player_action_vertical"
-                    android:buttonTint="#22D3EE"
+                    android:buttonTint="@color/layout_literal_22d3ee"
                     android:paddingStart="4dp"
                     android:text="Admin"
-                    android:textColor="#F1F7FF"
+                    android:textColor="@color/layout_literal_f1f7ff"
                     android:textSize="13sp" />
 
                 <View
@@ -68,10 +68,10 @@
                     android:layout_height="40dp"
                     android:layout_weight="1"
                     android:background="@drawable/bg_player_action_vertical"
-                    android:buttonTint="#22D3EE"
+                    android:buttonTint="@color/layout_literal_22d3ee"
                     android:paddingStart="4dp"
                     android:text="Kids"
-                    android:textColor="#F1F7FF"
+                    android:textColor="@color/layout_literal_f1f7ff"
                     android:textSize="13sp" />
             </LinearLayout>
 
@@ -80,7 +80,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:text="Galeria de Avatares e Papéis de Parede:"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/layout_literal_ffffff"
                 android:textSize="13sp"
                 android:textStyle="bold" />
 
@@ -99,7 +99,7 @@
                     android:layout_weight="1"
                     android:background="@drawable/glass_pill_accent_bg"
                     android:text="👤 Avatares Populares"
-                    android:textColor="#040C16"
+                    android:textColor="@color/layout_literal_040c16"
                     android:textSize="12sp"
                     android:textStyle="bold" />
 
@@ -111,7 +111,7 @@
                     android:layout_weight="1"
                     android:background="@drawable/glass_pill_button_bg"
                     android:text="🖼️ Wallpapers Populares"
-                    android:textColor="#CBD5E1"
+                    android:textColor="@color/layout_literal_cbd5e1"
                     android:textSize="12sp" />
             </LinearLayout>
 
@@ -132,8 +132,8 @@
                     android:inputType="text"
                     android:paddingHorizontal="12dp"
                     android:singleLine="true"
-                    android:textColor="#F1F7FF"
-                    android:textColorHint="#7B82A3"
+                    android:textColor="@color/layout_literal_f1f7ff"
+                    android:textColorHint="@color/layout_literal_7b82a3"
                     android:textSize="12sp" />
 
                 <Button
@@ -144,7 +144,7 @@
                     android:background="@drawable/bg_player_action_vertical"
                     android:paddingHorizontal="14dp"
                     android:text="Buscar"
-                    android:textColor="#22D3EE"
+                    android:textColor="@color/layout_literal_22d3ee"
                     android:textSize="12sp" />
             </LinearLayout>
 
@@ -155,7 +155,7 @@
                 android:accessibilityLiveRegion="polite"
                 android:paddingVertical="4dp"
                 android:text="Selecione uma imagem abaixo para aplicar:"
-                android:textColor="#7B82A3"
+                android:textColor="@color/layout_literal_7b82a3"
                 android:textSize="11sp" />
 
             <!-- Gallery Grid with fixed column widths and cards -->
@@ -173,7 +173,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:text="URLs Diretas (Opcional):"
-                android:textColor="#7B82A3"
+                android:textColor="@color/layout_literal_7b82a3"
                 android:textSize="11sp" />
 
             <EditText
@@ -186,8 +186,8 @@
                 android:inputType="textUri"
                 android:paddingHorizontal="12dp"
                 android:singleLine="true"
-                android:textColor="#F1F7FF"
-                android:textColorHint="#7B82A3"
+                android:textColor="@color/layout_literal_f1f7ff"
+                android:textColorHint="@color/layout_literal_7b82a3"
                 android:textSize="11sp" />
 
             <EditText
@@ -200,8 +200,8 @@
                 android:inputType="textUri"
                 android:paddingHorizontal="12dp"
                 android:singleLine="true"
-                android:textColor="#F1F7FF"
-                android:textColorHint="#7B82A3"
+                android:textColor="@color/layout_literal_f1f7ff"
+                android:textColorHint="@color/layout_literal_7b82a3"
                 android:textSize="11sp" />
 
         </LinearLayout>

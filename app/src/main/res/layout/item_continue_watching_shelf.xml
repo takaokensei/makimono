@@ -61,7 +61,7 @@
                 android:contentDescription="@null"
                 android:padding="7dp"
                 android:src="@drawable/ic_play_24"
-                app:tint="#22D3EE" />
+                app:tint="@color/layout_literal_22d3ee" />
 
             <View
                 android:layout_width="0dp"
@@ -78,7 +78,7 @@
                 android:paddingTop="2dp"
                 android:paddingEnd="6dp"
                 android:paddingBottom="2dp"
-                android:textColor="#E2E8F0"
+                android:textColor="@color/layout_literal_e2e8f0"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 tools:text="T2: Ep. 03" />
@@ -103,7 +103,7 @@
                 android:ellipsize="end"
                 android:fontFamily="@font/inter"
                 android:maxLines="1"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/layout_literal_ffffff"
                 android:textSize="15sp"
                 android:textStyle="bold"
                 tools:text="Attack on Titan - Ep. 04" />
@@ -121,7 +121,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/inter"
-                    android:textColor="#CBD5E1"
+                    android:textColor="@color/layout_literal_cbd5e1"
                     android:textSize="12sp"
                     tools:text="Ep. 04" />
 
@@ -131,7 +131,7 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/inter"
                     android:text=" • "
-                    android:textColor="#64748B"
+                    android:textColor="@color/layout_literal_64748b"
                     android:textSize="12sp" />
 
                 <TextView
@@ -158,7 +158,7 @@
             android:max="100"
             android:progress="60"
             android:progressTint="?attr/colorAccentPrimary"
-            android:progressBackgroundTint="#33FFFFFF"
+            android:progressBackgroundTint="@color/layout_literal_33ffffff"
             tools:progress="40" />
 
     </FrameLayout>

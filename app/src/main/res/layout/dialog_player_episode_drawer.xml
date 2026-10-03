@@ -5,10 +5,10 @@
     android:layout_width="380dp"
     android:layout_height="match_parent"
     android:layout_gravity="end"
-    app:cardBackgroundColor="#E60A0F1D"
+    app:cardBackgroundColor="@color/layout_literal_e60a0f1d"
     app:cardCornerRadius="0dp"
     app:cardElevation="24dp"
-    app:strokeColor="#26FFFFFF"
+    app:strokeColor="@color/layout_literal_26ffffff"
     app:strokeWidth="1dp">
 
     <LinearLayout
@@ -37,7 +37,7 @@
                 android:padding="8dp"
                 android:src="@drawable/ic_back_24"
                 android:visibility="gone"
-                app:tint="#F1F5F9"
+                app:tint="@color/layout_literal_f1f5f9"
                 tools:visibility="visible" />
 
             <LinearLayout
@@ -53,7 +53,7 @@
                     android:ellipsize="end"
                     android:fontFamily="@font/inter"
                     android:maxLines="1"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/layout_literal_ffffff"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     tools:text="One Piece" />
@@ -83,14 +83,14 @@
                 android:focusable="true"
                 android:padding="8dp"
                 android:src="@drawable/ic_close_24"
-                app:tint="#94A3B8" />
+                app:tint="@color/layout_literal_94a3b8" />
 
         </LinearLayout>
 
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:background="#1AFFFFFF" />
+            android:background="@color/layout_literal_1affffff" />
 
         <!-- Seasons / Arcs List -->
         <androidx.recyclerview.widget.RecyclerView

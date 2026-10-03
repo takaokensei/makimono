@@ -3,12 +3,12 @@
     <!--
         Google TV / Android TV guidelines (and most consumer TV panels still sold today)
         recommend keeping interactive and text content at least 5% inset from each edge
-        to survive overscan cropping. On a 1920x1080 canvas that is ~24dp on the short
-        edges. We centralize it here instead of hardcoding 16dp/20dp per-layout so every
+        to survive overscan cropping. Keep content 48dp horizontally and 30dp vertically.
+        We centralize it here so every TV-facing screen stays consistent and the margin
         TV-facing screen stays consistent and the margin can be tuned in one place.
     -->
-    <dimen name="tv_overscan_margin">24dp</dimen>
-    <dimen name="tv_overscan_margin_vertical">24dp</dimen>
+    <dimen name="tv_overscan_margin">48dp</dimen>
+    <dimen name="tv_overscan_margin_vertical">30dp</dimen>
     <dimen name="tv_nav_rail_width">240dp</dimen>
     <dimen name="tv_nav_item_height">56dp</dimen>
     <dimen name="tv_nav_icon_size">32dp</dimen>
@@ -52,6 +52,14 @@
     <dimen name="spacing_8">32dp</dimen>
     <dimen name="spacing_12">48dp</dimen>
     <dimen name="spacing_16">64dp</dimen>
+
+    <!-- Obsidian shape and elevation tokens -->
+    <dimen name="radius_card">16dp</dimen>
+    <dimen name="radius_dialog">28dp</dimen>
+    <dimen name="radius_hud">32dp</dimen>
+    <dimen name="elevation_card_resting">2dp</dimen>
+    <dimen name="elevation_focus">12dp</dimen>
+    <dimen name="elevation_overlay">24dp</dimen>
 
     <!-- Standard screen padding -->
     <dimen name="content_padding">@dimen/spacing_4</dimen>

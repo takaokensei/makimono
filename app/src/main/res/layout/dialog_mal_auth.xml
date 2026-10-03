@@ -106,7 +106,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="42dp"
-            android:background="#151722"
+            android:background="@color/layout_literal_151722"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingStart="16dp"
@@ -172,7 +172,7 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                app:cardBackgroundColor="#FFFFFF"
+                app:cardBackgroundColor="@color/layout_literal_ffffff"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="8dp"
                 app:strokeColor="?attr/colorAccentPrimary"
@@ -221,7 +221,7 @@
                 android:gravity="center"
                 android:maxWidth="520dp"
                 android:text="💡 No emulador/PC host: Use a aba 'Navegador TV' acima ou acesse http://localhost:1420/mal no computador."
-                android:textColor="#F39C12"
+                android:textColor="@color/layout_literal_f39c12"
                 android:textSize="12sp"
                 android:visibility="gone" />
 
@@ -353,7 +353,7 @@
                         android:layout_marginTop="20dp"
                         android:backgroundTint="?attr/colorAccentPrimary"
                         android:text="Validar e Conectar MyAnimeList"
-                        android:textColor="#0E0D14"
+                        android:textColor="@color/layout_literal_0e0d14"
                         android:textSize="14sp"
                         android:textStyle="bold"
                         app:cornerRadius="10dp" />
@@ -364,7 +364,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:fontFamily="@font/inter"
-                        android:textColor="#F7768E"
+                        android:textColor="@color/layout_literal_f7768e"
                         android:textSize="13sp"
                         android:visibility="gone" />
 

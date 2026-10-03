@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_gravity="center"
-    app:cardBackgroundColor="#E00B1928"
+    app:cardBackgroundColor="@color/layout_literal_e00b1928"
     app:cardCornerRadius="20dp"
     app:cardElevation="24dp"
     app:strokeColor="?attr/colorBorderGlass"
@@ -39,7 +39,7 @@
                 android:layout_marginStart="10dp"
                 android:layout_weight="1"
                 android:fontFamily="@font/inter"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/layout_literal_ffffff"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 tools:text="Faixas de Legenda" />
@@ -54,7 +54,7 @@
                 android:focusable="true"
                 android:padding="4dp"
                 android:src="@drawable/ic_close_24"
-                app:tint="#94A3B8" />
+                app:tint="@color/layout_literal_94a3b8" />
 
         </LinearLayout>
 
@@ -117,7 +117,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="38dp"
                 android:fontFamily="@font/inter"
-                android:textColor="#94A3B8"
+                android:textColor="@color/layout_literal_94a3b8"
                 android:textSize="12sp"
                 tools:text="Sincronia" />
 

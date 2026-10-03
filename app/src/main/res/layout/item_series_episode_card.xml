@@ -26,7 +26,7 @@
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="126dp"
-        app:cardBackgroundColor="#0D1117"
+        app:cardBackgroundColor="@color/layout_literal_0d1117"
         app:cardCornerRadius="8dp"
         app:cardElevation="0dp"
         app:strokeWidth="0dp">
@@ -55,7 +55,7 @@
                 android:paddingTop="2dp"
                 android:paddingEnd="6dp"
                 android:paddingBottom="2dp"
-                android:textColor="#E2E8F0"
+                android:textColor="@color/layout_literal_e2e8f0"
                 android:textSize="10sp"
                 android:textStyle="bold"
                 tools:text="EP 04" />
@@ -69,7 +69,7 @@
                 android:contentDescription="@null"
                 android:src="@drawable/ic_play_24"
                 android:visibility="gone"
-                app:tint="#22D3EE"
+                app:tint="@color/layout_literal_22d3ee"
                 tools:visibility="visible" />
 
             <!-- Progress bar red pinned to bottom of thumbnail -->
@@ -107,7 +107,7 @@
             android:fontFamily="sans-serif-medium"
             android:includeFontPadding="false"
             android:maxLines="1"
-            android:textColor="#F8FAFC"
+            android:textColor="@color/layout_literal_f8fafc"
             android:textSize="13sp"
             tools:text="Episódio 04 - The Seed of the Blanc Aile" />
 
@@ -123,7 +123,7 @@
                 android:id="@+id/tvEpisodeDuration"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="#94A3B8"
+                android:textColor="@color/layout_literal_94a3b8"
                 android:textSize="11sp"
                 tools:text="24 min" />
 
@@ -134,7 +134,7 @@
                 android:layout_marginStart="5dp"
                 android:layout_marginEnd="5dp"
                 android:text="•"
-                android:textColor="#475569"
+                android:textColor="@color/layout_literal_475569"
                 android:textSize="10sp" />
 
             <TextView
@@ -147,7 +147,7 @@
                 android:paddingEnd="5dp"
                 android:paddingBottom="1dp"
                 android:text="Dual Áudio"
-                android:textColor="#CBD5E1"
+                android:textColor="@color/layout_literal_cbd5e1"
                 android:textSize="10sp" />
 
             <View
@@ -160,7 +160,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:fontFamily="sans-serif-medium"
-                android:textColor="#E11D48"
+                android:textColor="@color/layout_literal_e11d48"
                 android:textSize="11sp"
                 tools:text="65%" />
 

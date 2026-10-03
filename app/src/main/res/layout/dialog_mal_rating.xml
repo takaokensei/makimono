@@ -110,7 +110,7 @@
             android:backgroundTint="?attr/colorAccentPrimary"
             android:fontFamily="@font/inter"
             android:text="Enviar para o MAL"
-            android:textColor="#040C16"
+            android:textColor="@color/layout_literal_040c16"
             android:textStyle="bold" />
 
     </LinearLayout>

@@ -4,6 +4,26 @@ F0 is a diagnostic baseline, not a passing conformance claim. “Gap” identifi
 
 **Evidence:** 12 user-provided screenshots in `docs/ui-audit/current-state/` and 12 fixture recaptures in `docs/ui-audit/after-v2/f0/`. Current capture dimensions: 1920×1080, 320 dpi (logical 960×540 dp). The fixture is debug-only and has the separate application ID `zechs.drive.stream.visualreview`; the signed install and its account data were left intact. **Scope note:** `AUDIT_REPORT.md` requested by the attached mission is absent; the existing review is `docs/ui-modernization/AUDIT.md`.
 
+## F1 token verification
+
+`python tools/check_contrast.py` measures primary and secondary text at ≥7:1 against each palette's base and elevated surfaces, and primary-action text at ≥4.5:1. All six palettes pass. Token and theme resources compile as part of `assembleDebug`; layout adoption, focused-state clearance, and reduced-motion behavior still require later phase verification.
+
+| F1 area | Evidence | F1 status | Remaining phase |
+|---|---|---|---|
+| Color roles | `tools/check_contrast.py` output; six palette token definitions | Pass: checked primary/secondary text ≥7:1; action labels ≥4.5:1 | F2–F6 must replace remaining hardcoded view colors and validate on imagery |
+| Safe margins | `values/dimens.xml`, `values-land/dimens.xml`, `values-sw600dp-land/dimens.xml` | Pass: shared 48dp horizontal / 30dp vertical tokens | F2–F5 visual checks for screens, clipping, and focus clearance |
+| Type/shape/motion tokens | `values/typography.xml`, `values/dimens.xml`, `values/motion_spec.xml`, `ContinuousCornerOutline.kt` | Foundation added; runtime application not yet proven | F2/F4/F5/F6 |
+| Theme compatibility | `AppThemeTest.kt`; original values 0–4 unchanged, Obsidian value 5 | Pass at model/resource mapping level | F5 theme selector and all surface variants |
+| D-pad and theme picker | `after-v2/f1/02_home_details_focus.png`, `03_home_shelf_focus.png`, `04_theme_picker_obsidian.png` and hierarchy XML | RIGHT reaches Details; DOWN reaches shelf card; five DOWN presses scroll to and focus Obsidian. Prior dialog clipped the added row and now has an accessible scroll viewport. The current ring is bright white and the focused button is 42dp tall, so F2 remains open. | F2 |
+
+## F1 measured visual evidence
+
+| Capture and hierarchy | Measured value | Interpretation |
+|---|---|---|
+| `after-v2/f1/home-focus-hierarchy.xml` | Focused `btnFeaturedInfo` bounds `[605,486][823,570]` = 109×42dp. | D-pad reaches the secondary action; the target falls 6dp below the phase's 48dp standard control target and has a double white ring. F2 will refine both. |
+| `after-v2/f1/home-down-hierarchy.xml` | Focused `cardShelfItem` bounds `[308,759][714,988]` = 203×114.5dp. `tvHomeCatalogTitle` is still at `[308,1077][1836,1080]` (1.5dp visible). | The path from hero controls to first shelf item works, while the next shelf remains clipped. Layout correction belongs to F3. |
+| `after-v2/f1/theme-picker-focus-hierarchy.xml` | Focused `cardTheme` bounds `[516,839][1403,1003]`; its label is Obsidian. | The new sixth theme can be reached by D-pad scrolling; the original five remain in place. |
+
 | Rule | Source | Diagnostic evidence / baseline finding | F0 status | Planned phase |
 |---|---|---|---|---|
 | H-F1–F2 | Focus and selection, pp. 2–5 | Cards have prominent rings, but selected/favorite and focused states are not consistently distinguishable and every action path is not proven. | Gap | F1 focus |

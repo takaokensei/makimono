@@ -5,7 +5,7 @@
     android:id="@+id/scrollView"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0B0E14"
+    android:background="@color/layout_literal_0b0e14"
     android:clipChildren="false"
     android:clipToPadding="false"
     android:fillViewport="true">
@@ -40,7 +40,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- 2. Bottom Scrim Gradient (Transparent -> #0B0E14) -->
+        <!-- 2. Bottom Scrim Gradient (Transparent -> @color/layout_literal_0b0e14) -->
         <View
             android:id="@+id/viewHeroScrim"
             android:layout_width="0dp"
@@ -50,7 +50,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
 
-        <!-- 3. Left Vignette Gradient (#F20B0E14 -> Transparent) -->
+        <!-- 3. Left Vignette Gradient (@color/layout_literal_f20b0e14 -> Transparent) -->
         <View
             android:id="@+id/viewHeroVignette"
             android:layout_width="0dp"
@@ -68,7 +68,7 @@
             android:id="@+id/viewSeriesBodySurface"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:background="#0B0E14"
+            android:background="@color/layout_literal_0b0e14"
             android:clickable="false"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -106,7 +106,7 @@
                     android:layout_gravity="center"
                     android:contentDescription="@string/back"
                     android:src="@drawable/ic_back_24"
-                    app:tint="#F8FAFC" />
+                    app:tint="@color/layout_literal_f8fafc" />
             </FrameLayout>
 
             <View
@@ -127,7 +127,7 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-medium"
                     android:text="Animes"
-                    android:textColor="#94A3B8"
+                    android:textColor="@color/layout_literal_94a3b8"
                     android:textSize="13sp" />
 
                 <TextView
@@ -136,7 +136,7 @@
                     android:layout_marginStart="8dp"
                     android:layout_marginEnd="8dp"
                     android:text="›"
-                    android:textColor="#64748B"
+                    android:textColor="@color/layout_literal_64748b"
                     android:textSize="14sp" />
 
                 <TextView
@@ -145,7 +145,7 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-medium"
                     android:text="Séries"
-                    android:textColor="#CBD5E1"
+                    android:textColor="@color/layout_literal_cbd5e1"
                     android:textSize="13sp" />
             </LinearLayout>
 
@@ -169,7 +169,7 @@
                     android:layout_gravity="center"
                     android:contentDescription="@string/search"
                     android:src="@drawable/ic_search_24"
-                    app:tint="#F8FAFC" />
+                    app:tint="@color/layout_literal_f8fafc" />
             </FrameLayout>
 
         </LinearLayout>
@@ -195,10 +195,10 @@
                 android:layout_height="285dp"
                 android:clickable="false"
                 android:focusable="false"
-                app:cardBackgroundColor="#1E293B"
+                app:cardBackgroundColor="@color/layout_literal_1e293b"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="10dp"
-                app:strokeColor="#3338BDF8"
+                app:strokeColor="@color/layout_literal_3338bdf8"
                 app:strokeWidth="1.5dp">
 
                 <ImageView
@@ -226,11 +226,11 @@
                 android:fontFamily="sans-serif-black"
                 android:includeFontPadding="false"
                 android:letterSpacing="0.04"
-                android:shadowColor="#80000000"
+                android:shadowColor="@color/layout_literal_80000000"
                 android:shadowDx="0"
                 android:shadowDy="2"
                 android:shadowRadius="6"
-                android:textColor="#99FFFFFF"
+                android:textColor="@color/layout_literal_99ffffff"
                 android:textSize="22sp"
                 android:visibility="gone"
                 tools:text="グリザイアの楽園"
@@ -244,11 +244,11 @@
                 android:layout_marginTop="4dp"
                 android:fontFamily="sans-serif-black"
                 android:includeFontPadding="false"
-                android:shadowColor="#CC000000"
+                android:shadowColor="@color/layout_literal_cc000000"
                 android:shadowDx="0"
                 android:shadowDy="3"
                 android:shadowRadius="10"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/layout_literal_ffffff"
                 android:textSize="32sp"
                 tools:text="Grisaia no Rakuen" />
 
@@ -263,7 +263,7 @@
                 android:includeFontPadding="false"
                 android:letterSpacing="0.08"
                 android:textAllCaps="true"
-                android:textColor="#38BDF8"
+                android:textColor="@color/layout_literal_38bdf8"
                 android:textSize="12sp"
                 tools:text="THE EDEN OF GRISAIA" />
 
@@ -285,7 +285,7 @@
                     android:paddingTop="2dp"
                     android:paddingEnd="7dp"
                     android:paddingBottom="2dp"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/layout_literal_ffffff"
                     android:textSize="11sp"
                     android:textStyle="bold"
                     tools:text="16+" />
@@ -300,7 +300,7 @@
                     android:paddingTop="2dp"
                     android:paddingEnd="8dp"
                     android:paddingBottom="2dp"
-                    android:textColor="#CBD5E1"
+                    android:textColor="@color/layout_literal_cbd5e1"
                     android:textSize="11sp"
                     tools:text="2015" />
 
@@ -315,7 +315,7 @@
                     android:paddingTop="2dp"
                     android:paddingEnd="8dp"
                     android:paddingBottom="2dp"
-                    android:textColor="#CBD5E1"
+                    android:textColor="@color/layout_literal_cbd5e1"
                     android:textSize="11sp"
                     tools:text="Completo" />
 
@@ -334,7 +334,7 @@
                         android:layout_height="14dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_star_filled_24"
-                        app:tint="#FBBF24" />
+                        app:tint="@color/layout_literal_fbbf24" />
 
                     <TextView
                         android:id="@+id/tvMalScore"
@@ -342,7 +342,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="5dp"
                         android:fontFamily="sans-serif-bold"
-                        android:textColor="#FFFFFF"
+                        android:textColor="@color/layout_literal_ffffff"
                         android:textSize="12sp"
                         tools:text="8.2" />
 
@@ -350,7 +350,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="4dp"
-                        android:textColor="#94A3B8"
+                        android:textColor="@color/layout_literal_94a3b8"
                         android:textSize="11sp"
                         android:text="MAL" />
                 </LinearLayout>
@@ -382,7 +382,7 @@
                         android:layout_height="14dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_player_24"
-                        app:tint="#94A3B8" />
+                        app:tint="@color/layout_literal_94a3b8" />
 
                     <TextView
                         android:id="@+id/tvQualityBadge"
@@ -390,7 +390,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="5dp"
                         android:text="1080p"
-                        android:textColor="#E2E8F0"
+                        android:textColor="@color/layout_literal_e2e8f0"
                         android:textSize="11sp" />
                 </LinearLayout>
 
@@ -411,7 +411,7 @@
                         android:layout_height="14dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_audio_24"
-                        app:tint="#94A3B8" />
+                        app:tint="@color/layout_literal_94a3b8" />
 
                     <TextView
                         android:id="@+id/tvAudioTrackBadge"
@@ -419,7 +419,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="5dp"
                         android:text="Dual Áudio PT-BR / JA"
-                        android:textColor="#E2E8F0"
+                        android:textColor="@color/layout_literal_e2e8f0"
                         android:textSize="11sp" />
                 </LinearLayout>
 
@@ -440,7 +440,7 @@
                         android:layout_height="14dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_subtitles_24"
-                        app:tint="#94A3B8" />
+                        app:tint="@color/layout_literal_94a3b8" />
 
                     <TextView
                         android:id="@+id/tvSubtitleBadge"
@@ -448,7 +448,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="5dp"
                         android:text="Multi Subs"
-                        android:textColor="#E2E8F0"
+                        android:textColor="@color/layout_literal_e2e8f0"
                         android:textSize="11sp" />
                 </LinearLayout>
 
@@ -464,7 +464,7 @@
                 android:fontFamily="sans-serif"
                 android:lineSpacingExtra="3dp"
                 android:maxLines="3"
-                android:textColor="#94A3B8"
+                android:textColor="@color/layout_literal_94a3b8"
                 android:textSize="12.5sp"
                 tools:text="Após ser atacada por um vampiro e sobreviver, Koyomi Araragi se vê envolvido com diversas garotas ligadas a excentricidades sobrenaturais..." />
 
@@ -497,7 +497,7 @@
                         android:layout_height="22dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_play_24"
-                        app:tint="#03121C" />
+                        app:tint="@color/layout_literal_03121c" />
 
                     <LinearLayout
                         android:layout_width="wrap_content"
@@ -513,7 +513,7 @@
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-bold"
                             android:includeFontPadding="false"
-                            android:textColor="#03121C"
+                            android:textColor="@color/layout_literal_03121c"
                             android:textSize="13sp"
                             tools:text="Continuar Assistindo" />
 
@@ -524,7 +524,7 @@
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif"
                             android:includeFontPadding="false"
-                            android:textColor="#164451"
+                            android:textColor="@color/layout_literal_164451"
                             android:textSize="10sp"
                             tools:text="Ep. 4 • 14:28 restante" />
 
@@ -551,7 +551,7 @@
                         android:layout_height="18dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_trailer_24"
-                        app:tint="#E2E8F0" />
+                        app:tint="@color/layout_literal_e2e8f0" />
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -559,7 +559,7 @@
                         android:layout_marginStart="8dp"
                         android:fontFamily="sans-serif-medium"
                         android:text="Ver Trailer"
-                        android:textColor="#F8FAFC"
+                        android:textColor="@color/layout_literal_f8fafc"
                         android:textSize="12sp" />
                 </LinearLayout>
 
@@ -584,7 +584,7 @@
                         android:layout_height="18dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_star_outline_24"
-                        app:tint="#E2E8F0" />
+                        app:tint="@color/layout_literal_e2e8f0" />
 
                     <TextView
                         android:id="@+id/tvFavoriteText"
@@ -593,7 +593,7 @@
                         android:layout_marginStart="8dp"
                         android:fontFamily="sans-serif-medium"
                         android:text="Favoritar"
-                        android:textColor="#F8FAFC"
+                        android:textColor="@color/layout_literal_f8fafc"
                         android:textSize="12sp" />
                 </LinearLayout>
 
@@ -618,7 +618,7 @@
                         android:layout_height="18dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_notification_24"
-                        app:tint="#E2E8F0" />
+                        app:tint="@color/layout_literal_e2e8f0" />
 
                     <TextView
                         android:id="@+id/tvFollowText"
@@ -627,7 +627,7 @@
                         android:layout_marginStart="8dp"
                         android:fontFamily="sans-serif-medium"
                         android:text="Seguir"
-                        android:textColor="#F8FAFC"
+                        android:textColor="@color/layout_literal_f8fafc"
                         android:textSize="12sp" />
                 </LinearLayout>
 
@@ -660,7 +660,7 @@
                         android:layout_marginStart="8dp"
                         android:fontFamily="sans-serif-medium"
                         android:text="Marcar como Assistido"
-                        android:textColor="#F8FAFC"
+                        android:textColor="@color/layout_literal_f8fafc"
                         android:textSize="12sp" />
                 </LinearLayout>
 
@@ -712,7 +712,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:indeterminate="true"
-            android:indeterminateTint="#22D3EE"
+            android:indeterminateTint="@color/layout_literal_22d3ee"
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -727,7 +727,7 @@
             android:layout_marginTop="24dp"
             android:fontFamily="sans-serif-medium"
             android:text="Nenhum episódio encontrado nesta categoria."
-            android:textColor="#94A3B8"
+            android:textColor="@color/layout_literal_94a3b8"
             android:textSize="14sp"
             android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"

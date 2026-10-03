@@ -54,12 +54,12 @@ class AppSettings @Inject constructor(
             val profileKey = profileThemeKey(profileId)
             val preferences = sessionStore.data.first()
             val themeText = preferences[profileKey] ?: preferences[stringPreferencesKey(APP_THEME)]
-            val appTheme = AppTheme.fromText(themeText)
+            val appTheme = themeText?.let(AppTheme::fromText) ?: AppTheme.OBSIDIAN
             Log.d(TAG, "fetchTheme [profile=$profileId]: $appTheme")
             appTheme
         } catch (e: Exception) {
-            Log.e(TAG, "fetchTheme error, fallback to Kodi Estuary", e)
-            AppTheme.KODI_ESTUARY
+            Log.e(TAG, "fetchTheme error, fallback to Obsidian", e)
+            AppTheme.OBSIDIAN
         }
     }
 
@@ -153,7 +153,7 @@ enum class AppTheme(
         text = "Tokyo Night",
         value = 0,
         displayName = "Tokyo Night",
-        subtitle = "Equilibrado & Glassmorphism (Padrão)",
+        subtitle = "Equilibrado & Glassmorphism",
         bgBaseHex = "#1A1B26",
         bgSurfaceHex = "#1F2335",
         accentPrimaryHex = "#7AA2F7",
@@ -194,15 +194,25 @@ enum class AppTheme(
         value = 4,
         displayName = "Kodi Estuary",
         subtitle = "Petróleo profundo & ciano cinematográfico",
-        bgBaseHex = "#0A1C2A",
-        bgSurfaceHex = "#1A2123",
-        accentPrimaryHex = "#12A0C7",
-        accentSecondaryHex = "#147995"
+        bgBaseHex = "#030B14",
+        bgSurfaceHex = "#0B1928",
+        accentPrimaryHex = "#22D3EE",
+        accentSecondaryHex = "#0E597E"
+    ),
+    OBSIDIAN(
+        text = "Obsidian",
+        value = 5,
+        displayName = "Obsidian",
+        subtitle = "Cinema escuro & foco ciano",
+        bgBaseHex = "#070B11",
+        bgSurfaceHex = "#111925",
+        accentPrimaryHex = "#22D3EE",
+        accentSecondaryHex = "#4F8CFF"
     );
 
     companion object {
-        fun fromValue(value: Int): AppTheme = entries.find { it.value == value } ?: KODI_ESTUARY
-        fun fromText(text: String?): AppTheme = entries.find { it.text.equals(text, ignoreCase = true) } ?: KODI_ESTUARY
+        fun fromValue(value: Int): AppTheme = entries.find { it.value == value } ?: OBSIDIAN
+        fun fromText(text: String?): AppTheme = entries.find { it.text.equals(text, ignoreCase = true) } ?: OBSIDIAN
     }
 }
 

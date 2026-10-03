@@ -181,7 +181,7 @@ class VisualReviewActivity : Activity() {
         setContentView(R.layout.fragment_settings)
         text(R.id.tvCurrentProfileName, "Perfil ativo: Cauã (Admin)")
         text(R.id.tvLibraryRootValue, "Meu Drive › Animes")
-        text(R.id.tvThemeCurrentValue, "Kodi Estuary (Petróleo / Ciano)")
+        text(R.id.tvThemeCurrentValue, "Obsidian (Cinema escuro / Ciano)")
         text(R.id.tvPlayerCurrentValue, "ExoPlayer (Nativo Android)")
         text(R.id.tvSubtitleSizeValue, "Grande (24sp · Branco · Borda)")
         text(R.id.tvCacheSizeValue, "142.4 MB em cache (Posters, capas e legendas)")
@@ -219,7 +219,7 @@ class VisualReviewActivity : Activity() {
                 swatchSecondary.background = androidx.core.content.ContextCompat.getDrawable(this@VisualReviewActivity, R.drawable.glass_circle_button_bg)?.mutate()?.apply {
                     setTint(android.graphics.Color.parseColor(theme.accentSecondaryHex))
                 }
-                ivSelected.visibility = if (theme == zechs.drive.stream.utils.AppTheme.KODI_ESTUARY) View.VISIBLE else View.GONE
+                ivSelected.visibility = if (theme == zechs.drive.stream.utils.AppTheme.OBSIDIAN) View.VISIBLE else View.GONE
                 cardTheme.setOnClickListener { dialog.dismiss() }
             }
             container.addView(itemBinding.root)

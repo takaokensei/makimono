@@ -98,7 +98,7 @@
                     android:layout_gravity="center"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_star_filled_24"
-                    app:tint="#FFD700" />
+                    app:tint="@color/layout_literal_ffd700" />
             </FrameLayout>
         </LinearLayout>
 
@@ -117,11 +117,11 @@
                 android:ellipsize="end"
                 android:fontFamily="@font/inter"
                 android:maxLines="2"
-                android:shadowColor="#CC000000"
+                android:shadowColor="@color/layout_literal_cc000000"
                 android:shadowDx="0"
                 android:shadowDy="1"
                 android:shadowRadius="3"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/layout_literal_ffffff"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 tools:text="Sousou no Frieren" />
@@ -134,7 +134,7 @@
                 android:ellipsize="end"
                 android:fontFamily="@font/inter"
                 android:maxLines="1"
-                android:textColor="#C0C0C0"
+                android:textColor="@color/layout_literal_c0c0c0"
                 android:textSize="10sp"
                 tools:text="Pasta • Abrir" />
 

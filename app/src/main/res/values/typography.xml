@@ -1,0 +1,33 @@
+<resources>
+    <!-- TV hierarchy: all text remains scalable and uses the bundled Inter family. -->
+    <style name="TextAppearance.Makimono.TV" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="fontFamily">@font/inter</item>
+        <item name="android:textColor">?attr/colorTextPrimary</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+    <style name="TextAppearance.Makimono.TV.Title1" parent="TextAppearance.Makimono.TV">
+        <item name="android:textSize">38sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.01</item>
+    </style>
+    <style name="TextAppearance.Makimono.TV.Title2" parent="TextAppearance.Makimono.TV.Title1">
+        <item name="android:textSize">28sp</item>
+        <item name="android:letterSpacing">0.015</item>
+    </style>
+    <style name="TextAppearance.Makimono.TV.Title3" parent="TextAppearance.Makimono.TV.Title1">
+        <item name="android:textSize">24sp</item>
+        <item name="android:letterSpacing">0.01</item>
+    </style>
+    <style name="TextAppearance.Makimono.TV.Headline" parent="TextAppearance.Makimono.TV.Title1">
+        <item name="android:textSize">19sp</item>
+        <item name="android:letterSpacing">0.005</item>
+    </style>
+    <style name="TextAppearance.Makimono.TV.Body" parent="TextAppearance.Makimono.TV">
+        <item name="android:textSize">15sp</item>
+        <item name="android:lineSpacingExtra">3dp</item>
+    </style>
+    <style name="TextAppearance.Makimono.TV.Caption" parent="TextAppearance.Makimono.TV.Body">
+        <item name="android:textSize">13sp</item>
+    </style>
+</resources>

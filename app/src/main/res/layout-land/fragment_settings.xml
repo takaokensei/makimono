@@ -412,7 +412,7 @@
                 android:fontFamily="@font/inter"
                 android:letterSpacing="0.16"
                 android:text="INTEGRAÇÕES"
-                android:textColor="#8FA3BA"
+                android:textColor="@color/layout_literal_8fa3ba"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -534,7 +534,7 @@
                 android:fontFamily="@font/inter"
                 android:letterSpacing="0.16"
                 android:text="REPRODUÇÃO E GESTOS"
-                android:textColor="#8FA3BA"
+                android:textColor="@color/layout_literal_8fa3ba"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -602,7 +602,7 @@
                 android:fontFamily="@font/inter"
                 android:letterSpacing="0.16"
                 android:text="BACKUP &amp; DADOS"
-                android:textColor="#8FA3BA"
+                android:textColor="@color/layout_literal_8fa3ba"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 

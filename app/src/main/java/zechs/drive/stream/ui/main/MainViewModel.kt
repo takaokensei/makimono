@@ -46,7 +46,7 @@ class MainViewModel @Inject constructor(
     private val _theme = MutableSharedFlow<AppTheme>(replay = 1)
     val theme = _theme.asSharedFlow()
 
-    var currentThemeIndex = AppTheme.KODI_ESTUARY.value
+    var currentThemeIndex = AppTheme.OBSIDIAN.value
         private set
 
     private val _lastUpdated = MutableStateFlow<String?>(null)

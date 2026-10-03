@@ -261,13 +261,14 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        val themeValue = intent.getIntExtra("theme", 0)
+        val themeValue = intent.getIntExtra("theme", zechs.drive.stream.utils.AppTheme.OBSIDIAN.value)
         val themeRes = when (zechs.drive.stream.utils.AppTheme.fromValue(themeValue)) {
             zechs.drive.stream.utils.AppTheme.TOKYO_NIGHT -> R.style.Theme_Fullscreen_TokyoNight
             zechs.drive.stream.utils.AppTheme.DRACULA -> R.style.Theme_Fullscreen_Dracula
             zechs.drive.stream.utils.AppTheme.NORD -> R.style.Theme_Fullscreen_Nord
             zechs.drive.stream.utils.AppTheme.CATPPUCCIN_MOCHA -> R.style.Theme_Fullscreen_CatppuccinMocha
             zechs.drive.stream.utils.AppTheme.KODI_ESTUARY -> R.style.Theme_Fullscreen_KodiEstuary
+            zechs.drive.stream.utils.AppTheme.OBSIDIAN -> R.style.Theme_Fullscreen_Obsidian
         }
         setTheme(themeRes)
         super.onCreate(savedInstanceState)

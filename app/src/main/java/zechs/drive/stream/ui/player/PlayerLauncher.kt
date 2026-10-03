@@ -6,6 +6,7 @@ import zechs.drive.stream.data.model.PlaylistItem
 import zechs.drive.stream.data.model.SubtitleItem
 import zechs.drive.stream.ui.player2.MPVActivity
 import zechs.drive.stream.utils.VideoPlayer
+import zechs.drive.stream.utils.AppTheme
 
 object PlayerLauncher {
 
@@ -27,7 +28,7 @@ object PlayerLauncher {
         seriesTitle: String? = null,
         accessToken: String? = null,
         thumbnailLink: String? = null,
-        themeIndex: Int = 0,
+        themeIndex: Int = AppTheme.OBSIDIAN.value,
         playlist: ArrayList<PlaylistItem>? = null,
         subtitles: ArrayList<SubtitleItem>? = null,
         startPosition: Long = -1L
@@ -61,7 +62,7 @@ object PlayerLauncher {
         seriesTitle: String? = null,
         accessToken: String? = null,
         thumbnailLink: String? = null,
-        themeIndex: Int = 0,
+        themeIndex: Int = AppTheme.OBSIDIAN.value,
         playlist: ArrayList<PlaylistItem>? = null,
         subtitles: ArrayList<SubtitleItem>? = null,
         startPosition: Long = -1L

@@ -1,14 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Linear motion spec for quick transitions -->
-    <item name="motion_spec_linear" type="integer">300</item>
+    <!-- Semantic durations (ms); keep legacy IDs for existing call sites. -->
+    <item name="motion_spec_instant" type="integer">100</item>
+    <item name="motion_spec_fast" type="integer">150</item>
+    <item name="motion_spec_normal" type="integer">220</item>
+    <item name="motion_spec_gentle" type="integer">300</item>
+    <item name="motion_spec_slow" type="integer">450</item>
+    <item name="motion_spec_linear" type="integer">220</item>
     <item name="motion_easing_linear" type="string">linear</item>
 
     <!-- Cubic motion spec for standard transitions -->
-    <item name="motion_spec_cubic" type="integer">450</item>
+    <item name="motion_spec_cubic" type="integer">220</item>
     <item name="motion_easing_cubic" type="string">cubic</item>
 
     <!-- Emphasized motion spec for important transitions -->
-    <item name="motion_spec_emphasized" type="integer">600</item>
+    <item name="motion_spec_emphasized" type="integer">300</item>
     <item name="motion_easing_emphasized" type="string">emphasized</item>
 </resources>

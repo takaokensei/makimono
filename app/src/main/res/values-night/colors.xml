@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#000000</color>
+    <color name="colorPrimary">@color/obsidian_bg_base</color>
     <color name="blackColor_74">#3D000000</color>
-    <color name="cardColor_50">#8025232A</color>
-    <color name="colorAccent">#6750a4</color>
-    <color name="textColor">#FFFFFF</color>
-    <color name="textColor_54">#8AFFFFFF</color>
-    <color name="textColor_74">#BDFFFFFF</color>
-    <color name="textColor_87">#DEFFFFFF</color>
-    <color name="fadedColor">#1c1b1f</color>
+    <color name="cardColor_50">@color/obsidian_bg_surface</color>
+    <color name="colorAccent">@color/obsidian_accent_primary</color>
+    <color name="textColor">@color/obsidian_text_primary</color>
+    <color name="textColor_54">@color/obsidian_text_tertiary</color>
+    <color name="textColor_74">@color/obsidian_text_secondary</color>
+    <color name="textColor_87">@color/obsidian_text_primary</color>
+    <color name="fadedColor">@color/obsidian_bg_base</color>
 </resources>

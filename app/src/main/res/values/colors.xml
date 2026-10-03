@@ -1,12 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Obsidian: default premium TV palette. Keep semantic roles opaque and theme-scoped. -->
+    <color name="obsidian_bg_base">#070B11</color>
+    <color name="obsidian_bg_surface">#111925</color>
+    <color name="obsidian_bg_glass">#0F111925</color>
+    <color name="obsidian_border_glass">#1AFFFFFF</color>
+    <color name="obsidian_text_primary">#F5F7FA</color>
+    <color name="obsidian_text_secondary">#B0B8C4</color>
+    <color name="obsidian_text_tertiary">#7C8696</color>
+    <color name="obsidian_accent_primary">#22D3EE</color>
+    <color name="obsidian_accent_secondary">#4F8CFF</color>
+    <color name="obsidian_on_primary">#0A0E14</color>
+    <color name="obsidian_focus_fill">#24FFFFFF</color>
+    <color name="obsidian_hairline">#1AFFFFFF</color>
+    <color name="obsidian_success">#54D18A</color>
+    <color name="obsidian_warning">#F6C76A</color>
+    <color name="obsidian_danger">#FF6B78</color>
+    <color name="obsidian_scrim">#99000000</color>
+    <color name="obsidian_media_scrim">#CC000000</color>
+
     <!-- Tokyo Night (Default) -->
     <color name="tn_bg_base">#1A1B26</color>
     <color name="tn_bg_surface">#1F2335</color>
     <color name="tn_bg_glass">#261F2335</color>
     <color name="tn_border_glass">#24FFFFFF</color>
     <color name="tn_text_primary">#C0CAF5</color>
-    <color name="tn_text_secondary">#7B82A3</color>
+    <color name="tn_text_secondary">#AEB6D1</color>
+    <color name="tn_text_tertiary">#7B82A3</color>
     <color name="tn_accent_primary">#7AA2F7</color>
     <color name="tn_accent_secondary">#BB9AF7</color>
     <color name="tn_success">#9ECE6A</color>
@@ -19,7 +39,8 @@
     <color name="dracula_bg_glass">#2644475A</color>
     <color name="dracula_border_glass">#24FFFFFF</color>
     <color name="dracula_text_primary">#F8F8F2</color>
-    <color name="dracula_text_secondary">#8390B7</color>
+    <color name="dracula_text_secondary">#C5CBE1</color>
+    <color name="dracula_text_tertiary">#8390B7</color>
     <color name="dracula_accent_primary">#BD93F9</color>
     <color name="dracula_accent_secondary">#FF79C6</color>
     <color name="dracula_success">#50FA7B</color>
@@ -32,7 +53,8 @@
     <color name="nord_bg_glass">#26434C5E</color>
     <color name="nord_border_glass">#1FFFFFFF</color>
     <color name="nord_text_primary">#ECEFF4</color>
-    <color name="nord_text_secondary">#979DA9</color>
+    <color name="nord_text_secondary">#D7DBE3</color>
+    <color name="nord_text_tertiary">#979DA9</color>
     <color name="nord_accent_primary">#88C0D0</color>
     <color name="nord_accent_secondary">#81A1C1</color>
     <color name="nord_success">#A3BE8C</color>
@@ -45,7 +67,8 @@
     <color name="mocha_bg_glass">#2645475A</color>
     <color name="mocha_border_glass">#1FFFFFFF</color>
     <color name="mocha_text_primary">#CDD6F4</color>
-    <color name="mocha_text_secondary">#A6ADC8</color>
+    <color name="mocha_text_secondary">#BEC5DC</color>
+    <color name="mocha_text_tertiary">#8E95AF</color>
     <color name="mocha_accent_primary">#89B4FA</color>
     <color name="mocha_accent_secondary">#CBA6F7</color>
     <color name="mocha_success">#A6E3A1</color>
@@ -59,6 +82,7 @@
     <color name="estuary_border_glass">#604D91AD</color>
     <color name="estuary_text_primary">#F0F0F0</color>
     <color name="estuary_text_secondary">#ACC0D6</color>
+    <color name="estuary_text_tertiary">#819BB5</color>
     <color name="estuary_accent_primary">#22D3EE</color>
     <color name="estuary_accent_secondary">#0E597E</color>
     <color name="estuary_success">#4CBB6C</color>
@@ -66,27 +90,113 @@
     <color name="estuary_danger">#E85B5B</color>
 
     <!-- Shared / Legacy Aliases (mapped to Tokyo Night defaults for backwards compatibility) -->
-    <color name="colorPrimary">#1A1B26</color>
-    <color name="colorBackground">#1A1B26</color>
-    <color name="colorSurface">#1F2335</color>
-    <color name="colorSurfaceVariant">#292E42</color>
+    <color name="colorPrimary">@color/obsidian_bg_base</color>
+    <color name="colorBackground">@color/obsidian_bg_base</color>
+    <color name="colorSurface">@color/obsidian_bg_surface</color>
+    <color name="colorSurfaceVariant">#1B2634</color>
     <color name="blackColor_74">#3DFFFFFF</color>
     <color name="cardColor_50">#1F2335</color>
-    <color name="colorAccent">#7AA2F7</color>
-    <color name="colorAccentNeon">#BB9AF7</color>
-    <color name="playerAccent">#7AA2F7</color>
-    <color name="textColor">#C0CAF5</color>
-    <color name="textColor_54">#7B82A3</color>
-    <color name="textColor_74">#A9B1D6</color>
-    <color name="textColor_87">#C0CAF5</color>
-    <color name="fadedColor">#1A1B26</color>
-    <color name="cardStrokeDefault">#24FFFFFF</color>
-    <color name="cardFocusedStroke">#7AA2F7</color>
-    <color name="playerButtonBgDefault">#261F2335</color>
-    <color name="playerButtonBgFocused">#7AA2F7</color>
+    <color name="colorAccent">@color/obsidian_accent_primary</color>
+    <color name="colorAccentNeon">@color/obsidian_accent_secondary</color>
+    <color name="playerAccent">@color/obsidian_accent_primary</color>
+    <color name="textColor">@color/obsidian_text_primary</color>
+    <color name="textColor_54">@color/obsidian_text_tertiary</color>
+    <color name="textColor_74">@color/obsidian_text_secondary</color>
+    <color name="textColor_87">@color/obsidian_text_primary</color>
+    <color name="fadedColor">@color/obsidian_bg_base</color>
+    <color name="cardStrokeDefault">@color/obsidian_border_glass</color>
+    <color name="cardFocusedStroke">@color/obsidian_accent_primary</color>
+    <color name="playerButtonBgDefault">@color/obsidian_bg_glass</color>
+    <color name="playerButtonBgFocused">@color/obsidian_accent_primary</color>
 
     <!-- Design Tokens for Series Detail -->
     <color name="amber_500">#FBBF24</color>
     <color name="rose_600">#E11D48</color>
     <color name="cyan_400">#22D3EE</color>
+
+    <!-- Non-theme-specific presentation tokens used by shared components. -->
+    <color name="surface_hairline">#1AFFFFFF</color>
+    <color name="surface_specular">#38FFFFFF</color>
+    <color name="surface_focus_fill">#24FFFFFF</color>
+    <color name="scrim_dialog">#99000000</color>
+    <color name="progress_track">#33FFFFFF</color>
+    <color name="progress_track_inactive">#40FFFFFF</color>
+
+    <!-- Centralized legacy layout literals; migrate to semantic theme roles with each screen phase. -->
+    <color name="layout_literal_000000">#000000</color>
+    <color name="layout_literal_00c0ff">#00C0FF</color>
+    <color name="layout_literal_030c16">#030C16</color>
+    <color name="layout_literal_03121c">#03121C</color>
+    <color name="layout_literal_040c16">#040C16</color>
+    <color name="layout_literal_070a10">#070A10</color>
+    <color name="layout_literal_0a0a0a">#0A0A0A</color>
+    <color name="layout_literal_0b0e14">#0B0E14</color>
+    <color name="layout_literal_0d1117">#0D1117</color>
+    <color name="layout_literal_0e0d14">#0E0D14</color>
+    <color name="layout_literal_0f172a">#0F172A</color>
+    <color name="layout_literal_12a0c7">#12A0C7</color>
+    <color name="layout_literal_151722">#151722</color>
+    <color name="layout_literal_164451">#164451</color>
+    <color name="layout_literal_1affffff">#1AFFFFFF</color>
+    <color name="layout_literal_1e0f172a">#1E0F172A</color>
+    <color name="layout_literal_1e293b">#1E293B</color>
+    <color name="layout_literal_1f2335">#1F2335</color>
+    <color name="layout_literal_20ffffff">#20FFFFFF</color>
+    <color name="layout_literal_22d3ee">#22D3EE</color>
+    <color name="layout_literal_24ffffff">#24FFFFFF</color>
+    <color name="layout_literal_2563eb">#2563EB</color>
+    <color name="layout_literal_2638bdf8">#2638BDF8</color>
+    <color name="layout_literal_26ffffff">#26FFFFFF</color>
+    <color name="layout_literal_2fffffff">#2FFFFFFF</color>
+    <color name="layout_literal_33000000">#33000000</color>
+    <color name="layout_literal_3338bdf8">#3338BDF8</color>
+    <color name="layout_literal_334155">#334155</color>
+    <color name="layout_literal_33ffffff">#33FFFFFF</color>
+    <color name="layout_literal_38bdf8">#38BDF8</color>
+    <color name="layout_literal_40ffffff">#40FFFFFF</color>
+    <color name="layout_literal_475569">#475569</color>
+    <color name="layout_literal_59080a10">#59080A10</color>
+    <color name="layout_literal_64748b">#64748B</color>
+    <color name="layout_literal_66020617">#66020617</color>
+    <color name="layout_literal_71909a">#71909A</color>
+    <color name="layout_literal_7b82a3">#7B82A3</color>
+    <color name="layout_literal_7ba7b5">#7BA7B5</color>
+    <color name="layout_literal_7dd3fc">#7DD3FC</color>
+    <color name="layout_literal_7fa3d6">#7FA3D6</color>
+    <color name="layout_literal_80000000">#80000000</color>
+    <color name="layout_literal_8ea6b4">#8EA6B4</color>
+    <color name="layout_literal_8fa3ba">#8FA3BA</color>
+    <color name="layout_literal_94a3b8">#94A3B8</color>
+    <color name="layout_literal_99000000">#99000000</color>
+    <color name="layout_literal_99ffffff">#99FFFFFF</color>
+    <color name="layout_literal_a3b0c2">#A3B0C2</color>
+    <color name="layout_literal_b30e0d14">#B30E0D14</color>
+    <color name="layout_literal_b4c0cf">#B4C0CF</color>
+    <color name="layout_literal_b9cadf">#B9CADF</color>
+    <color name="layout_literal_b9d1d7">#B9D1D7</color>
+    <color name="layout_literal_c0c0c0">#C0C0C0</color>
+    <color name="layout_literal_c1cfde">#C1CFDE</color>
+    <color name="layout_literal_cbd5e1">#CBD5E1</color>
+    <color name="layout_literal_cc000000">#CC000000</color>
+    <color name="layout_literal_ccffffff">#CCFFFFFF</color>
+    <color name="layout_literal_d4d4d4">#D4D4D4</color>
+    <color name="layout_literal_d5dee9">#D5DEE9</color>
+    <color name="layout_literal_e00b1928">#E00B1928</color>
+    <color name="layout_literal_e11d48">#E11D48</color>
+    <color name="layout_literal_e2e8f0">#E2E8F0</color>
+    <color name="layout_literal_e3edff">#E3EDFF</color>
+    <color name="layout_literal_e60a0f1d">#E60A0F1D</color>
+    <color name="layout_literal_f0f0f0">#F0F0F0</color>
+    <color name="layout_literal_f1f5f9">#F1F5F9</color>
+    <color name="layout_literal_f1f7ff">#F1F7FF</color>
+    <color name="layout_literal_f20b0e14">#F20B0E14</color>
+    <color name="layout_literal_f20e131e">#F20E131E</color>
+    <color name="layout_literal_f2f6fc">#F2F6FC</color>
+    <color name="layout_literal_f39c12">#F39C12</color>
+    <color name="layout_literal_f7768e">#F7768E</color>
+    <color name="layout_literal_f8fafc">#F8FAFC</color>
+    <color name="layout_literal_fbbf24">#FBBF24</color>
+    <color name="layout_literal_ffd700">#FFD700</color>
+    <color name="layout_literal_ffffff">#FFFFFF</color>
+    <color name="layout_literal_ffffffff">#FFFFFFFF</color>
 </resources>

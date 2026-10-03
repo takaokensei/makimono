@@ -23,6 +23,15 @@ The Layout p. 6 two-column table and Typography pp. 9–10 tvOS styles were legi
 
 The mission catalog also seeds rules from Buttons, Labels, Collections, Top Shelf, Menus, Lists and tables, Loading, Managing accounts, Settings, and other phase-specific guides. Their guide files are assigned to F2–F6; those rules are not recorded below as PDF-reconfirmed until those guides are read in their phase.
 
+## F1 re-review — color, layout, typography, materials, motion, accessibility
+
+Before token changes, the general/tvOS portions of `Accessibility`, `Color`, `Dark Mode`, `Focus and selection`, `Layout`, `Materials`, `Motion`, and `Typography` were re-opened from `C:\Work\refs\hig`. The dark-mode and accessibility contrast guidance supports strong foreground contrast on dark surfaces; Focus and selection distinguishes focus from selection and requires room around enlarged focused content; Layout emphasizes alignment and adaptive hierarchy; Materials separates controls from changing imagery; Motion should be purposeful and restrained; Typography prioritizes legibility and hierarchy. These are adaptation principles, not Android implementation rules.
+
+- Contrast is checked locally by `tools/check_contrast.py`: primary and secondary text target ≥7:1 on both base and elevated surfaces across all six palettes; text on primary action fills targets ≥4.5:1. Tertiary is kept for disabled/unavailable states.
+- Obsidian is a sixth selectable palette and the fallback only when a profile has no valid saved preference. The five original enum values and user selections remain stable; this reconciles the new default with D-02's preservation constraint without adding another appearance picker.
+- TV landscape safe margins now resolve to 48dp horizontal and 30dp vertical across base, `land`, and `sw600dp-land` dimension resources. Screen-by-screen clipping and focus-clearance remain phase-specific visual checks.
+- Token styles use the bundled Inter family, retain scalable `sp` sizes, and shorten old motion resource timings to the semantic 100/150/220/300/450ms scale. Runtime reduced-motion behavior remains to be verified in later implementation phases.
+
 ## Focus and selection
 
 **Source:** `Focus and selection _ Apple Developer Documentation.pdf` (6 pages), general and tvOS sections, pp. 1–6.
