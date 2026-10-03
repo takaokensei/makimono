@@ -6,7 +6,7 @@ mal.clientId=YOUR_MAL_CLIENT_ID
 mal.clientSecret=YOUR_MAL_CLIENT_SECRET
 # Personal GitHub token with read-only access to the private repository releases.
 # This value is packaged into this single-user APK and must never be committed.
-github.apiToken=YOUR_GITHUB_READ_ONLY_TOKEN
+github.releaseReadToken=YOUR_GITHUB_READ_ONLY_TOKEN
 
 # Optional: dedicated release keystore. If left unset, release builds fall
 # back to the debug key (fine for personal use, NOT fine for distributing

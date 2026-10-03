@@ -54,8 +54,17 @@ jobs:
             echo "mal.clientSecret=${{ secrets.MAL_CLIENT_SECRET }}" >> local.properties
           fi
 
+      - name: Setup GitHub release read token
+        env:
+          GITHUB_API_TOKEN: ${{ secrets.GITHUB_API_TOKEN }}
+        run: |
+          if [ -n "$GITHUB_API_TOKEN" ]; then
+            printf 'github.releaseReadToken=%s\n' "$GITHUB_API_TOKEN" >> local.properties
+          fi
+
       - name: Validate Release Secrets
         env:
+          GITHUB_API_TOKEN: ${{ secrets.GITHUB_API_TOKEN }}
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
@@ -64,8 +73,10 @@ jobs:
           if [ -z "$RELEASE_KEYSTORE_BASE64" ] || \
              [ -z "$RELEASE_STORE_PASSWORD" ] || \
              [ -z "$RELEASE_KEY_ALIAS" ] || \
-             [ -z "$RELEASE_KEY_PASSWORD" ]; then
-            echo "::error::Missing required release signing secrets (RELEASE_KEYSTORE_BASE64, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD). Production release cannot be published without dedicated release keystore."
+             [ -z "$RELEASE_KEY_PASSWORD" ] || \
+             [ -z "$GITHUB_API_TOKEN" ]; then
+            echo "::error::Missing required signing secrets (RELEASE_KEYSTORE_BASE64, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD)."
+            echo "::error::GITHUB_API_TOKEN is also required for the private-repository updater."
             exit 1
           fi
 

@@ -13,8 +13,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import zechs.drive.stream.BuildConfig
 import zechs.drive.stream.data.model.ChecksumAsset
 import zechs.drive.stream.data.model.ReleaseAsset
+import zechs.drive.stream.data.remote.GithubAuth
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -43,10 +45,12 @@ class AppUpdateManager @Inject constructor(
     ): Result<File> = withContext(Dispatchers.IO) {
         try {
             Log.d(TAG, "Downloading APK asset: ${asset.name} from ${asset.browserDownloadUrl}")
-            val request = Request.Builder()
+            val requestBuilder = Request.Builder()
                 .url(asset.browserDownloadUrl)
                 .header("Accept", "application/octet-stream")
-                .build()
+            GithubAuth.authorizationFor(asset.browserDownloadUrl, BuildConfig.GITHUB_API_TOKEN)
+                ?.let { requestBuilder.header("Authorization", it) }
+            val request = requestBuilder.build()
 
             val response = okHttpClient.newCall(request).execute()
             if (!response.isSuccessful) {
@@ -113,10 +117,12 @@ class AppUpdateManager @Inject constructor(
     suspend fun fetchExpectedChecksum(checksumAsset: ChecksumAsset): String? =
         withContext(Dispatchers.IO) {
             try {
-                val request = Request.Builder()
+                val requestBuilder = Request.Builder()
                     .url(checksumAsset.browserDownloadUrl)
                     .header("Accept", "application/octet-stream")
-                    .build()
+                GithubAuth.authorizationFor(checksumAsset.browserDownloadUrl, BuildConfig.GITHUB_API_TOKEN)
+                    ?.let { requestBuilder.header("Authorization", it) }
+                val request = requestBuilder.build()
 
                 val response = okHttpClient.newCall(request).execute()
                 if (!response.isSuccessful) return@withContext null

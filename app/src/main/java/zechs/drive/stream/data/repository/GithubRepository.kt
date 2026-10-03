@@ -4,8 +4,10 @@ import android.util.Log
 import dagger.Lazy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import zechs.drive.stream.BuildConfig
 import zechs.drive.stream.data.model.LatestRelease
 import zechs.drive.stream.data.remote.GithubApi
+import zechs.drive.stream.data.remote.GithubAuth
 import zechs.drive.stream.utils.state.Resource
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,7 +23,8 @@ class GithubRepository @Inject constructor(
 
     suspend fun getLatestRelease(): Resource<LatestRelease> = withContext(Dispatchers.IO) {
         try {
-            val latest = githubApi.get().getLatestRelease(null)
+            val authorization = GithubAuth.bearerFor(BuildConfig.GITHUB_API_TOKEN)
+            val latest = githubApi.get().getLatestRelease(authorization)
             Log.d(TAG, "Fetched latest release from API: ${latest.tagName}")
             return@withContext Resource.Success(latest)
         } catch (e: Exception) {

@@ -71,7 +71,7 @@ Referências de princípio:
 
 Arquivos:
 
-- `app/build.gradle`: lê `github.apiToken` de `local.properties` e expõe apenas
+- `app/build.gradle`: lê `github.releaseReadToken` de `local.properties` e expõe apenas
   `BuildConfig.GITHUB_API_TOKEN` para o build pessoal.
 - `local.properties.example`: documenta o novo valor local.
 - `GithubApi.kt`: exige o header `Authorization` na API de releases.
@@ -83,7 +83,7 @@ Arquivos:
 Configuração local mínima:
 
 ```properties
-github.apiToken=SEU_TOKEN_PESSOAL_COM_ACESSO_DE_LEITURA
+github.releaseReadToken=SEU_TOKEN_FINE_GRAINED_COM_LEITURA_DE_CONTEÚDO
 ```
 
 Não adicionar esse valor ao Git. O token dentro do APK pode ser extraído por uma
@@ -139,7 +139,7 @@ Arquivos:
 1. Aplicar o diff na raiz do clone e confirmar que somente os arquivos listados
    foram alterados.
 2. Criar `local.properties` a partir de `local.properties.example`, preencher
-   credenciais do Drive e `github.apiToken`, sem versionar o arquivo.
+   credenciais do Drive e `github.releaseReadToken`, sem versionar o arquivo.
 3. Criar uma release privada no repositório com os nomes de APK esperados pelo
    `LatestRelease.getBestApkAsset()` (`arm64-v8a`, `armeabi-v7a`, `universal`,
    `x86` ou `x86_64`).
