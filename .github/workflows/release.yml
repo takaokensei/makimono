@@ -76,7 +76,7 @@ jobs:
              [ -z "$RELEASE_KEY_PASSWORD" ] || \
              [ -z "$GITHUB_API_TOKEN" ]; then
             echo "::error::Missing required signing secrets (RELEASE_KEYSTORE_BASE64, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD)."
-            echo "::error::GITHUB_API_TOKEN is also required for the private-repository updater."
+            echo "::error::API_TOKEN_GITHUB is also required for the private-repository updater."
             exit 1
           fi
 

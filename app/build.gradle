@@ -19,13 +19,9 @@ if (localPropertiesFile.exists()) {
 // When absent, local/personal release builds explicitly fall back to the debug
 // key so the build never fails silently on a developer machine.
 //
-// In CI, though, a silent fallback means a release could get published to
-// GitHub Releases signed with the well-known debug key without anyone
-// noticing. Gradle sets the "CI" project/env property to "true" on GitHub
-// Actions runners, so assembleRelease is made to fail loudly there instead,
-// forcing RELEASE_KEYSTORE_BASE64 (and friends) to be configured as repo
-// secrets before a real release can be published. Set -PallowDebugSigningInCi
-// (or the equivalent env var) if a debug-signed CI build is ever intentional.
+// In CI, a release must never silently fall back to the debug key. Keep the
+// guard scoped to release-producing tasks so lint, tests, and debug builds can
+// run in CI without a release keystore.
 def releaseStoreFile = localProperties.getProperty("release.storeFile", "")
 def hasReleaseSigningConfig = !releaseStoreFile.isEmpty()
 def isCiEnv = System.getenv("CI") == "true" || System.getenv("GITHUB_ACTIONS") == "true"
@@ -33,15 +29,6 @@ def allowDebugSigningInCi = project.hasProperty("allowDebugSigningInCi") ||
         System.getenv("ALLOW_DEBUG_SIGNING_IN_CI") == "true"
 
 if (!hasReleaseSigningConfig) {
-    if (isCiEnv && !allowDebugSigningInCi) {
-        throw new GradleException(
-            "Refusing to build assembleRelease in CI without a release keystore. " +
-            "RELEASE_KEYSTORE_BASE64 / RELEASE_STORE_PASSWORD / RELEASE_KEY_ALIAS / " +
-            "RELEASE_KEY_PASSWORD must be configured as GitHub Actions secrets so " +
-            "published releases are never silently signed with the debug key. " +
-            "Pass -PallowDebugSigningInCi to override intentionally."
-        )
-    }
     logger.warn(
         "WARNING: No release.storeFile configured in local.properties. " +
         "Release build will be signed with the DEBUG key. " +
@@ -49,6 +36,21 @@ if (!hasReleaseSigningConfig) {
         "distributed as if it were a production release. " +
         "See local.properties.example for how to configure a real release keystore."
     )
+}
+
+gradle.taskGraph.whenReady { taskGraph ->
+    def releaseTasks = ["assembleRelease", "bundleRelease", "packageRelease"]
+    def isBuildingRelease = taskGraph.allTasks.any { task ->
+        task.project == project && releaseTasks.contains(task.name)
+    }
+    if (isBuildingRelease && isCiEnv && !hasReleaseSigningConfig && !allowDebugSigningInCi) {
+        throw new GradleException(
+            "Refusing to build a release in CI without a release keystore. " +
+            "Configure RELEASE_KEYSTORE_BASE64, RELEASE_STORE_PASSWORD, " +
+            "RELEASE_KEY_ALIAS, and RELEASE_KEY_PASSWORD, or pass " +
+            "-PallowDebugSigningInCi to override intentionally."
+        )
+    }
 }
 
 android {
