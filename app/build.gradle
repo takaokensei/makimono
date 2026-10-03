@@ -107,6 +107,11 @@ android {
     }
 
     buildTypes {
+        // Keep the debug-only visual fixture installable beside the signed app.
+        // This avoids uninstalling the user's build and losing its Drive session.
+        debug {
+            applicationIdSuffix ".visualreview"
+        }
         release {
             minifyEnabled true
             shrinkResources true

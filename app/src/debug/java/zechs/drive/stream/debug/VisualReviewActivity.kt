@@ -38,6 +38,7 @@ class VisualReviewActivity : Activity() {
             "profiles" -> profiles()
             "files" -> fileScreen()
             "details" -> details()
+            "details_episode_focus" -> details(focusEpisode = true)
             "player" -> player()
             "settings" -> settingsScreen()
             else -> home()
@@ -124,7 +125,7 @@ class VisualReviewActivity : Activity() {
         rv.adapter=FilesAdapter({},{},{_,_->}).apply { isGridMode=true;submitList(files(12,true)) }
         rv.postDelayed({rv.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus()},500)
     }
-    private fun details() {
+    private fun details(focusEpisode: Boolean = false) {
         setContentView(R.layout.fragment_series_detail)
         art(R.id.ivHeroBackdrop);art(R.id.ivSeriesPosterCard,poster)
         text(R.id.tvRomajiTitle,"SOUSOU NO FRIEREN")
@@ -139,6 +140,8 @@ class VisualReviewActivity : Activity() {
             v.isSelected = p == 0
         }
         val rv=findViewById<RecyclerView>(R.id.rvEpisodes)
+        rv.isFocusable = true
+        rv.isFocusableInTouchMode = true
         rv.adapter=FixtureAdapter(R.layout.item_series_episode_card,12) { v,p ->
             v.findViewById<TextView>(R.id.tvEpisodeTitle).text=listOf("O fim da viagem", "A magia da memória", "Uma nova jornada")[p % 3]
             v.findViewById<TextView>(R.id.tvEpisodeDuration).text="24 min"
@@ -146,7 +149,18 @@ class VisualReviewActivity : Activity() {
             v.findViewById<TextView>(R.id.tvEpNumberBadge).text="Ep. ${p+1}"
             Glide.with(this).load(backdrop).into(v.findViewById(R.id.ivEpisodeThumb))
         }
-        findViewById<View>(R.id.btnPrimaryAction)?.postDelayed({ findViewById<View>(R.id.btnPrimaryAction)?.requestFocus() }, 300)
+        if (focusEpisode) {
+            rv.postDelayed({
+                val episode = rv.findViewHolderForAdapterPosition(0)?.itemView
+                if (episode != null) {
+                    episode.isFocusable = true
+                    episode.isFocusableInTouchMode = true
+                    episode.requestFocusFromTouch()
+                }
+            }, 1000)
+        } else {
+            findViewById<View>(R.id.btnPrimaryAction)?.postDelayed({ findViewById<View>(R.id.btnPrimaryAction)?.requestFocus() }, 300)
+        }
     }
     private fun player() {
         val frame=android.widget.FrameLayout(this)

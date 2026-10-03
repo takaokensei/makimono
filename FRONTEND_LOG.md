@@ -2,6 +2,30 @@
 
 Este documento é a memória persistente dos ciclos de auditoria, testes visuais e refatoração de UI/UX do Makimono para Android TV e Mobile, conforme definido em `GOAL.md`.
 
+## F0 — Baseline e protocolo HIG v2
+
+1. Preservar o estado do checkout e a pasta local `docs/ui-audit/current-state/`, que já contém as 12 capturas do usuário.
+2. Marcar o commit atual com `pre-ui-v2`; não criar branch nem enviar tags ou commits ao remoto.
+3. Ler integralmente os dez PDFs obrigatórios de F0, extraindo regras tvOS/gerais e verificando visualmente tabelas/figuras relevantes.
+4. Reconciliar o briefing v2 com `README.md`, `GOAL.md`, este log e a auditoria existente; registrar ausências e conflitos sem inventar requisitos HIG.
+5. Confirmar que a fixture debug reproduz as 12 telas/estados e capturar o MuMu conectado antes de qualquer mudança visual.
+6. Executar `assembleDebug` e os testes JVM baseline; registrar falhas preexistentes separadas das mudanças desta rodada.
+7. Criar `HIG_NOTES.md` e `HIG_CONFORMANCE.md` com IDs rastreáveis, fontes, páginas e limitações verificadas.
+8. Fechar F0 com capturas, rubrica e evidências; só então escolher a menor próxima fase que respeite os gates de build e testes.
+
+**Status F0:** `pre-ui-v2` aponta para `c1b772f`; as 12 capturas do usuário foram preservadas e os 12 estados foram repetidos na fixture em `docs/ui-audit/after-v2/f0/`. A fixture ganhou rota `details_episode_focus`; a hierarquia confirma o card como focado. O `applicationIdSuffix .visualreview` mantém o APK de teste ao lado da versão assinada, sem apagar a sessão dela. Os dez PDFs F0 foram lidos nas seções gerais/tvOS e as tabelas/figuras relevantes foram rasterizadas; decisões, conflitos e escopo por regra estão em `docs/ui-modernization/HIG_NOTES.md`. A matriz/rubrica e medidas estão em `docs/ui-modernization/HIG_CONFORMANCE.md`. `AUDIT_REPORT.md` não existe; usamos `docs/ui-modernization/AUDIT.md` como auditoria existente. `assembleDebug testDebugUnitTest --rerun-tasks --no-daemon -PdistributionBuild` passou no container Android SDK: 152 testes, 0 falhas/erros. Sem push. Próximo passo: F1 tokens e contraste.
+
+## F1 — Tokens e contraste (plano antes de editar)
+
+1. Reconfirmar no PDF as regras F0 de foco, layout, acessibilidade, materiais e movimento aplicáveis aos tokens; manter as referências locais fora do repositório.
+2. Inventariar `values`, `values-night`, `values-land`, `values-television`, `values-sw720dp-land` e `values-port`, além dos estilos/dimens/fontes e `motion_spec.xml`.
+3. Mapear cores existentes para papéis semânticos; identificar hexes soltos e conflitos entre os cinco temas sem removê-los.
+4. Definir escala de tipografia Inter e espaçamento/cantos/elevation para as telas de TV; preservar layouts menores e IDs existentes.
+5. Criar uma verificação reproduzível de contraste para os papéis × superfícies × temas, mirando piso 4,5:1 e 7:1 para texto pequeno.
+6. Implementar tokens centralizados e o modo visual reduzido apenas onde o modelo existente permitir sem introduzir regressão.
+7. Capturar amostras de superfície, texto, foco e estados claros/escuros no MuMu e corrigir toda falha antes de fechar a fase.
+8. Rodar `assembleDebug` e a suíte unitária completa sem cache; atualizar rubrica/matriz e só então criar o commit F1 local.
+
 ---
 
 ## Baseline Inicial (v1.6.2 — Commit 28b44f6 / ui/pro-polish)
