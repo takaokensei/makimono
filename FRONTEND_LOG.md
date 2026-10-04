@@ -310,3 +310,34 @@ Este documento é a memória persistente dos ciclos de auditoria, testes visuais
 **Validação:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou em 1m30s (161 testes, 0 falhas/erros/skips). `check_layout_colors.py`, `check_contrast.py` e `git diff --check` passaram; `menu_final.png` foi capturada no MuMu com a superfície ajustada a D-01 e o foco restaurado após DOWN/BACK. O APK Debug foi instalado apenas em `zechs.drive.stream.visualreview`; `zechs.drive.stream` e sua sessão/dados não foram modificados. HIG_NOTES e HIG_CONFORMANCE registram as fontes, D-01 e limites de evidência.
 
 **Limites e rubrica:** fixture verifica modal, toque, D-pad e foco, não reproduz mídia. Drive sem sessão impede confirmar Exo/MPV ao vivo, pausas/retomada, tracks, capítulos reais, AniSkip, buffering e autoplay. Avaliação do escopo exercitado: hierarquia 8,5; tipografia 8,0; espaçamento 8,0; materiais 8,5; foco 9,0; motion 8,0; consistência 8,0; performance não medida; conformidade HIG 8,0 (10 regras de interface cobertas, evidências de playback pendentes). **F6 local concluída para os caminhos da fixture; não é certificação de playback.**
+
+## F7 — Polimento e validação final (plano antes de editar)
+
+1. Reler Motion, Layout, Accessibility, Materials, Focus and selection e Typography nas referências gerais/tvOS; confirmar H-O*, H-L*, H-A5/A8/A10 e os limites de variação de fonte.
+2. Inspecionar `TvFocusRing`, dimensões de safe area, controles por ícone e efeitos completos/reduzidos em todas as telas e variantes XML relevantes, sem esconder funcionalidades.
+3. Medir strings e foco em `font_scale` 1.0, 1.3 e 2.0 no MuMu; verificar Home, Detalhes, Files, Settings, Perfis e Player, capturando regressões e restaurando a escala do sistema ao final.
+4. Auditar animações, fallback de transparência/blur, descrições de ícones e áreas de recorte; corrigir só problemas reproduzíveis e documentar limitações de Android TV/emulador.
+5. Executar `assembleDebug`, suíte unitária e checks estáticos; instalar somente a fixture separada e repetir cenários de foco/escala.
+6. Compilar também `assembleRelease` localmente, gerar release notes locais e registrar assinaturas/configuração sem publicar, criar tag ou alterar workflows.
+7. Atualizar rubrica, matriz HIG, notas e capturas; commitar F7 localmente somente após build e testes verdes e encerrar com limites objetivos de mídia real/hardware.
+
+## Execução F7 — Texto ampliado, movimento e safe areas
+
+**Achados:** `TvFocusRing`, recortes das coleções e os recursos de movimento existentes não exigiram alteração nesta rodada. O fixture foi medido com fontScale 1.0, 1.3 e 2.0 nas seis telas. Em 1.3, o hero fixo da Home ocultava ações; `TvAccessibilityLayout` passou a escalar a altura do hero e das ações com a fonte. Em 2.0, o foco continua alcançável e rolável, mas Home (rótulos/cards), Details, Files, Settings e Profiles ainda apresentam truncamento/cortes. O Player foi incluído no conjunto de capturas; ainda precisa de um ciclo dedicado de legibilidade ampliada.
+
+**D-pad e movimento:** no MuMu, os três valores globais de animação foram zerados temporariamente. RIGHT e DOWN mudaram o foco da Home; o anel ciano continuou identificável. A captura `docs/ui-audit/after-v2/f7/reduced-motion-home.png` e dump XML registram o resultado. Os valores originais foram restaurados (`animator_duration_scale=1`, transition/window=0.5). Isso testa o efeito global do emulador, não a integração nativa com Reduced Motion Android.
+
+**Validação:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou (161 testes, 0 falhas/erros/skips); checks de layouts/contraste e `git diff --check` passaram. `assembleRelease --no-daemon -PdistributionBuild` local também compilou os quatro APKs ABI. Como `local.properties` não configura `release.storeFile`, os APKs de release foram assinados com a chave DEBUG: artefatos apenas de compilação, não aptos a atualização dos releases assinados. Nenhum release/tag/workflow/GitHub foi alterado. Só o pacote `zechs.drive.stream.visualreview` foi instalado; `zechs.drive.stream` e os dados do Drive permaneceram intactos.
+
+**Limites e próximo ciclo:** comparativos de escala e XML estão em `docs/ui-audit/after-v2/f7/`. Home melhorou parcialmente em 1.3×; 2.0× ainda falha e isso impede marcar a acessibilidade tipográfica como aprovada. O Drive segue sem sessão neste ambiente e a fixture não reproduz vídeo; playback real Exo/MPV, trilhas, AniSkip, autoplay, OAuth e metadata remota continuam pendentes. F8 deve tratar escalabilidade/layout dos seis destinos e retestar no MuMu.
+
+## F8 — Reflow para texto ampliado (plano antes de editar)
+
+1. Relê FRONTEND_LOG, matriz HIG e os PDFs Layout, Typography, Accessibility, Lists and tables, Collections, Buttons e Focus and selection; preservar adaptações Apple apenas como referência.
+2. Comparar layouts base/land/port/television/sw720dp-land e rastrear cada view fixa/linha horizontal nas seis telas com dumps UIAutomator em fontScale 1.3 e 2.0.
+3. Definir correções por classe: wrap/scroll em rótulos de navegação, hero e ações; cards/rails; rows de Settings; toolbar e detalhes; arquivos e perfis; validar Player sem reduzir controles ou funcionalidades.
+4. Ajustar dimensões/constraints apenas nas variantes afetadas, mantendo targets, D-pad, hierarquia visual, dados reais de metadata e limites de viewport.
+5. Reinstalar apenas a fixture visual, testar toque e sequências D-pad nas telas em escalas 1.3/2.0 e guardar screenshot + XML antes/depois de cada correção.
+6. Rodar `assembleDebug`, `testDebugUnitTest`, checks de layout/contraste e `git diff --check`; confirmar que as settings de escala do MuMu foram restauradas.
+7. Atualizar evidência, HIG notes/conformance e rubrica; compilar `assembleRelease` local somente se necessária à validação final, registrar assinatura DEBUG, sem publicar, tag ou workflow.
+8. Fazer commit local F8 após verificação, mantendo como gaps explícitos qualquer clipping restante ou fluxo impossível sem sessão Drive.

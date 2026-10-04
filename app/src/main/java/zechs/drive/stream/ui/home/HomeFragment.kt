@@ -37,6 +37,7 @@ import zechs.drive.stream.ui.player.PlayerLauncher
 import zechs.drive.stream.utils.GlideApp
 import zechs.drive.stream.utils.MediaImageLoader
 import zechs.drive.stream.utils.ProfileManager
+import zechs.drive.stream.utils.TvAccessibilityLayout
 import zechs.drive.stream.utils.VideoPlayer
 import zechs.drive.stream.utils.ext.navigateSafe
 import zechs.drive.stream.utils.ext.resolveThemeColor
@@ -139,6 +140,12 @@ class HomeFragment : BaseFragment() {
         setupBrandLogo()
         setupBackPressedHandling()
         setupHeroAndProfile()
+        TvAccessibilityLayout.adaptHomeHero(
+            requireContext(),
+            binding.featuredHeroContainer,
+            binding.btnFeaturedPlay,
+            binding.btnFeaturedInfo
+        )
 
         binding.rvContinueWatchingShelf.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(
             requireContext(), androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false

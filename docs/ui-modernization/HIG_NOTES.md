@@ -210,3 +210,20 @@ Todos os PDFs obrigatórios da fase e os cinco PDFs transversais F0 foram relido
 
 **Conflitos desta fase:** nenhum novo conflito entre PDF e catálogo. A limitação de blur sobre `SurfaceView`/MPV permanece coberta por D-01: a janela é `0xE8` (91% opaca) quando blur está disponível e `0xF2` (95%) no fallback, com dim de fundo de 35%; a captura final do menu confirma texto legível sobre arte clara.
 
+## F7 PDF re-review — escalabilidade, movimento e foco (2026-10-04)
+
+Os PDFs Motion, Layout, Accessibility, Materials, Focus and selection e Typography foram relidos nas seções gerais e tvOS antes da rodada. Princípios exclusivos de outras plataformas Apple não foram tratados como requisitos nativos Android.
+
+| PDF | Páginas revisadas | Regras usadas nesta rodada |
+|---|---:|---|
+| Motion | 1–4 | Animação deve comunicar mudança, ser curta, cancelável e não bloquear a entrada; minimizar movimento redundante. |
+| Layout | 2–6 | Hierarquia estável, adaptação a conteúdo maior, safe area e espaço para foco ampliado sem colisão. |
+| Accessibility | 2–7 | Texto ampliável, contraste, controles alcançáveis, estado não indicado só por cor e movimento configurável. |
+| Materials | 2–6 | Superfícies translúcidas preservam legibilidade sobre mídia; contexto pode permanecer visível sem competir com texto. |
+| Focus and selection | 2–5 | Foco D-pad visível, previsível e alcançável; foco transitório não deve ser confundido com seleção persistente. |
+| Typography | 1–6, 8–10, 15–16 | Hierarquia e peso legíveis a distância, layout adaptável e redução de truncamento em tamanhos ampliados. |
+
+**Adaptação Android verificada:** com animações globais do MuMu em zero, o foco D-pad continuou visível e navegável; o teste não afirma suporte específico ao recurso de acessibilidade Reduced Motion do Android. Home passou a aumentar a altura do hero e dos botões proporcionalmente à escala de fonte para manter as ações visíveis em 1,3×. A validação em 2,0× e nas demais telas encontrou truncamento e conteúdo cortado em Home, Details, Files, Settings e Profiles; isso permanece um defeito aberto para F8, não uma conformidade presumida. Evidência reduzida: `docs/ui-audit/after-v2/f7/reduced-motion-home.png` e `reduced-motion-home.xml`; comparativos 1,0×/1,3×/2,0× e captura corrigida estão em `docs/ui-audit/after-v2/f7/`.
+
+**Conflitos desta fase:** nenhum novo. O alvo de 200% do material Apple é um critério de referência; layouts Android ainda precisam preservar conteúdo útil e não se declaram aprovados enquanto as capturas 2,0× exibirem cortes. As escalas globais de animação foram restauradas após o teste.
+

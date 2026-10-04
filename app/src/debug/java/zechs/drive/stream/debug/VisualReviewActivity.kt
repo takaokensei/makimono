@@ -19,6 +19,7 @@ import zechs.drive.stream.ui.profile.ProfileUiModel
 import zechs.drive.stream.ui.player.PlayerQuickOptions
 import zechs.drive.stream.ui.FocusedItemScroll
 import zechs.drive.stream.utils.TvFocusRing
+import zechs.drive.stream.utils.TvAccessibilityLayout
 
 /** Renders production XML and adapters with explicit fixtures, without touching account or Room. */
 class VisualReviewActivity : Activity(), zechs.drive.stream.ui.player.PlayerModalHost {
@@ -87,6 +88,12 @@ class VisualReviewActivity : Activity(), zechs.drive.stream.ui.player.PlayerModa
     }
     private fun home() {
         setContentView(R.layout.fragment_home)
+        TvAccessibilityLayout.adaptHomeHero(
+            this,
+            findViewById(R.id.featuredHeroContainer),
+            findViewById(R.id.btnFeaturedPlay),
+            findViewById(R.id.btnFeaturedInfo)
+        )
         show(R.id.featuredHeroContainer);show(R.id.shelfHeaderRow);show(R.id.rvContinueWatchingShelf)
         findViewById<View>(R.id.containerViewToggle)?.visibility=View.GONE
         findViewById<View>(R.id.containerItemCount)?.visibility=View.GONE
