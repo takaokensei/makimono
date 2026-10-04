@@ -433,6 +433,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                 override fun isControllerVisible(): Boolean = controller.root.isVisible
                 override fun getTouchIgnoredViews(): List<View> = listOf(
                     controller.playerToolbar,
+                    controller.btnBack,
                     controller.titleBlock,
                     controller.controlsScrollView,
                     controller.linearLayout2,

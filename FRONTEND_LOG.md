@@ -649,3 +649,21 @@ Este documento é a memória persistente dos ciclos de auditoria, testes visuais
 **Build e testes:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild --max-workers=1` passou (171 testes, 0 falhas/erros/ignorados). A primeira tentativa Windows falhou ao resolver o classpath do worker; `TEMP/TMP=C:\temp`, `GRADLE_USER_HOME=G:\` (atalho ao cache existente) e checkout em `X:\` eliminaram o problema do caminho com caractere acentuado. Uma tentativa WSL/Linux anterior parou na detecção do SDK Windows e foi descartada; a execução aprovada foi inteiramente pelo Gradle/JDK Windows.
 
 **Estado:** correção do fixture compilada, validada manualmente e coberta pela suíte existente. `zechs.drive.stream` permaneceu instalado na versão 1.6.4.1; só o pacote isolado `zechs.drive.stream.visualreview` foi substituído. Nenhuma credencial foi lida; `local.properties` não foi editado. Nenhum release, tag, commit ou push foi criado.
+
+## C1.1 — delegação de toque explícita na saída dos players (plano antes de editar)
+
+1. Confrontar o contrato da seta de saída e do BACK nos players ExoPlayer/MPV.
+2. Verificar como o detector de gestos delega toques em elementos interativos visíveis.
+3. Incluir explicitamente as setas `btnBack` nos alvos delegados em ambos os motores e remover a dependência da visibilidade reportada pelo controller nativo; preservar gestos no vídeo e o callback de saída.
+4. Compilar e rodar unitários/instrumentados; validar toque, foco D-pad e BACK em camadas no Exo isolado.
+5. Registrar o limite: a sessão foi sem arquivo/ID de Drive e não valida reprodução nem o percurso de saída no MPV ao vivo.
+
+### Execução C1.1
+
+**Falha:** o detector global consumia toques antes da hierarquia Android se `PlayerView.isControllerVisible()` estivesse falso, mesmo com controles customizados visíveis. O sintoma era a seta esconder o OSD em vez de encerrar o player. O MPV usava a mesma regra compartilhada. **Correção:** o helper agora verifica os limites dos controles interativos visíveis em todo ACTION_DOWN, independentemente do estado do controller nativo; ambos os players incluem diretamente a seta de voltar na lista delegada.
+
+**MuMu x86_64, 1920×1080:** toque na seta fechou `PlayerActivity`; DPAD_UP focou `btnBack` e DPAD_CENTER retornou à fixture; BACK dispensou a HUD na primeira pressão e retornou à fixture na segunda. Evidência: `docs/ui-audit/after-v2/c1/`. O Exo foi aberto sem arquivo ou sessão Drive; o MPV não foi exercitado com mídia real. O pacote principal `zechs.drive.stream` e seus dados ficaram instalados e intocados; só a variante debug `.visualreview` foi instalada.
+
+**Verificação:** `assembleDebug testDebugUnitTest connectedDebugAndroidTest --no-daemon -PdistributionBuild --max-workers=1 --console=plain` passou no Windows/Gradle com o MuMu conectado; suíte unitária com 171 testes e instrumentada com 6 testes, 0 falhas. `ExampleInstrumentedTest` agora compara com `BuildConfig.APPLICATION_ID`, respeitando o sufixo isolado da variante debug.
+
+**Limite:** o screenshot do SurfaceView sem mídia é preto e não representa OSD funcional; por isso não foi versionado. A validação de toque e saída usa Activity/foco e hierarquia do Android, não playback end-to-end. Nenhuma credencial, release, tag ou push foi usado/criado.

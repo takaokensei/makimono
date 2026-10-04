@@ -154,19 +154,19 @@ class PlayerGestureHelper(
             return false
         }
 
-        // If controller is visible and user clicked on an interactive view, let system handle it
+        // Let visible interactive overlays receive their own touch events before interpreting a
+        // tap as a video gesture. Custom player controls can remain visible while PlayerView
+        // reports its built-in controller as hidden, so controller visibility is not a safe gate.
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
             isInteractingWithControls = false
-            if (callback.isControllerVisible()) {
-                val ignored = callback.getTouchIgnoredViews()
-                val hitRect = Rect()
-                for (v in ignored) {
-                    if (v.isVisible) {
-                        v.getGlobalVisibleRect(hitRect)
-                        if (hitRect.contains(event.rawX.toInt(), event.rawY.toInt())) {
-                            isInteractingWithControls = true
-                            return false
-                        }
+            val ignored = callback.getTouchIgnoredViews()
+            val hitRect = Rect()
+            for (v in ignored) {
+                if (v.isVisible) {
+                    v.getGlobalVisibleRect(hitRect)
+                    if (hitRect.contains(event.rawX.toInt(), event.rawY.toInt())) {
+                        isInteractingWithControls = true
+                        return false
                     }
                 }
             }

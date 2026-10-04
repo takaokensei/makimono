@@ -491,6 +491,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                 override fun isControllerVisible(): Boolean = playerView.isControllerVisible
                 override fun getTouchIgnoredViews(): List<View> = listOf(
                     toolbar,
+                    btnBack,
                     titleBlock,
                     controlsScrollView,
                     progressViewGroup,

@@ -1,6 +1,6 @@
 # Makimono — plano contínuo de qualidade orientado pela HIG
 
-Data: 04/10/2026. Base revisada: `bb71c27`. Status: C0.1 corrigido, build e 171 testes unitários aprovados; revalidação funcional isolada no fixture concluída.
+Data: 04/10/2026. Base revisada: `bb71c27`. Status: C0.1 corrigido; C1.1 corrigido e validado em build, 171 unitários, 6 instrumentados e percurso de saída Exo isolado no MuMu.
 
 ## 1. Objetivo e autoridade
 
@@ -84,6 +84,12 @@ Prioridade: P0. Dependência: C0. Correspondência: F6; H-R*, H-F5, H-PV*, H-V1.
 Arquivos: `PlayerActivity.kt`, `MPVActivity.kt`, `PlayerViewModel.kt`, `PlaybackCoordinator.kt`, `PlayerControllerVisibility.kt`, helpers de input/modal e testes relacionados.
 
 Aceite: repetir os percursos por toque e D-pad em ambos os engines; saída sempre alcançável, progresso recuperado, sem dupla ação, foco oculto ou bloqueio. Evidência separada de fixture, mídia local e Drive.
+
+#### C1.1 — toque na saída não pode virar gesto de vídeo (concluído; MPV ao vivo pendente)
+
+**Prioridade:** P0, saída bloqueada. O detector compartilhado só deixava o toque seguir para as views quando o controller nativo reportava visibilidade; HUDs customizadas podem estar visíveis sem essa flag. Foram adicionados alvos diretos para `btnBack` nos dois motores e a filtragem passou a respeitar todos os controles interativos visíveis.
+
+**Aceite entregue:** no Exo sem mídia, toque fechou a Activity, DPAD focou a seta e OK saiu, BACK ocultou a HUD antes de sair; build e as 6 instrumentações passaram. O MPV recebeu a correção comum e exclusão direta da seta, mas playback/saída com stream real ainda depende de fixture de mídia que não foi configurada. Evidências e limite em `docs/ui-audit/after-v2/c1/`.
 
 ### C2 — sessão, persistência e integridade dos metadados
 
