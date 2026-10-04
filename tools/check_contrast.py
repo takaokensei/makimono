@@ -57,12 +57,17 @@ def main() -> int:
         if ratio < 4.5:
             failures.append(f"{palette}.accent_primary with on_primary is below 4.5:1")
 
+        focused_ratio = contrast(accent, surface)
+        print(f"{palette:13} {'focused_cta_text':17} {focused_ratio:5.2f}:1  (surface fill)")
+        if focused_ratio < 4.5:
+            failures.append(f"{palette}.accent_primary with bg_surface is below 4.5:1")
+
     if failures:
         print("\nContrast failures:")
         for failure in failures:
             print(f"- {failure}")
         return 1
-    print("\nAll primary/secondary text combinations meet 7:1; action text meets 4.5:1.")
+    print("\nPrimary/secondary text meets 7:1; default and focused action text meet 4.5:1.")
     return 0
 
 

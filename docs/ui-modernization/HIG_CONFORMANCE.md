@@ -259,3 +259,13 @@ Header passa a ficar visível nos tabs Início/Catálogo/Favoritos, sem tocar no
 | Build/testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` via Ubuntu WSL/JDK 21. | 163 testes, 0 falhas/erros/skips |
 
 Checks de cor/contraste/diff passaram, `fontScale` ficou em 1.0 e `local.properties` foi restaurado. O pacote principal não foi atualizado; o APK integrado foi verificado em `zechs.drive.stream.visualreview`. Configurações foi compilado com o mesmo fallback, sem manipular nem reinstalar o app principal.
+
+## F19 — CTA da Home com estado de foco de alto contraste
+
+| Regra | Evidência | Status |
+|---|---|---|
+| H-F2–F4, H-C1 | `f19-home-play-focused.png`: CTA focado muda para superfície escura e tinta/anel ciano; `f19-home-play-focused.xml` confirma foco em Assistir Agora. `f19-home-info-focused.xml` confirma navegação horizontal para Detalhes. | OK (MuMu, D-pad) |
+| H-A5, H-T1 | `tools/check_contrast.py` verifica tinta ciano sobre superfície em todas as paletas (mínimo 4,89:1, Dracula) e texto escuro no botão primário (mínimo 7,68:1, Tokyo Night). | OK (seis temas) |
+| Build/testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` via Ubuntu WSL/JDK 21. | 163 testes, 0 falhas/erros/skips |
+
+O pacote principal e a sessão Drive não foram atualizados ou removidos. `fontScale` permaneceu 1.0; checks de layout, contraste e diff passaram.

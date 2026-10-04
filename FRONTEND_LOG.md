@@ -557,3 +557,21 @@ Este documento é a memória persistente dos ciclos de auditoria, testes visuais
 **Validação integrada:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou via Ubuntu WSL/JDK 21: 163 testes, 0 falhas/erros/skips. `tools/check_layout_colors.py`, `tools/check_contrast.py` e `git diff --check` passaram. APK instalado apenas como `zechs.drive.stream.visualreview`; o pacote principal preservou sua versão e seus dados. `local.properties` manteve SHA-256 `6F8A9100E30E897E01CF8E5B9E1DAA76C4D77DDCE257BB4E266AE9623C5A532B`.
 
 **Limite:** a fixture reproduz o estado sem avatar salvo com conectividade disponível; comportamento do CDN totalmente offline foi conferido pelo placeholder configurado no Glide, sem simular desconexão. Os dados dos perfis reais permaneceram intactos.
+
+## F19 — Estado visual da ação principal da Home (plano antes de editar)
+
+1. Reproduzir o CTA `Assistir agora` focado no MuMu e rastrear fundo, tinta do texto/ícone e foco nativo em cada variante de layout.
+2. Substituir a superfície branca fixa por cores semânticas do tema; manter contraste do conteúdo e tornar o foco perceptível em todas as paletas.
+3. Atualizar os layouts usados em TV, telas grandes, paisagem e layout base.
+4. Recompilar, instalar somente `zechs.drive.stream.visualreview`, conferir screenshot/foco D-pad, scripts de contraste/cores e testes.
+5. Não tocar no pacote principal, na sessão Drive ou em dados locais; commitar localmente após validação.
+
+### Execução F19 — CTA da Home por estado e tema
+
+**Causa:** `btn_hero_play_bg` usava branco como preenchimento padrão em todas as paletas; o foco nativo ficava visualmente desconectado do ciano/azul. Uma primeira troca para o tom secundário criava contraste insuficiente no tema Estuary, então essa opção foi descartada.
+
+**Correção:** CTA não focado permanece preenchido com `colorAccentPrimary` e tinta `colorOnPrimary`. No foco, passa para `colorBgSurface`, com borda e texto/ícone em `colorAccentPrimary`. Os filhos duplicam o estado do container para aplicar também a tinta focada. Estados de toque e ícone/texto acompanham o mesmo par de cores. Layout base, TV, paisagem e tela larga usam os tokens semânticos.
+
+**MuMu x86_64, 1920×1080:** D-pad moveu o foco de Assistir Agora para Detalhes (`f19-home-info-focused.xml`) e de volta para Assistir Agora (`f19-home-play-focused.xml`). A captura focada mostra superfície escura e anel/texto ciano (`f19-home-play-focused.png`); quando o foco sai, o CTA volta ao preenchimento ciano. A escala do dispositivo permaneceu em 1.0.
+
+**Validação:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou; 163 testes, 0 falhas/erros/skips. `tools/check_layout_colors.py`, `tools/check_contrast.py` e `git diff --check` passaram. O script agora verifica também a tinta ciano sobre superfície nos seis temas; menor resultado focado 4,89:1 (Dracula), e 9,82:1 (Estuary). Só `zechs.drive.stream.visualreview` recebeu o APK. `local.properties` preservou SHA-256 `6F8A9100E30E897E01CF8E5B9E1DAA76C4D77DDCE257BB4E266AE9623C5A532B`.
