@@ -215,3 +215,14 @@ Checks de cores, contraste e diff passaram. FontScale voltou a 1.0; APK aplicado
 | Build e testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` via Ubuntu WSL/JDK 21. | 163 testes, 0 falhas/erros |
 
 `check_layout_colors.py`, `check_contrast.py` e `git diff --check` passaram. Apenas `zechs.drive.stream.visualreview` foi atualizado no MuMu. `local.properties` e fontScale foram restaurados; app principal/dados mantidos intactos.
+
+## F15 — Sair e recuperar controles no player
+
+| Regra | Evidência | Status |
+|---|---|---|
+| H-PV1–PV6, H-R1–R5 | `f15-exo-actual.xml`: seta clicável; `f15-exo-dpad-focus.xml`: foco no `btnBack`; teste real da Activity confirmou que toque/CENTER saem com HUD visível. | OK (Exo sem stream) |
+| H-PV2, H-R3 | BACK oculta HUD e a ação seguinte encerra. Toque no vídeo com HUD oculto revela os controles após auto-hide de 4,5 s. | OK (Exo sem stream) |
+| MPV | Handlers e navegação foram inspecionados, mas o engine termina no pacote isolado sem token Drive antes de renderizar HUD. | Pendente (sem sessão de teste) |
+| Build e testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` pelo Ubuntu WSL/JDK 21. | Passou; suíte sem falhas |
+
+Nenhum arquivo de mídia/Drive ou credencial foi usado. Somente o pacote visualreview foi instalado.

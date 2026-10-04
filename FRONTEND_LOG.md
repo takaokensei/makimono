@@ -473,3 +473,23 @@ Este documento é a memória persistente dos ciclos de auditoria, testes visuais
 **Validação:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou via Ubuntu WSL/JDK 21; relatório XML: 163 testes, zero falhas/erros. `check_layout_colors.py`, `check_contrast.py` e `git diff --check` passaram. APK Debug reinstalado somente em `zechs.drive.stream.visualreview`; `local.properties` foi restaurado.
 
 **Limites:** o harness da fixture não conecta ações aos controles de Settings; portanto, seleção de tema/player, editor de legendas, limpeza de cache, exportação/restauração, OAuth/MAL e confirmação de sair não foram acionados. Nenhum dado ou sessão do pacote principal foi alterado. Nenhum release, tag, workflow ou push foi feito.
+
+## F15 — Sair do player por toque e D-pad (plano antes de editar)
+
+1. Inspecionar handlers da seta, `dispatchTouchEvent`, atalhos de foco e `handleBackNavigation` em ExoPlayer e MPV.
+2. Abrir a Activity real do ExoPlayer por uma rota interna de Debug, sem `fileId`, stream ou token; testar seta quando OSD está visível, foco no botão e CENTER.
+3. Distinguir toque com OSD oculto (revelar controles), seta com OSD visível (sair), e BACK (ocultar OSD primeiro, sair na próxima ação).
+4. Conferir implementação e layout equivalente de MPV sem copiar sessão/token do app principal; registrar limite se a fixture isolada não conseguir abrir o engine.
+5. Capturar os estados e repetir toque/D-pad após compilação; preservar funcionalidades e não mudar o comportamento de foco/overlays.
+6. Rodar `assembleDebug testDebugUnitTest`, checks de diff, reinstalar apenas visualreview e restaurar MuMu/local.properties.
+7. Atualizar log/HIG; commit local somente se o comportamento estiver validado; sem release/tag/workflow/push.
+
+### Execução F15 — seta de saída funciona com OSD visível
+
+**Inspeção:** ExoPlayer e MPV conectam `btnBack` a `finish()`. Em ambos, CENTER no botão focado também encerra; BACK fecha overlay/OSD antes e encerra quando não há mais HUD visível. O Exo mantém timeout de 4,5 s para auto-ocultar controles.
+
+**MuMu x86_64, 1920×1080:** uma Activity real `PlayerActivity` foi aberta dentro da fixture, sem arquivo, mídia, autenticação ou request ao Drive. UIAutomator confirmou `btnBack` clicável em `[63,68][140,145]` e D-pad ↑×2 focou esse botão (`f15-exo-actual.xml`, `f15-exo-dpad-focus.xml`). Com OSD visível, tocar a seta e CENTER em `btnBack` finalizaram a Activity e retornaram à fixture. Com BACK, a primeira ação oculta o OSD e a seguinte sai. Quando o OSD já expirou, um toque no vídeo apenas revela a HUD; a seta precisa estar visível para funcionar como alvo de saída.
+
+**Conclusão desta reprodução:** não encontrei falha na seta da versão compilada atual; o comportamento descrito não se reproduziu quando o botão está visível e ativo. O app em produção pode estar usando um build anterior. MPV foi verificado estaticamente: a fixture isolada não tem sessão Drive e encerra o engine antes de renderizar controles, então toque real no MPV permanece pendente sem usar o token da conta principal.
+
+**Validação:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou via Ubuntu WSL/JDK 21. APK atualizado instalado somente em `zechs.drive.stream.visualreview`; pacote principal/sessão preservados. Não houve alteração de player em release.

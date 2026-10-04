@@ -62,6 +62,7 @@ class VisualReviewActivity : Activity(), zechs.drive.stream.ui.player.PlayerModa
             "details" -> details()
             "details_episode_focus" -> details(focusEpisode = true)
             "player" -> player()
+            "player_exo_activity" -> launchActualPlayer(zechs.drive.stream.ui.player.PlayerActivity::class.java)
             "settings" -> settingsScreen()
             else -> home()
         }
@@ -320,6 +321,12 @@ class VisualReviewActivity : Activity(), zechs.drive.stream.ui.player.PlayerModa
         text(com.google.android.exoplayer2.ui.R.id.exo_position,"12:45");text(com.google.android.exoplayer2.ui.R.id.exo_duration,"24:10")
         findViewById<com.google.android.exoplayer2.ui.DefaultTimeBar>(com.google.android.exoplayer2.ui.R.id.exo_progress).apply {
             setDuration(1450000);setPosition(765000)
+        }
+    }
+    private fun launchActualPlayer(activityClass: Class<out Activity>) {
+        setContentView(View(this))
+        window.decorView.post {
+            startActivity(android.content.Intent(this, activityClass))
         }
     }
     private fun settingsScreen() {

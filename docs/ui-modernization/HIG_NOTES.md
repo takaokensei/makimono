@@ -289,3 +289,11 @@ Focus and selection pp. 1–3, Remotes pp. 1–3, Accessibility pp. 2–5, Setti
 **Aplicação:** o cartão de perfil aceita foco em touch mode no caminho TV antes do `requestFocus()` inicial; `focusedByDefault` cobre as variantes XML como fallback. O primeiro item não exige um DOWN extra para localizar o começo da tela. Em escala ampliada, o D-pad rola o cartão final até o viewport sem ocultar o conteúdo.
 
 **Validação e limite:** MuMu confirmou foco inicial e percurso até Sair a 1×/2× usando a fixture isolada; evidência em `docs/ui-audit/after-v2/f11/f14-*`. O harness não liga os listeners de preferências nem de conta, então ações, diálogos e OAuth reais não foram acionados. Nenhuma ação de logout/cache foi usada.
+
+## F15 PDF re-review — saída do player e uso do controle remoto (2026-10-04)
+
+Playing video pp. 1–4, Remotes pp. 1–3, Focus and selection pp. 1–3, Buttons pp. 1–4 e Going full screen pp. 1–3 foram reconsultados. Uma ação de sair precisa continuar distinta do toque usado para revelar/ocultar a HUD; o alvo deve ser focável e a transição de tela cheia deve preservar um caminho de retorno.
+
+**Aplicação/resultado:** na Activity ExoPlayer atual, a seta encerra a tela quando visível, CENTER segue o foco até ela, e BACK oculta OSD antes de encerrar. A Activity real foi exercitada sem stream no pacote visualreview. A reprodução relatada não ocorreu nessa versão compilada.
+
+**Limite:** MPV recebeu inspeção estática dos mesmos handlers, mas não tem token Drive dentro da fixture isolada e encerra antes de exibir o OSD. Reprodução de arquivo real nos dois engines permanece pendente; a conta da aplicação principal não foi usada.
