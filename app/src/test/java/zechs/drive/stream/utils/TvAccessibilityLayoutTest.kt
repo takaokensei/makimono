@@ -2,6 +2,7 @@ package zechs.drive.stream.utils
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import zechs.drive.stream.R
 
 class TvAccessibilityLayoutTest {
     @Test
@@ -24,6 +25,9 @@ class TvAccessibilityLayoutTest {
         assertEquals(300, TvAccessibilityLayout.filesSearchWidthDp(1f))
         assertEquals(360, TvAccessibilityLayout.filesSearchWidthDp(1.3f))
         assertEquals(420, TvAccessibilityLayout.filesSearchWidthDp(2f))
+        assertEquals(R.string.search_files_hint, TvAccessibilityLayout.filesSearchHintResId(1.3f, hasNavigationRail = true))
+        assertEquals(R.string.search_files_hint_large, TvAccessibilityLayout.filesSearchHintResId(2f, hasNavigationRail = true))
+        assertEquals(R.string.search_files_hint, TvAccessibilityLayout.filesSearchHintResId(2f, hasNavigationRail = false))
     }
 
     @Test

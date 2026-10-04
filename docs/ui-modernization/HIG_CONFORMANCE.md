@@ -193,3 +193,14 @@ Checks: `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou
 | Build e testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` via Ubuntu WSL/JDK 21. | 167 testes, 0 falhas/erros/skips |
 
 APK instalado somente em `zechs.drive.stream.visualreview`; fontScale retornou a 1.0. O app principal/dados permaneceram intactos. OAuth/Drive e reprodução real não fazem parte da fixture.
+
+## F13 — hint da busca Files com texto ampliado
+
+| Regra | Evidência | Status |
+|---|---|---|
+| H-S1–S4, H-A5 | `f13-1.0.png`, `f13-1.3.png`, `f13-2.0.png`: hint completo; em 2×, TV usa “Buscar nesta pasta…”; 1×/1.3× mantêm “Pesquisar neste diretório…”. | OK (fixture visual; 1×/1.3×/2×) |
+| H-F2–F4, H-R3 | `f13-final-focus.xml`: RIGHT na busca vazia foca toggle; `f13-final-row.xml`: CENTER e DOWN chegam ao primeiro item em 2×. | OK (fixture/D-pad) |
+| H-S1, H-A5 | Teste cobre a escolha compacta só com rail e mantém a dica original sem rail. | OK (unidade) |
+| Build e testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` pelo Ubuntu WSL/JDK 21. | 167 testes, 0 falhas/erros/skips |
+
+Checks de cores, contraste e diff passaram. FontScale voltou a 1.0; APK aplicado apenas à fixture visualreview.

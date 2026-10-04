@@ -273,3 +273,11 @@ Search fields pp. 1–2, Searching pp. 1–2, Focus and selection pp. 1–3, Acc
 **Aplicado e validado:** Limpar retorna foco/cursor ao campo `etSearch`. MuMu comprovou a rota de busca, Limpar, Grade/Lista e primeira linha por D-pad em 1× e 2×, com fixture e dumps/screenshot em `docs/ui-audit/after-v2/f11/f12-*`.
 
 **Limite encontrado:** em 2× o placeholder textual ultrapassa a largura disponível e é elidido antes do fim. O campo continua funcional; a dica precisa ficar mais concisa sem reduzir tipografia. Fica planejado para F13.
+
+## F13 PDF re-review — busca em tamanho de texto ampliado (2026-10-04)
+
+Search fields pp. 1–2, Typography pp. 1–6 e 15–16, Accessibility pp. 2–5, Layout pp. 2–6 e Focus and selection pp. 1–5 foram reconsultados. A dica deve identificar a ação e caber no espaço responsivo sem redução do tamanho da fonte; quando a largura disponível depende da composição com rail, o texto auxiliar pode ser mais conciso nesse layout.
+
+**Aplicação e verificação:** `TvAccessibilityLayout` escolhe “Buscar nesta pasta…” somente em 1.8× ou maior e se a tela tem rail. O MuMu mostrou a dica completa nas variantes com rail a 1.0×, 1.3× e 2.0×. O retrato mantém a dica longa independentemente do tamanho da fonte. A trilha D-pad busca → alternância → primeira linha foi repetida em 2×; screenshots/XML estão em `docs/ui-audit/after-v2/f11/f13-*`.
+
+**Conflitos:** nenhum; placeholder curto mantém o escopo local da busca no contexto da pasta atual e não altera a query ou resultados.

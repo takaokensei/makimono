@@ -67,7 +67,10 @@ object TvAccessibilityLayout {
                 }
             }
         }
-        searchInput?.maxLines = 1
+        searchInput?.apply {
+            maxLines = 1
+            setHint(filesSearchHintResId(fontScale, hasNavigationRail = navigationRail != null))
+        }
     }
 
     fun filesRailWidthDp(fontScale: Float): Int = when {
@@ -81,6 +84,13 @@ object TvAccessibilityLayout {
         fontScale >= 1.3f -> 360
         else -> 300
     }
+
+    fun filesSearchHintResId(fontScale: Float, hasNavigationRail: Boolean): Int =
+        if (hasNavigationRail && fontScale >= 1.8f) {
+            R.string.search_files_hint_large
+        } else {
+            R.string.search_files_hint
+        }
 
     fun adaptDetailsSynopsis(context: Context, synopsis: TextView?) {
         val fontScale = context.resources.configuration.fontScale

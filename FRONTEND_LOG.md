@@ -443,3 +443,11 @@ Este documento é a memória persistente dos ciclos de auditoria, testes visuais
 **Build/checks:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou via Ubuntu WSL/JDK 21: 167 testes, 0 falhas/erros/skips. `check_layout_colors.py`, `check_contrast.py` e `git diff --check` passaram. APK Debug copiado/instalado somente em `zechs.drive.stream.visualreview`; `local.properties` foi restaurado. Nenhuma release, tag, workflow ou publicação foi alterada.
 
 **Limite:** a ação de SignIn está ligada à tela existente; a fixture comprovou apresentação e foco do botão, enquanto destino e listener foram conferidos no código, sem clicar para disparar uma autenticação real. OAuth e o Drive da conta real não foram usados nem autenticados. Portanto, login, refresh-token, retorno de navegação e arquivos/paginação remotos continuam pendentes de teste com conta de teste ou sessão já acessível. O pacote principal e seus dados foram preservados.
+
+### Execução F13 — dica de busca responsiva ao espaço
+
+**Correção:** a dica do campo Files mantém “Pesquisar neste diretório…” em 1.0× e 1.3×. Em 1.8× ou maior, somente quando existe rail lateral (TV/landscape), usa a versão concisa “Buscar nesta pasta…”. O portrait sem rail conserva a dica original. A fonte e a query digitada não mudam. `TvAccessibilityLayoutTest` cobre limites e ausência de rail.
+
+**MuMu x86_64, 1920×1080:** capturas a 1×, 1.3× e 2× (`f13-1.0.png`, `f13-1.3.png`, `f13-2.0.png`) mostram o hint integral nas três escalas; a 2× a mensagem curta cabe entre lupa e alternância. No APK da compilação final, com fonte a 2×, → a partir da busca focou `btnToggleGrid`, CENTER seguido de ↓ focou a primeira linha (`f13-final-focus.xml`, `f13-final-row.xml`, `f13-final.png`). FontScale voltou a 1.0.
+
+**Build/checks:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou via Ubuntu WSL/JDK 21: 167 testes, zero falhas/erros/skips. `check_layout_colors.py`, `check_contrast.py` e `git diff --check` passaram. APK Debug instalado apenas como `zechs.drive.stream.visualreview`; `local.properties` foi restaurado. Avisos de assinatura DEBUG/depreciações permanecem. Nenhum release, tag, workflow ou publicação foi alterada.
