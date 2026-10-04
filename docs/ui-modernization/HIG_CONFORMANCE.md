@@ -279,3 +279,12 @@ O pacote principal e a sessão Drive não foram atualizados ou removidos. `fontS
 | Build/testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` via Ubuntu WSL/JDK 21. | 171 testes, 0 falhas/erros/skips |
 
 Home compacta somente em telas de TV/largas; celular preserva altura de destaque existente. O APK foi instalado apenas em `zechs.drive.stream.visualreview`; conta Drive e dados do pacote principal não foram alterados. Sem release ou publicação nesta rodada.
+## F21 — CTA focada da tela de detalhes
+
+| Regra | Evidência | Status |
+|---|---|---|
+| H-F2–F4, H-C1 | `f21-details-after-focused.png/xml`: ação primária focada com superfície escura, anel/texto/ícone ciano. `f21-details-after-normal.png`: CTA normal em ciano e card de episódio focado. | OK (MuMu, D-pad) |
+| H-L1–L4, H-R3 | `f21-details-before.png`: hero/backdrop dentro da tela. DOWN chega à temporada e ao primeiro episódio; UP volta à temporada; RIGHT move para o episódio seguinte. | OK (fixture) |
+| Build/testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` via Ubuntu WSL/JDK 21. | 171 testes, zero falhas/erros/skips |
+
+A fixture não reproduz dados do Drive nem uma stream autenticada; conteúdo de teste foi usado somente para avaliação visual. Apenas o pacote `zechs.drive.stream.visualreview` recebeu o APK.

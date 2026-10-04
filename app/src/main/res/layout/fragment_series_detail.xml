@@ -496,13 +496,15 @@
                         android:layout_width="22dp"
                         android:layout_height="22dp"
                         android:contentDescription="@null"
+                        android:duplicateParentState="true"
                         android:src="@drawable/ic_play_24"
-                        app:tint="@color/layout_literal_03121c" />
+                        android:tint="@color/detail_primary_action_foreground" />
 
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="10dp"
+                        android:duplicateParentState="true"
                         android:orientation="vertical">
 
                         <TextView
@@ -511,9 +513,10 @@
             android:id="@+id/tvPrimaryActionTitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:duplicateParentState="true"
                             android:fontFamily="sans-serif-bold"
                             android:includeFontPadding="false"
-                            android:textColor="@color/layout_literal_03121c"
+                            android:textColor="@color/detail_primary_action_foreground"
                             android:textSize="13sp"
                             tools:text="Continuar Assistindo" />
 
@@ -522,9 +525,10 @@
             android:id="@+id/tvPrimaryActionSubtitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:duplicateParentState="true"
                             android:fontFamily="sans-serif"
                             android:includeFontPadding="false"
-                            android:textColor="@color/layout_literal_164451"
+                            android:textColor="@color/detail_primary_action_foreground"
                             android:textSize="10sp"
                             tools:text="Ep. 4 • 14:28 restante" />
 

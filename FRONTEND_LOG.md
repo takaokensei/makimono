@@ -593,3 +593,22 @@ Este documento é a memória persistente dos ciclos de auditoria, testes visuais
 **MuMu x86_64, 1920×1080:** comparação `f20-home-before.png` → `f20-home-after.png`. Hero passou de 672px para 511px (`[224,98][1920,609]`); “Continuar assistindo” e os cards completos cabem (`rvContinueWatchingShelf=[224,685][1920,951]`), com “Em alta / Catálogo” visível abaixo. D-pad direita leva de Assistir agora a Detalhes (`f20-home-right.xml`); para baixo leva ao primeiro card (`f20-home-down.xml`), cujo anel ciano está em `f20-home-card-focused.png`. Fixture verificada pelo pacote `zechs.drive.stream.visualreview`; `fontScale=1.0`.
 
 **Validação:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou via Ubuntu WSL/JDK 21: 171 testes, 0 falhas/erros/skips. `tools/check_layout_colors.py`, `tools/check_contrast.py` e `git diff --check` passaram. `local.properties` preservou SHA-256 `6F8A9100E30E897E01CF8E5B9E1DAA76C4D77DDCE257BB4E266AE9623C5A532B`. Nenhum release foi criado ou enviado; o pacote principal e sua sessão/dados permaneceram intactos.
+## F21 — CTA da tela de detalhes e contenção do hero (plano antes de editar)
+
+1. Abrir a tela de detalhes na fixture e verificar bounds do backdrop, poster, botões, temporadas e cards de episódio.
+2. Testar foco inicial e caminho D-pad: ação primária → temporadas → episódios; confirmar foco de retorno ao subir.
+3. Corrigir diferenças de cor/estado do CTA que prejudiquem hierarquia e contraste, mantendo layout e recursos da tela.
+4. Compilar/testar, instalar somente visualreview no MuMu e conferir estados focado e normal com screenshot/XML.
+5. Registrar resultado/limite da fixture e fazer commit local apenas depois da validação.
+
+### Execução F21 — CTA ciano consistente na tela de detalhes
+
+**Auditoria visual:** no MuMu, o poster, o hero/backdrop, a fileira de temporadas e os cards ficaram contidos no viewport; não reproduzi vazamento de imagem para fora do hero. D-pad DOWN partiu de `btnPrimaryAction`, chegou à aba de temporadas e, com mais um DOWN, ao primeiro episódio; UP voltou à temporada (`f21-details-down.xml`, `f21-details-down2.xml`, `f21-details-up.xml`). RIGHT moveu o foco ao próximo episódio (`f21-details-right.xml`).
+
+**Falha encontrada:** `detail_primary_action_bg` era branco fixo em todas as paletas e não seguia os estados da Home. Ao aplicar superfície escura no foco, os descendentes dentro de uma coluna interna herdavam a cor errada e ficavam quase invisíveis.
+
+**Correção:** CTA de detalhes agora usa `colorAccentPrimary` como preenchimento normal/pressionado e `colorBgSurface` com contorno ciano no foco. Texto e ícone usam `colorOnPrimary` no normal e `colorAccentPrimary` focados; o contêiner interno propaga corretamente o estado aos labels. Layout base e paisagem foram atualizados sem alterar ações, medidas ou recursos.
+
+**MuMu x86_64, 1920×1080:** `f21-details-before.png` e `f21-details-after-focused.png` mostram o antes/depois do CTA; `f21-details-after-normal.png` mostra o estado fora de foco com card de episódio focado. `f21-details-after-focused.xml` confirma foco na ação primária; após dois DOWN, `f21-details-after-normal.xml` confirma foco em `cardEpisodeItem`. Fixture usada: `zechs.drive.stream.visualreview`, sem chamada ao Drive.
+
+**Validação:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou via Ubuntu WSL/JDK 21: 171 testes, zero falhas/erros/skips. `tools/check_layout_colors.py`, `tools/check_contrast.py` e `git diff --check` passaram; menor contraste de CTA focado permanece 4,89:1 na paleta Dracula. `local.properties` foi restaurado ao SHA-256 `6F8A9100E30E897E01CF8E5B9E1DAA76C4D77DDCE257BB4E266AE9623C5A532B`. Nenhum release/tag/push foi feito e o pacote principal permaneceu intacto.
