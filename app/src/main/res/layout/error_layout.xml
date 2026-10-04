@@ -23,15 +23,28 @@
         app:drawableTopCompat="@drawable/ic_error_72" />
 
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnRetry"
+        android:id="@+id/btnConnectDrive"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
         android:fontFamily="@font/inter"
-        android:text="@string/retry"
+        android:text="@string/connect_google_drive"
         android:textColor="?attr/colorBgBase"
+        android:visibility="gone"
         app:backgroundTint="?attr/colorAccentPrimary"
         app:cornerRadius="8dp"
+        tools:visibility="visible" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnRetry"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:fontFamily="@font/inter"
+        android:text="@string/retry"
+        android:textColor="?attr/colorTextPrimary"
+        app:strokeColor="?attr/colorTextSecondary"
         android:visibility="gone"
         tools:visibility="visible" />
 

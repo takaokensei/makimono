@@ -163,7 +163,7 @@ class DriveRepositoryTest {
 
         val result = repo.getFiles(query = "trashed=false", pageToken = null, pageSize = 25)
         assertTrue(result is Resource.Error)
-        assertEquals("Cliente do Google Drive não configurado. Conecte sua conta em Configurações.", result.message)
+        assertEquals("Conecte sua conta do Google Drive para continuar.", result.message)
     }
 
     @Test

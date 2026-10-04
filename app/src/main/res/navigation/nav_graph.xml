@@ -40,6 +40,9 @@
         <action
             android:id="@+id/action_filesFragment_to_seriesDetailFragment"
             app:destination="@id/seriesDetailFragment" />
+        <action
+            android:id="@+id/action_filesFragment_to_signInFragment"
+            app:destination="@id/signInFragment" />
     </fragment>
 
     <fragment

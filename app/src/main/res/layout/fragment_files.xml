@@ -56,7 +56,7 @@
                 android:layout_weight="1"
                 android:background="@null"
                 android:fontFamily="@font/inter"
-                android:hint="Filtrar arquivos ou pastas..."
+                android:hint="@string/search_files_hint"
                 android:imeOptions="actionSearch"
                 android:inputType="text"
                 android:maxLines="1"

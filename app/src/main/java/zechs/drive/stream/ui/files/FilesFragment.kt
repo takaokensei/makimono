@@ -144,6 +144,7 @@ class FilesFragment : BaseFragment() {
         binding.root.findViewById<View>(R.id.filesFolders)?.setOnClickListener { binding.etSearch.requestFocus() }
         binding.root.findViewById<View>(R.id.filesSettings)?.setOnClickListener { findNavController().navigate(R.id.settingsFragment) }
         setupSearchAndLayoutToggle()
+        setupFilesFocusNavigation()
         setupFilesObserver()
         mpvObserver()
 
@@ -188,6 +189,7 @@ class FilesFragment : BaseFragment() {
                         isGone = true
                     }
                 }
+                binding.error.btnConnectDrive.isGone = true
             }
         }
     }
@@ -210,6 +212,8 @@ class FilesFragment : BaseFragment() {
             binding.error.apply {
                 root.isVisible = true
                 errorTxt.text = getString(R.string.no_files_found)
+                btnRetry.isGone = true
+                btnConnectDrive.isGone = true
             }
         } else {
             binding.error.root.apply {
@@ -319,6 +323,25 @@ class FilesFragment : BaseFragment() {
         }
     }
 
+    private fun setupFilesFocusNavigation() {
+        binding.rvList.isFocusable = true
+        binding.etSearch.nextFocusDownId = binding.rvList.id
+        binding.btnClearSearch.nextFocusDownId = binding.rvList.id
+        binding.btnToggleGrid.nextFocusDownId = binding.rvList.id
+        binding.rvList.addOnChildAttachStateChangeListener(object : RecyclerView.OnChildAttachStateChangeListener {
+            override fun onChildViewAttachedToWindow(view: View) {
+                val position = binding.rvList.getChildAdapterPosition(view)
+                val firstRowSize = (binding.rvList.layoutManager as? androidx.recyclerview.widget.GridLayoutManager)
+                    ?.spanCount ?: 1
+                if (position in 0 until firstRowSize) {
+                    view.nextFocusUpId = binding.etSearch.id
+                }
+            }
+
+            override fun onChildViewDetachedFromWindow(view: View) = Unit
+        })
+    }
+
     private fun updateLayoutMode() {
         val hasVideoFiles = allFilesList.any {
             it is FilesDataModel.File && (it.driveFile.isVideoFile || it.driveFile.isShortcutVideo)
@@ -384,6 +407,21 @@ class FilesFragment : BaseFragment() {
         val count = listToSubmit.count { it is FilesDataModel.File }
         binding.containerItemCount.isVisible = count > 0
         binding.tvItemCount.text = if (count == 1) "1 item" else "$count itens"
+        if (listToSubmit.isEmpty() && !isLoading) {
+            binding.error.root.isVisible = true
+            binding.error.errorTxt.text = getString(
+                when (FilesStatePolicy.emptyMessage(allFilesList.isNotEmpty(), query)) {
+                    FilesStatePolicy.EmptyFilesMessage.NO_FILES -> R.string.no_files_found
+                    FilesStatePolicy.EmptyFilesMessage.NO_SEARCH_RESULTS -> R.string.no_search_results
+                }
+            )
+            binding.error.btnRetry.isGone = true
+            binding.error.btnConnectDrive.isGone = true
+            binding.rvList.isInvisible = true
+        } else if (listToSubmit.isNotEmpty()) {
+            binding.error.root.isGone = true
+            binding.rvList.isVisible = true
+        }
         filesAdapter.submitList(listToSubmit)
     }
 
@@ -401,18 +439,29 @@ class FilesFragment : BaseFragment() {
     }
 
     private fun showError(msg: String?) {
+        val message = msg ?: getString(R.string.something_went_wrong)
+        val needsDriveLogin = FilesStatePolicy.isAuthenticationError(message)
         binding.apply {
             rvList.isInvisible = true
             loading.isInvisible = true
             error.apply {
                 root.isVisible = true
-                errorTxt.text = msg ?: getString(R.string.something_went_wrong)
+                errorTxt.text = message
+                btnConnectDrive.apply {
+                    isVisible = needsDriveLogin
+                    if (needsDriveLogin) {
+                        setOnClickListener { findNavController().navigate(R.id.action_filesFragment_to_signInFragment) }
+                    }
+                }
                 btnRetry.apply {
                     isVisible = true
                     setOnClickListener {
                         viewModel.queryFiles(args.query)
                     }
                 }
+                val initialAction = if (needsDriveLogin) btnConnectDrive else btnRetry
+                initialAction.isFocusableInTouchMode = true
+                initialAction.post { initialAction.requestFocusFromTouch() }
             }
         }
         isLoading = false

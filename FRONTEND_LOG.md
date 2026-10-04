@@ -391,3 +391,25 @@ Este documento é a memória persistente dos ciclos de auditoria, testes visuais
 **Build/testes:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou via JDK 21 no Ubuntu WSL após o Java do executor Windows falhar ao abrir conexão loopback. A suíte executou 165 testes, sem falhas, erros ou skips. A fixture compilada foi instalada apenas como `zechs.drive.stream.visualreview`; o pacote principal e seus dados não foram tocados. `local.properties` foi restaurado byte a byte. FontScale do MuMu retornou a 1.0. A advertência de assinatura DEBUG impede distribuir esse APK como release.
 
 **Limites e estado:** esta fixture não valida login OAuth/Drive, leitura de pastas reais, stream, decoder, trilhas, AniSkip, autoplay ou saída real dos engines Exo/MPV. Esses fluxos continuam pendentes até existir sessão/dados de teste acessíveis. F10 está verificada para build, testes, escalas e foco descritos acima. Nenhum release, tag, workflow ou dado do app principal foi modificado.
+
+## F11 — Arquivos: modos de exibição, busca e sessão ausente (plano antes de editar)
+
+1. Revisar o estado committed F10 e reabrir layouts/código Files; reler nas referências locais Search fields, Searching, Lists and tables, Collections, Managing accounts, Settings, Loading e Accessibility.
+2. No MuMu, percorrer Grade↔Lista com toque e D-pad em 1.0/1.3/2.0; testar foco do campo de busca, limpar, resultados longos, rolagem até o fim e BACK sem sair do destino.
+3. Auditar estados loading, vazio, erro offline e Drive sem sessão no `FilesFragment`; medir se cada mensagem oferece uma ação direta, alcançável e coerente para recuperar conexão/conta.
+4. Corrigir apenas falhas observáveis nos caminhos testáveis sem tocar nos dados do app principal; adaptar a fixture para reproduzir os mesmos estados e assegurar alvos/foco em todas as escalas.
+5. Capturar screenshot/XML e provar os caminhos de foco no MuMu; diferenciar fixture de OAuth/Drive real e não simular sucesso de autenticação.
+6. Rodar `assembleDebug testDebugUnitTest`, checks de layout/contraste/diff; reinstalar apenas `zechs.drive.stream.visualreview`, restaurar fontScale e validar status de `local.properties`.
+7. Atualizar rubrica, HIG e evidências; commit F11 local apenas com validação verde, sem release, tag, workflow ou push.
+
+### Execução F11 — estados de busca, reconexão Drive e rota de foco em Files
+
+**Falhas reproduzidas:** buscar um termo sem correspondência deixava a lista em branco, sem comunicar o resultado; a primeira linha de cards desviava o D-pad ↑ para a marca no rail, longe da busca; o erro de sessão orientava a pessoa a abrir Configurações, mas não oferecia um caminho de reconexão naquela tela. A fixture inicial não tinha o mesmo foco/modo de escala da tela real e foi ajustada antes de validar o erro a 200%.
+
+**Correções:** o filtro agora diferencia pasta vazia de busca sem resultados, mostra estado vazio e oculta as ações de erro até haver arquivos. Os erros de sessão/401 apresentam “Conectar Google Drive” como ação primária, abrem a tela SignIn existente e focam essa ação; Retry fica secundário e DOWN chega até ele. Mensagens do repositório não mandam mais a pessoa para um local sem opção de conectar. A primeira linha de itens usa a busca como `nextFocusUp`; busca e ações descem para a lista. Os controles Grade/Lista e limpar busca continuam disponíveis.
+
+**MuMu x86_64, 1920×1080:** com fixture visual, RIGHT atinge o primeiro card, ↑ retorna a `etSearch` e ↓ volta ao card. Digitar `nomatchzz` mostrou “Nenhum arquivo corresponde à sua busca”; “Limpar” restaurou os 12 itens. Toque no toggle passou da grade para linhas (12 cards no grid, 12 file rows, sem grid rows no dump da lista). No estado de sessão, foco inicial caiu em `btnConnectDrive`; DOWN alcançou `btnRetry` a 1.0× e 2.0×. A 2.0×, a fixture usa `adaptFilesChrome`: rail completo, placeholder de busca ainda reconhecível, erro em duas linhas e botões dentro da viewport. FontScale restaurado a 1.0. Capturas e dumps estão em `docs/ui-audit/after-v2/f11/`.
+
+**Build/checks:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou via Ubuntu WSL/JDK 21: 167 testes, 0 falhas/erros/skips. `check_layout_colors.py`, `check_contrast.py` e `git diff --check` passaram. APK Debug copiado/instalado somente em `zechs.drive.stream.visualreview`; `local.properties` foi restaurado. Nenhuma release, tag, workflow ou publicação foi alterada.
+
+**Limite:** a ação de SignIn está ligada à tela existente; a fixture comprovou apresentação e foco do botão, enquanto destino e listener foram conferidos no código, sem clicar para disparar uma autenticação real. OAuth e o Drive da conta real não foram usados nem autenticados. Portanto, login, refresh-token, retorno de navegação e arquivos/paginação remotos continuam pendentes de teste com conta de teste ou sessão já acessível. O pacote principal e seus dados foram preservados.

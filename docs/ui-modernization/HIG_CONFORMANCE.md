@@ -170,3 +170,16 @@ Checks: `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou
 | Build e testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` via Ubuntu WSL; relatório XML da suíte. | 165 testes, 0 falhas/erros/skips |
 
 **Limites F10:** a fixture não autentica no Drive nem reproduz mídia; login OAuth, arquivos reais, Exo/MPV com stream, faixas, AniSkip e autoplay continuam sem validação. Apenas o pacote `zechs.drive.stream.visualreview` foi instalado no MuMu; o app principal e a escala do sistema ficaram preservados.
+
+## F11 — Estados de busca e recuperação Drive em Files
+
+| Regra | Evidência | Status |
+|---|---|---|
+| H-S1–S4, H-A5 | `f11/search-empty.png`, `search-empty.xml`: busca `nomatchzz` comunica zero correspondências; `search-cleared.png` mostra itens restaurados após Limpar. | OK (fixture) |
+| H-F2–F4, H-R3 | `f11/focus-card.xml` → `search-focused.xml` → `card-after-search.xml`: card ↑ busca ↓ card. Toggle por toque produz `list-mode.xml`, com file rows e sem grid rows. | OK (fixture; percurso exercitado) |
+| H-A5, H-B1–B3, H-F2–F4 | `f11/auth-error.png` e `auth-error-scale-2.png`: ação Conectar em primeiro plano, Retry secundário, foco inicial na conexão; DOWN em 1×/2× vai para Retry. A busca/rail usa o adaptador de texto ampliado real. | OK (layout/foco fixture) |
+| H-A3, H-R3 | `f11/auth-error.xml`: nó focado `btnConnectDrive`; `auth-error-down.xml`: nó focado `btnRetry`. | OK (fixture) |
+| Fim a fim de autenticação | Handler Files navega à SignIn existente; OAuth, salvamento de refresh token e retorno à pasta exigem sessão/conta de teste e não foram executados pela fixture. | Pendente (Drive real) |
+| Build e testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` pelo Ubuntu WSL/JDK 21. | 167 testes, 0 falhas/erros/skips |
+
+`check_layout_colors.py`, `check_contrast.py` e `git diff --check` passaram. APK Debug atualizado foi instalado apenas no pacote `zechs.drive.stream.visualreview`; fontScale do MuMu retornou a 1.0 e `local.properties` foi restaurado. Nenhuma publicação/release ocorreu.

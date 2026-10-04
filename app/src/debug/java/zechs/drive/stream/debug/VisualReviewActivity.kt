@@ -58,6 +58,7 @@ class VisualReviewActivity : Activity(), zechs.drive.stream.ui.player.PlayerModa
         when(intent.getStringExtra("screen")) {
             "profiles" -> profiles()
             "files" -> fileScreen()
+            "files_auth_error" -> filesAuthError()
             "details" -> details()
             "details_episode_focus" -> details(focusEpisode = true)
             "player" -> player()
@@ -168,9 +169,86 @@ class VisualReviewActivity : Activity(), zechs.drive.stream.ui.player.PlayerModa
         // Match FilesFragment: the toolbar shows the current folder name, not the whole path.
         findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar).title="Temporada 01"
         val rv=findViewById<RecyclerView>(R.id.rvList)
-        rv.layoutManager=GridLayoutManager(this,TvAccessibilityLayout.gridColumnsForFontScale(4,resources.configuration.fontScale))
-        rv.adapter=FilesAdapter({},{},{_,_->}).apply { isGridMode=true;submitList(files(12,true)) }
+        val entries = files(12,true)
+        val adapter = FilesAdapter({},{},{_,_->}).apply { isGridMode=true }
+        var gridMode = true
+        fun render(query: String = "") {
+            val matching = entries.filter { (it as? FilesDataModel.File)?.driveFile?.name?.contains(query, true) != false }
+            adapter.submitList(matching)
+            findViewById<View>(R.id.error).visibility = if (matching.isEmpty()) View.VISIBLE else View.GONE
+            findViewById<TextView>(R.id.error_txt).text = getString(
+                if (query.isNotBlank() && entries.isNotEmpty()) R.string.no_search_results else R.string.no_files_found
+            )
+            findViewById<View>(R.id.btnRetry).visibility = View.GONE
+            findViewById<View>(R.id.btnConnectDrive).visibility = View.GONE
+            rv.visibility = if (matching.isEmpty()) View.INVISIBLE else View.VISIBLE
+        }
+        fun updateMode() {
+            adapter.isGridMode = gridMode
+            rv.layoutManager = if (gridMode) {
+                GridLayoutManager(this,TvAccessibilityLayout.gridColumnsForFontScale(4,resources.configuration.fontScale))
+            } else LinearLayoutManager(this)
+            findViewById<ImageView>(R.id.btnToggleGrid).setImageResource(
+                if (gridMode) R.drawable.ic_list_view_24 else R.drawable.ic_grid_view_24
+            )
+        }
+        rv.adapter=adapter
+        rv.isFocusable = true
+        findViewById<View>(R.id.etSearch).nextFocusDownId = rv.id
+        findViewById<View>(R.id.btnClearSearch).nextFocusDownId = rv.id
+        findViewById<View>(R.id.btnToggleGrid).nextFocusDownId = rv.id
+        rv.addOnChildAttachStateChangeListener(object : RecyclerView.OnChildAttachStateChangeListener {
+            override fun onChildViewAttachedToWindow(view: View) {
+                val position = rv.getChildAdapterPosition(view)
+                val firstRowSize = (rv.layoutManager as? GridLayoutManager)?.spanCount ?: 1
+                if (position in 0 until firstRowSize) view.nextFocusUpId = R.id.etSearch
+            }
+            override fun onChildViewDetachedFromWindow(view: View) = Unit
+        })
+        render()
+        updateMode()
+        findViewById<View>(R.id.btnToggleGrid).setOnClickListener {
+            gridMode = !gridMode
+            updateMode()
+        }
+        findViewById<android.widget.EditText>(R.id.etSearch).addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val query = s?.toString()?.trim().orEmpty()
+                findViewById<View>(R.id.btnClearSearch).visibility = if (query.isEmpty()) View.GONE else View.VISIBLE
+                render(query)
+            }
+            override fun afterTextChanged(s: android.text.Editable?) = Unit
+        })
+        findViewById<View>(R.id.btnClearSearch).setOnClickListener { findViewById<android.widget.EditText>(R.id.etSearch).text.clear() }
         rv.postDelayed({rv.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus()},500)
+    }
+    private fun filesAuthError() {
+        setContentView(R.layout.fragment_files)
+        TvAccessibilityLayout.adaptFilesChrome(
+            this,
+            findViewById(R.id.filesNavRail),
+            listOf(
+                findViewById(R.id.filesHome),
+                findViewById(R.id.filesCatalog),
+                findViewById(R.id.filesFolders),
+                findViewById(R.id.filesFavorites),
+                findViewById(R.id.filesSettings)
+            ),
+            findViewById(R.id.searchContainer),
+            findViewById(R.id.etSearch),
+            listOf(findViewById(R.id.btnClearSearch), findViewById(R.id.btnToggleGrid))
+        )
+        findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar).title="oneblacki"
+        findViewById<View>(R.id.rvList).visibility = View.INVISIBLE
+        findViewById<View>(R.id.error).visibility = View.VISIBLE
+        findViewById<TextView>(R.id.error_txt).text = "Sessão do Google Drive ausente ou expirada. Conecte sua conta para continuar."
+        findViewById<View>(R.id.btnRetry).visibility = View.VISIBLE
+        findViewById<View>(R.id.btnConnectDrive).visibility = View.VISIBLE
+        findViewById<View>(R.id.btnConnectDrive).apply {
+            isFocusableInTouchMode = true
+            postDelayed({ requestFocusFromTouch() }, 500)
+        }
     }
     private fun details(focusEpisode: Boolean = false) {
         setContentView(R.layout.fragment_series_detail)

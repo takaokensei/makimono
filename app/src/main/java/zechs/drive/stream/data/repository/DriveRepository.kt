@@ -63,7 +63,7 @@ class DriveRepository @Inject constructor(
 
     private suspend fun getOrFetchAccessToken(): Resource<String> {
         val client = sessionManager.fetchClient()
-            ?: return Resource.Error("Cliente do Google Drive não configurado. Conecte sua conta em Configurações.")
+            ?: return Resource.Error("Conecte sua conta do Google Drive para continuar.")
         return when (val tokenResponse = fetchAccessToken(client)) {
             is Resource.Success -> Resource.Success(tokenResponse.data.accessToken)
             is Resource.Error -> Resource.Error(tokenResponse.message ?: "Falha ao obter token de acesso do Google Drive")
@@ -209,7 +209,7 @@ class DriveRepository @Inject constructor(
         }
 
         val refreshToken = sessionManager.fetchRefreshToken()
-            ?: return Resource.Error("Sessão do Google Drive ausente ou expirada. Conecte sua conta em Configurações.")
+            ?: return Resource.Error("Sessão do Google Drive ausente ou expirada. Conecte sua conta para continuar.")
 
         return try {
             val token = tokenApi.get().getAccessToken(
@@ -224,7 +224,7 @@ class DriveRepository @Inject constructor(
             if (e is HttpException && e.code() == 400) {
                 val errorBody = try { e.response()?.errorBody()?.string() } catch (_: Exception) { null }
                 Log.e(TAG, "Google OAuth 400 Bad Request: $errorBody", e)
-                Resource.Error("Sessão do Google Drive expirada ou revogada. Por favor, faça login novamente nas configurações.")
+                Resource.Error("Sessão do Google Drive expirada ou revogada. Faça login novamente para continuar.")
             } else {
                 doOnError(e)
             }

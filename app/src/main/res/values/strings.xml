@@ -56,6 +56,9 @@
     <string name="theme_dark">Escuro</string>
     <string name="theme_system">Seguir sistema</string>
     <string name="no_files_found">No files found</string>
+    <string name="no_search_results">Nenhum arquivo corresponde à sua busca.</string>
+    <string name="connect_google_drive">Conectar Google Drive</string>
+    <string name="search_files_hint">Pesquisar neste diretório…</string>
     <string name="pip_not_supported">PiP mode is not supported on your device</string>
     <string name="configure_your_drive_client">Configure your drive client</string>
     <string name="client_id">Client ID</string>

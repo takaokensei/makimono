@@ -257,3 +257,11 @@ O build do Windows falhou antes de compilar ao criar a conexão loopback Java; o
 
 **Limite:** validar BACK do player, decoder, streams/Drive autenticado, trilhas, capítulos, AniSkip, autoplay e paridade efetiva dos engines exige reprodução real; os screenshots de OSD são fixture e a inspeção de BACK Exo/MPV foi estática. APKs debug usam assinatura DEBUG e não são releases distribuíveis.
 
+## F11 PDF re-review — busca e navegação no explorador (2026-10-04)
+
+Search fields pp. 1–2, Searching pp. 1–2, Lists and tables pp. 1–2 e Focus and selection pp. 1–3 foram relidos. Para o Files Android, princípios aplicados: placeholder identifica o escopo local; resultados refinam enquanto a pessoa digita; existe caminho claro para limpar; textos de uma lista devem permanecer legíveis; foco remoto precisa comunicar o próximo alvo e alcançar todas as ações sem depender de toque.
+
+**Aplicação:** uma busca sem correspondências agora tem estado vazio próprio e limpar restaura a lista. A primeira linha da coleção volta verticalmente para a busca, e busca/ações descem para conteúdo. O estado de sessão Drive separa reconexão (principal) de Retry (secundário), preserva a mensagem explicativa e inicia o foco na ação que corrige a condição. O número de página, layout e política dos componentes Apple não foram copiados para Android.
+
+**Evidência e limite:** MuMu testou grade/lista, busca, limpar, estado vazio, foco, 200% e sequência Connect→Retry com a fixture; arquivos e fluxos foram medidos em `after-v2/f11/`. O listener de Connect aponta para SignIn no código, mas a fixture não executou OAuth ou a conta Drive real.
+
