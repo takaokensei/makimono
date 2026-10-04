@@ -238,3 +238,13 @@ Nenhum arquivo de mídia/Drive ou credencial foi usado. Somente o pacote visualr
 | Build/testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` via Ubuntu WSL/JDK 21. | 168 testes, 0 falhas/erros/skips |
 
 Checks de cores, contraste e diff passaram. APK Debug instalado somente em `zechs.drive.stream.visualreview`; fontScale retornou a 1.0 e a Activity principal foi reaberta sem limpar seus dados. OAuth/Drive, perfil persistido e reprodução real seguem pendentes.
+
+## F17 — Header da Home e foco para busca
+
+| Regra | Evidência | Status |
+|---|---|---|
+| H-S1–S4, H-L1–L4 | `f17-home-current.png/xml`: Home real sem busca; hero inicia em y=0 e título encosta no topo. `f17-home-final.png/xml`: header de busca e ação Ordenar visíveis, título passa para y=199. | Corrigido no código; layout verificado em fixture |
+| H-F2–F4, H-R3 | `f17-search-focus.xml`: UP da ação principal foca `etSearchAnime`; `f17-play-focus.xml`: DOWN retorna a `btnFeaturedPlay`. | OK (fixture, D-pad) |
+| Build/testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` via Ubuntu WSL/JDK 21. | 168 testes, 0 falhas/erros/skips |
+
+Header passa a ficar visível nos tabs Início/Catálogo/Favoritos, sem tocar no pacote principal. Checks de cor/contraste/diff passaram; `fontScale` ficou em 1.0. Seleção de tab pela tela real e conteúdo autenticado não foram exercitados nesta rodada.

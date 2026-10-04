@@ -250,6 +250,8 @@ class HomeFragment : BaseFragment() {
         }
 
         search.nextFocusLeftId = binding.btnNavInicio.id
+        play?.nextFocusUpId = search.id
+        info?.nextFocusUpId = search.id
         play?.nextFocusLeftId = binding.btnNavInicio.id
         play?.nextFocusRightId = info?.id ?: View.NO_ID
         info?.nextFocusLeftId = play?.id ?: View.NO_ID
@@ -817,6 +819,9 @@ class HomeFragment : BaseFragment() {
 
     private fun selectTab(tab: String) {
         currentTab = tab
+        if (tab == "Início" || tab == "Animes" || tab == "Favoritos") {
+            binding.root.findViewById<View>(R.id.topHeaderBar)?.visibility = View.VISIBLE
+        }
         binding.root.findViewById<View>(R.id.tvHomeCatalogTitle)?.visibility =
             if (tab == "Início") View.VISIBLE else View.GONE
         val hasRecent = viewModel.recentWatches.value.isNotEmpty()

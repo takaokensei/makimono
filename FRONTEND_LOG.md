@@ -515,3 +515,24 @@ Este documento é a memória persistente dos ciclos de auditoria, testes visuais
 **Build/checks:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou no Ubuntu WSL/JDK 21; relatórios: 168 testes, 0 falhas/erros/skips. `check_layout_colors.py`, `check_contrast.py` e `git diff --check` passaram. APK Debug atualizado instalado apenas como `zechs.drive.stream.visualreview`. SHA-256 de `local.properties` permaneceu `6F8A9100E30E897E01CF8E5B9E1DAA76C4D77DDCE257BB4E266AE9623C5A532B`.
 
 **Limites:** foi exercitada navegação e renderização, sem salvar no Room; não foram testados refresh/expiração dos URLs no longo prazo ou edição de perfil já persistido com conta real. OAuth/Drive e reprodução continuam fora deste percurso. Nenhum release, tag, workflow ou push foi feito.
+
+## F17 — Home: busca superior e margem do hero (plano antes de editar)
+
+1. Reabrir a Home real no MuMu sem limpar dados e registrar hierarquia visual e foco da navegação por D-pad.
+2. Conferir barra de busca e posição do hero contra a captura e o mockup: foco, altura do header, título/sinopse/CTAs e primeiro shelf.
+3. Corrigir a causa de header ausente/hero cortado nas variantes TV/landscape, preservando busca, sort e alternância de exibição em Catálogo/Favoritos.
+4. Validar no pacote principal apenas leitura visual e no fixture de UI se existir; não executar ações que mudem Drive, conta ou preferências do usuário.
+5. Recompilar, instalar somente a fixture quando a validação de produção não exigir pacote principal, repetir screenshots/XML, teste de foco e checks.
+6. Registrar limites e evidências; commit local após validação, sem release/push.
+
+### Execução F17 — busca visível e retorno D-pad entre CTA e busca
+
+**Achados no pacote principal, em leitura visual:** a Home abria com `topHeaderBar` ausente; `contentScrollView` começava em y=0, deixando o título do destaque encostado no topo e removendo a busca da Home. O dump mostrava `tvFeaturedTitle` em `[308,6][1162,78]`. No primeiro build da fixture, UP a partir de “Assistir agora” desviou para `btnNavFavoritos`, apesar da busca ser o destino esperado.
+
+**Correções:** `HomeFragment.selectTab` torna `topHeaderBar` visível em Início, Catálogo e Favoritos; `setupTenFootFocusChain` conecta UP das ações principais à busca. A fixture da Home mostra o mesmo header e oferece o mesmo vínculo direcional para validar o layout/D-pad sem instalar sobre o pacote principal.
+
+**MuMu x86_64, 1920×1080:** antes/depois registrados em `f17-home-current.png/xml` e `f17-home-final.png/xml`. Depois, a busca ocupa `[308,28][1836,98]`, o campo `[392,31][1536,94]` e o título do destaque `[308,199][1162,343]`, com respiro para texto de duas linhas. UP do botão de reprodução focou `etSearchAnime` (`f17-search-focus.xml`); DOWN retornou a `btnFeaturedPlay` (`f17-play-focus.xml`). O teste visual final foi feito no pacote fixture, sem alterar a sessão/dados Drive.
+
+**Validação:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou via Ubuntu WSL/JDK 21; 168 testes, 0 falhas/erros/skips. `check_layout_colors.py`, `check_contrast.py` e `git diff --check` passaram. Build instalado somente em `zechs.drive.stream.visualreview`; fontScale 1.0. O pacote principal não foi reinstalado nem limpo.
+
+**Limite:** a troca de tab via Home real não foi acionada, por preservar o app principal; a visibilidade para Catálogo/Favoritos foi conferida no `selectTab` e a rota do header/Home foi exercitada na fixture. OAuth, Drive e playback não foram usados.

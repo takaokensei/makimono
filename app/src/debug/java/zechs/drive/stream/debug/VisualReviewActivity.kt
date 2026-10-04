@@ -102,6 +102,9 @@ class VisualReviewActivity : FragmentActivity(), zechs.drive.stream.ui.player.Pl
     }
     private fun home() {
         setContentView(R.layout.fragment_home)
+        show(R.id.topHeaderBar)
+        findViewById<View>(R.id.btnFeaturedPlay)?.nextFocusUpId = R.id.etSearchAnime
+        findViewById<View>(R.id.btnFeaturedInfo)?.nextFocusUpId = R.id.etSearchAnime
         TvAccessibilityLayout.adaptHomeHero(
             this,
             findViewById(R.id.featuredHeroContainer),
