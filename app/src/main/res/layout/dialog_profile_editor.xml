@@ -41,6 +41,7 @@
 
             <!-- Role Checkboxes -->
             <LinearLayout
+                android:id="@+id/profileRolesRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
@@ -86,6 +87,7 @@
 
             <!-- Filter selection buttons: Avatares / Wallpapers -->
             <LinearLayout
+                android:id="@+id/profileArtTabs"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
@@ -117,6 +119,7 @@
 
             <!-- Search bar for live anime search -->
             <LinearLayout
+                android:id="@+id/profileArtSearchRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"

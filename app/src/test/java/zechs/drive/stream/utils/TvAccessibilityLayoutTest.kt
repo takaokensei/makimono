@@ -18,6 +18,14 @@ class TvAccessibilityLayoutTest {
     }
 
     @Test
+    fun `profile art catalog reduces density for enlarged text`() {
+        assertEquals(4, TvAccessibilityLayout.profileCatalogColumns(1f, isWallpaperView = false))
+        assertEquals(2, TvAccessibilityLayout.profileCatalogColumns(1.3f, isWallpaperView = false))
+        assertEquals(2, TvAccessibilityLayout.profileCatalogColumns(2f, isWallpaperView = false))
+        assertEquals(2, TvAccessibilityLayout.profileCatalogColumns(1f, isWallpaperView = true))
+    }
+
+    @Test
     fun `files navigation and search gain room only when text is enlarged`() {
         assertEquals(128, TvAccessibilityLayout.filesRailWidthDp(1f))
         assertEquals(168, TvAccessibilityLayout.filesRailWidthDp(1.3f))

@@ -226,3 +226,15 @@ Checks de cores, contraste e diff passaram. FontScale voltou a 1.0; APK aplicado
 | Build e testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` pelo Ubuntu WSL/JDK 21. | Passou; suíte sem falhas |
 
 Nenhum arquivo de mídia/Drive ou credencial foi usado. Somente o pacote visualreview foi instalado.
+
+## F16 — Editor de perfis e galeria remota
+
+| Regra | Evidência | Status |
+|---|---|---|
+| H-F2–F4, H-R3, H-A3 | `f16-profile-editor-opaque-1x.xml` e `f16-profile-editor-opaque-2x.xml`: D-pad chega aos cartões; foco/descrição semântica permanecem expostos. Na escala ampliada, foco percorre a grade rolável. | OK (fixture, 1×/2×) |
+| H-A5, H-L4 | `f16-profile-editor-opaque-1x.png` e `f16-profile-editor-opaque-2x.png`: formulário e ações cabem no diálogo rolável; tabs/busca empilham em 2×; conteúdo de fundo não atravessa a superfície. | OK (visual, 1×/2×) |
+| H-C1, H-A10 | As imagens de avatar e wallpaper vêm de URLs públicos do catálogo e usam cache Glide; 20 avatares e 10 wallpapers responderam HTTP 200. Não foram adicionados bitmaps gerados. | OK (rede + fixture) |
+| Persistência de perfil | Fixture apenas abriu/cancelou o editor para evitar gravações de teste; Room e perfil existente não foram modificados. | Pendente (sem salvar dados reais) |
+| Build/testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` via Ubuntu WSL/JDK 21. | 168 testes, 0 falhas/erros/skips |
+
+Checks de cores, contraste e diff passaram. APK Debug instalado somente em `zechs.drive.stream.visualreview`; fontScale retornou a 1.0 e a Activity principal foi reaberta sem limpar seus dados. OAuth/Drive, perfil persistido e reprodução real seguem pendentes.

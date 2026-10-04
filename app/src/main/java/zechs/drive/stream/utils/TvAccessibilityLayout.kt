@@ -205,6 +205,9 @@ object TvAccessibilityLayout {
         return (baseColumns - reduction).coerceAtLeast(1)
     }
 
+    fun profileCatalogColumns(fontScale: Float, isWallpaperView: Boolean): Int =
+        if (isWallpaperView || fontScale >= 1.3f) 2 else 4
+
     private fun setTextMaxLines(view: View, maxLines: Int) {
         when (view) {
             is TextView -> {

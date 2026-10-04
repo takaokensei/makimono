@@ -1,6 +1,8 @@
 package zechs.drive.stream.ui.profile
 
 import android.view.LayoutInflater
+import android.view.ViewGroup
+import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -20,6 +22,7 @@ import zechs.drive.stream.databinding.ItemProfileCatalogCardBinding
 import zechs.drive.stream.utils.GlideApp
 import zechs.drive.stream.utils.ProfileManager
 import zechs.drive.stream.utils.TvFocusRing
+import zechs.drive.stream.utils.TvAccessibilityLayout
 import java.net.URI
 import java.util.UUID
 
@@ -33,6 +36,7 @@ class ProfileEditorDialog(
     fun show(profile: UserProfile?) {
         val context = fragment.requireContext()
         val b = DialogProfileEditorBinding.inflate(LayoutInflater.from(context))
+        adaptForLargeText(b)
         b.profileName.setText(profile?.name.orEmpty())
         b.avatarUrl.setText(profile?.avatarUrl.orEmpty())
         b.backgroundUrl.setText(profile?.backgroundUrl.orEmpty())
@@ -42,7 +46,7 @@ class ProfileEditorDialog(
         var currentTab = CatalogTab.AVATARS
 
         val dialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
-            .setBackground(ContextCompat.getDrawable(context, R.drawable.bg_player_bottom_panel))
+            .setBackground(ContextCompat.getDrawable(context, R.drawable.bg_profile_editor_dialog))
             .setTitle(if (profile == null) "Novo perfil" else "Editar perfil")
             .setView(b.root)
             .setPositiveButton("Salvar", null)
@@ -63,7 +67,10 @@ class ProfileEditorDialog(
             b.catalogImages.removeAllViews()
             val density = context.resources.displayMetrics.density
             val itemHeight = if (isWallpaperView) (76 * density).toInt() else (96 * density).toInt()
-            val colCount = if (isWallpaperView) 2 else 4
+            val colCount = TvAccessibilityLayout.profileCatalogColumns(
+                context.resources.configuration.fontScale,
+                isWallpaperView
+            )
             b.catalogImages.columnCount = colCount
 
             val glideOptions = RequestOptions()
@@ -96,6 +103,26 @@ class ProfileEditorDialog(
                         } else {
                             b.avatarUrl.setText(art.url)
                             b.catalogStatus.text = "Avatar: ${art.label}"
+                        }
+                    }
+                    setOnFocusChangeListener { focusedView, hasFocus ->
+                        if (hasFocus) {
+                            b.scrollEditor.post {
+                                val viewLocation = IntArray(2)
+                                val scrollLocation = IntArray(2)
+                                focusedView.getLocationOnScreen(viewLocation)
+                                b.scrollEditor.getLocationOnScreen(scrollLocation)
+                                val viewportTop = scrollLocation[1] + b.scrollEditor.paddingTop
+                                val viewportBottom = scrollLocation[1] + b.scrollEditor.height - b.scrollEditor.paddingBottom
+                                val focusedTop = viewLocation[1]
+                                val focusedBottom = focusedTop + focusedView.height
+                                val scrollDelta = when {
+                                    focusedBottom > viewportBottom -> focusedBottom - viewportBottom
+                                    focusedTop < viewportTop -> focusedTop - viewportTop
+                                    else -> 0
+                                }
+                                if (scrollDelta != 0) b.scrollEditor.smoothScrollBy(0, scrollDelta)
+                            }
                         }
                     }
                 }
@@ -210,5 +237,59 @@ class ProfileEditorDialog(
         fun validImageUrl(value: String?): Boolean = value == null || runCatching {
             URI(value).let { it.scheme == "https" && !it.host.isNullOrBlank() && it.userInfo == null }
         }.getOrDefault(false)
+    }
+
+    private fun adaptForLargeText(binding: DialogProfileEditorBinding) {
+        val context = fragment.requireContext()
+        val fontScale = context.resources.configuration.fontScale
+        if (fontScale < 1.3f) return
+
+        val density = context.resources.displayMetrics.density
+        fun dp(value: Int) = (value * density).toInt()
+        val controlHeight = dp(if (fontScale >= 1.8f) 64 else 56)
+
+        binding.profileArtTabs.orientation = LinearLayout.VERTICAL
+        listOf(binding.btnTabAvatars, binding.btnTabWallpapers).forEach { button ->
+            val params = button.layoutParams as? LinearLayout.LayoutParams
+                ?: LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            params.width = ViewGroup.LayoutParams.MATCH_PARENT
+            params.height = ViewGroup.LayoutParams.WRAP_CONTENT
+            params.marginStart = 0
+            params.marginEnd = 0
+            params.topMargin = dp(6)
+            button.layoutParams = params
+            button.minHeight = controlHeight
+            button.isSingleLine = false
+            button.maxLines = 2
+        }
+
+        binding.profileArtSearchRow.orientation = LinearLayout.VERTICAL
+        binding.catalogQuery.apply {
+            layoutParams = (layoutParams as? LinearLayout.LayoutParams
+                ?: LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)).apply {
+                width = ViewGroup.LayoutParams.MATCH_PARENT
+                height = ViewGroup.LayoutParams.WRAP_CONTENT
+                weight = 0f
+            }
+            minHeight = controlHeight
+            if (fontScale >= 1.8f) hint = "Buscar anime"
+        }
+        binding.searchCatalog.apply {
+            layoutParams = (layoutParams as? LinearLayout.LayoutParams
+                ?: LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)).apply {
+                width = ViewGroup.LayoutParams.MATCH_PARENT
+                height = ViewGroup.LayoutParams.WRAP_CONTENT
+                weight = 0f
+                marginStart = 0
+                topMargin = dp(6)
+            }
+            minHeight = controlHeight
+        }
+
+        listOf(binding.profileName, binding.avatarUrl, binding.backgroundUrl).forEach { field ->
+            field.layoutParams = field.layoutParams.apply { height = ViewGroup.LayoutParams.WRAP_CONTENT }
+            field.minHeight = controlHeight
+            field.setPadding(field.paddingLeft, dp(8), field.paddingRight, dp(8))
+        }
     }
 }

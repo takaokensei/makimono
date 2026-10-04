@@ -493,3 +493,25 @@ Este documento é a memória persistente dos ciclos de auditoria, testes visuais
 **Conclusão desta reprodução:** não encontrei falha na seta da versão compilada atual; o comportamento descrito não se reproduziu quando o botão está visível e ativo. O app em produção pode estar usando um build anterior. MPV foi verificado estaticamente: a fixture isolada não tem sessão Drive e encerra o engine antes de renderizar controles, então toque real no MPV permanece pendente sem usar o token da conta principal.
 
 **Validação:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou via Ubuntu WSL/JDK 21. APK atualizado instalado somente em `zechs.drive.stream.visualreview`; pacote principal/sessão preservados. Não houve alteração de player em release.
+
+## F16 — Editor de perfis: foco, escala ampliada e catálogo visual
+
+1. Rever F15 e a implementação de `ProfileEditorDialog`; validar o gerenciamento de perfis com a fixture isolada, sem persistir perfis nem tocar na conta Drive do app principal.
+2. Percorrer o editor com D-pad em 1.0× e 2.0×: nome, Admin/Kids, abas, busca, cartões, URLs e ações de cancelar/salvar; procurar foco perdido e itens fora da viewport.
+3. Corrigir rolagem/foco da grade de arte e reflow em fonte ampliada; manter nome, papéis, avatar, wallpaper e links customizados utilizáveis.
+4. Conferir a disponibilidade real dos URLs remotos de avatar/wallpaper, carregamento Glide e superfície do diálogo; não gerar arte estática nem gravar dados de teste.
+5. Compilar e instalar somente `zechs.drive.stream.visualreview`; repetir capturas e navegação no MuMu após as mudanças.
+6. Rodar `assembleDebug testDebugUnitTest`, checks de layout/contraste/diff, restaurar fontScale e verificar `local.properties` byte a byte.
+7. Registrar evidências e limites, commitar F16 local após validação verde; sem release, tag, workflow ou push.
+
+### Execução F16 — galeria carregada, foco contínuo e diálogo sem bleed
+
+**Falhas reproduzidas:** o D-pad chegava à segunda linha de arte sem rolar o `NestedScrollView`, parecendo travar; em 200% o reflow comprimia abas e busca e deixava controles difíceis de alcançar. As URLs estáticas de AniList retornavam erro, deixando placeholders no catálogo. O fundo translúcido do editor permitia que título/perfis da tela de trás atravessassem a superfície e disputassem a leitura.
+
+**Correções:** cartões rolam para dentro da viewport quando recebem foco; abas e busca empilham em fonte grande, os campos/botões ganham altura e a grade reduz para duas colunas. Os 20 avatares e 10 wallpapers agora usam endpoints de imagens públicos resolvidos pelo catálogo AniList; os 30 links foram validados com HTTP 200. O editor recebeu superfície escura opaca com contorno discreto, preservando o foco ciano e evitando bleed. Nenhuma arte foi gerada por IA.
+
+**MuMu x86_64, 1920×1080:** fixture isolada `zechs.drive.stream.visualreview`, sem salvar o formulário e sem autenticar no Drive. A 1×, D-pad percorreu abas/busca e chegou à galeria de quatro colunas; imagens reais carregaram nas duas linhas visíveis (`f16-profile-editor-opaque-1x.png/xml`). A 2×, o layout empilhado e a grade de duas colunas mantiveram imagens visíveis, com cartão focado dentro da área rolável (`f16-profile-editor-opaque-2x.png/xml`). As etapas de D-pad cobriram abas de avatar/wallpaper, busca, cartões e campos de URL, além de Cancelar/Salvar. O seletor de perfis foi inspecionado a 1×/2× (`f16-profiles-1x.png/xml`, `f16-profiles-2x.png/xml`). FontScale foi restaurada para 1.0 e o MuMu voltou a abrir `MainActivity` do pacote principal.
+
+**Build/checks:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou no Ubuntu WSL/JDK 21; relatórios: 168 testes, 0 falhas/erros/skips. `check_layout_colors.py`, `check_contrast.py` e `git diff --check` passaram. APK Debug atualizado instalado apenas como `zechs.drive.stream.visualreview`. SHA-256 de `local.properties` permaneceu `6F8A9100E30E897E01CF8E5B9E1DAA76C4D77DDCE257BB4E266AE9623C5A532B`.
+
+**Limites:** foi exercitada navegação e renderização, sem salvar no Room; não foram testados refresh/expiração dos URLs no longo prazo ou edição de perfil já persistido com conta real. OAuth/Drive e reprodução continuam fora deste percurso. Nenhum release, tag, workflow ou push foi feito.

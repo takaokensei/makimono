@@ -4,8 +4,12 @@ import android.app.Activity
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
+import android.view.LayoutInflater
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -20,9 +24,16 @@ import zechs.drive.stream.ui.player.PlayerQuickOptions
 import zechs.drive.stream.ui.FocusedItemScroll
 import zechs.drive.stream.utils.TvFocusRing
 import zechs.drive.stream.utils.TvAccessibilityLayout
+import zechs.drive.stream.data.remote.ProfileArtCatalog
+import zechs.drive.stream.ui.profile.ProfileEditorDialog
+import zechs.drive.stream.utils.ProfileManager
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 
 /** Renders production XML and adapters with explicit fixtures, without touching account or Room. */
-class VisualReviewActivity : Activity(), zechs.drive.stream.ui.player.PlayerModalHost {
+class VisualReviewActivity : FragmentActivity(), zechs.drive.stream.ui.player.PlayerModalHost {
     private val poster = "https://cdn.myanimelist.net/images/anime/1015/138006l.jpg"
     private val backdrop = "https://images.justwatch.com/backdrop/308526637/s1440/sousou-no-frieren.jpg"
     private var playerFixtureControls: View? = null
@@ -74,6 +85,7 @@ class VisualReviewActivity : Activity(), zechs.drive.stream.ui.player.PlayerModa
                     "rating" -> zechs.drive.stream.ui.player.MalRatingDialog.show(this, "Sousou no Frieren", 28, {})
                     "theme" -> showThemeDialog()
                     "glass_menu" -> showGlassMenu()
+                    "profile_editor" -> showProfileEditorFixture()
                 }
             }, 800)
         }
@@ -146,10 +158,29 @@ class VisualReviewActivity : Activity(), zechs.drive.stream.ui.player.PlayerModa
         val rv=findViewById<RecyclerView>(R.id.rvProfiles)
         rv.layoutParams=rv.layoutParams.apply { height=ViewGroup.LayoutParams.WRAP_CONTENT }
         rv.layoutManager=LinearLayoutManager(this,RecyclerView.HORIZONTAL,false)
-        rv.adapter=ProfilesAdapter({},{},{}).apply {
+        val adapter=ProfilesAdapter({},{},{}).apply {
             submitList(listOf(ProfileUiModel.ProfileItem(UserProfile("one","Cauã",avatarUrl=poster,isAdmin=true),true),ProfileUiModel.ProfileItem(UserProfile("two","Visitante",avatarUrl=poster),false),ProfileUiModel.ProfileItem(UserProfile("three","Kids / Shounen",avatarUrl=poster,isKids=true),false),ProfileUiModel.AddProfileItem))
         }
+        rv.adapter=adapter
+        var managing = false
+        findViewById<View>(R.id.btnManageProfiles).setOnClickListener { button ->
+            managing = !managing
+            adapter.isManageMode = managing
+            (button as? TextView)?.text = if (managing) "CONCLUÍDO" else "GERENCIAR PERFIS"
+        }
         rv.postDelayed({rv.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus()},500)
+    }
+
+    private fun showProfileEditorFixture() {
+        val dependencies = EntryPointAccessors.fromApplication(
+            applicationContext,
+            VisualReviewDependencies::class.java
+        )
+        val fragment = ProfileEditorFixtureFragment()
+        supportFragmentManager.beginTransaction()
+            .add(fragment, "profile-editor-visual-review")
+            .commitNow()
+        ProfileEditorDialog(fragment, dependencies.profileManager(), dependencies.profileArtCatalog()).show(null)
     }
     private fun fileScreen() {
         setContentView(R.layout.fragment_files)
@@ -410,5 +441,25 @@ class VisualReviewActivity : Activity(), zechs.drive.stream.ui.player.PlayerModa
         override fun getItemCount()=count
         override fun onCreateViewHolder(parent:ViewGroup,type:Int)=object:RecyclerView.ViewHolder(layoutInflater.inflate(layout,parent,false)){}
         override fun onBindViewHolder(holder:RecyclerView.ViewHolder,position:Int)=bind(holder.itemView,position)
+    }
+}
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface VisualReviewDependencies {
+    fun profileManager(): ProfileManager
+    fun profileArtCatalog(): ProfileArtCatalog
+}
+
+class ProfileEditorFixtureFragment : Fragment() {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View = FrameLayout(requireContext()).apply {
+        layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
     }
 }
