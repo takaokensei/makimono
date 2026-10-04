@@ -170,9 +170,10 @@ class VisualReviewActivity : Activity() {
         frame.addView(image,ViewGroup.LayoutParams(-1,-1));Glide.with(this).load(backdrop).into(image)
         val controls=layoutInflater.inflate(R.layout.player_control_view,frame,false)
         frame.addView(controls);setContentView(frame);PlayerQuickOptions.bind(controls)
-        controls.findViewById<View>(com.google.android.exoplayer2.ui.R.id.exo_play_pause)?.postDelayed({
-            controls.findViewById<View>(com.google.android.exoplayer2.ui.R.id.exo_play_pause)?.requestFocus()
+        controls.findViewById<View>(R.id.btnPlayPause)?.postDelayed({
+            controls.findViewById<View>(R.id.btnPlayPause)?.requestFocusFromTouch()
         }, 300)
+        controls.findViewById<View>(R.id.btnBack)?.setOnClickListener { finish() }
         text(R.id.tvPlayerTitle,"SOUSOU NO FRIEREN")
         text(com.google.android.exoplayer2.ui.R.id.exo_position,"12:45");text(com.google.android.exoplayer2.ui.R.id.exo_duration,"24:10")
         findViewById<com.google.android.exoplayer2.ui.DefaultTimeBar>(com.google.android.exoplayer2.ui.R.id.exo_progress).apply {
@@ -234,12 +235,7 @@ class VisualReviewActivity : Activity() {
     }
 
     private fun showGlassMenu() {
-        val items = listOf(
-            zechs.drive.stream.ui.player.GlassMenuItem("1", "Faixa de Áudio 1", "Japonês (FLAC 2.0)", isSelected = true),
-            zechs.drive.stream.ui.player.GlassMenuItem("2", "Faixa de Áudio 2", "Português Brasileiro (AAC 2.0)"),
-            zechs.drive.stream.ui.player.GlassMenuItem("3", "Faixa de Áudio 3", "Inglês (AC3 5.1)")
-        )
-        zechs.drive.stream.ui.player.PlayerGlassMenuDialog(this, "Selecionar Áudio", items) {}.show()
+        findViewById<View>(R.id.btnMoreOptions)?.performClick()
     }
     private inner class FixtureAdapter(val layout: Int,val count: Int,val bind: (View,Int)->Unit):RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         override fun getItemCount()=count

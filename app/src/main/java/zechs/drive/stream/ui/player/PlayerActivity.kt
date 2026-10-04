@@ -1145,10 +1145,11 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun isControlsShowing(): Boolean {
-        if (isHidingControls) return false
-        return (::playerView.isInitialized && playerView.isControllerVisible) ||
-                (::controlsScrollView.isInitialized && controlsScrollView.isVisible) ||
-                (::mainControlsRoot.isInitialized && mainControlsRoot.alpha > 0.05f && !isHidingControls)
+        if (!::playerView.isInitialized) return false
+        return zechs.drive.stream.utils.PlayerControllerVisibility.isVisible(
+            controllerVisible = playerView.isControllerVisible,
+            isHiding = isHidingControls
+        )
     }
 
     private fun handleBackNavigation(): Boolean {

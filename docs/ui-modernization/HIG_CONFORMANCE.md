@@ -111,3 +111,14 @@ Ratings judge current screenshots and code evidence, not future quality. They ar
 | Preferências condicionais | `SettingsFragment.kt` | Ordem de foco ignora linhas ocultas e é refeita quando muda a visibilidade de sincronização MAL. | Estado de conta e callback OAuth real. |
 
 **Fontes locais consultadas:** Collections pp. 1–2 (grades/linhas padrão, escolha fácil); Lists and tables pp. 2–3 (texto sucinto e comportamento de foco em tvOS); Search fields p. 6 e Searching pp. 1–2 (escopo, sugestões e privacidade); Settings p. 2 (opções gerais, evitar configuração redundante); Sidebars pp. 1–2 (hierarquia enxuta); Pickers pp. 1–2; Focus and selection pp. 2–5; Typography pp. 1–2 (legibilidade à distância e contraste). Adaptações Android TV estão descritas em `FRONTEND_LOG.md`; as diretrizes Apple são referência, não requisito nativo Android.
+
+## F5 — Player e controle remoto
+
+| Área | Evidência | Resultado desta fase | Pendente |
+|---|---|---|---|
+| Estado da HUD e retorno | `PlayerControllerVisibility.kt`, `PlayerControllerVisibilityTest.kt`, `after-v2/f5/player_back_focus.xml`, `touch_back_result.png` | A Activity deixa de inferir a HUD visível a partir de subviews residuais após o controller fechar. A fixture valida seta por OK/toque; D-pad sobe ao retorno e o ativa. | Confirmar sequência OSD→player com playback real e timeout no ExoPlayer/MPV. |
+| Foco e navegação no OSD | `player_initial.xml`, `player_left_focus.xml`, `player_right_focus.xml`, `player_up.xml` | Foco inicia em Play/Pause e percorre seek bar, controles de transporte, retorno e Mais opções no MuMu. | Navegação e single activation com teclas físicas em reprodução real; teste no hardware Android TV. |
+| Opções secundárias | `player_quick_menu.png`, `player_quick_menu_down.png`, `player_after_menu_back.xml` | Dialog abre na primeira linha focada, DOWN avança e BACK fecha restaurando foco no botão de origem. Velocidade, proporção, capítulos e dados técnicos preservados. | Validar cada ação com mídia compatível e leitura técnica real. |
+| Paridade e playback | inspeção de `PlayerActivity`/`MPVActivity` e fixture | Sem recurso existente removido; labels do fechar localizadas. A fixture testa apresentação/retorno do drawer e navegação, não reprodução. | Drive autenticado é necessário para decoder, streams, legendas, AniSkip, autoplay e ambos os engines. |
+
+**Referências locais consultadas:** Playing video pp. 1–2 (ações sucintas, transporte previsível e proporção de vídeo) e Remotes pp. 1–2 (comportamento padrão de Play/Pause/Back e foco direcional), adaptadas à plataforma Android TV.

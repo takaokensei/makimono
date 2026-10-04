@@ -50,7 +50,7 @@
                 android:layout_height="28dp"
                 android:background="?android:attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
-                android:contentDescription="@null"
+                android:contentDescription="@string/content_description_close"
                 android:focusable="true"
                 android:padding="4dp"
                 android:src="@drawable/ic_close_24"

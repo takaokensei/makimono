@@ -161,10 +161,36 @@ class PlayerGlassMenuDialog(
         }
         dialogBinding.rvDialogItems.post {
             val targetPos = if (selectedIndex >= 0) selectedIndex else 0
-            val targetHolder = dialogBinding.rvDialogItems.findViewHolderForAdapterPosition(targetPos)
-            targetHolder?.itemView?.requestFocus() ?: dialogBinding.rvDialogItems.requestFocus()
+            requestInitialItemFocus(dialogBinding, targetPos, attemptsRemaining = 5)
         }
         return this
+    }
+
+    private fun requestInitialItemFocus(
+        dialogBinding: DialogPlayerGlassMenuBinding,
+        position: Int,
+        attemptsRemaining: Int
+    ) {
+        val activeDialog = dialog ?: return
+        if (!activeDialog.isShowing) return
+
+        val list = dialogBinding.rvDialogItems
+        val itemCount = adapter?.itemCount ?: 0
+        if (itemCount == 0) {
+            dialogBinding.btnDialogClose.requestFocus()
+            return
+        }
+
+        val targetPosition = position.coerceIn(0, itemCount - 1)
+        val target = list.findViewHolderForAdapterPosition(targetPosition)?.itemView
+        if (target?.isShown == true && target.requestFocus()) return
+
+        if (attemptsRemaining > 0) {
+            list.scrollToPosition(targetPosition)
+            list.postDelayed({
+                requestInitialItemFocus(dialogBinding, targetPosition, attemptsRemaining - 1)
+            }, 32L)
+        }
     }
 
     fun showLoading(show: Boolean) {
