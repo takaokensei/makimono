@@ -630,3 +630,22 @@ Este documento é a memória persistente dos ciclos de auditoria, testes visuais
 **MuMu x86_64, 1920×1080:** `docs/ui-audit/after-v2/f22/files-toolbar-focus.png` mostra anel ciano no toggle; o XML confirma foco e “Alternar para lista”. OK alternou para lista, manteve foco no botão e atualizou a descrição para “Alternar para grade” (`files-list-f22.png`, `files-list-f22-focus.xml`). OK voltou à grade; DOWN/RIGHT alcançaram a coleção e um card recebeu o foco com ring ciano (`files-grid-return.xml`, `files-grid-dpad-final.png`).
 
 **Validação:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou via Ubuntu WSL/JDK 21 (171 testes, 0 falhas/erros/skips). Os checks de cor, contraste e `git diff --check` passaram. O APK x86_64 foi instalado apenas em `zechs.drive.stream.visualreview` no device `127.0.0.1:16384`; `zechs.drive.stream` permaneceu instalado. `local.properties` manteve SHA-256 `6F8A9100E30E897E01CF8E5B9E1DAA76C4D77DDCE257BB4E266AE9623C5A532B`. Sem release, tag ou push.
+
+## C0.1 — fidelidade do fixture Home (plano antes de editar)
+
+1. Conferir o estado instalado e capturar a Home da fixture sem reinstalar o app principal.
+2. Percorrer com D-pad Home → Detalhes → prateleira → ação principal; registrar foco real.
+3. Comparar binder do fixture com `ContinueWatchingAdapter` para separar defeitos do app e da ferramenta.
+4. Corrigir dados sintéticos ausentes no fixture sem alterar comportamento/estado de conta.
+5. Compilar, executar a suíte unitária existente e repetir a captura/navegação no MuMu.
+6. Atualizar evidência e matriz com o escopo e limites explícitos; sem release ou push.
+
+### Execução C0.1
+
+**Resultado:** o fixture de debug omitia os dados de episódio do card e usava o título do episódio como nome da série. O binder sintético agora corresponde à hierarquia visual de produção: nome da série, badge `Ep. NN`, episódio e tempo restante. Mudança restrita a `VisualReviewActivity.kt`; adapter e telas de produção não foram tocados.
+
+**MuMu x86_64, 1920×1080:** instalado só `zechs.drive.stream.visualreview`, iniciado explicitamente `VisualReviewActivity` e salvo `home-after.png` / `home-focus-after.png`. O UIAutomator confirmou `btnFeaturedInfo` após RIGHT e `btnFeaturedPlay` após DOWN→UP; a captura focada exibe o contorno ciano. Evidências anteriores e novas, incluindo XML, estão em `docs/ui-audit/after-v2/c0/`. O pacote `zechs.drive.stream` manteve versão 1.6.4.1 e não foi reinstalado.
+
+**Build e testes:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild --max-workers=1` passou (171 testes, 0 falhas/erros/ignorados). A primeira tentativa Windows falhou ao resolver o classpath do worker; `TEMP/TMP=C:\temp`, `GRADLE_USER_HOME=G:\` (atalho ao cache existente) e checkout em `X:\` eliminaram o problema do caminho com caractere acentuado. Uma tentativa WSL/Linux anterior parou na detecção do SDK Windows e foi descartada; a execução aprovada foi inteiramente pelo Gradle/JDK Windows.
+
+**Estado:** correção do fixture compilada, validada manualmente e coberta pela suíte existente. `zechs.drive.stream` permaneceu instalado na versão 1.6.4.1; só o pacote isolado `zechs.drive.stream.visualreview` foi substituído. Nenhuma credencial foi lida; `local.properties` não foi editado. Nenhum release, tag, commit ou push foi criado.

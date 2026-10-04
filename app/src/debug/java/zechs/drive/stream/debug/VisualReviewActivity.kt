@@ -154,7 +154,12 @@ class VisualReviewActivity : FragmentActivity(), zechs.drive.stream.ui.player.Pl
         val shelf=findViewById<RecyclerView>(R.id.rvContinueWatchingShelf)
         shelf.layoutManager=LinearLayoutManager(this,RecyclerView.HORIZONTAL,false)
         shelf.adapter=FixtureAdapter(R.layout.item_continue_watching_shelf,6) { v,p ->
-            v.findViewById<TextView>(R.id.tvShelfItemTitle).text="Ep. ${p+1} · O fim da viagem"
+            v.findViewById<TextView>(R.id.tvShelfItemTitle).text="Sousou no Frieren"
+            v.findViewById<TextView>(R.id.tvEpisodeTopBadge).text = "Ep. ${String.format(java.util.Locale.ROOT, "%02d", p + 1)}"
+            v.findViewById<TextView>(R.id.tvShelfItemEpisode).apply {
+                text = "Ep. ${String.format(java.util.Locale.ROOT, "%02d", p + 1)}"
+                visibility = View.VISIBLE
+            }
             v.findViewById<TextView>(R.id.tvShelfItemRemaining).text="7 min restantes"
             Glide.with(this).load(backdrop).into(v.findViewById(R.id.ivShelfItemThumb))
         }
