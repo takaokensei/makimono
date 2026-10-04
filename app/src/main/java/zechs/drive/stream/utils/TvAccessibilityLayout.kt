@@ -115,14 +115,22 @@ object TvAccessibilityLayout {
         secondaryAction: View?
     ) {
         val scale = context.resources.configuration.fontScale.coerceIn(1f, 2f)
-        if (scale <= 1f) return
+        val configuration = context.resources.configuration
+        val baseHeight = if (
+            usesCompactHomeHero(configuration.screenWidthDp, configuration.smallestScreenWidthDp)
+        ) {
+            context.resources.getDimensionPixelSize(R.dimen.home_hero_height_compact)
+        } else {
+            context.resources.getDimensionPixelSize(R.dimen.home_hero_height)
+        }
 
         hero?.let {
             it.layoutParams = it.layoutParams.apply {
-                height = (context.resources.getDimensionPixelSize(R.dimen.home_hero_height) * scale)
-                    .roundToInt()
+                height = (baseHeight * scale).roundToInt()
             }
         }
+
+        if (scale <= 1f) return
 
         val actionHeight = (context.resources.getDimensionPixelSize(R.dimen.home_hero_action_height) * scale)
             .roundToInt()
@@ -130,6 +138,9 @@ object TvAccessibilityLayout {
             action.layoutParams = action.layoutParams.apply { height = actionHeight }
         }
     }
+
+    fun usesCompactHomeHero(screenWidthDp: Int, smallestScreenWidthDp: Int): Boolean =
+        screenWidthDp >= 900 || smallestScreenWidthDp >= 600
 
     fun adaptSettingsRows(context: Context, rows: List<View?>) {
         if (context.resources.configuration.fontScale <= 1f) return

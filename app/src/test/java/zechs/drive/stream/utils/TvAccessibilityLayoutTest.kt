@@ -44,4 +44,11 @@ class TvAccessibilityLayoutTest {
         assertEquals(5, TvAccessibilityLayout.detailsSynopsisMaxLines(1.3f))
         assertEquals(8, TvAccessibilityLayout.detailsSynopsisMaxLines(2f))
     }
+
+    @Test
+    fun `home hero compacts on TV and wide screens only`() {
+        assertEquals(false, TvAccessibilityLayout.usesCompactHomeHero(414, 393))
+        assertEquals(true, TvAccessibilityLayout.usesCompactHomeHero(960, 540))
+        assertEquals(true, TvAccessibilityLayout.usesCompactHomeHero(800, 600))
+    }
 }

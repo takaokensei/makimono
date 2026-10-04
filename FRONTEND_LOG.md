@@ -575,3 +575,21 @@ Este documento é a memória persistente dos ciclos de auditoria, testes visuais
 **MuMu x86_64, 1920×1080:** D-pad moveu o foco de Assistir Agora para Detalhes (`f19-home-info-focused.xml`) e de volta para Assistir Agora (`f19-home-play-focused.xml`). A captura focada mostra superfície escura e anel/texto ciano (`f19-home-play-focused.png`); quando o foco sai, o CTA volta ao preenchimento ciano. A escala do dispositivo permaneceu em 1.0.
 
 **Validação:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou; 163 testes, 0 falhas/erros/skips. `tools/check_layout_colors.py`, `tools/check_contrast.py` e `git diff --check` passaram. O script agora verifica também a tinta ciano sobre superfície nos seis temas; menor resultado focado 4,89:1 (Dracula), e 9,82:1 (Estuary). Só `zechs.drive.stream.visualreview` recebeu o APK. `local.properties` preservou SHA-256 `6F8A9100E30E897E01CF8E5B9E1DAA76C4D77DDCE257BB4E266AE9623C5A532B`.
+
+## F20 — Hero da Home e primeira dobra da TV (plano antes de editar)
+
+1. Capturar a Home atual no MuMu e medir os bounds do destaque e da fileira seguinte.
+2. Reduzir a ocupação vertical do hero em TV/telas largas sem cortar título ou CTA; manter Home de celular em dimensão normal.
+3. Confirmar que a primeira fileira cabe, que o catálogo aparece logo após ela e que o D-pad percorre CTA, Detalhes e cards.
+4. Rodar `assembleDebug testDebugUnitTest`, checks visuais e contraste; instalar apenas o pacote de revisão.
+5. Salvar capturas/XML, atualizar conformidade HIG e fazer commit local após validação.
+
+### Execução F20 — Home com hero compacto em TV
+
+**Causa:** o destaque tinha 384dp de altura e sinopse de três linhas; em 1920×1080, consumia `[224,98][1920,770]`, deixando a maior parte de “Continuar assistindo” fora da tela. O override por qualifier de dimensões não era selecionado pela configuração real do MuMu.
+
+**Correção:** em layouts de TV/paisagem, título e sinopse usam densidade tipográfica compacta (30sp e 12,5sp, sinopse em duas linhas), espaçamentos/paddings menores e scrim inferior de 176dp. `TvAccessibilityLayout` agora aplica 292dp ao hero quando a largura de tela é ≥900dp ou a menor largura é ≥600dp; celulares mantêm 384dp. A escala de texto do sistema continua ampliando hero e ações.
+
+**MuMu x86_64, 1920×1080:** comparação `f20-home-before.png` → `f20-home-after.png`. Hero passou de 672px para 511px (`[224,98][1920,609]`); “Continuar assistindo” e os cards completos cabem (`rvContinueWatchingShelf=[224,685][1920,951]`), com “Em alta / Catálogo” visível abaixo. D-pad direita leva de Assistir agora a Detalhes (`f20-home-right.xml`); para baixo leva ao primeiro card (`f20-home-down.xml`), cujo anel ciano está em `f20-home-card-focused.png`. Fixture verificada pelo pacote `zechs.drive.stream.visualreview`; `fontScale=1.0`.
+
+**Validação:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou via Ubuntu WSL/JDK 21: 171 testes, 0 falhas/erros/skips. `tools/check_layout_colors.py`, `tools/check_contrast.py` e `git diff --check` passaram. `local.properties` preservou SHA-256 `6F8A9100E30E897E01CF8E5B9E1DAA76C4D77DDCE257BB4E266AE9623C5A532B`. Nenhum release foi criado ou enviado; o pacote principal e sua sessão/dados permaneceram intactos.

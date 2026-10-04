@@ -269,3 +269,13 @@ Checks de cor/contraste/diff passaram, `fontScale` ficou em 1.0 e `local.propert
 | Build/testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` via Ubuntu WSL/JDK 21. | 163 testes, 0 falhas/erros/skips |
 
 O pacote principal e a sessão Drive não foram atualizados ou removidos. `fontScale` permaneceu 1.0; checks de layout, contraste e diff passaram.
+
+## F20 — Primeira dobra da Home em TV
+
+| Regra | Evidência | Status |
+|---|---|---|
+| H-L1–L4, H-C1 | `f20-home-before.png/xml` versus `f20-home-after.png/xml`: hero 672px → 511px; a fileira e os cards de “Continuar assistindo” agora aparecem completos, com o cabeçalho do catálogo logo após. | Corrigido e verificado no MuMu |
+| H-F2–F4, H-R3 | `f20-home-right.xml` confirma foco em Detalhes após direita; `f20-home-down.xml` confirma foco no primeiro card após baixo; `f20-home-card-focused.png` mostra o anel de foco. | OK (fixture, D-pad) |
+| Build/testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` via Ubuntu WSL/JDK 21. | 171 testes, 0 falhas/erros/skips |
+
+Home compacta somente em telas de TV/largas; celular preserva altura de destaque existente. O APK foi instalado apenas em `zechs.drive.stream.visualreview`; conta Drive e dados do pacote principal não foram alterados. Sem release ou publicação nesta rodada.

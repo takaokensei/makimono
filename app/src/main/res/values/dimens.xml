@@ -17,6 +17,7 @@
 
     <!-- Home "streaming" layout: cinematic hero + generous side gutter -->
     <dimen name="home_hero_height">384dp</dimen>
+    <dimen name="home_hero_height_compact">292dp</dimen>
     <dimen name="home_hero_action_height">48dp</dimen>
     <dimen name="home_content_margin">48dp</dimen>
     <dimen name="home_shelf_height">152dp</dimen>
