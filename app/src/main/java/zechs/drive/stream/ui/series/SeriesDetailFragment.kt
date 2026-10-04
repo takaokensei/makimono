@@ -37,6 +37,7 @@ import zechs.drive.stream.ui.series.adapter.SeriesDetailEpisodeAdapter
 import zechs.drive.stream.ui.series.adapter.SeriesDetailSeasonAdapter
 import zechs.drive.stream.ui.series.adapter.SeriesEpisodeItem
 import zechs.drive.stream.utils.VideoPlayer
+import zechs.drive.stream.utils.TvAccessibilityLayout
 import java.util.Locale
 
 @AndroidEntryPoint
@@ -65,6 +66,18 @@ class SeriesDetailFragment : BaseFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        TvAccessibilityLayout.adaptSeriesActions(
+            requireContext(),
+            binding.actionsRow.parent as? android.widget.HorizontalScrollView,
+            binding.actionsRow,
+            listOf(
+                binding.btnPrimaryAction,
+                binding.btnTrailer,
+                binding.btnFavorite,
+                binding.btnFollow,
+                binding.btnMarkWatched
+            )
+        )
         setupTopHeader()
         setupAdapters()
         setupFocusAnimations()

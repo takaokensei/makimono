@@ -153,12 +153,24 @@ class VisualReviewActivity : Activity(), zechs.drive.stream.ui.player.PlayerModa
         setContentView(R.layout.fragment_files)
         findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar).title="Meu Drive  ›  Frieren  ›  Temporada 01"
         val rv=findViewById<RecyclerView>(R.id.rvList)
-        rv.layoutManager=GridLayoutManager(this,4)
+        rv.layoutManager=GridLayoutManager(this,TvAccessibilityLayout.gridColumnsForFontScale(4,resources.configuration.fontScale))
         rv.adapter=FilesAdapter({},{},{_,_->}).apply { isGridMode=true;submitList(files(12,true)) }
         rv.postDelayed({rv.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus()},500)
     }
     private fun details(focusEpisode: Boolean = false) {
         setContentView(R.layout.fragment_series_detail)
+        TvAccessibilityLayout.adaptSeriesActions(
+            this,
+            findViewById<View>(R.id.actionsRow)?.parent as? android.widget.HorizontalScrollView,
+            findViewById(R.id.actionsRow),
+            listOf(
+                findViewById(R.id.btnPrimaryAction),
+                findViewById(R.id.btnTrailer),
+                findViewById(R.id.btnFavorite),
+                findViewById(R.id.btnFollow),
+                findViewById(R.id.btnMarkWatched)
+            )
+        )
         art(R.id.ivHeroBackdrop);art(R.id.ivSeriesPosterCard,poster)
         text(R.id.tvRomajiTitle,"SOUSOU NO FRIEREN")
         text(R.id.tvJapaneseTitle,"葬送のフリーレン");show(R.id.tvJapaneseTitle)

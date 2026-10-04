@@ -1,9 +1,11 @@
 package zechs.drive.stream.utils
 
 import android.content.Context
+import android.widget.HorizontalScrollView
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import kotlin.math.roundToInt
 import zechs.drive.stream.R
 
@@ -62,6 +64,57 @@ object TvAccessibilityLayout {
             action.layoutParams = action.layoutParams.apply {
                 height = maxOf(minimumHeight, contentHeight)
             }
+        }
+    }
+
+    fun adaptSeriesActions(
+        context: Context,
+        actionsViewport: HorizontalScrollView?,
+        actionsRow: LinearLayout?,
+        actions: List<View?>
+    ) {
+        val fontScale = context.resources.configuration.fontScale
+        if (fontScale < 1.3f) return
+
+        val density = context.resources.displayMetrics.density
+        actionsViewport?.isFillViewport = true
+        actionsRow?.apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = layoutParams.apply { width = ViewGroup.LayoutParams.MATCH_PARENT }
+        }
+
+        actions.filterNotNull().forEach { action ->
+            val params = action.layoutParams as? ViewGroup.MarginLayoutParams
+                ?: ViewGroup.MarginLayoutParams(action.layoutParams)
+            params.width = ViewGroup.LayoutParams.MATCH_PARENT
+            params.height = ViewGroup.LayoutParams.WRAP_CONTENT
+            params.topMargin = (8f * density).roundToInt()
+            params.marginStart = 0
+            action.layoutParams = params
+            action.minimumHeight = (52f * density).roundToInt()
+            action.setPadding(
+                action.paddingLeft,
+                maxOf(action.paddingTop, (10f * density).roundToInt()),
+                action.paddingRight,
+                maxOf(action.paddingBottom, (10f * density).roundToInt())
+            )
+            setTextMaxLines(action, 2)
+        }
+    }
+
+    fun gridColumnsForFontScale(baseColumns: Int, fontScale: Float): Int {
+        if (fontScale < 1.3f) return baseColumns.coerceAtLeast(1)
+        val reduction = if (fontScale >= 1.8f) 2 else 1
+        return (baseColumns - reduction).coerceAtLeast(1)
+    }
+
+    private fun setTextMaxLines(view: View, maxLines: Int) {
+        when (view) {
+            is TextView -> {
+                view.isSingleLine = false
+                view.maxLines = maxLines
+            }
+            is ViewGroup -> (0 until view.childCount).forEach { setTextMaxLines(view.getChildAt(it), maxLines) }
         }
     }
 

@@ -361,3 +361,23 @@ Este documento é a memória persistente dos ciclos de auditoria, testes visuais
 5. Instalar somente a fixture, validar toque e D-pad antes/depois em cada tela e escala; percorrer itens até o fim e capturar dumps UIAutomator.
 6. Rodar assembleDebug, testes JVM, checks de cor/contraste e diff; compilar release local somente após correções aprovadas, sem upload/tag/workflow.
 7. Registrar resultados objetivos, HIG e gaps de dados reais; commit local F9 apenas com verificações verdes.
+
+## Execução F9 — Reflow de Details e Files
+
+**Correção de Details:** quando fontScale ≥1.3, `actionsRow` muda para coluna e suas cinco ações viram alvos largos com texto de até duas linhas. A prioridade e todas as funcionalidades foram preservadas. No MuMu 200%, as cinco ações aparecem completas em sequência vertical. DOWN a partir de Play chega a Trailer; cinco DOWN alcançam a aba de temporada depois de percorrer play/trailer/favorito/seguir/assistido, com rolagem trazendo o destino à tela (`f9-details-down1.xml`, `f9-details-down5.png/xml`).
+
+**Correção de Files:** o número de colunas da grade se ajusta ao tamanho de texto: mantém o valor normal abaixo de 1.3, reduz uma coluna em 1.3–1.79 e duas em 1.8+. A fixture confirmou 2 colunas em 200% e a sequência RIGHT/DOWN atingiu `cardGridItem` (`f9-files-2.png`, `f9-files-dpad.xml`). Adicionados dois testes unitários puros para a política e o limite mínimo.
+
+**Validação:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou; suite agora tem 163 testes, incluindo `TvAccessibilityLayoutTest`. Capturas e dumps da fixture em `docs/ui-audit/after-v2/f9-*`. O pacote visualreview foi atualizado no MuMu, fontScale voltou a 1.0, app principal não foi alterado. Sessão Drive sem dados reais; logo, mídia/Exo/MPV e comportamento de rede seguem não testados.
+
+**Riscos/gaps reabertos para ciclo seguinte:** Files ainda tem rótulos do side rail quebrados e busca horizontal cortada a 200%; Details continua com hero/sinopse truncados nessa escala; Player OSD label ainda cresce sem estratégia de reflow, embora controles mantenham áreas e descrições. F10 deve focar esses três gaps restantes e os caminhos de navegação até o final da lista.
+
+## F10 — Legibilidade do rail, Details e OSD (plano antes de editar)
+
+1. Reler o ciclo F9, layouts/variantes efetivamente ativos no MuMu e os PDFs Layout, Typography, Accessibility, Focus and selection, Remotes, Playing video, Search fields e Searching.
+2. Identificar o layout que desenha a navegação lateral compartilhada no host de Files e mapear largura/altura dos rótulos, busca, header e foco em 1.3/2.0.
+3. Reflow dos rótulos de navegação e busca em escala grande sem esconder destinos; preservar descrição de acessibilidade, scroll/foco e localização da navegação.
+4. Ajustar Details synopsis e hero para conteúdo expandido sem ocultar Play; permitir leitura/rolagem e manter backdrop contido e hierarquia original.
+5. Auditar Player OSD em 2.0, refluindo labels ou agrupando rótulos apenas se focus/Touch continuarem óbvios; preservar legendas, áudio, episódios, skip OP e menu contextual.
+6. Capturar screenshot/XML em 1.0/1.3/2.0, navegar por todos os controles com D-pad/toque e registrar o estado real; playback fica separado porque Drive não tem sessão.
+7. Rodar assembleDebug, testDebugUnitTest, color/contrast/layout checks e diff; atualizar ledger e fazer commit local após verde, sem publicar release/tag/workflow.

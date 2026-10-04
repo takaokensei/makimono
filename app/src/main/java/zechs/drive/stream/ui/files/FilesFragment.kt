@@ -48,6 +48,7 @@ import zechs.drive.stream.utils.EpisodeParser
 import zechs.drive.stream.utils.SeasonEpisodeGrouper
 import zechs.drive.stream.utils.SeasonGroup
 import zechs.drive.stream.utils.VideoPlayer
+import zechs.drive.stream.utils.TvAccessibilityLayout
 import zechs.drive.stream.utils.state.Resource
 
 
@@ -308,7 +309,7 @@ class FilesFragment : BaseFragment() {
             it is FilesDataModel.File && (it.driveFile.isVideoFile || it.driveFile.isShortcutVideo)
         }
         val screenWidthDp = resources.configuration.screenWidthDp
-        val spanCount = if (hasVideoFiles) {
+        val baseSpanCount = if (hasVideoFiles) {
             when {
                 screenWidthDp >= 1200 -> 4
                 screenWidthDp >= 840 -> 4
@@ -325,6 +326,10 @@ class FilesFragment : BaseFragment() {
                 else -> 2
             }
         }
+        val spanCount = TvAccessibilityLayout.gridColumnsForFontScale(
+            baseSpanCount,
+            resources.configuration.fontScale
+        )
 
         if (isGridMode) {
             binding.btnToggleGrid.setImageResource(R.drawable.ic_list_view_24)

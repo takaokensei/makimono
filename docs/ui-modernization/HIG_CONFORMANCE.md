@@ -145,8 +145,18 @@ Ratings judge current screenshots and code evidence, not future quality. They ar
 | H-A5, H-Y1–Y8 | `after-v2/f8-settings-2.png` antes: summaries cortados dentro de rows landscape fixas; `f8-settings-2-after.png` depois: “Meu Drive › Animes” e tema têm altura suficiente e não se sobrepõem. FontScale 2.0. | Melhoria confirmada; Settings passa a rolar verticalmente |
 | H-A5, H-Y1–Y8, H-L4 | `after-v2/f8-profiles-2.png` antes: nome/role cortados; `f8-profiles-dpad.png` depois: nomes e badges quebram em duas linhas, botões inteiros. | Melhoria confirmada; título ainda domina a tela em 2.0 |
 | H-F2–F4, H-R3 | `f8-profile-down.xml`: três RIGHT alcançam Add Profile e DOWN foca `btnManageProfiles` `[730,854][1191,952]`; `f8-settings-down.xml`: DOWN foca `settingLibraryRoot` `[284,409][1635,594]`. | D-pad sem dead-end nos caminhos testados |
-| H-A5, H-Y1–Y8 | Escalas 1.3/2.0 também inspecionadas em Home, Details, Files e Player (`f7/scale-*`). Home CTA foi parcialmente corrigida em F7. Details hero/actions, Files nav/cards e labels do OSD ainda precisam de adaptação em 2.0. | Gap medido; próximo ciclo |
+| H-A5, H-Y1–Y8 | Escalas 1.3/2.0 inspecionadas em Home, Details, Files e Player (`f7/scale-*`). Home CTA parcialmente corrigida em F7; Details actions empilhadas e Files grid reduzido em F9. Details synopsis/title, Files nav/search e Player OSD continuam truncando/cortando em 2.0. | Parcial; gap para F10 |
 
 Checks: `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou com 161 testes; foco exercitado no MuMu x86_64. Fixture exclusivamente demonstrativa; rede Drive e playback real não cobertos.
+
+## F9 — Reflow de ações Details e grade Files
+
+| Regra | Evidência | Status |
+|---|---|---|
+| H-A5, H-L4, H-B1–B3 | `after-v2/f9-details-2.png` e `f9-details-down5.png`: cinco ações em coluna em 200%; botões exibem labels inteiros. `f9-details-down1.xml`: DOWN vai a Trailer; `f9-details-down5.xml`: cinco ações percorridas até a aba, com scroll automático. | OK (fixture/d-pad); synopsis ainda elide |
+| H-A5, H-Y1–Y8, H-CO1–CO2 | `after-v2/f9-files-2.png`: grid cai de 4 para 2 colunas em 200%, com cards significativamente mais largos; `f9-files-dpad.xml` foca `cardGridItem` `[322,444][1086,1080]` após RIGHT/DOWN. | Parcial (grid/foco OK); rail e busca truncam |
+| H-R1–R5, H-PV1–PV6 | Operação de player escala 2× vista em `f7/scale-2.0/player.png`; esta fase não carregou stream e não validou controles reais. | Gap permanece; fixture sem mídia/Drive |
+
+`TvAccessibilityLayoutTest`: 2 casos para preservar colunas em tamanhos padrão/moderado e reduzir sem zerar em escala extrema. Build/testes e checks da fase registrados em `FRONTEND_LOG.md`.
 
 **Validação F6:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou com 161 testes; o pacote de fixture `zechs.drive.stream.visualreview` foi reinstalado no MuMu x86_64; o pacote principal `zechs.drive.stream` permaneceu intacto. OSD sob modal, seleção da nota, saída por toque/BACK e foco após fechamento foram testados na fixture. Playback e operações dependentes do Drive/MAL continuam sem validação nesta sessão.

@@ -235,3 +235,13 @@ Layout pp. 2–6, Typography pp. 1–2/6/9–10, Accessibility pp. 2–5, Lists 
 
 **Conflitos desta fase:** nenhum. O foco após RIGHT/DOWN foi testado sem transições; estado selecionado e foco não foram fundidos. Configuração de fontScale do emulador retornou a 1.0.
 
+## F9 PDF re-review — Details, Files e reprodução (2026-10-04)
+
+Playing video pp. 1–4, Remotes pp. 1–3, Layout pp. 1–6, Typography pp. 1–2/6, Accessibility pp. 2–5, Collections pp. 1–2, Lists and tables pp. 1–3 e Focus and selection pp. 1–5 foram relidos. Na adaptação: manter proporção e ações previsíveis, hierarquia do foco D-pad, grade de imagem familiar e textos em listas sem sobreposição; usar scroll/reflow para conteúdo complementar. Não foram portadas APIs/comportamentos exclusivos de Siri Remote ou AVPlayer.
+
+**Aplicado nesta rodada:** a partir de fontScale 1.3, as cinco ações do cabeçalho de Details empilham dentro da coluna, usam até duas linhas e mantêm a ordem Play, Trailer, Favorito, Seguir e Assistido. O grid do explorador reduz colunas gradualmente (−1 em 1.3, −2 em 1.8+) para aumentar a área dos títulos. Evidências 200% em `docs/ui-audit/after-v2/f9-*`.
+
+**Verificação:** RIGHT/DOWN em Files focou `cardGridItem` no grid de duas colunas. Em Details, DOWN a partir da ação primária alcançou Trailer; mais quatro DOWN passaram por todas as cinco ações e chegaram à aba de temporada focada, enquanto o NestedScrollView deslocava a região. As cinco ações ficaram inteiras na captura. O player continua sem mídia real; o OSD 200% permanece assunto pendente. Side rail e busca do Files também ainda cortam rótulos/texto, para F10.
+
+**Conflitos desta fase:** nenhum. Reduzir colunas é resposta de layout explícita ao tamanho de texto e preserva todos os itens; não remove dados ou ações.
+
