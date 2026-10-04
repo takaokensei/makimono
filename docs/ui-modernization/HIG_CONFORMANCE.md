@@ -138,4 +138,15 @@ Ratings judge current screenshots and code evidence, not future quality. They ar
 | H-RV1–RV2 | Pedido de avaliação | `MalRatingDialog.kt`: pedido continua acionado no ponto de conclusão existente; nota só é enviada após seleção explícita; botão Cancelar e BACK dispensam. Uma avaliação não é submetida pela nota inicial. | OK (código/fixture) |
 | H-A3, H-A4, H-A10 | Menu, rating e editor de legendas | Dumps UIAutomator confirmam elementos acionáveis e foco; `SeekBar` e botões são selecionáveis por D-pad/toque. Escalas 1.0/1.3/2.0 exercitadas; cortes permanecem em várias telas em 2.0. A descrição semântica dos ícones ainda requer auditoria dedicada. | Parcial; F8 |
 
+## F8 — Texto ampliado em Configurações e Perfis
+
+| Regra | Evidência | Status |
+|---|---|---|
+| H-A5, H-Y1–Y8 | `after-v2/f8-settings-2.png` antes: summaries cortados dentro de rows landscape fixas; `f8-settings-2-after.png` depois: “Meu Drive › Animes” e tema têm altura suficiente e não se sobrepõem. FontScale 2.0. | Melhoria confirmada; Settings passa a rolar verticalmente |
+| H-A5, H-Y1–Y8, H-L4 | `after-v2/f8-profiles-2.png` antes: nome/role cortados; `f8-profiles-dpad.png` depois: nomes e badges quebram em duas linhas, botões inteiros. | Melhoria confirmada; título ainda domina a tela em 2.0 |
+| H-F2–F4, H-R3 | `f8-profile-down.xml`: três RIGHT alcançam Add Profile e DOWN foca `btnManageProfiles` `[730,854][1191,952]`; `f8-settings-down.xml`: DOWN foca `settingLibraryRoot` `[284,409][1635,594]`. | D-pad sem dead-end nos caminhos testados |
+| H-A5, H-Y1–Y8 | Escalas 1.3/2.0 também inspecionadas em Home, Details, Files e Player (`f7/scale-*`). Home CTA foi parcialmente corrigida em F7. Details hero/actions, Files nav/cards e labels do OSD ainda precisam de adaptação em 2.0. | Gap medido; próximo ciclo |
+
+Checks: `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou com 161 testes; foco exercitado no MuMu x86_64. Fixture exclusivamente demonstrativa; rede Drive e playback real não cobertos.
+
 **Validação F6:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou com 161 testes; o pacote de fixture `zechs.drive.stream.visualreview` foi reinstalado no MuMu x86_64; o pacote principal `zechs.drive.stream` permaneceu intacto. OSD sob modal, seleção da nota, saída por toque/BACK e foco após fechamento foram testados na fixture. Playback e operações dependentes do Drive/MAL continuam sem validação nesta sessão.

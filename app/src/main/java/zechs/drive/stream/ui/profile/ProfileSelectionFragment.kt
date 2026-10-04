@@ -25,6 +25,7 @@ import zechs.drive.stream.databinding.FragmentProfileSelectionBinding
 import zechs.drive.stream.ui.BaseFragment
 import zechs.drive.stream.utils.ProfileManager
 import zechs.drive.stream.utils.TvFocusRing
+import zechs.drive.stream.utils.TvAccessibilityLayout
 import zechs.drive.stream.utils.ext.navigateSafe
 import javax.inject.Inject
 
@@ -97,6 +98,10 @@ class ProfileSelectionFragment : BaseFragment() {
     }
 
     private fun setupActions() {
+        TvAccessibilityLayout.adaptProfileActions(
+            requireContext(),
+            listOf(binding.btnManageProfiles, binding.btnProfileSettings)
+        )
         binding.btnManageProfiles.setOnClickListener {
             profilesAdapter.isManageMode = !profilesAdapter.isManageMode
             binding.btnManageProfiles.text = if (profilesAdapter.isManageMode) "CONCLUÍDO" else "GERENCIAR PERFIS"

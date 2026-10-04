@@ -2,6 +2,8 @@ package zechs.drive.stream.utils
 
 import android.content.Context
 import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
 import kotlin.math.roundToInt
 import zechs.drive.stream.R
 
@@ -28,5 +30,44 @@ object TvAccessibilityLayout {
         listOfNotNull(primaryAction, secondaryAction).forEach { action ->
             action.layoutParams = action.layoutParams.apply { height = actionHeight }
         }
+    }
+
+    fun adaptSettingsRows(context: Context, rows: List<View?>) {
+        if (context.resources.configuration.fontScale <= 1f) return
+
+        val density = context.resources.displayMetrics.density
+        val minimumHeight = (64f * density).roundToInt()
+        val verticalPadding = (12f * density).roundToInt()
+        rows.filterNotNull().forEach { row ->
+            row.layoutParams = row.layoutParams.apply {
+                height = ViewGroup.LayoutParams.WRAP_CONTENT
+            }
+            row.minimumHeight = minimumHeight
+            if (row.paddingTop < verticalPadding || row.paddingBottom < verticalPadding) {
+                row.setPadding(row.paddingLeft, verticalPadding, row.paddingRight, verticalPadding)
+            }
+        }
+    }
+
+    fun adaptProfileActions(context: Context, actions: List<View?>) {
+        if (context.resources.configuration.fontScale <= 1f) return
+
+        val density = context.resources.displayMetrics.density
+        actions.filterNotNull().forEach { action ->
+            val largestTextHeight = findTextViews(action)
+                .maxOfOrNull { (it.paint.fontMetrics.descent - it.paint.fontMetrics.ascent).roundToInt() }
+                ?: 0
+            val minimumHeight = (48f * density).roundToInt()
+            val contentHeight = largestTextHeight + (24f * density).roundToInt()
+            action.layoutParams = action.layoutParams.apply {
+                height = maxOf(minimumHeight, contentHeight)
+            }
+        }
+    }
+
+    private fun findTextViews(view: View): List<TextView> = when (view) {
+        is TextView -> listOf(view)
+        is ViewGroup -> (0 until view.childCount).flatMap { findTextViews(view.getChildAt(it)) }
+        else -> emptyList()
     }
 }

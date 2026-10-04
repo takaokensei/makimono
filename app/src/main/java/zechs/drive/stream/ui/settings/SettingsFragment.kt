@@ -29,6 +29,7 @@ import zechs.drive.stream.ui.main.MainViewModel
 import zechs.drive.stream.utils.AppTheme
 import zechs.drive.stream.utils.BackupSerializer
 import zechs.drive.stream.utils.VideoPlayer
+import zechs.drive.stream.utils.TvAccessibilityLayout
 import zechs.drive.stream.utils.state.Resource
 import zechs.drive.stream.utils.ext.resolveThemeColor
 import dagger.hilt.android.AndroidEntryPoint
@@ -142,6 +143,8 @@ class SettingsFragment : BaseFragment() {
             binding.settingImportBackup,
             binding.settingLogOut
         )
+
+        TvAccessibilityLayout.adaptSettingsRows(requireContext(), rows)
 
         rows.forEach { row ->
             row.setOnFocusChangeListener { view, hasFocus ->

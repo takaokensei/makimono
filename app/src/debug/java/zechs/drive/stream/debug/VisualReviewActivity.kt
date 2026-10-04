@@ -137,6 +137,10 @@ class VisualReviewActivity : Activity(), zechs.drive.stream.ui.player.PlayerModa
     }
     private fun profiles() {
         setContentView(R.layout.fragment_profile_selection)
+        TvAccessibilityLayout.adaptProfileActions(
+            this,
+            listOf(findViewById(R.id.btnManageProfiles), findViewById(R.id.btnProfileSettings))
+        )
         val rv=findViewById<RecyclerView>(R.id.rvProfiles)
         rv.layoutParams=rv.layoutParams.apply { height=ViewGroup.LayoutParams.WRAP_CONTENT }
         rv.layoutManager=LinearLayoutManager(this,RecyclerView.HORIZONTAL,false)
@@ -209,6 +213,25 @@ class VisualReviewActivity : Activity(), zechs.drive.stream.ui.player.PlayerModa
     }
     private fun settingsScreen() {
         setContentView(R.layout.fragment_settings)
+        TvAccessibilityLayout.adaptSettingsRows(
+            this,
+            listOf(
+                R.id.settingSelectProfile,
+                R.id.settingLibraryRoot,
+                R.id.settingSelectTheme,
+                R.id.settingDefaultPlayer,
+                R.id.settingSubtitleSize,
+                R.id.settingClearCache,
+                R.id.settingCheckForUpdate,
+                R.id.settingMalAccount,
+                R.id.settingMalSyncToggle,
+                R.id.settingAutoSkipToggle,
+                R.id.settingGesturesToggle,
+                R.id.settingExportBackup,
+                R.id.settingImportBackup,
+                R.id.settingLogOut
+            ).map { findViewById<View>(it) }
+        )
         findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar).apply {
             title = "Configurações"
             navigationContentDescription = "Voltar"

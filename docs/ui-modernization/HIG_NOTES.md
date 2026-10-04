@@ -227,3 +227,11 @@ Os PDFs Motion, Layout, Accessibility, Materials, Focus and selection e Typograp
 
 **Conflitos desta fase:** nenhum novo. O alvo de 200% do material Apple é um critério de referência; layouts Android ainda precisam preservar conteúdo útil e não se declaram aprovados enquanto as capturas 2,0× exibirem cortes. As escalas globais de animação foram restauradas após o teste.
 
+## F8 PDF re-review — Lists, Collections, Buttons e responsividade (2026-10-04)
+
+Layout pp. 2–6, Typography pp. 1–2/6/9–10, Accessibility pp. 2–5, Lists and tables pp. 1–3, Collections pp. 1–2, Buttons pp. 1–3/7–8 e Focus and selection pp. 1–5 foram relidos. Aplicação prática: listas de texto precisam permitir leitura em mais de uma linha e rolagem; grids permanecem adequados para arte; ações primárias mantêm hierarquia e padding; foco D-pad continua distinto da seleção. Para escala ampliada, conteúdo pode reflow e crescer, preservando a ordem e a rota de navegação. Os números e componentes Apple são referência de design, não especificações de Android.
+
+**Aplicado nesta rodada:** linhas de Settings na variante landscape passam de altura fixa para `wrap_content` com mínimo/padding de controle, preservando summaries em 200%; cards de perfil permitem nome/role em duas linhas e os botões inferiores crescem conforme a tipografia. Capturas pré/pós e dumps UIAutomator, incluindo foco nos caminhos Settings e Profiles a 2.0×, ficam em `docs/ui-audit/after-v2/f8-*`. Home/Details/Files/Player foram auditados e os defeitos registrados para o ciclo seguinte; a conclusão de F8 não significa conformidade a 200% nessas telas.
+
+**Conflitos desta fase:** nenhum. O foco após RIGHT/DOWN foi testado sem transições; estado selecionado e foco não foram fundidos. Configuração de fontScale do emulador retornou a 1.0.
+

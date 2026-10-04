@@ -341,3 +341,23 @@ Este documento é a memória persistente dos ciclos de auditoria, testes visuais
 6. Rodar `assembleDebug`, `testDebugUnitTest`, checks de layout/contraste e `git diff --check`; confirmar que as settings de escala do MuMu foram restauradas.
 7. Atualizar evidência, HIG notes/conformance e rubrica; compilar `assembleRelease` local somente se necessária à validação final, registrar assinatura DEBUG, sem publicar, tag ou workflow.
 8. Fazer commit local F8 após verificação, mantendo como gaps explícitos qualquer clipping restante ou fluxo impossível sem sessão Drive.
+
+## Execução F8 — Reflow de Settings e Perfis
+
+**Achados e correções:** o `layout-land/fragment_settings.xml` fixa cards em 64dp, embora seus summaries estejam em `sp`; a 200% o texto atravessava a borda. `TvAccessibilityLayout.adaptSettingsRows` agora converte essas linhas para altura pelo conteúdo com padding e mínimo de toque quando fontScale > 1, tanto no fragment real quanto na fixture. `item_profile_card.xml` agora deixa nomes e papel ocuparem duas linhas; ações no rodapé são dimensionadas pela altura real da tipografia ampliada. Sem reduzir recursos.
+
+**MuMu, fontScale 2.0:** comparativos Settings/Profiles antes e depois em `docs/ui-audit/after-v2/f8-*`. Após a mudança, summaries de Settings cabem nos cartões visíveis e rolam verticalmente; Profile names/roles e as ações cabem melhor. O título de Perfis ocupa grande fração da tela, portanto o layout ainda precisa de novo refinement em 200%. D-pad verificado: Settings DOWN foca `settingLibraryRoot`; Profiles RIGHT×3 chega a “Adicionar perfil” e DOWN alcança `btnManageProfiles` `[730,854][1191,952]`. FontScale foi restaurado a 1.0.
+
+**Validação:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou (161 testes, zero falhas/erros/skips). A fixture foi reinstalada no pacote `zechs.drive.stream.visualreview`; dados do app principal preservados. Nenhum release foi compilado/publicado neste ciclo. `git diff --check`, `check_layout_colors.py` e `check_contrast.py` serão executados antes do commit. PDFs usados e limites constam em `docs/ui-modernization/HIG_NOTES.md` e `HIG_CONFORMANCE.md`.
+
+**Limites e ciclo seguinte:** fontScale 2.0 continua causando cortes em Home shelf/rail, Details hero/actions, Files toolbar/rail/cards e Player OSD labels. F9 começa nesses componentes, aplica reflow em layouts/variantes e repete teste de escala/toque/D-pad. Home CTA já preservada em 1.3 por F7. Sessão Drive continua ausente; Exo/MPV com stream real, autenticação OAuth, faixas e AniSkip seguem pendentes.
+
+## F9 — Reflow das telas de mídia em fontScale alto (plano antes de editar)
+
+1. Reler FRONTEND_LOG, as notas F7/F8 e os PDFs Layout, Typography, Accessibility, Collections, Lists and tables, Focus and selection, Playing video e Remotes nas seções gerais/tvOS pertinentes.
+2. Medir dumps/screenshots a 1.0, 1.3 e 2.0; localizar exatamente os cortes em nav/rails Home e Files, hero/actions Details, file/episode cards e Player OSD.
+3. Corrigir primeiro estruturas horizontais rígidas: wrap/stack em ações de Details, breadcrumb/search Files com acessos alternativos e player com alvos acessíveis; não reduzir funcionalidades.
+4. Preservar grids de arte como coleção e oferecer reflow/rolagem para textos; assegurar viewport clipping, espaçamento de foco e títulos longos sem cortar ações.
+5. Instalar somente a fixture, validar toque e D-pad antes/depois em cada tela e escala; percorrer itens até o fim e capturar dumps UIAutomator.
+6. Rodar assembleDebug, testes JVM, checks de cor/contraste e diff; compilar release local somente após correções aprovadas, sem upload/tag/workflow.
+7. Registrar resultados objetivos, HIG e gaps de dados reais; commit local F9 apenas com verificações verdes.
