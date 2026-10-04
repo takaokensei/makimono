@@ -181,6 +181,10 @@ class VisualReviewActivity : Activity() {
     }
     private fun settingsScreen() {
         setContentView(R.layout.fragment_settings)
+        findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar).apply {
+            title = "Configurações"
+            navigationContentDescription = "Voltar"
+        }
         text(R.id.tvCurrentProfileName, "Perfil ativo: Cauã (Admin)")
         text(R.id.tvLibraryRootValue, "Meu Drive › Animes")
         text(R.id.tvThemeCurrentValue, "Obsidian (Cinema escuro / Ciano)")

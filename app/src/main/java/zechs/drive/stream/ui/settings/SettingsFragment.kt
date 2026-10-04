@@ -45,6 +45,7 @@ class SettingsFragment : BaseFragment() {
 
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
+    private var tvFocusEnabled = false
 
     private val mainViewModel by activityViewModels<MainViewModel>()
 
@@ -100,6 +101,8 @@ class SettingsFragment : BaseFragment() {
         binding.toolbar.setNavigationOnClickListener {
             findNavController().navigateUp()
         }
+        binding.toolbar.title = getString(R.string.app_settings)
+        binding.toolbar.navigationContentDescription = getString(R.string.back)
 
         setupUserProfileSection()
         setupLibraryRootSetting()
@@ -119,6 +122,7 @@ class SettingsFragment : BaseFragment() {
     private fun setupTvFocus() {
         val isTv = zechs.drive.stream.utils.DeviceUi.isTenFootExperience(requireContext())
         if (!isTv && resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE) return
+        tvFocusEnabled = true
 
         zechs.drive.stream.utils.TvFocusRing.install(binding.root)
 
@@ -139,7 +143,7 @@ class SettingsFragment : BaseFragment() {
             binding.settingLogOut
         )
 
-        rows.forEachIndexed { index, row ->
+        rows.forEach { row ->
             row.setOnFocusChangeListener { view, hasFocus ->
                 view.animate()
                     .scaleX(if (hasFocus) 1.015f else 1f)
@@ -148,14 +152,50 @@ class SettingsFragment : BaseFragment() {
                     .setDuration(120L)
                     .start()
             }
-            row.nextFocusUpId = rows.getOrNull(index - 1)?.id ?: binding.toolbar.id
-            row.nextFocusDownId = rows.getOrNull(index + 1)?.id ?: row.id
         }
+        updateSettingsFocusOrder(rows)
 
         binding.switchMalSync.isFocusable = false
         binding.switchAutoSkip.isFocusable = false
         binding.switchGestures.isFocusable = false
         binding.settingSelectProfile?.post { binding.settingSelectProfile?.requestFocus() }
+    }
+
+    private fun updateSettingsFocusOrder(rows: List<View>? = null) {
+        if (!tvFocusEnabled || _binding == null) return
+        val candidates = rows ?: listOfNotNull(
+            binding.settingSelectProfile,
+            binding.settingLibraryRoot,
+            binding.settingSelectTheme,
+            binding.settingDefaultPlayer,
+            binding.settingSubtitleSize,
+            binding.settingClearCache,
+            binding.settingCheckForUpdate,
+            binding.settingMalAccount,
+            binding.settingMalSyncToggle,
+            binding.settingAutoSkipToggle,
+            binding.settingGesturesToggle,
+            binding.settingExportBackup,
+            binding.settingImportBackup,
+            binding.settingLogOut
+        )
+        val visibleRows = candidates.filter { it.isShown && it.isFocusable }
+        val backButton = (0 until binding.toolbar.childCount)
+            .asSequence()
+            .map(binding.toolbar::getChildAt)
+            .firstOrNull { it.contentDescription == binding.toolbar.navigationContentDescription }
+        if (backButton?.id == View.NO_ID) {
+            backButton.id = View.generateViewId()
+        }
+        if (visibleRows.isNotEmpty()) {
+            backButton?.nextFocusDownId = visibleRows.first().id
+        }
+        visibleRows.forEachIndexed { index, row ->
+            row.nextFocusUpId = visibleRows.getOrNull(index - 1)?.id
+                ?: backButton?.id?.takeIf { it != View.NO_ID }
+                ?: row.id
+            row.nextFocusDownId = visibleRows.getOrNull(index + 1)?.id ?: row.id
+        }
     }
 
     private fun setupUserProfileSection() {
@@ -494,6 +534,7 @@ class SettingsFragment : BaseFragment() {
             // Direct token transfer over the LAN was removed. The TV flow uses
             // the short-lived OAuth code handled by MalAuthDialog instead.
             binding.settingMalTransferToTv.isVisible = false
+            updateSettingsFocusOrder()
         }
 
         updateMalUi()
@@ -727,6 +768,7 @@ class SettingsFragment : BaseFragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        tvFocusEnabled = false
         _binding = null
     }
 

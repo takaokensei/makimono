@@ -680,29 +680,19 @@ class FilesFragment : BaseFragment() {
         binding.rvList.apply {
             adapter = filesAdapter
             addOnScrollListener(this@FilesFragment.scrollListener)
-            addOnChildAttachStateChangeListener(focusPaginationListener)
         }
-        updateLayoutMode()
-    }
-
-    private val focusPaginationListener = object : RecyclerView.OnChildAttachStateChangeListener {
-        override fun onChildViewAttachedToWindow(view: View) {
-            view.setOnFocusChangeListener { focusedView, hasFocus ->
-                if (!hasFocus) return@setOnFocusChangeListener
-                val rv = binding.rvList
-                val position = rv.getChildAdapterPosition(focusedView)
-                if (position == RecyclerView.NO_POSITION) return@setOnFocusChangeListener
-                val total = filesAdapter.itemCount
-                if (position >= total - 2 && !isLoading && !viewModel.isLastPage) {
-                    Log.d(TAG, "Paginating via D-pad focus near end (pos=$position)")
-                    viewModel.queryFiles(args.query)
-                }
+        filesAdapter.onFocusItemListener = { focusedView ->
+            val position = binding.rvList.getChildAdapterPosition(focusedView)
+            if (position != RecyclerView.NO_POSITION &&
+                position >= filesAdapter.itemCount - 2 &&
+                !isLoading &&
+                !viewModel.isLastPage
+            ) {
+                Log.d(TAG, "Paginating via D-pad focus near end (pos=$position)")
+                viewModel.queryFiles(args.query)
             }
         }
-
-        override fun onChildViewDetachedFromWindow(view: View) {
-            view.onFocusChangeListener = null
-        }
+        updateLayoutMode()
     }
 
     private fun showSnackBar(message: String?) {

@@ -99,3 +99,15 @@ Ratings judge current screenshots and code evidence, not future quality. They ar
 - The user-provided `current-state/` screenshots remain byte-for-byte preserved. They are evidence supplied with the task; don't overwrite them with emulator output.
 - OAuth/Drive login, expired-token behavior, network failure recovery, MPV/ExoPlayer key behavior, and subfolder traversal require runtime fixtures/accounts beyond the current visual fixture. Do not infer that these paths pass from screenshots or JVM tests.
 
+
+## F4 — Coleções, busca e preferências
+
+| Área | Evidência | Resultado desta fase | Pendente |
+|---|---|---|---|
+| Hierarquia e foco de Files | `after-v2/f4/files_rail.xml`, `files_dpad_final.xml` | D-pad parte da navegação lateral, alcança o primeiro card e segue para a linha seguinte. Listener de paginação agora compõe com o callback de foco do card em vez de substituí-lo. | Paginação remota e ordem/listagem de dados do Drive real. |
+| Busca contextual | `fragment_files.xml`, `after-v2/f4/files_search_test.xml` | Placeholder explicita “neste diretório”; busca alcançável por D-pad após mover para a coluna direita. | Sugestões/histórico de busca não são implementados; testar resultados, teclado Android TV e limpar em dados reais. |
+| Estado visual de foco | `settings_after.png`, `settings_first_row_focus.png` | Configurações usa um único anel ciano temático; contorno branco duplicado removido do drawable compartilhado. | Validar dialogs e todos os temas em execução. |
+| Título/voltar em Settings | `layout-land/fragment_settings.xml`, `settings_first_row_focus.png` | Barra fixa mostra “Configurações”; seta possui descrição “Voltar”; foco de primeira linha tem alvo de retorno explícito. | BACK do sistema e tela completa em device build de produção. |
+| Preferências condicionais | `SettingsFragment.kt` | Ordem de foco ignora linhas ocultas e é refeita quando muda a visibilidade de sincronização MAL. | Estado de conta e callback OAuth real. |
+
+**Fontes locais consultadas:** Collections pp. 1–2 (grades/linhas padrão, escolha fácil); Lists and tables pp. 2–3 (texto sucinto e comportamento de foco em tvOS); Search fields p. 6 e Searching pp. 1–2 (escopo, sugestões e privacidade); Settings p. 2 (opções gerais, evitar configuração redundante); Sidebars pp. 1–2 (hierarquia enxuta); Pickers pp. 1–2; Focus and selection pp. 2–5; Typography pp. 1–2 (legibilidade à distância e contraste). Adaptações Android TV estão descritas em `FRONTEND_LOG.md`; as diretrizes Apple são referência, não requisito nativo Android.
