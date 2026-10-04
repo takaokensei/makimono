@@ -239,6 +239,9 @@ class VisualReviewActivity : FragmentActivity(), zechs.drive.stream.ui.player.Pl
             findViewById<ImageView>(R.id.btnToggleGrid).setImageResource(
                 if (gridMode) R.drawable.ic_list_view_24 else R.drawable.ic_grid_view_24
             )
+            findViewById<ImageView>(R.id.btnToggleGrid).contentDescription = getString(
+                if (gridMode) R.string.files_switch_to_list else R.string.files_switch_to_grid
+            )
         }
         rv.adapter=adapter
         rv.isFocusable = true

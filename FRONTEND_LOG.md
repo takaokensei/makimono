@@ -612,3 +612,21 @@ Este documento é a memória persistente dos ciclos de auditoria, testes visuais
 **MuMu x86_64, 1920×1080:** `f21-details-before.png` e `f21-details-after-focused.png` mostram o antes/depois do CTA; `f21-details-after-normal.png` mostra o estado fora de foco com card de episódio focado. `f21-details-after-focused.xml` confirma foco na ação primária; após dois DOWN, `f21-details-after-normal.xml` confirma foco em `cardEpisodeItem`. Fixture usada: `zechs.drive.stream.visualreview`, sem chamada ao Drive.
 
 **Validação:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou via Ubuntu WSL/JDK 21: 171 testes, zero falhas/erros/skips. `tools/check_layout_colors.py`, `tools/check_contrast.py` e `git diff --check` passaram; menor contraste de CTA focado permanece 4,89:1 na paleta Dracula. `local.properties` foi restaurado ao SHA-256 `6F8A9100E30E897E01CF8E5B9E1DAA76C4D77DDCE257BB4E266AE9623C5A532B`. Nenhum release/tag/push foi feito e o pacote principal permaneceu intacto.
+
+## F22 — Toggle de visualização em Pastas (plano antes de editar)
+
+1. Auditar Grade/Lista em 1920×1080, verificar feedback de foco, mudança de modo e retorno do D-pad.
+2. Corrigir o alvo de toque para cumprir 48dp também fora da adaptação de TV, mantendo o tamanho de tela grande.
+3. Substituir a descrição genérica por uma ação que anuncie o modo que será ativado; preservar persistência da preferência.
+4. Compilar, rodar todos os testes e alternar Grade↔Lista por OK no MuMu; validar o anel ciano e foco após a mudança.
+5. Salvar evidências, atualizar matriz HIG e criar commit local. Não reinstalar o pacote principal nem acessar a sessão Drive.
+
+### Execução F22 — alvo, foco e descrição do toggle
+
+**Falha encontrada:** em celular, o ícone de Grade/Lista ocupava 24×24dp e tinha apenas uma descrição genérica. A tela larga adapta o controle para um alvo de TV, mas o layout base mantinha a área de toque curta.
+
+**Correção:** o controle agora tem área mínima de 48×48dp e o campo de busca acompanha 48dp de altura. O seletor de fundo usa o preenchimento de foco/pressão do tema, mantendo o contorno ciano do `TvFocusRing`. A descrição é contextual: “Alternar para lista” na grade e “Alternar para grade” na lista. O adaptador de modo e sua preferência continuam inalterados.
+
+**MuMu x86_64, 1920×1080:** `docs/ui-audit/after-v2/f22/files-toolbar-focus.png` mostra anel ciano no toggle; o XML confirma foco e “Alternar para lista”. OK alternou para lista, manteve foco no botão e atualizou a descrição para “Alternar para grade” (`files-list-f22.png`, `files-list-f22-focus.xml`). OK voltou à grade; DOWN/RIGHT alcançaram a coleção e um card recebeu o foco com ring ciano (`files-grid-return.xml`, `files-grid-dpad-final.png`).
+
+**Validação:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou via Ubuntu WSL/JDK 21 (171 testes, 0 falhas/erros/skips). Os checks de cor, contraste e `git diff --check` passaram. O APK x86_64 foi instalado apenas em `zechs.drive.stream.visualreview` no device `127.0.0.1:16384`; `zechs.drive.stream` permaneceu instalado. `local.properties` manteve SHA-256 `6F8A9100E30E897E01CF8E5B9E1DAA76C4D77DDCE257BB4E266AE9623C5A532B`. Sem release, tag ou push.

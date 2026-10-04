@@ -288,3 +288,14 @@ Home compacta somente em telas de TV/largas; celular preserva altura de destaque
 | Build/testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` via Ubuntu WSL/JDK 21. | 171 testes, zero falhas/erros/skips |
 
 A fixture não reproduz dados do Drive nem uma stream autenticada; conteúdo de teste foi usado somente para avaliação visual. Apenas o pacote `zechs.drive.stream.visualreview` recebeu o APK.
+
+## F22 — Toggle Grade/Lista em Pastas
+
+| Regra | Evidência | Status |
+|---|---|---|
+| H-F2–F4, H-C1 | `f22/files-toolbar-focus.png/xml` confirma foco visível, ring ciano e descrição “Alternar para lista”. Após OK em lista, `files-list-f22-focus.xml` confirma o foco preservado e a descrição “Alternar para grade”. | OK (MuMu, D-pad) |
+| H-A1, H-C3 | Área mínima 48×48dp no layout base; descrições de ação anunciam o destino do toggle. | Corrigido em código |
+| H-F2–F4, H-L3 | `f22/files-grid-return.xml` e `files-grid-dpad-final.png` registram retorno à grade e foco contínuo no conteúdo. | OK (fixture, D-pad) |
+| Build/testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` via WSL/JDK 21. | 171 testes, 0 falhas/erros/skips |
+
+O teste usou a fixture de demonstração; autenticação, conteúdo remoto e persistência de preferência na sessão real do Drive não foram alterados nem avaliados. Apenas `zechs.drive.stream.visualreview` foi instalado.

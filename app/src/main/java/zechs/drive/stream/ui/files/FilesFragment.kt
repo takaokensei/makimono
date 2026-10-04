@@ -373,6 +373,7 @@ class FilesFragment : BaseFragment() {
 
         if (isGridMode) {
             binding.btnToggleGrid.setImageResource(R.drawable.ic_list_view_24)
+            binding.btnToggleGrid.contentDescription = getString(R.string.files_switch_to_list)
             val gridLayoutManager = androidx.recyclerview.widget.GridLayoutManager(requireContext(), spanCount)
             gridLayoutManager.spanSizeLookup = object : androidx.recyclerview.widget.GridLayoutManager.SpanSizeLookup() {
                 override fun getSpanSize(position: Int): Int {
@@ -383,6 +384,7 @@ class FilesFragment : BaseFragment() {
             filesAdapter.isGridMode = true
         } else {
             binding.btnToggleGrid.setImageResource(R.drawable.ic_grid_view_24)
+            binding.btnToggleGrid.contentDescription = getString(R.string.files_switch_to_grid)
             binding.rvList.layoutManager = LinearLayoutManager(requireContext())
             filesAdapter.isGridMode = false
         }
