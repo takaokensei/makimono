@@ -136,7 +136,16 @@ class VisualReviewActivity : FragmentActivity(), zechs.drive.stream.ui.player.Pl
         art(R.id.ivFeaturedBackdrop)
         findViewById<ImageView>(R.id.ivUserAvatar)?.let { avatar ->
             avatar.imageTintList = null
-            Glide.with(this).load(poster).circleCrop().into(avatar)
+            val artCatalog = EntryPointAccessors.fromApplication(
+                applicationContext,
+                VisualReviewDependencies::class.java
+            ).profileArtCatalog()
+            Glide.with(this)
+                .load(artCatalog.defaultAvatarForProfile("fixture-caua")?.url)
+                .placeholder(R.drawable.avatar_caua)
+                .error(R.drawable.avatar_caua)
+                .circleCrop()
+                .into(avatar)
         }
         text(R.id.tvUserName,"Cauã")
         val grid=findViewById<RecyclerView>(R.id.rvAnimeLibrary)
@@ -161,8 +170,12 @@ class VisualReviewActivity : FragmentActivity(), zechs.drive.stream.ui.player.Pl
         val rv=findViewById<RecyclerView>(R.id.rvProfiles)
         rv.layoutParams=rv.layoutParams.apply { height=ViewGroup.LayoutParams.WRAP_CONTENT }
         rv.layoutManager=LinearLayoutManager(this,RecyclerView.HORIZONTAL,false)
-        val adapter=ProfilesAdapter({},{},{}).apply {
-            submitList(listOf(ProfileUiModel.ProfileItem(UserProfile("one","Cauã",avatarUrl=poster,isAdmin=true),true),ProfileUiModel.ProfileItem(UserProfile("two","Visitante",avatarUrl=poster),false),ProfileUiModel.ProfileItem(UserProfile("three","Kids / Shounen",avatarUrl=poster,isKids=true),false),ProfileUiModel.AddProfileItem))
+        val artCatalog = EntryPointAccessors.fromApplication(
+            applicationContext,
+            VisualReviewDependencies::class.java
+        ).profileArtCatalog()
+        val adapter=ProfilesAdapter({},{},{}, profileArtCatalog = artCatalog).apply {
+            submitList(listOf(ProfileUiModel.ProfileItem(UserProfile("one","Cauã",avatarResName="avatar_anime",isAdmin=true),true),ProfileUiModel.ProfileItem(UserProfile("two","Visitante",avatarResName="avatar_anime"),false),ProfileUiModel.ProfileItem(UserProfile("three","Kids / Shounen",avatarResName="avatar_anime",isKids=true),false),ProfileUiModel.AddProfileItem))
         }
         rv.adapter=adapter
         var managing = false

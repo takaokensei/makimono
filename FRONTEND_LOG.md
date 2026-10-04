@@ -536,3 +536,24 @@ Este documento é a memória persistente dos ciclos de auditoria, testes visuais
 **Validação:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou via Ubuntu WSL/JDK 21; 168 testes, 0 falhas/erros/skips. `check_layout_colors.py`, `check_contrast.py` e `git diff --check` passaram. Build instalado somente em `zechs.drive.stream.visualreview`; fontScale 1.0. O pacote principal não foi reinstalado nem limpo.
 
 **Limite:** a troca de tab via Home real não foi acionada, por preservar o app principal; a visibilidade para Catálogo/Favoritos foi conferida no `selectTab` e a rota do header/Home foi exercitada na fixture. OAuth, Drive e playback não foram usados.
+
+## F18 — Avatar ausente nos perfis salvos (plano antes de editar)
+
+1. Confirmar por leitura de `ProfileManager`/Room que os perfis sem avatar não sofreram falha de carregamento ou alteração de dados.
+2. Reproduzir no MuMu em fixture um perfil com `avatarUrl=null`; verificar redes Glide, placeholder, acessibilidade e estado offline/falha.
+3. Fornecer avatar visual determinístico do catálogo web quando não houver URL salvo; manter escolha customizada como prioridade e não gravar fallback na conta.
+4. Garantir fallback local de erro carregável/offline sem introduzir arte estática nova nem imagem gerada.
+5. Compilar, validar no MuMu com URLs que respondem e foco D-pad, rodar testes/checks, instalar só o visualreview.
+6. Manter Room/shared preferences do app principal intactos, registrar limites e fazer commit local após verde; sem release/push.
+
+### Execução F18 — fallback de perfil com imagem de catálogo
+
+**Causa:** os perfis padrão têm `avatarUrl=null` e `avatarResName="avatar_anime"`; esse PNG é somente um círculo azul escuro, então a UI parecia não carregar nenhum avatar. O adapter não tinha fallback online para perfis sem escolha customizada.
+
+**Correção:** `ProfileSelectionFragment` fornece o catálogo ao adapter. Quando `avatarUrl` é nulo e o perfil usa o avatar padrão vazio, o seletor, a pílula da Home e a seção de perfil das Configurações escolhem a mesma imagem preset por hash estável do ID, sem gravar no modelo/Room. URLs personalizadas e o avatar local escolhido explicitamente têm prioridade. Glide mantém cache de rede e usa o avatar existente como placeholder/erro; nenhum arquivo de arte novo foi criado.
+
+**MuMu x86_64, 1920×1080:** antes, os círculos vazios do pacote principal aparecem em `f18-profile-picker-current.png/xml`. A fixture integrada pós-correção mostra retratos online distintos para perfis sem URL (`f18-profile-picker-integrated.png/xml`) e o avatar da pílula na Home (`f18-home-avatar-integrated.png/xml`). Em 2×, arte, texto e ações permanecem visíveis (`f18-profile-picker-2x.png/xml`). D-pad percorreu os perfis até Adicionar, moveu o foco para Gerenciar e alternou para Concluído (`f18-profile-manage-integrated.xml`, `f18-profile-manage-toggled.xml`); evidências anteriores incluem `f18-addfocus.xml`, `f18-managefocus.xml` e `f18-2x-manage.xml`. O pacote principal não foi instalado/alterado; Room/perfis foram apenas lidos. Escala voltou a 1.0.
+
+**Validação integrada:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou via Ubuntu WSL/JDK 21: 163 testes, 0 falhas/erros/skips. `tools/check_layout_colors.py`, `tools/check_contrast.py` e `git diff --check` passaram. APK instalado apenas como `zechs.drive.stream.visualreview`; o pacote principal preservou sua versão e seus dados. `local.properties` manteve SHA-256 `6F8A9100E30E897E01CF8E5B9E1DAA76C4D77DDCE257BB4E266AE9623C5A532B`.
+
+**Limite:** a fixture reproduz o estado sem avatar salvo com conectividade disponível; comportamento do CDN totalmente offline foi conferido pelo placeholder configurado no Glide, sem simular desconexão. Os dados dos perfis reais permaneceram intactos.

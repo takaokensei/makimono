@@ -26,6 +26,7 @@ import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.data.model.PlaylistItem
 import zechs.drive.stream.data.model.WatchList
 import zechs.drive.stream.data.model.WatchQueueItem
+import zechs.drive.stream.data.remote.ProfileArtCatalog
 import zechs.drive.stream.databinding.FragmentHomeBinding
 import zechs.drive.stream.ui.BaseFragment
 import zechs.drive.stream.ui.FocusedItemScroll
@@ -58,6 +59,9 @@ class HomeFragment : BaseFragment() {
 
     @Inject
     lateinit var profileManager: zechs.drive.stream.utils.ProfileManager
+
+    @Inject
+    lateinit var profileArtCatalog: ProfileArtCatalog
 
     private var isGridMode = true
     private var currentTab = "Início"
@@ -803,11 +807,15 @@ class HomeFragment : BaseFragment() {
                 profileManager.activeProfileFlow.collect { profile ->
                     binding.tvUserName?.text = profile.name
                     val avatarRes = profileManager.getAvatarDrawableRes(profile.avatarResName)
+                    val avatarSource: Any? = profile.avatarUrl
+                        ?: if (profile.avatarResName == "avatar_caua") avatarRes
+                        else profileArtCatalog.defaultAvatarForProfile(profile.id)?.url
                     binding.ivUserAvatar?.let { avatar ->
                         avatar.imageTintList = null
                         avatar.clearColorFilter()
-                        com.bumptech.glide.Glide.with(this@HomeFragment).load(profile.avatarUrl)
-                            .placeholder(avatarRes).error(avatarRes).circleCrop().into(avatar)
+                        com.bumptech.glide.Glide.with(this@HomeFragment).load(avatarSource)
+                            .placeholder(R.drawable.avatar_caua).error(R.drawable.avatar_caua)
+                            .circleCrop().into(avatar)
                     }
                 }
             }

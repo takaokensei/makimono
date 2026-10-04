@@ -20,6 +20,17 @@ class ProfileArtCatalog @Inject constructor(@ApplicationContext context: Context
     private val cache = context.getSharedPreferences("profile_art_catalog", Context.MODE_PRIVATE)
     private val client = OkHttpClient.Builder().callTimeout(12, TimeUnit.SECONDS).build()
 
+    fun defaultAvatarForProfile(profileId: String): ProfileArt? =
+        defaultAvatarForProfile(profileId, getPresetAvatars())
+
+    companion object {
+        internal fun defaultAvatarForProfile(profileId: String, avatars: List<ProfileArt>): ProfileArt? {
+            if (avatars.isEmpty()) return null
+            val index = Math.floorMod(profileId.hashCode(), avatars.size)
+            return avatars[index]
+        }
+    }
+
     /** Curated catalog of popular high quality anime avatar presets (served via CDN) */
     fun getPresetAvatars(): List<ProfileArt> = listOf(
         ProfileArt("Luffy (One Piece)", "https://s4.anilist.co/file/anilistcdn/character/large/b40-MNypXsxSRb1R.png", false),

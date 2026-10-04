@@ -21,6 +21,7 @@ import androidx.transition.TransitionManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import zechs.drive.stream.databinding.ItemThemePreviewBinding
 import com.google.android.material.snackbar.Snackbar
+import com.bumptech.glide.Glide
 import kotlinx.coroutines.launch
 import zechs.drive.stream.R
 import zechs.drive.stream.databinding.FragmentSettingsBinding
@@ -35,6 +36,7 @@ import zechs.drive.stream.utils.ext.resolveThemeColor
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import zechs.drive.stream.data.repository.MalRepository
+import zechs.drive.stream.data.remote.ProfileArtCatalog
 import zechs.drive.stream.utils.MalSessionManager
 
 @AndroidEntryPoint
@@ -58,6 +60,9 @@ class SettingsFragment : BaseFragment() {
 
     @Inject
     lateinit var profileManager: zechs.drive.stream.utils.ProfileManager
+
+    @Inject
+    lateinit var profileArtCatalog: ProfileArtCatalog
 
     @Inject
     lateinit var appSettings: zechs.drive.stream.utils.AppSettings
@@ -210,7 +215,15 @@ class SettingsFragment : BaseFragment() {
                 profileManager.activeProfileFlow.collect { profile ->
                     binding.tvCurrentProfileName.text = "Perfil ativo: ${profile.name}"
                     val avatarRes = profileManager.getAvatarDrawableRes(profile.avatarResName)
-                    binding.ivSettingProfileAvatar.setImageResource(avatarRes)
+                    val avatarSource: Any? = profile.avatarUrl
+                        ?: if (profile.avatarResName == "avatar_caua") avatarRes
+                        else profileArtCatalog.defaultAvatarForProfile(profile.id)?.url
+                    Glide.with(binding.ivSettingProfileAvatar)
+                        .load(avatarSource)
+                        .placeholder(avatarRes.takeIf { profile.avatarResName == "avatar_caua" } ?: R.drawable.avatar_caua)
+                        .error(R.drawable.avatar_caua)
+                        .circleCrop()
+                        .into(binding.ivSettingProfileAvatar)
                 }
             }
         }

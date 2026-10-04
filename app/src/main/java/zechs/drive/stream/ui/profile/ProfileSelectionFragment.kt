@@ -82,7 +82,8 @@ class ProfileSelectionFragment : BaseFragment() {
                     .format(DecodeFormat.PREFER_RGB_565)
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .into(binding.ivFantasyBg)
-            }
+            },
+            profileArtCatalog = posterResolver
         )
 
         val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE

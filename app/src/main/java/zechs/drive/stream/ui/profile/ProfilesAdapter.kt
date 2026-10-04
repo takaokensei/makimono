@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import zechs.drive.stream.R
+import zechs.drive.stream.data.remote.ProfileArtCatalog
 import zechs.drive.stream.data.model.UserProfile
 import zechs.drive.stream.databinding.ItemProfileCardBinding
 
@@ -20,7 +21,8 @@ class ProfilesAdapter(
     private val onProfileSelected: (UserProfile) -> Unit,
     private val onAddProfileClicked: () -> Unit,
     private val onEditProfileClicked: (UserProfile) -> Unit,
-    private val onProfileFocused: (UserProfile) -> Unit = {}
+    private val onProfileFocused: (UserProfile) -> Unit = {},
+    private val profileArtCatalog: ProfileArtCatalog? = null
 ) : ListAdapter<ProfileUiModel, ProfilesAdapter.ProfileViewHolder>(DiffCallback) {
 
     init {
@@ -81,13 +83,11 @@ class ProfilesAdapter(
                     val profile = item.profile
                     binding.tvProfileName.text = profile.name
 
-                    val avatarRes = when (profile.avatarResName) {
-                        "avatar_anime" -> R.drawable.avatar_anime
-                        "avatar_caua" -> R.drawable.avatar_caua
-                        else -> R.drawable.avatar_caua
-                    }
+                    val avatarSource: Any? = profile.avatarUrl
+                        ?: if (profile.avatarResName == "avatar_caua") R.drawable.avatar_caua
+                        else profileArtCatalog?.defaultAvatarForProfile(profile.id)?.url
                     com.bumptech.glide.Glide.with(binding.ivProfileAvatar)
-                        .load(profile.avatarUrl).placeholder(avatarRes).error(avatarRes)
+                        .load(avatarSource).placeholder(R.drawable.avatar_caua).error(R.drawable.avatar_caua)
                         .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
                         .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
                         .into(binding.ivProfileAvatar)

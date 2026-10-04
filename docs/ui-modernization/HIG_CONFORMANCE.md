@@ -248,3 +248,14 @@ Checks de cores, contraste e diff passaram. APK Debug instalado somente em `zech
 | Build/testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` via Ubuntu WSL/JDK 21. | 168 testes, 0 falhas/erros/skips |
 
 Header passa a ficar visível nos tabs Início/Catálogo/Favoritos, sem tocar no pacote principal. Checks de cor/contraste/diff passaram; `fontScale` ficou em 1.0. Seleção de tab pela tela real e conteúdo autenticado não foram exercitados nesta rodada.
+
+## F18 — Avatar visível para perfil sem imagem configurada
+
+| Regra | Evidência | Status |
+|---|---|---|
+| H-A5, H-A10, H-C1 | `f18-profile-picker-integrated.png/xml` e `f18-home-avatar-integrated.png/xml`: perfis sem URL recebem retratos do catálogo no seletor e na pílula da Home. URL customizada e escolha local explícita mantêm prioridade; Configurações usa o mesmo resolver. Glide mantém cache e placeholder local. | OK no APK visualreview |
+| H-L1–L4, H-R3, H-F2–F4 | `f18-profile-picker-2x.png`: labels/status permanecem legíveis em 200%; `f18-profile-manage-integrated.xml` e `f18-profile-manage-toggled.xml` comprovam navegação D-pad até Gerenciar e ativação do estado Concluído. Evidências 2× existentes: `f18-addfocus.xml`, `f18-managefocus.xml`, `f18-2x-manage.xml`. | OK (MuMu, D-pad 1×/2×) |
+| Estado Room/perfil | Nenhum valor de perfil foi salvo; identidade sem URL recebe arte apenas durante renderização. Dados principais foram preservados. | OK (read-only no app principal) |
+| Build/testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` via Ubuntu WSL/JDK 21. | 163 testes, 0 falhas/erros/skips |
+
+Checks de cor/contraste/diff passaram, `fontScale` ficou em 1.0 e `local.properties` foi restaurado. O pacote principal não foi atualizado; o APK integrado foi verificado em `zechs.drive.stream.visualreview`. Configurações foi compilado com o mesmo fallback, sem manipular nem reinstalar o app principal.
