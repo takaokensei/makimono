@@ -159,4 +159,14 @@ Checks: `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou
 
 `TvAccessibilityLayoutTest`: 2 casos para preservar colunas em tamanhos padrão/moderado e reduzir sem zerar em escala extrema. Build/testes e checks da fase registrados em `FRONTEND_LOG.md`.
 
-**Validação F6:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou com 161 testes; o pacote de fixture `zechs.drive.stream.visualreview` foi reinstalado no MuMu x86_64; o pacote principal `zechs.drive.stream` permaneceu intacto. OSD sob modal, seleção da nota, saída por toque/BACK e foco após fechamento foram testados na fixture. Playback e operações dependentes do Drive/MAL continuam sem validação nesta sessão.
+## F10 — Navegação Files e leitura em texto ampliado
+
+| Regra | Evidência | Status |
+|---|---|---|
+| H-A5, H-L4, H-S1 | `TvAccessibilityLayout.adaptFilesChrome`: rail 168/224 dp e busca 360×44/420×52 dp a 1.3×/2×; `f10-files-final-1-3.png`, `f10-files-final-2-0.png`. Nome atual da pasta cabe na toolbar; escopo da busca segue reconhecível. | OK (fixture; 1.0×/1.3×/2×) |
+| H-A5, H-L4 | `adaptDetailsSynopsis`: 5 linhas em 1.3× e 8 em 2×; `f10-details-1-3.png`, `f10-details-2-0.png`; a tela rola. | OK (visual/fixture) |
+| H-F2–F4, H-R3 | `f10-files-dpad-final.xml`: RIGHT/DOWN chega a `cardGridItem`; `f10-details-dpad.xml`: cinco DOWN em 2× chega à aba de temporada. | Sem dead-end nos trajetos exercitados |
+| H-R1–R5, H-PV1–PV6 | `f10-player-1-0.png`, `f10-player-2-0.png`: OSD visível e Play/Pause focado. Fixture: dois UP focam `btnBack` (`f10-player-up.xml`); OK e toque encerram a Activity. Código Exo/MPV esconde HUD em BACK antes de sair. | Fixture/código OK; stream real e handlers dos engines não exercitados |
+| Build e testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` via Ubuntu WSL; relatório XML da suíte. | 165 testes, 0 falhas/erros/skips |
+
+**Limites F10:** a fixture não autentica no Drive nem reproduz mídia; login OAuth, arquivos reais, Exo/MPV com stream, faixas, AniSkip e autoplay continuam sem validação. Apenas o pacote `zechs.drive.stream.visualreview` foi instalado no MuMu; o app principal e a escala do sistema ficaram preservados.

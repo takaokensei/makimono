@@ -78,6 +78,7 @@ class SeriesDetailFragment : BaseFragment() {
                 binding.btnMarkWatched
             )
         )
+        TvAccessibilityLayout.adaptDetailsSynopsis(requireContext(), binding.tvSynopsis)
         setupTopHeader()
         setupAdapters()
         setupFocusAnimations()

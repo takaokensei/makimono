@@ -245,3 +245,15 @@ Playing video pp. 1–4, Remotes pp. 1–3, Layout pp. 1–6, Typography pp. 1�
 
 **Conflitos desta fase:** nenhum. Reduzir colunas é resposta de layout explícita ao tamanho de texto e preserva todos os itens; não remove dados ou ações.
 
+## F10 PDF re-review — busca, sinopse e navegação (2026-10-04)
+
+Layout pp. 2–6, Typography pp. 1–6/8–10/15–16, Accessibility pp. 2–7, Focus and selection pp. 2–5, Remotes pp. 1–3, Playing video pp. 1–4, Search fields pp. 1–4 e Searching pp. 1–2 foram relidos nas seções gerais e tvOS relevantes. Princípios aplicados: preservar o escopo reconhecível da busca, deixar alvos e rótulos crescerem com texto ampliado, permitir mais de uma linha e rolagem, e manter rotas de foco previsíveis. Nenhum comportamento específico de Apple TV/Siri Remote foi transplantado como requisito Android.
+
+**Aplicação preparada:** rail Files larga em escalas 1.3×/2×; rótulos com até duas linhas; busca mais alta/larga e ações de toque ampliadas; layout mobile preserva a largura original quando não há rail. Sinopse Details permite mais linhas e usa o scroll já existente. O OSD foi inspecionado na captura 2×, em que as ações visíveis cabem; não se alterou o conjunto de controles.
+
+**Validação F10:** no MuMu x86_64, Files/Details foram capturados a 1.0×/1.3×/2.0× e OSD a 1.0×/2.0×. A toolbar da fixture representa a tela real (`args.name`, nome atual da pasta), não breadcrumb sintético. A busca conserva o texto indicativo; o label “Configurações” cabe sem quebra órfã em 1.3× e 2.0×. D-pad RIGHT/DOWN em Files foca um card; cinco DOWN em Details 2× chegam à aba de temporada com scroll. A escala global foi restaurada a 1.0×.
+
+O build do Windows falhou antes de compilar ao criar a conexão loopback Java; o build/teste foi concluído no Ubuntu WSL com JDK 21 e Android Build Tools 34. `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou com 165 testes, zero falhas/erros/skips. O APK atualizado foi instalado somente no pacote fixture `zechs.drive.stream.visualreview`; `local.properties` foi restaurado e o app principal permaneceu intacto. Capturas e dumps estão em `docs/ui-audit/after-v2/f10-*`.
+
+**Limite:** validar BACK do player, decoder, streams/Drive autenticado, trilhas, capítulos, AniSkip, autoplay e paridade efetiva dos engines exige reprodução real; os screenshots de OSD são fixture e a inspeção de BACK Exo/MPV foi estática. APKs debug usam assinatura DEBUG e não são releases distribuíveis.
+

@@ -94,6 +94,21 @@ class FilesFragment : BaseFragment() {
         super.onViewCreated(view, savedInstanceState)
         _binding = FragmentFilesBinding.bind(view)
 
+        TvAccessibilityLayout.adaptFilesChrome(
+            requireContext(),
+            view.findViewById(R.id.filesNavRail),
+            listOf(
+                view.findViewById(R.id.filesHome),
+                view.findViewById(R.id.filesCatalog),
+                view.findViewById(R.id.filesFolders),
+                view.findViewById(R.id.filesFavorites),
+                view.findViewById(R.id.filesSettings)
+            ),
+            view.findViewById(R.id.searchContainer),
+            binding.etSearch,
+            listOf(binding.btnClearSearch, binding.btnToggleGrid)
+        )
+
         // Workaround for transition animation
         // https://github.com/material-components/material-components-android/issues/1984
         val colorBackground = MaterialColors.getColor(view, android.R.attr.colorBackground)

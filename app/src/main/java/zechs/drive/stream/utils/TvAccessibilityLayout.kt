@@ -2,6 +2,7 @@ package zechs.drive.stream.utils
 
 import android.content.Context
 import android.widget.HorizontalScrollView
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.view.View
@@ -11,6 +12,92 @@ import zechs.drive.stream.R
 
 /** Keeps the Home hero actions inside the visible hero when system text is enlarged. */
 object TvAccessibilityLayout {
+    fun adaptFilesChrome(
+        context: Context,
+        navigationRail: View?,
+        navigationRows: List<View?>,
+        searchContainer: View?,
+        searchInput: EditText?,
+        searchActions: List<View?>
+    ) {
+        val fontScale = context.resources.configuration.fontScale
+        if (fontScale < 1.3f) return
+
+        val density = context.resources.displayMetrics.density
+        fun dp(value: Float) = (value * density).roundToInt()
+
+        navigationRail?.let { rail ->
+            rail.layoutParams = rail.layoutParams.apply {
+                width = dp(filesRailWidthDp(fontScale).toFloat())
+            }
+        }
+        val rowMinimum = dp(if (fontScale >= 1.8f) 68f else 56f)
+        navigationRows.filterNotNull().forEach { row ->
+            row.layoutParams = row.layoutParams.apply { height = ViewGroup.LayoutParams.WRAP_CONTENT }
+            row.minimumHeight = rowMinimum
+            if (row is ViewGroup) {
+                (0 until row.childCount).map { row.getChildAt(it) }
+                    .filterIsInstance<TextView>()
+                    .forEach { label ->
+                        label.isSingleLine = false
+                        label.maxLines = 2
+                        label.ellipsize = android.text.TextUtils.TruncateAt.END
+                        val params = label.layoutParams as? LinearLayout.LayoutParams
+                        if (params != null) {
+                            params.width = 0
+                            params.weight = 1f
+                            label.layoutParams = params
+                        }
+                    }
+            }
+        }
+
+        searchContainer?.let { container ->
+            container.layoutParams = container.layoutParams.apply {
+                if (navigationRail != null) width = dp(filesSearchWidthDp(fontScale).toFloat())
+                height = dp(if (fontScale >= 1.8f) 52f else 44f)
+            }
+        }
+        if (navigationRail != null) {
+            val actionSize = dp(if (fontScale >= 1.8f) 48f else 44f)
+            searchActions.filterNotNull().forEach { action ->
+                action.layoutParams = action.layoutParams.apply {
+                    width = actionSize
+                    height = actionSize
+                }
+            }
+        }
+        searchInput?.maxLines = 1
+    }
+
+    fun filesRailWidthDp(fontScale: Float): Int = when {
+        fontScale >= 1.8f -> 224
+        fontScale >= 1.3f -> 168
+        else -> 128
+    }
+
+    fun filesSearchWidthDp(fontScale: Float): Int = when {
+        fontScale >= 1.8f -> 420
+        fontScale >= 1.3f -> 360
+        else -> 300
+    }
+
+    fun adaptDetailsSynopsis(context: Context, synopsis: TextView?) {
+        val fontScale = context.resources.configuration.fontScale
+        if (fontScale < 1.3f || synopsis == null) return
+
+        val density = context.resources.displayMetrics.density
+        synopsis.maxLines = detailsSynopsisMaxLines(fontScale)
+        synopsis.ellipsize = android.text.TextUtils.TruncateAt.END
+        synopsis.maxWidth = (680f * density).roundToInt()
+    }
+
+    fun detailsSynopsisMaxLines(fontScale: Float): Int = when {
+        fontScale >= 1.8f -> 8
+        fontScale >= 1.3f -> 5
+        else -> 3
+    }
+
     fun adaptHomeHero(
         context: Context,
         hero: View?,

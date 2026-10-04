@@ -151,7 +151,22 @@ class VisualReviewActivity : Activity(), zechs.drive.stream.ui.player.PlayerModa
     }
     private fun fileScreen() {
         setContentView(R.layout.fragment_files)
-        findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar).title="Meu Drive  ›  Frieren  ›  Temporada 01"
+        TvAccessibilityLayout.adaptFilesChrome(
+            this,
+            findViewById(R.id.filesNavRail),
+            listOf(
+                findViewById(R.id.filesHome),
+                findViewById(R.id.filesCatalog),
+                findViewById(R.id.filesFolders),
+                findViewById(R.id.filesFavorites),
+                findViewById(R.id.filesSettings)
+            ),
+            findViewById(R.id.searchContainer),
+            findViewById(R.id.etSearch),
+            listOf(findViewById(R.id.btnClearSearch), findViewById(R.id.btnToggleGrid))
+        )
+        // Match FilesFragment: the toolbar shows the current folder name, not the whole path.
+        findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar).title="Temporada 01"
         val rv=findViewById<RecyclerView>(R.id.rvList)
         rv.layoutManager=GridLayoutManager(this,TvAccessibilityLayout.gridColumnsForFontScale(4,resources.configuration.fontScale))
         rv.adapter=FilesAdapter({},{},{_,_->}).apply { isGridMode=true;submitList(files(12,true)) }
@@ -159,6 +174,7 @@ class VisualReviewActivity : Activity(), zechs.drive.stream.ui.player.PlayerModa
     }
     private fun details(focusEpisode: Boolean = false) {
         setContentView(R.layout.fragment_series_detail)
+        TvAccessibilityLayout.adaptDetailsSynopsis(this, findViewById(R.id.tvSynopsis))
         TvAccessibilityLayout.adaptSeriesActions(
             this,
             findViewById<View>(R.id.actionsRow)?.parent as? android.widget.HorizontalScrollView,
