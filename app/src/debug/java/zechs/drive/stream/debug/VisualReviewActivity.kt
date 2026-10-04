@@ -220,7 +220,12 @@ class VisualReviewActivity : Activity(), zechs.drive.stream.ui.player.PlayerModa
             }
             override fun afterTextChanged(s: android.text.Editable?) = Unit
         })
-        findViewById<View>(R.id.btnClearSearch).setOnClickListener { findViewById<android.widget.EditText>(R.id.etSearch).text.clear() }
+        findViewById<View>(R.id.btnClearSearch).setOnClickListener {
+            val search = findViewById<android.widget.EditText>(R.id.etSearch)
+            search.text.clear()
+            search.requestFocus()
+            search.setSelection(search.text.length)
+        }
         rv.postDelayed({rv.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus()},500)
     }
     private fun filesAuthError() {

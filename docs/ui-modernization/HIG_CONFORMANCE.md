@@ -183,3 +183,13 @@ Checks: `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou
 | Build e testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` pelo Ubuntu WSL/JDK 21. | 167 testes, 0 falhas/erros/skips |
 
 `check_layout_colors.py`, `check_contrast.py` e `git diff --check` passaram. APK Debug atualizado foi instalado apenas no pacote `zechs.drive.stream.visualreview`; fontScale do MuMu retornou a 1.0 e `local.properties` foi restaurado. Nenhuma publicação/release ocorreu.
+
+## F12 — Busca Files com D-pad
+
+| Regra | Evidência | Status |
+|---|---|---|
+| H-S1–S4, H-A5 | `f12-1x-verified.png` e `f12-2x-verified.png`; na segunda, o placeholder longo está horizontalmente truncado, embora campo e ações estejam visíveis. | D-pad validado; dica 2× pendente F13 |
+| H-F2–F4, H-R3, H-S3 | `f12-clearresult-verified.xml`: CENTER em Limpar retorna a `etSearch`; `f12-toggle-verified.xml`: RIGHT na busca vazia foca toggle; `f12-listrow-verified.xml`: CENTER e DOWN chegam à primeira linha. Repetido em 2× com `f12-clearresult2x.xml`, `f12-toggle2x-verified.xml`, `f12-row2x-verified.xml`. | OK (fixture/D-pad 1× e 2×) |
+| Build e testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` via Ubuntu WSL/JDK 21. | 167 testes, 0 falhas/erros/skips |
+
+APK instalado somente em `zechs.drive.stream.visualreview`; fontScale retornou a 1.0. O app principal/dados permaneceram intactos. OAuth/Drive e reprodução real não fazem parte da fixture.

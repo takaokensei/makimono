@@ -402,6 +402,36 @@ Este documento é a memória persistente dos ciclos de auditoria, testes visuais
 6. Rodar `assembleDebug testDebugUnitTest`, checks de layout/contraste/diff; reinstalar apenas `zechs.drive.stream.visualreview`, restaurar fontScale e validar status de `local.properties`.
 7. Atualizar rubrica, HIG e evidências; commit F11 local apenas com validação verde, sem release, tag, workflow ou push.
 
+## F12 — Percurso D-pad dos controles de busca em Files (plano antes de editar)
+
+1. Rever o resultado/commit F11 e reler as notas locais Remotes, Focus and selection, Search fields, Searching e Accessibility.
+2. No MuMu a 1.0× e 2.0×, iniciar no primeiro card, subir até a busca e usar RIGHT/LEFT para tentar alcançar Limpar e Grade/Lista; registrar o foco após cada tecla.
+3. Confirmar se o campo preserva digitação/cursor ao navegar; também testar DOWN da busca, CENTER do toggle, BACK/limpar, caminho de volta ao conteúdo e focus ring.
+4. Se houver saída da faixa ou ação inalcançável, acrescentar `nextFocus*` determinístico sem remover uso das setas para editar o texto e sem criar dead-end em mobile.
+5. Capturar screenshot e UIAutomator antes/depois a 1.0×/2.0×; não usar tap para substituir a validação D-pad.
+6. Rodar `assembleDebug testDebugUnitTest`, checks estáticos e diff; instalar somente visualreview e restaurar fontScale/local.properties.
+7. Registrar limites de search/Drive real, commitar F12 local apenas se todas as verificações passarem; sem release, tag, workflow ou push.
+
+### Execução F12 — rota de foco da busca e retorno após Limpar
+
+**Achado reproduzido:** LEFT/RIGHT alcançam os controles Limpar/Grade preservando a digitação. Ao pressionar CENTER em Limpar, o `TextWatcher` escondia o botão focado e o Android transferia o foco para `filesBrand` no rail. A pessoa perdia o ponto de busca.
+
+**Correção:** o listener de Limpar limpa a query e devolve foco/cursor a `etSearch`; a fixture executa a mesma ação para verificar o layout de produção. Nenhum controle foi removido.
+
+**MuMu x86_64, 1920×1080:** no APK Debug atualizado e somente no pacote `zechs.drive.stream.visualreview`, a 1.0×: rail → primeiro card → ↑ busca → digitar `Frieren` → → Limpar → CENTER. O foco voltou a `etSearch` e a lista foi restaurada (`f12-clearresult-verified.xml`). Com a busca vazia, → foca `btnToggleGrid`, CENTER alterna para Lista e ↓ foca a primeira linha (`f12-toggle-verified.xml`, `f12-listrow-verified.xml`, `f12-1x-verified.png`). A 2.0×, retorno a `etSearch` e busca → toggle → primeira linha foram testados (`f12-clearresult2x.xml`, `f12-toggle2x-verified.xml`, `f12-row2x-verified.xml`, `f12-2x-verified.png`). FontScale voltou a 1.0.
+
+**Build/checks:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou via Ubuntu WSL/JDK 21: 167 testes, 0 falhas/erros/skips. O placeholder longo da busca Files fica truncado horizontalmente a 2×; fica registrado para F13. `local.properties` foi restaurado e o app principal permaneceu intacto. Nenhuma release, tag, workflow ou publicação foi alterada.
+
+## F13 — Busca Files em escala ampliada (plano antes de editar)
+
+1. Revisar a evidência F12 e as notas Typography, Layout, Search fields, Focus and selection e Accessibility.
+2. Reproduzir a busca Files em 1.0×/1.3×/2.0× no MuMu e medir o espaço entre lupa, texto, Limpar e Grade/Lista.
+3. Tornar o texto auxiliar conciso em escala extrema sem reduzir tipografia, perder escopo, sobrepor ícones ou alterar a query; conferir mobile/landscape e PT-BR.
+4. Preservar D-pad: card ↑ busca; texto/cursor editáveis; RIGHT chega a Limpar quando visível e Grade/Lista; CENTER em Limpar continua no campo; CENTER no toggle e DOWN chegam ao conteúdo.
+5. Capturar screenshots/XML antes/depois nas três escalas e executar a fixture no MuMu.
+6. Rodar build/testes e checks de cor/contraste/layout/diff; restaurar fontScale/local.properties e não tocar no app principal nem publicar.
+7. Atualizar evidências/HIG e commitar F13 local após validação verde; registrar qualquer limite restante em 2×.
+
 ### Execução F11 — estados de busca, reconexão Drive e rota de foco em Files
 
 **Falhas reproduzidas:** buscar um termo sem correspondência deixava a lista em branco, sem comunicar o resultado; a primeira linha de cards desviava o D-pad ↑ para a marca no rail, longe da busca; o erro de sessão orientava a pessoa a abrir Configurações, mas não oferecia um caminho de reconexão naquela tela. A fixture inicial não tinha o mesmo foco/modo de escala da tela real e foi ajustada antes de validar o erro a 200%.

@@ -320,6 +320,8 @@ class FilesFragment : BaseFragment() {
 
         binding.btnClearSearch.setOnClickListener {
             binding.etSearch.text?.clear()
+            binding.etSearch.requestFocus()
+            binding.etSearch.setSelection(binding.etSearch.text?.length ?: 0)
         }
     }
 

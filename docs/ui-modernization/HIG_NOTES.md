@@ -265,3 +265,11 @@ Search fields pp. 1–2, Searching pp. 1–2, Lists and tables pp. 1–2 e Focus
 
 **Evidência e limite:** MuMu testou grade/lista, busca, limpar, estado vazio, foco, 200% e sequência Connect→Retry com a fixture; arquivos e fluxos foram medidos em `after-v2/f11/`. O listener de Connect aponta para SignIn no código, mas a fixture não executou OAuth ou a conta Drive real.
 
+
+## F12 PDF re-review — controles de busca no D-pad (2026-10-04)
+
+Search fields pp. 1–2, Searching pp. 1–2, Focus and selection pp. 1–3, Accessibility pp. 2–5 e Remotes pp. 1–3 foram reconsultados. Aplicação no Files: cursor do campo continua sendo edição de texto; botões adicionais seguem alcançáveis pelo controle; esconder um controle após sua ação não deve perder o foco remoto no rail.
+
+**Aplicado e validado:** Limpar retorna foco/cursor ao campo `etSearch`. MuMu comprovou a rota de busca, Limpar, Grade/Lista e primeira linha por D-pad em 1× e 2×, com fixture e dumps/screenshot em `docs/ui-audit/after-v2/f11/f12-*`.
+
+**Limite encontrado:** em 2× o placeholder textual ultrapassa a largura disponível e é elidido antes do fim. O campo continua funcional; a dica precisa ficar mais concisa sem reduzir tipografia. Fica planejado para F13.
