@@ -53,6 +53,7 @@
                 android:background="@drawable/glass_action_item_bg"
                 android:clickable="true"
                 android:focusable="true"
+                android:focusedByDefault="true"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:padding="16dp">

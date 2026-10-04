@@ -204,3 +204,14 @@ APK instalado somente em `zechs.drive.stream.visualreview`; fontScale retornou a
 | Build e testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` pelo Ubuntu WSL/JDK 21. | 167 testes, 0 falhas/erros/skips |
 
 Checks de cores, contraste e diff passaram. FontScale voltou a 1.0; APK aplicado apenas à fixture visualreview.
+
+## F14 — Configurações com foco remoto previsível
+
+| Regra | Evidência | Status |
+|---|---|---|
+| H-F2–F4, H-R3 | Primeiro foco `settingSelectProfile` a 1×/2× em `f14-1x-first.xml` e `f14-2x-first.xml`; depois de 16 DOWN, `settingLogOut` focado em `f14-1x-last.xml` e `f14-2x-last.xml`. | OK (fixture, navegação vertical) |
+| H-A5, H-L4 | `f14-1x-first.png`, `f14-1x-last.png` e `f14-2x-last.png`: itens com texto ampliado rolam para dentro do viewport e o cartão inferior não fica cortado. | OK (visual, 1×/2×) |
+| Ações de Settings | O harness visual não conecta os listeners de preferências. OAuth, sair, limpar cache, backup e troca de conta não foram acionados. | Pendente (fluxos reais preservados) |
+| Build e testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` via Ubuntu WSL/JDK 21. | 163 testes, 0 falhas/erros |
+
+`check_layout_colors.py`, `check_contrast.py` e `git diff --check` passaram. Apenas `zechs.drive.stream.visualreview` foi atualizado no MuMu. `local.properties` e fontScale foram restaurados; app principal/dados mantidos intactos.

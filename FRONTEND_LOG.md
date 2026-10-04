@@ -451,3 +451,25 @@ Este documento é a memória persistente dos ciclos de auditoria, testes visuais
 **MuMu x86_64, 1920×1080:** capturas a 1×, 1.3× e 2× (`f13-1.0.png`, `f13-1.3.png`, `f13-2.0.png`) mostram o hint integral nas três escalas; a 2× a mensagem curta cabe entre lupa e alternância. No APK da compilação final, com fonte a 2×, → a partir da busca focou `btnToggleGrid`, CENTER seguido de ↓ focou a primeira linha (`f13-final-focus.xml`, `f13-final-row.xml`, `f13-final.png`). FontScale voltou a 1.0.
 
 **Build/checks:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou via Ubuntu WSL/JDK 21: 167 testes, zero falhas/erros/skips. `check_layout_colors.py`, `check_contrast.py` e `git diff --check` passaram. APK Debug instalado apenas como `zechs.drive.stream.visualreview`; `local.properties` foi restaurado. Avisos de assinatura DEBUG/depreciações permanecem. Nenhum release, tag, workflow ou publicação foi alterada.
+
+## F14 — Percurso completo de Configurações por D-pad (plano antes de editar)
+
+1. Revisar a fixture Settings e os itens visíveis do layout ativo; conferir notas locais Settings, Lists and tables, Focus and selection, Remotes e Accessibility.
+2. No MuMu, em 1.0× e 2.0×, percorrer a lista vertical do primeiro ao último item, abrir controles seguros da fixture, dispensar com BACK e verificar que a rota continua até voltar.
+3. Registrar limites de foco em rows que abrem diálogos, itens sem ação, scroll do container e labels ampliados; não usar ações do Drive ou limpar cache real.
+4. Corrigir apenas caminhos reproduzíveis, com foco após fechar modal e scroll automático, preservando valores e funcionalidades.
+5. Capturar screenshots/dumps e repetir toda a sequência em 1.0×/2.0× com visualreview exclusivamente.
+6. Rodar build/testes/checks aplicáveis, restaurar escala e conferir que app principal/dados/local.properties ficaram intactos.
+7. Atualizar rubrica/HIG e commitar F14 local após validação verde; sem publicar nem modificar releases/workflows.
+
+### Execução F14 — foco inicial e alcance da lista em escala ampliada
+
+**Falha reproduzida:** ao abrir a fixture Settings no MuMu (janela touch), `requestFocus()` falhava porque o primeiro cartão não aceitava foco em touch mode; o primeiro DOWN começava em “Pasta da biblioteca”, ignorando “Perfil de usuário”. O Android TV precisa apresentar o primeiro destino de foco ao entrar nessa tela.
+
+**Correção:** no caminho TV de `SettingsFragment`, o cartão “Perfil de usuário” agora aceita foco em touch mode antes do `requestFocus()` postado. `focusedByDefault` complementa o fallback nas variantes portrait e landscape. A fixture visualreview replica o estado focusable-in-touch-mode para permitir a mesma validação com D-pad no MuMu.
+
+**MuMu x86_64, 1920×1080:** no pacote isolado `zechs.drive.stream.visualreview`, o primeiro foco foi `settingSelectProfile` a 1× e 2× (`f14-1x-first.xml`, `f14-2x-first.xml`). Dezesseis DOWN alcançaram `settingLogOut`; após rolagem, o cartão inteiro permaneceu dentro da área visível em 1× e 2× (`f14-1x-last.png/xml`, `f14-2x-last.png/xml`). A escala global foi restaurada a 1.0. O layout comprimido de Settings não teve o padding de rolagem alterado; uma tentativa inicial de clipping foi revertida após piorar o corte.
+
+**Validação:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou via Ubuntu WSL/JDK 21; relatório XML: 163 testes, zero falhas/erros. `check_layout_colors.py`, `check_contrast.py` e `git diff --check` passaram. APK Debug reinstalado somente em `zechs.drive.stream.visualreview`; `local.properties` foi restaurado.
+
+**Limites:** o harness da fixture não conecta ações aos controles de Settings; portanto, seleção de tema/player, editor de legendas, limpeza de cache, exportação/restauração, OAuth/MAL e confirmação de sair não foram acionados. Nenhum dado ou sessão do pacote principal foi alterado. Nenhum release, tag, workflow ou push foi feito.

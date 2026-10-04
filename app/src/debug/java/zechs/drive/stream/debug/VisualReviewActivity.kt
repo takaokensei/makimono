@@ -356,9 +356,10 @@ class VisualReviewActivity : Activity(), zechs.drive.stream.ui.player.PlayerModa
         text(R.id.lastCheckedLabel, "Última verificação: hoje, 16:30")
         text(R.id.tvMalSubtitle, "Conectado como: CauaVitor • Toque para desconectar")
         findViewById<ImageView>(R.id.ivSettingProfileAvatar)?.setImageResource(R.drawable.avatar_caua)
-        findViewById<View>(R.id.settingSelectProfile)?.postDelayed({
-            findViewById<View>(R.id.settingSelectProfile)?.requestFocus()
-        }, 300)
+        findViewById<View>(R.id.settingSelectProfile)?.apply {
+            isFocusableInTouchMode = true
+            postDelayed({ requestFocus() }, 300)
+        }
     }
     private fun showThemeDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_theme_selector, null)

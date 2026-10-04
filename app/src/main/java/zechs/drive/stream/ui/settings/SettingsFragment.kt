@@ -161,7 +161,10 @@ class SettingsFragment : BaseFragment() {
         binding.switchMalSync.isFocusable = false
         binding.switchAutoSkip.isFocusable = false
         binding.switchGestures.isFocusable = false
-        binding.settingSelectProfile?.post { binding.settingSelectProfile?.requestFocus() }
+        binding.settingSelectProfile?.apply {
+            if (isTv) isFocusableInTouchMode = true
+            post { requestFocus() }
+        }
     }
 
     private fun updateSettingsFocusOrder(rows: List<View>? = null) {

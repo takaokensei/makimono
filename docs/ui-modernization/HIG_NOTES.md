@@ -281,3 +281,11 @@ Search fields pp. 1–2, Typography pp. 1–6 e 15–16, Accessibility pp. 2–5
 **Aplicação e verificação:** `TvAccessibilityLayout` escolhe “Buscar nesta pasta…” somente em 1.8× ou maior e se a tela tem rail. O MuMu mostrou a dica completa nas variantes com rail a 1.0×, 1.3× e 2.0×. O retrato mantém a dica longa independentemente do tamanho da fonte. A trilha D-pad busca → alternância → primeira linha foi repetida em 2×; screenshots/XML estão em `docs/ui-audit/after-v2/f11/f13-*`.
 
 **Conflitos:** nenhum; placeholder curto mantém o escopo local da busca no contexto da pasta atual e não altera a query ou resultados.
+
+## F14 PDF re-review — foco remoto em Configurações (2026-10-04)
+
+Focus and selection pp. 1–3, Remotes pp. 1–3, Accessibility pp. 2–5, Settings pp. 1–4 e Lists and tables pp. 1–2 foram reconsultados. Na entrada de uma lista com controle remoto, o foco inicial deve apontar a primeira ação útil, continuar evidente e preservar uma rota previsível até o fim da tela.
+
+**Aplicação:** o cartão de perfil aceita foco em touch mode no caminho TV antes do `requestFocus()` inicial; `focusedByDefault` cobre as variantes XML como fallback. O primeiro item não exige um DOWN extra para localizar o começo da tela. Em escala ampliada, o D-pad rola o cartão final até o viewport sem ocultar o conteúdo.
+
+**Validação e limite:** MuMu confirmou foco inicial e percurso até Sair a 1×/2× usando a fixture isolada; evidência em `docs/ui-audit/after-v2/f11/f14-*`. O harness não liga os listeners de preferências nem de conta, então ações, diálogos e OAuth reais não foram acionados. Nenhuma ação de logout/cache foi usada.
