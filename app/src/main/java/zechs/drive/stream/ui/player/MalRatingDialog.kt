@@ -11,17 +11,17 @@ object MalRatingDialog {
 
     private fun getScoreLabel(score: Int): String {
         return when (score) {
-            10 -> "★ 10 - Obra-prima (Masterpiece)"
-            9 -> "★ 9 - Incrível (Great)"
-            8 -> "★ 8 - Muito Bom (Very Good)"
-            7 -> "★ 7 - Bom (Good)"
-            6 -> "★ 6 - Razoável (Fine)"
-            5 -> "★ 5 - Médio (Average)"
-            4 -> "★ 4 - Ruim (Bad)"
-            3 -> "★ 3 - Muito Ruim (Very Bad)"
-            2 -> "★ 2 - Horrível (Horrible)"
-            1 -> "★ 1 - Pavoroso (Appalling)"
-            else -> "★ $score"
+            10 -> "Obra-prima"
+            9 -> "Incrível"
+            8 -> "Muito bom"
+            7 -> "Bom"
+            6 -> "Razoável"
+            5 -> "Mediano"
+            4 -> "Fraco"
+            3 -> "Ruim"
+            2 -> "Muito ruim"
+            1 -> "Péssimo"
+            else -> "Escolha uma nota"
         }
     }
 
@@ -30,7 +30,10 @@ object MalRatingDialog {
         animeTitle: String,
         totalEpisodes: Int,
         onSubmit: (score: Int) -> Unit,
-        onSkip: () -> Unit = {}
+        onSkip: () -> Unit = {},
+        onDialogVisibilityChanged: (Boolean) -> Unit = { isVisible ->
+            (activity as? PlayerModalHost)?.onPlayerModalVisibilityChanged(isVisible)
+        }
     ): AlertDialog {
         val binding = DialogMalRatingBinding.inflate(activity.layoutInflater)
 
@@ -38,16 +41,20 @@ object MalRatingDialog {
         val epText = if (totalEpisodes > 0) "todos os $totalEpisodes episódios" else "a série"
         binding.tvRatingPrompt.text = "Você completou $epText! Como você avalia este anime no MyAnimeList?"
 
-        var currentScore = 10
-        binding.tvScoreNumber.text = "10"
-        binding.tvScoreLabel.text = getScoreLabel(10)
-        binding.seekBarScore.progress = 10
+        var currentScore = 0
+        binding.tvScoreNumber.text = "?"
+        binding.tvScoreLabel.text = getScoreLabel(0)
+        binding.seekBarScore.progress = 0
+        binding.btnSubmitRating.isEnabled = false
+        binding.btnSubmitRating.alpha = 0.42f
 
         binding.seekBarScore.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                currentScore = if (progress < 1) 1 else progress
-                binding.tvScoreNumber.text = currentScore.toString()
+                currentScore = progress.coerceIn(0, 10)
+                binding.tvScoreNumber.text = if (currentScore == 0) "—" else currentScore.toString()
                 binding.tvScoreLabel.text = getScoreLabel(currentScore)
+                binding.btnSubmitRating.isEnabled = currentScore > 0
+                binding.btnSubmitRating.alpha = if (currentScore > 0) 1f else 0.42f
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
@@ -56,15 +63,18 @@ object MalRatingDialog {
 
         val dialog = MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_DriveStream_Dialog)
             .setView(binding.root)
-            .setCancelable(false)
+            .setCancelable(true)
             .create()
+        dialog.setCanceledOnTouchOutside(false)
 
         dialog.setOnShowListener {
             dialog.window?.let { w ->
                 zechs.drive.stream.utils.TvFocusRing.install(w.decorView)
             }
-            binding.btnSubmitRating.requestFocus()
+            binding.seekBarScore.requestFocus()
         }
+        dialog.setOnDismissListener { onDialogVisibilityChanged(false) }
+        dialog.setOnCancelListener { onSkip() }
 
         binding.btnSubmitRating.setOnClickListener {
             dialog.dismiss()
@@ -76,6 +86,7 @@ object MalRatingDialog {
             onSkip()
         }
 
+        onDialogVisibilityChanged(true)
         dialog.show()
         return dialog
     }

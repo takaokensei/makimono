@@ -115,7 +115,7 @@ import kotlin.math.roundToInt
 
 
 @AndroidEntryPoint
-class PlayerActivity : AppCompatActivity() {
+class PlayerActivity : AppCompatActivity(), PlayerModalHost {
 
     companion object {
         const val TAG = "PlayerActivity"
@@ -205,6 +205,8 @@ class PlayerActivity : AppCompatActivity() {
     // States
     private var onStopCalled = false
     private var controlsLocked = false
+    private val playerModalVisibilityState = PlayerModalVisibilityState()
+    private var modalReturnFocus: View? = null
     private var hasAutoSelectedTracks = false
     private var parsedChapters: List<MatroskaChapterParser.ParsedChapter> = emptyList()
     private var activeSkipChapter: MatroskaChapterParser.ParsedChapter? = null
@@ -1150,6 +1152,33 @@ class PlayerActivity : AppCompatActivity() {
             controllerVisible = playerView.isControllerVisible,
             isHiding = isHidingControls
         )
+    }
+
+    override fun onPlayerModalVisibilityChanged(isVisible: Boolean) {
+        val transition = if (isVisible) {
+            playerModalVisibilityState.onModalOpened(osdWasVisible = isControlsShowing())
+        } else {
+            playerModalVisibilityState.onModalClosed()
+        }
+
+        when (transition) {
+            PlayerModalTransition.HIDE_OSD -> {
+                modalReturnFocus = playerView.findFocus()?.takeIf { it.isFocusable }
+                animateHideController()
+            }
+            PlayerModalTransition.RESTORE_OSD -> if (!isFinishing && !isDestroyed) {
+                animateShowController()
+                val target = modalReturnFocus
+                modalReturnFocus = null
+                playerView.postDelayed({
+                    if (!isControlsShowing()) return@postDelayed
+                    target?.takeIf { it.isShown && it.isFocusable }
+                        ?.requestFocus()
+                        ?: playerView.findViewById<View>(R.id.btnPlayPause)?.requestFocus()
+                }, 250L)
+            }
+            PlayerModalTransition.NONE -> Unit
+        }
     }
 
     private fun handleBackNavigation(): Boolean {
@@ -2548,7 +2577,7 @@ class PlayerActivity : AppCompatActivity() {
             return
         }
 
-        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog).apply {
+        val dialog = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog).apply {
             setTitle(getString(R.string.chapters))
             setMessage("Nenhum capítulo embutido foi detectado neste arquivo de vídeo.\n\nDeseja alternar para o MPV Player?")
             setPositiveButton("Abrir no MPV") { dialog, _ ->
@@ -2556,8 +2585,10 @@ class PlayerActivity : AppCompatActivity() {
                 launchMpvFallback()
             }
             setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.dismiss() }
-            show()
-        }
+        }.create()
+        dialog.setOnDismissListener { onPlayerModalVisibilityChanged(false) }
+        onPlayerModalVisibilityChanged(true)
+        dialog.show()
     }
 
     private fun hideSystemUI() {
@@ -2828,13 +2859,15 @@ class PlayerActivity : AppCompatActivity() {
                 }
             } else if (textSecondary != null) {
                 setAction(getString(R.string.details)) {
-                    MaterialAlertDialogBuilder(
+                    val dialog = MaterialAlertDialogBuilder(
                         this@PlayerActivity
                     ).apply {
                         setMessage(textSecondary)
                         setPositiveButton(R.string.ok) { dialog, _ -> dialog.dismiss() }
-                        create()
-                    }.also { it.show() }
+                    }.create()
+                    dialog.setOnDismissListener { onPlayerModalVisibilityChanged(false) }
+                    onPlayerModalVisibilityChanged(true)
+                    dialog.show()
                 }
             }
 

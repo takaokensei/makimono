@@ -122,3 +122,20 @@ Ratings judge current screenshots and code evidence, not future quality. They ar
 | Paridade e playback | inspeção de `PlayerActivity`/`MPVActivity` e fixture | Sem recurso existente removido; labels do fechar localizadas. A fixture testa apresentação/retorno do drawer e navegação, não reprodução. | Drive autenticado é necessário para decoder, streams, legendas, AniSkip, autoplay e ambos os engines. |
 
 **Referências locais consultadas:** Playing video pp. 1–2 (ações sucintas, transporte previsível e proporção de vídeo) e Remotes pp. 1–2 (comportamento padrão de Play/Pause/Back e foco direcional), adaptadas à plataforma Android TV.
+
+## F6 — Player e diálogos
+
+| ID da regra | Tela/componente | Evidência (captura + valor medido + arquivo) | Status |
+|---|---|---|---|
+| H-Q1–Q3 | Avaliação MAL | `after-v2/f6/rating_before.png`: modal com duas ações claras; `rating_cancel.xml` e `rating_back.xml`: Cancelar e BACK dispensam sem enviar; `menu_final_back.png` mostra OSD e foco em `btnPlayPause`. | OK (fixture) |
+| H-Q4 | Menu contextual de opções | O player usa menu de lista contextual Android, não action sheet; a ação é acessada deliberadamente em “Mais opções” e BACK/× dispensam. | N/A-Android |
+| H-Q5 | Avaliação, editor de legendas e menu | `rating_before.png`, `subtitles_before.png`, `menu_before.png`: uma tarefa por modal; menus/drawers fecham por BACK. Modal aninhado de cor não revela o OSD antes do modal pai fechar. | OK (fixture/código) |
+| H-N1 | Mais opções do OSD | `menu_before.png` / `menu_before.xml`: 5 ações secundárias, primeiro item focado; DOWN move para o próximo; BACK fecha e restaura Play/Pause. Ações de velocidade, proporção, capítulos e informação técnica continuam presentes. | OK (fixture) |
+| H-B1–B5 | Avaliação MAL | `rating_before.png`: nenhum score pré-selecionado (`?`); botão de envio inicialmente desabilitado; `rating_selected.xml`: após 3 RIGHT, valor `8`, envio habilitado; labels em PT-BR. | OK (fixture) |
+| H-M1–M5 / D-01 | OSD e diálogos | `menu_final.png`, `subtitles_before.png`: `FrostedWindow.kt` usa alpha `0xE8` (91%) com blur e `0xF2` (95%) sem blur; dim 35%; conteúdo continua perceptível sem competir com os rótulos. | D-01 |
+| H-V1 | Player visual | `menu_final_back.png`, `rating_back.xml`, `subtitles_back.xml`: modal fechado com OSD visível e foco restituído; fixture não executa mídia real. | OK (fixture) |
+| H-PV1–PV6 | ExoPlayer e MPV | Inspeção de `PlayerActivity.kt` e `MPVActivity.kt`; esta fase não removeu handlers. Buffering, timers, saída/retomada de stream, tracks, AniSkip e autoplay exigem fonte autenticada e não foram simulados. | Pendente (sem playback real) |
+| H-RV1–RV2 | Pedido de avaliação | `MalRatingDialog.kt`: pedido continua acionado no ponto de conclusão existente; nota só é enviada após seleção explícita; botão Cancelar e BACK dispensam. Uma avaliação não é submetida pela nota inicial. | OK (código/fixture) |
+| H-A3, H-A4, H-A10 | Menu, rating e editor de legendas | Dumps UIAutomator confirmam elementos acionáveis e foco; `SeekBar` e botões são selecionáveis por D-pad/toque. Descrições de ícones e outras escalas de fonte ficam para F7. | Parcial (F7) |
+
+**Validação F6:** `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` passou com 161 testes; o pacote de fixture `zechs.drive.stream.visualreview` foi reinstalado no MuMu x86_64; o pacote principal `zechs.drive.stream` permaneceu intacto. OSD sob modal, seleção da nota, saída por toque/BACK e foco após fechamento foram testados na fixture. Playback e operações dependentes do Drive/MAL continuam sem validação nesta sessão.

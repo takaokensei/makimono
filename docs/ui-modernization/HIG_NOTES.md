@@ -175,7 +175,7 @@ IDs below are from the mission briefing's confirmed catalog. Each record is a pa
 
 ## Desvios pré-aprovados (D-01–D-08)
 
-- **D-01 — H-M2 / motivo (c):** MPV `SurfaceView` cannot blur. Alternative: ≥88% opaque dark surface + hairline, and a 35% dim layer over bright artwork. Evidence to record in F6.
+- **D-01 — H-M2 / motivo (c):** MPV `SurfaceView` cannot blur. Alternative: ≥88% opaque dark surface + hairline, and a 35% dim layer over bright artwork. F6 `FrostedWindow` uses 0xE8 (91%) when blur is available, 0xF2 (95%) otherwise, and 35% dim in both states; see `after-v2/f6/menu_final.png`.
 - **D-02 — Dark Mode / motivo (b):** Preserve the five existing dark themes; don't add a light theme or another appearance picker. Evidence: existing theme list and theme dialog.
 - **D-03 — H-K1 / motivo (b):** The v1.5.8 invariant keeps poster titles visible at rest. Alternative: secondary label at rest, primary emphasis on focus, title grows with card. Evidence: catalog/details captures.
 - **D-04 — Focus / motivo (a):** tvOS parallax/tilt assumes Siri remote swipe and layered image assets, with no Android D-pad equivalent. Alternative: restrained scale, elevation and fill; don't add parallax.
@@ -185,4 +185,28 @@ IDs below are from the mission briefing's confirmed catalog. Each record is a pa
 - **D-08 — H-NV3 / motivo (b):** Season changes can't steal focus from asynchronous metadata/episode updates (v1.4.23 invariant). Alternative: keep explicit OK confirmation if focus-driven debounce would violate the invariant.
 
 Apple HIG pages describe Apple platforms. The tvOS sizing and interaction metrics above are used as the user's chosen adaptation reference; they are not statements about Android's native APIs. Exact 3–9 column grids and alert anatomy not legible in the supplied source remain explicitly unverified.
+
+## F6 PDF re-review — Player e diálogos (2026-10-03)
+
+Todos os PDFs obrigatórios da fase e os cinco PDFs transversais F0 foram relidos antes da implementação. As notas abaixo resumem as seções gerais/tvOS; orientações exclusivas de iOS, iPadOS, macOS, visionOS e watchOS não foram portadas.
+
+| PDF | Páginas | Regras reconfirmadas / aplicadas |
+|---|---:|---|
+| Playing video | 6 | pp. 1–4: controles de reprodução familiares, proporção original, overlays breves e retorno contextual ao sair. |
+| Going full screen | 3 | pp. 1–2: conteúdo prioriza tela cheia, controles essenciais fáceis de revelar e saída por escolha da pessoa. |
+| Sliders | 3 | pp. 1–3: direção e semântica familiares, feedback do valor; tvOS não oferece slider nativo. `SeekBar` Android permanece por D-07. |
+| Menus | 7 | pp. 2–4: rótulos sucintos, ações frequentes primeiro, grupos consistentes e listas dinâmicas roláveis. |
+| Sheets | 8 | pp. 1–3: tarefa curta ligada ao contexto, Cancelar/Concluído explícitos e saída acessível; sheet Apple não foi copiada como componente iOS. |
+| Alerts | 6 | pp. 1–3: alertas raros, título direto, mensagem necessária e até três ações. |
+| Action sheets | 3 | pp. 1–2: escolha ligada a uma ação intencional, poucas opções e Cancelar explícito. |
+| Modality | 3 | p. 2: modal com tarefa clara, caminho simples e uma rota evidente para dispensar. |
+| Ratings and reviews | 3 | pp. 1–2: solicitar avaliação após engajamento e em pausa natural; pedido dispensável e sem insistência. |
+| Rating indicators | 2 | pp. 1–2: nota textual clara; estrelas só quando comunicam classificação. |
+| Focus and selection (releitura transversal) | 6 | pp. 2–5: foco distinto, destino previsível e sem roubar foco. |
+| Layout (releitura transversal) | 9 | pp. 2–6: hierarquia, safe areas e espaço para estados focados. |
+| Accessibility (releitura transversal) | 10 | pp. 3–7: controles legíveis, alternativas ao gesto e movimento reduzido. |
+| Materials (releitura transversal) | 8 | pp. 2–6: material adequado à densidade do conteúdo e contraste sobre mídia. |
+| Motion (releitura transversal) | 4 | pp. 1–4: movimento funcional, curto e subordinado à entrada. |
+
+**Conflitos desta fase:** nenhum novo conflito entre PDF e catálogo. A limitação de blur sobre `SurfaceView`/MPV permanece coberta por D-01: a janela é `0xE8` (91% opaca) quando blur está disponível e `0xF2` (95%) no fallback, com dim de fundo de 35%; a captura final do menu confirma texto legível sobre arte clara.
 

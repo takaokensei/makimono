@@ -67,6 +67,9 @@ import zechs.drive.stream.ui.player.PlayerGestureCallback
 import zechs.drive.stream.ui.player.PlayerGlassMenuDialog
 import zechs.drive.stream.ui.player.GlassMenuItem
 import zechs.drive.stream.ui.player.PlayerEpisodeDrawerDialog
+import zechs.drive.stream.ui.player.PlayerModalHost
+import zechs.drive.stream.ui.player.PlayerModalTransition
+import zechs.drive.stream.ui.player.PlayerModalVisibilityState
 import zechs.drive.stream.utils.OnlineSubtitleManager
 import zechs.drive.stream.utils.OnlineSubtitle
 import zechs.drive.stream.utils.SavedSubtitle
@@ -87,7 +90,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @AndroidEntryPoint
-class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
+class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
 
     companion object {
         const val TAG = "MPVActivity"
@@ -148,6 +151,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
     private var activityIsForeground = true
     private var userIsOperatingSeekbar = false
     private var controlsLocked = false
+    private val playerModalVisibilityState = PlayerModalVisibilityState()
     private var hasAutoSelectedMpvTracks = false
     private var parsedChapters = listOf<ParsedChapter>()
     private var activeSkipChapter: ParsedChapter? = null
@@ -816,6 +820,20 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         }
         val currentPos = (player.timePos ?: 0).toDouble()
         checkChapterAutoSkip(currentPos)
+    }
+
+    override fun onPlayerModalVisibilityChanged(isVisible: Boolean) {
+        val transition = if (isVisible) {
+            playerModalVisibilityState.onModalOpened(osdWasVisible = controller.root.isVisible && !isHidingControls)
+        } else {
+            playerModalVisibilityState.onModalClosed()
+        }
+
+        when (transition) {
+            PlayerModalTransition.HIDE_OSD -> hideControls()
+            PlayerModalTransition.RESTORE_OSD -> if (!isFinishing && !isDestroyed) showControlsWithFocus()
+            PlayerModalTransition.NONE -> Unit
+        }
     }
 
     private fun mergeAniSkipChapters(aniSkipChapters: List<MatroskaChapterParser.ParsedChapter>) {
@@ -1725,11 +1743,14 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver {
         val chapters = player.loadChapters()
 
         if (chapters.isEmpty()) {
-            MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog)
+            val dialog = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog)
                 .setTitle(getString(R.string.chapters))
                 .setMessage("Nenhum capítulo encontrado neste arquivo.")
                 .setPositiveButton(android.R.string.ok) { dialog, _ -> dialog.dismiss() }
-                .show()
+                .create()
+            dialog.setOnDismissListener { onPlayerModalVisibilityChanged(false) }
+            onPlayerModalVisibilityChanged(true)
+            dialog.show()
             return
         }
 

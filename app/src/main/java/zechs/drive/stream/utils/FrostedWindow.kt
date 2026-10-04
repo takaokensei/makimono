@@ -13,8 +13,8 @@ object FrostedWindow {
         val background = GradientDrawable().apply { cornerRadius = 20 * density }
         window.setBackgroundDrawable(background)
         fun update(enabled: Boolean) {
-            background.setColor(if (enabled) 0xB3081828.toInt() else 0xF2081828.toInt())
-            window.setDimAmount(if (enabled) 0.25f else 0.6f)
+            background.setColor(if (enabled) 0xE8081828.toInt() else 0xF2081828.toInt())
+            window.setDimAmount(0.35f)
             if (Build.VERSION.SDK_INT >= 31) window.setBackgroundBlurRadius(if (enabled) (24 * density).toInt() else 0)
         }
         update(false)

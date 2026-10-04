@@ -146,11 +146,13 @@ class PlayerGlassMenuDialog(
             setDimAmount(0.65f)
         }
 
-        dialog?.show()
         zechs.drive.stream.utils.TvFocusRing.install(dialogBinding.root)
         dialog?.setOnDismissListener {
+            (context as? PlayerModalHost)?.onPlayerModalVisibilityChanged(false)
             onDismiss?.invoke() ?: previousFocus?.takeIf { it.isAttachedToWindow && it.isShown }?.requestFocus()
         }
+        (context as? PlayerModalHost)?.onPlayerModalVisibilityChanged(true)
+        dialog?.show()
         dialog?.window?.apply {
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             val width = minOf((520 * context.resources.displayMetrics.density).toInt(),

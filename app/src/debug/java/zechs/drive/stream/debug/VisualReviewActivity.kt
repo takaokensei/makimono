@@ -21,9 +21,28 @@ import zechs.drive.stream.ui.FocusedItemScroll
 import zechs.drive.stream.utils.TvFocusRing
 
 /** Renders production XML and adapters with explicit fixtures, without touching account or Room. */
-class VisualReviewActivity : Activity() {
+class VisualReviewActivity : Activity(), zechs.drive.stream.ui.player.PlayerModalHost {
     private val poster = "https://cdn.myanimelist.net/images/anime/1015/138006l.jpg"
     private val backdrop = "https://images.justwatch.com/backdrop/308526637/s1440/sousou-no-frieren.jpg"
+    private var playerFixtureControls: View? = null
+    private var restorePlayerFixtureControls = false
+    private var playerFixtureFocus: View? = null
+
+    override fun onPlayerModalVisibilityChanged(isVisible: Boolean) {
+        val controls = playerFixtureControls ?: return
+        if (isVisible) {
+            restorePlayerFixtureControls = controls.visibility == View.VISIBLE
+            playerFixtureFocus = controls.findFocus() ?: currentFocus
+            if (restorePlayerFixtureControls) controls.visibility = View.INVISIBLE
+            TvFocusRing.clear(findViewById(android.R.id.content))
+        } else if (restorePlayerFixtureControls) {
+            controls.visibility = View.VISIBLE
+            val focusToRestore = playerFixtureFocus
+            focusToRestore?.post { focusToRestore.requestFocus() }
+            restorePlayerFixtureControls = false
+            playerFixtureFocus = null
+        }
+    }
     private fun text(id: Int, value: String) { findViewById<TextView>(id)?.text = value }
     private fun show(id: Int) { findViewById<View>(id)?.visibility = View.VISIBLE }
     private fun art(id: Int, url: String = backdrop) { findViewById<ImageView>(id)?.let { Glide.with(this).load(url).into(it) } }
@@ -53,7 +72,7 @@ class VisualReviewActivity : Activity() {
                     "theme" -> showThemeDialog()
                     "glass_menu" -> showGlassMenu()
                 }
-            }, 400)
+            }, 800)
         }
         val root = findViewById<ViewGroup>(android.R.id.content)
         TvFocusRing.install(root)
@@ -169,6 +188,7 @@ class VisualReviewActivity : Activity() {
         val image=ImageView(this).apply { scaleType=ImageView.ScaleType.CENTER_CROP }
         frame.addView(image,ViewGroup.LayoutParams(-1,-1));Glide.with(this).load(backdrop).into(image)
         val controls=layoutInflater.inflate(R.layout.player_control_view,frame,false)
+        playerFixtureControls = controls
         frame.addView(controls);setContentView(frame);PlayerQuickOptions.bind(controls)
         controls.findViewById<View>(R.id.btnPlayPause)?.postDelayed({
             controls.findViewById<View>(R.id.btnPlayPause)?.requestFocusFromTouch()

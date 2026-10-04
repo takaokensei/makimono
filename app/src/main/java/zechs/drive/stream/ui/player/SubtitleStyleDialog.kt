@@ -195,6 +195,10 @@ object SubtitleStyleDialog {
             }
             binding.sliderSize.requestFocus()
         }
+        dialog.setOnDismissListener {
+            (context as? PlayerModalHost)?.onPlayerModalVisibilityChanged(false)
+        }
+        (context as? PlayerModalHost)?.onPlayerModalVisibilityChanged(true)
         dialog.show()
     }
 

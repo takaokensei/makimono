@@ -108,6 +108,11 @@ class PlayerEpisodeDrawerDialog(
             false
         }
 
+        d.setOnDismissListener {
+            (activity as? PlayerModalHost)?.onPlayerModalVisibilityChanged(false)
+        }
+
+        (activity as? PlayerModalHost)?.onPlayerModalVisibilityChanged(true)
         d.show()
         d.window?.let { w ->
             zechs.drive.stream.utils.TvFocusRing.install(w.decorView)
