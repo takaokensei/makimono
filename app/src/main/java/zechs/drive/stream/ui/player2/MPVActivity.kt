@@ -248,6 +248,34 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         controller
             .btnBack
             .setOnClickListener { finish() }
+        // Keep the dedicated exit target reliable while PlayerView toggles its
+        // controller on the same tap. Invoke the normal click exactly once so
+        // touch and accessibility actions share the same exit behavior.
+        controller.btnBack.setOnTouchListener { view, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    view.isPressed = true
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    view.isPressed = event.x >= 0f && event.x < view.width &&
+                        event.y >= 0f && event.y < view.height
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    val activate = view.isPressed && event.x >= 0f && event.x < view.width &&
+                        event.y >= 0f && event.y < view.height
+                    view.isPressed = false
+                    if (activate) view.performClick()
+                    true
+                }
+                MotionEvent.ACTION_CANCEL -> {
+                    view.isPressed = false
+                    true
+                }
+                else -> false
+            }
+        }
 
         currentFileId = intent.getStringExtra("fileId") ?: ""
         currentTitle = intent.getStringExtra("title") ?: ""
