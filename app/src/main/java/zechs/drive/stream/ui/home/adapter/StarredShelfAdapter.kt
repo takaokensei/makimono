@@ -48,10 +48,11 @@ class StarredShelfAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(file: DriveFile, onClick: (DriveFile) -> Unit) {
-            binding.tvStarredTitle.text = file.name
-
             val isFolder = file.isFolder || file.isShortcutFolder
             val isVideo = file.isVideoFile || file.isShortcutVideo
+
+            val rawName = if (isVideo) file.name.substringBeforeLast('.') else file.name
+            binding.tvStarredTitle.text = zechs.drive.stream.data.remote.AnimePosterResolver.cleanAnimeTitle(rawName)
 
             binding.tvStarredTypeBadge.text = when {
                 isFolder -> adapter.folderBadgeTextResId?.let(binding.root.context::getString)
