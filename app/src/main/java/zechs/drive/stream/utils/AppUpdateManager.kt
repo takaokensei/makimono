@@ -44,11 +44,16 @@ class AppUpdateManager @Inject constructor(
         onProgress: (progress: Int, bytesRead: Long, totalBytes: Long) -> Unit
     ): Result<File> = withContext(Dispatchers.IO) {
         try {
-            Log.d(TAG, "Downloading APK asset: ${asset.name} from ${asset.browserDownloadUrl}")
+            val downloadUrl = if (BuildConfig.GITHUB_API_TOKEN.isNotBlank() && asset.url.isNotBlank()) {
+                asset.url
+            } else {
+                asset.browserDownloadUrl
+            }
+            Log.d(TAG, "Downloading APK asset: ${asset.name} from $downloadUrl")
             val requestBuilder = Request.Builder()
-                .url(asset.browserDownloadUrl)
+                .url(downloadUrl)
                 .header("Accept", "application/octet-stream")
-            GithubAuth.authorizationFor(asset.browserDownloadUrl, BuildConfig.GITHUB_API_TOKEN)
+            GithubAuth.authorizationFor(downloadUrl, BuildConfig.GITHUB_API_TOKEN)
                 ?.let { requestBuilder.header("Authorization", it) }
             val request = requestBuilder.build()
 
@@ -117,10 +122,15 @@ class AppUpdateManager @Inject constructor(
     suspend fun fetchExpectedChecksum(checksumAsset: ChecksumAsset): String? =
         withContext(Dispatchers.IO) {
             try {
+                val downloadUrl = if (BuildConfig.GITHUB_API_TOKEN.isNotBlank() && checksumAsset.url.isNotBlank()) {
+                    checksumAsset.url
+                } else {
+                    checksumAsset.browserDownloadUrl
+                }
                 val requestBuilder = Request.Builder()
-                    .url(checksumAsset.browserDownloadUrl)
+                    .url(downloadUrl)
                     .header("Accept", "application/octet-stream")
-                GithubAuth.authorizationFor(checksumAsset.browserDownloadUrl, BuildConfig.GITHUB_API_TOKEN)
+                GithubAuth.authorizationFor(downloadUrl, BuildConfig.GITHUB_API_TOKEN)
                     ?.let { requestBuilder.header("Authorization", it) }
                 val request = requestBuilder.build()
 

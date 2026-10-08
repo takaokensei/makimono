@@ -10,14 +10,16 @@ data class ReleaseAsset(
     val name: String,
     @Json(name = "browser_download_url")
     val browserDownloadUrl: String,
-    val size: Long = 0L
+    val size: Long = 0L,
+    val url: String = ""
 )
 
 @Keep
 data class ChecksumAsset(
     val name: String,
     @Json(name = "browser_download_url")
-    val browserDownloadUrl: String
+    val browserDownloadUrl: String,
+    val url: String = ""
 )
 
 @Keep
@@ -76,7 +78,7 @@ data class LatestRelease(
     fun findChecksumAsset(apkAsset: ReleaseAsset): ChecksumAsset? {
         val checksumName = "${apkAsset.name}.sha256"
         return assets.firstOrNull { it.name.equals(checksumName, ignoreCase = true) }
-            ?.let { ChecksumAsset(it.name, it.browserDownloadUrl) }
+            ?.let { ChecksumAsset(it.name, it.browserDownloadUrl, it.url) }
     }
 
 }

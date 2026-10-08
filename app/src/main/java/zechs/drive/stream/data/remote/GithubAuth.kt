@@ -10,8 +10,12 @@ internal object GithubAuth {
 
     fun authorizationFor(url: String, token: String): String? {
         val uri = runCatching { URI(url) }.getOrNull() ?: return null
-        if (uri.scheme != "https" || uri.host?.lowercase() != "github.com") return null
-        if (!uri.path.startsWith("/takaokensei/makimono/releases/download/")) return null
+        if (uri.scheme != "https") return null
+        val host = uri.host?.lowercase() ?: return null
+        val path = uri.path ?: return null
+        val isGithubWeb = host == "github.com" && path.startsWith("/takaokensei/makimono/releases/download/")
+        val isGithubApi = host == "api.github.com" && path.startsWith("/repos/takaokensei/makimono/releases/assets/")
+        if (!isGithubWeb && !isGithubApi) return null
         return bearerFor(token)
     }
 }

@@ -36,35 +36,45 @@ jobs:
           extra_args: --debug --only-verified
 
       - name: Setup local.properties (Optional Secrets)
+        env:
+          DRIVE_CLIENT_ID: ${{ secrets.DRIVE_CLIENT_ID || secrets.GOOGLE_DRIVE_CLIENT_ID }}
+          DRIVE_CLIENT_SECRET: ${{ secrets.DRIVE_CLIENT_SECRET || secrets.GOOGLE_DRIVE_CLIENT_SECRET }}
+          DRIVE_REFRESH_TOKEN: ${{ secrets.DRIVE_REFRESH_TOKEN || secrets.GOOGLE_DRIVE_REFRESH_TOKEN }}
+          MAL_CLIENT_ID: ${{ secrets.MAL_CLIENT_ID }}
+          MAL_CLIENT_SECRET: ${{ secrets.MAL_CLIENT_SECRET }}
+          GITHUB_API_TOKEN: ${{ secrets.API_TOKEN_GITHUB || secrets.GITHUB_API_TOKEN || secrets.GH_TOKEN }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
         run: |
           touch local.properties
-          if [ -n "${{ secrets.DRIVE_CLIENT_ID }}" ]; then
-            echo "drive.clientId=${{ secrets.DRIVE_CLIENT_ID }}" >> local.properties
+          if [ -n "$DRIVE_CLIENT_ID" ]; then
+            echo "drive.clientId=$DRIVE_CLIENT_ID" >> local.properties
           fi
-          if [ -n "${{ secrets.DRIVE_CLIENT_SECRET }}" ]; then
-            echo "drive.clientSecret=${{ secrets.DRIVE_CLIENT_SECRET }}" >> local.properties
+          if [ -n "$DRIVE_CLIENT_SECRET" ]; then
+            echo "drive.clientSecret=$DRIVE_CLIENT_SECRET" >> local.properties
           fi
-          if [ -n "${{ secrets.DRIVE_REFRESH_TOKEN }}" ]; then
-            echo "drive.refreshToken=${{ secrets.DRIVE_REFRESH_TOKEN }}" >> local.properties
+          if [ -n "$DRIVE_REFRESH_TOKEN" ]; then
+            echo "drive.refreshToken=$DRIVE_REFRESH_TOKEN" >> local.properties
           fi
-          if [ -n "${{ secrets.MAL_CLIENT_ID }}" ]; then
-            echo "mal.clientId=${{ secrets.MAL_CLIENT_ID }}" >> local.properties
+          if [ -n "$MAL_CLIENT_ID" ]; then
+            echo "mal.clientId=$MAL_CLIENT_ID" >> local.properties
           fi
-          if [ -n "${{ secrets.MAL_CLIENT_SECRET }}" ]; then
-            echo "mal.clientSecret=${{ secrets.MAL_CLIENT_SECRET }}" >> local.properties
+          if [ -n "$MAL_CLIENT_SECRET" ]; then
+            echo "mal.clientSecret=$MAL_CLIENT_SECRET" >> local.properties
           fi
-
-      - name: Setup GitHub release read token
-        env:
-          GITHUB_API_TOKEN: ${{ secrets.API_TOKEN_GITHUB }}
-        run: |
           if [ -n "$GITHUB_API_TOKEN" ]; then
             printf 'github.releaseReadToken=%s\n' "$GITHUB_API_TOKEN" >> local.properties
+            printf 'github.apiToken=%s\n' "$GITHUB_API_TOKEN" >> local.properties
+          fi
+          if [ -n "$TMDB_API_KEY" ]; then
+            echo "tmdb.apiKey=$TMDB_API_KEY" >> local.properties
           fi
 
       - name: Validate Release Secrets
         env:
-          GITHUB_API_TOKEN: ${{ secrets.API_TOKEN_GITHUB }}
+          DRIVE_CLIENT_ID: ${{ secrets.DRIVE_CLIENT_ID || secrets.GOOGLE_DRIVE_CLIENT_ID }}
+          DRIVE_CLIENT_SECRET: ${{ secrets.DRIVE_CLIENT_SECRET || secrets.GOOGLE_DRIVE_CLIENT_SECRET }}
+          DRIVE_REFRESH_TOKEN: ${{ secrets.DRIVE_REFRESH_TOKEN || secrets.GOOGLE_DRIVE_REFRESH_TOKEN }}
+          GITHUB_API_TOKEN: ${{ secrets.API_TOKEN_GITHUB || secrets.GITHUB_API_TOKEN || secrets.GH_TOKEN }}
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
@@ -73,11 +83,15 @@ jobs:
           if [ -z "$RELEASE_KEYSTORE_BASE64" ] || \
              [ -z "$RELEASE_STORE_PASSWORD" ] || \
              [ -z "$RELEASE_KEY_ALIAS" ] || \
-             [ -z "$RELEASE_KEY_PASSWORD" ] || \
-             [ -z "$GITHUB_API_TOKEN" ]; then
+             [ -z "$RELEASE_KEY_PASSWORD" ]; then
             echo "::error::Missing required signing secrets (RELEASE_KEYSTORE_BASE64, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD)."
-            echo "::error::API_TOKEN_GITHUB is also required for the private-repository updater."
             exit 1
+          fi
+          if [ -z "$GITHUB_API_TOKEN" ]; then
+            echo "::warning::API_TOKEN_GITHUB / GITHUB_API_TOKEN is not set. In-app updater for private repository will not be able to download assets."
+          fi
+          if [ -z "$DRIVE_CLIENT_ID" ] || [ -z "$DRIVE_CLIENT_SECRET" ] || [ -z "$DRIVE_REFRESH_TOKEN" ]; then
+            echo "::warning::Drive credentials (DRIVE_CLIENT_ID, DRIVE_CLIENT_SECRET, DRIVE_REFRESH_TOKEN) were not found in repository secrets. Embedded Google Drive auto-login will be empty in release builds."
           fi
 
       - name: Setup release keystore
