@@ -491,9 +491,8 @@ class MainActivity : AppCompatActivity() {
             dismissVinheta()
         }
 
-        binding.vinhetaContainer.setOnClickListener {
-            dismissVinheta()
-        }
+        // Unskippable intro: consume touch/click events without dismissing
+        binding.vinhetaContainer.setOnClickListener { /* unskippable intro */ }
     }
 
     private fun dismissVinheta() {
@@ -506,7 +505,8 @@ class MainActivity : AppCompatActivity() {
 
         binding.vinhetaContainer.animate()
             .alpha(0f)
-            .setDuration(280L)
+            .setDuration(600L)
+            .setInterpolator(android.view.animation.AccelerateDecelerateInterpolator())
             .withEndAction {
                 binding.vinhetaContainer.visibility = View.GONE
                 binding.pvVinheta.player = null
@@ -518,9 +518,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (binding.vinhetaContainer.isVisible) {
-            if (event.action == KeyEvent.ACTION_DOWN) {
-                dismissVinheta()
-            }
+            // Unskippable intro: absorb all key events until intro completes naturally
             return true
         }
         return super.dispatchKeyEvent(event)
