@@ -35,20 +35,43 @@ class FolderMetadataRepository @Inject constructor(
         }
     }
 
-    suspend fun updatePosterUrl(folderId: String, folderName: String, posterUrl: String) {
+    suspend fun updatePosterUrl(
+        folderId: String,
+        folderName: String,
+        posterUrl: String,
+        isMovie: Boolean = false,
+        mediaType: String? = null
+    ) {
+        updateMetadataDetails(folderId, folderName, posterUrl, isMovie, mediaType)
+    }
+
+    suspend fun updateMetadataDetails(
+        folderId: String,
+        folderName: String,
+        posterUrl: String,
+        isMovie: Boolean = false,
+        mediaType: String? = null
+    ) {
         val existing = folderMetadataDao.getMetadata(folderId)
         if (existing != null) {
-            folderMetadataDao.upsert(existing.copy(posterUrl = posterUrl))
+            folderMetadataDao.upsert(
+                existing.copy(
+                    posterUrl = posterUrl,
+                    isMovie = isMovie,
+                    mediaType = mediaType
+                )
+            )
         } else {
             folderMetadataDao.upsert(
                 FolderMetadata(
                     folderId = folderId,
                     folderName = folderName,
                     posterUrl = posterUrl,
-                    lastOpened = 0L
+                    lastOpened = 0L,
+                    isMovie = isMovie,
+                    mediaType = mediaType
                 )
             )
         }
     }
-
 }

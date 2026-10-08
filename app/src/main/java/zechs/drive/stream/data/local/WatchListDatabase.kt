@@ -17,7 +17,7 @@ import zechs.drive.stream.data.model.WatchQueueItem
         FollowedFolder::class,
         ProfileEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 abstract class WatchListDatabase : RoomDatabase() {
@@ -33,6 +33,12 @@ abstract class WatchListDatabase : RoomDatabase() {
     abstract fun getProfileCleanupDao(): ProfileCleanupDao
 
     companion object {
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `isMovie` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `mediaType` TEXT")
+            }
+        }
         val MIGRATION_7_8 = object : Migration(7, 8) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `watch_list` ADD COLUMN `audioDelayMs` INTEGER NOT NULL DEFAULT 0")

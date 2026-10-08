@@ -18,7 +18,8 @@ data class DriveFile(
     /** RFC 3339 timestamp supplied by Drive; absent for local/synthetic items. */
     val modifiedTime: String? = null,
     /** Optional user-authored Drive description; never inferred from a filename. */
-    val description: String? = null
+    val description: String? = null,
+    val isMovie: Boolean = false
 ) {
     val humanSize = size?.let { Converter.toHumanSize(it) }
 

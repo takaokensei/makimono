@@ -11,5 +11,7 @@ data class FolderMetadata(
     val folderId: String,
     val folderName: String,
     val posterUrl: String? = null,
-    val lastOpened: Long = 0L
+    val lastOpened: Long = 0L,
+    val isMovie: Boolean = false,
+    val mediaType: String? = null
 )
