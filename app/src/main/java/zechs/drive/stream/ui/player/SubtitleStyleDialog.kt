@@ -3,8 +3,8 @@ package zechs.drive.stream.ui.player
 import android.content.Context
 import android.graphics.Color
 import android.view.LayoutInflater
-import com.google.android.exoplayer2.text.Cue
-import com.google.android.exoplayer2.ui.CaptionStyleCompat
+import androidx.media3.common.text.Cue
+import androidx.media3.ui.CaptionStyleCompat
 import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.slider.Slider

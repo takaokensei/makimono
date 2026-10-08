@@ -9,7 +9,7 @@
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="wrap_content"
         android:background="@android:color/transparent"
         android:elevation="0dp">
 
@@ -24,32 +24,66 @@
             app:navigationIconTint="?attr/colorTextPrimary"
             app:title="@string/app_settings"
             app:titleTextColor="?attr/colorTextPrimary" />
+
     </com.google.android.material.appbar.AppBarLayout>
 
-    <androidx.core.widget.NestedScrollView
+    <LinearLayout
+        android:id="@+id/settingsWorkspace"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:clipToPadding="false"
-        android:fillViewport="true"
-        android:paddingBottom="28dp"
+        android:orientation="horizontal"
         app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior">
 
         <LinearLayout
-            android:layout_width="820dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
+            android:layout_width="240dp"
+            android:layout_height="match_parent"
+            android:background="#0B1018"
             android:orientation="vertical"
-            android:paddingStart="24dp"
-            android:paddingTop="20dp"
-            android:paddingEnd="24dp">
+            android:paddingStart="12dp"
+            android:paddingTop="24dp"
+            android:paddingEnd="12dp">
 
             <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_marginBottom="12dp"
+                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                android:text="@string/settings_categories_heading"
+                android:textColor="?attr/colorTextSecondary"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:id="@+id/settingsCategoryBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
+
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/settingsScroll"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:fillViewport="true"
+            android:paddingBottom="28dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="28dp"
+            android:paddingTop="20dp"
+            android:paddingEnd="28dp">
+
+            <TextView
+                android:id="@+id/settingsSectionProfile"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="@font/inter"
+                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
                 android:text="PERSONALIZAÇÃO E CONTROLE"
                 android:textColor="?attr/colorAccentPrimary"
-                android:textSize="11sp"
                 android:textStyle="bold" />
 
             <LinearLayout
@@ -83,29 +117,26 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:fontFamily="@font/inter"
+                        android:textAppearance="@style/TextAppearance.Makimono.TV.Headline"
                         android:text="Perfil de usuário"
-                        android:textColor="?attr/colorTextPrimary"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
+                        android:textColor="?attr/colorTextPrimary" />
 
                     <TextView
                         android:id="@+id/tvCurrentProfileName"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:fontFamily="@font/inter"
+                        android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
                         android:text="Perfil ativo"
-                        android:textColor="?attr/colorTextSecondary"
-                        android:textSize="12sp" />
+                        android:textColor="?attr/colorTextSecondary" />
                 </LinearLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Trocar perfil  ›"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
                     android:textColor="?attr/colorAccentPrimary"
-                    android:textSize="12sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
@@ -196,8 +227,58 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Editar  ›"
-                    android:textColor="?attr/colorAccentPrimary"
-                    android:textSize="12sp" />
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                    android:textColor="?attr/colorAccentPrimary" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/settingReduceMotion"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/glass_action_item_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp"
+                android:importantForAccessibility="yes">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_settings_24"
+                    app:tint="?attr/colorAccentPrimary" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/reduce_motion"
+                        android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/tvMotionPreferenceValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/motion_follows_device"
+                        android:textAppearance="?attr/textAppearanceBodySmall" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Editar  ›"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                    android:textColor="?attr/colorAccentPrimary" />
             </LinearLayout>
 
             <LinearLayout
@@ -245,8 +326,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Selecionar  ›"
-                    android:textColor="?attr/colorAccentPrimary"
-                    android:textSize="12sp" />
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                    android:textColor="?attr/colorAccentPrimary" />
             </LinearLayout>
 
             <!-- Subtitle Size Setting -->
@@ -295,8 +376,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Ajustar  ›"
-                    android:textColor="?attr/colorAccentPrimary"
-                    android:textSize="12sp" />
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                    android:textColor="?attr/colorAccentPrimary" />
             </LinearLayout>
 
             <!-- Storage & Cache Management -->
@@ -345,8 +426,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Limpar  ›"
-                    android:textColor="?attr/colorAccentPrimary"
-                    android:textSize="12sp" />
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                    android:textColor="?attr/colorAccentPrimary" />
             </LinearLayout>
 
             <LinearLayout
@@ -395,19 +476,19 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Verificar  ›"
-                    android:textColor="?attr/colorAccentPrimary"
-                    android:textSize="12sp" />
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                    android:textColor="?attr/colorAccentPrimary" />
             </LinearLayout>
 
             <TextView
+                android:id="@+id/settingsSectionIntegrations"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="28dp"
-                android:fontFamily="@font/inter"
                 android:letterSpacing="0.16"
                 android:text="INTEGRAÇÕES"
+                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
                 android:textColor="@color/layout_literal_8fa3ba"
-                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <LinearLayout
@@ -488,9 +569,10 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
                     android:layout_weight="1"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
                     android:text="Enviar login do MAL para a TV"
                     android:textColor="?attr/colorTextPrimary"
-                    android:textSize="13sp" />
+                    android:textStyle="normal" />
             </LinearLayout>
 
             <LinearLayout
@@ -510,9 +592,10 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
                     android:text="Sincronizar episódios com o MAL"
                     android:textColor="?attr/colorTextPrimary"
-                    android:textSize="13sp" />
+                    android:textStyle="normal" />
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switchMalSync"
@@ -522,14 +605,14 @@
             </LinearLayout>
 
             <TextView
+                android:id="@+id/settingsSectionPlayback"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="28dp"
-                android:fontFamily="@font/inter"
                 android:letterSpacing="0.16"
                 android:text="REPRODUÇÃO E GESTOS"
+                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
                 android:textColor="@color/layout_literal_8fa3ba"
-                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <LinearLayout
@@ -549,9 +632,10 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
                     android:text="Pular aberturas automaticamente"
                     android:textColor="?attr/colorTextPrimary"
-                    android:textSize="13sp" />
+                    android:textStyle="normal" />
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switchAutoSkip"
@@ -577,9 +661,10 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
                     android:text="Gestos no player mobile"
                     android:textColor="?attr/colorTextPrimary"
-                    android:textSize="13sp" />
+                    android:textStyle="normal" />
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switchGestures"
@@ -590,14 +675,14 @@
 
             <!-- BACKUP & RESTAURAÇÃO (FEAT-07) -->
             <TextView
+                android:id="@+id/settingsSectionData"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:fontFamily="@font/inter"
                 android:letterSpacing="0.16"
                 android:text="BACKUP &amp; DADOS"
+                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
                 android:textColor="@color/layout_literal_8fa3ba"
-                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <!-- Exportar Backup -->
@@ -623,27 +708,25 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:fontFamily="@font/inter"
+                        android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
                         android:text="Exportar Backup dos Perfis"
                         android:textColor="?attr/colorTextPrimary"
-                        android:textSize="13sp" />
+                        android:textStyle="normal" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:fontFamily="@font/inter"
+                        android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
                         android:text="Salva histórico, favoritos e fila sem dados confidenciais"
-                        android:textColor="?attr/colorTextSecondary"
-                        android:textSize="10.5sp" />
+                        android:textColor="?attr/colorTextSecondary" />
                 </LinearLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/inter"
                     android:text="Exportar ›"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
                     android:textColor="?attr/colorAccentPrimary"
-                    android:textSize="12sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
@@ -671,32 +754,31 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:fontFamily="@font/inter"
+                        android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
                         android:text="Restaurar Backup"
                         android:textColor="?attr/colorTextPrimary"
-                        android:textSize="13sp" />
+                        android:textStyle="normal" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:fontFamily="@font/inter"
+                        android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
                         android:text="Restaura histórico e favoritos a partir de um backup JSON"
-                        android:textColor="?attr/colorTextSecondary"
-                        android:textSize="10.5sp" />
+                        android:textColor="?attr/colorTextSecondary" />
                 </LinearLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/inter"
                     android:text="Restaurar ›"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
                     android:textColor="?attr/colorAccentPrimary"
-                    android:textSize="12sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
             <!-- Seção Conta & Sessão -->
             <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/settingsSectionSession"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="24dp"
@@ -755,14 +837,14 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/inter"
                     android:text="Sair ›"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
                     android:textColor="?attr/colorError"
-                    android:textSize="13sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
         </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
+        </androidx.core.widget.NestedScrollView>
+    </LinearLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
 

@@ -24,8 +24,8 @@ object PlaybackProgressPolicy {
     /** Remaining time threshold near the end of a video (<= 15 seconds for long videos). */
     const val FINISHED_REMAINING_WINDOW_MS = 15_000L
 
-    /** Window before episode end where the next-episode card should be displayed (10.5 seconds). */
-    const val AUTOPLAY_CARD_TRIGGER_MS = 10_500L
+    /** Window before episode end where the next-episode card should be displayed (25 seconds - Netflix/Apple TV style). */
+    const val AUTOPLAY_CARD_TRIGGER_MS = 25_000L
 
     /** Threshold where automatic transition to the next episode occurs (<= 1 second remaining). */
     const val AUTOPLAY_ADVANCE_MS = 1_000L
@@ -92,7 +92,8 @@ object PlaybackProgressPolicy {
         durationMs: Long,
         hasNextEpisode: Boolean,
         isCanceled: Boolean,
-        controlsLocked: Boolean
+        controlsLocked: Boolean,
+        isEndingChapterActive: Boolean = false
     ): AutoplayDecision {
         if (controlsLocked || durationMs <= MIN_AUTOPLAY_DURATION_MS || !hasNextEpisode) {
             return AutoplayDecision.DismissCard
@@ -107,8 +108,8 @@ object PlaybackProgressPolicy {
 
         if (isCanceled) return AutoplayDecision.None
 
-        // Within countdown window (e.g. 1.0s to 10.5s before end)
-        if (remainingMs in (AUTOPLAY_ADVANCE_MS + 1)..AUTOPLAY_CARD_TRIGGER_MS) {
+        // Within countdown window (e.g. 1.0s to 25.0s before end) OR when an AniSkip ending is detected
+        if (remainingMs in (AUTOPLAY_ADVANCE_MS + 1)..AUTOPLAY_CARD_TRIGGER_MS || isEndingChapterActive) {
             val countdownSec = ceil(remainingMs / 1000.0).toInt().coerceAtLeast(1)
             return AutoplayDecision.ShowCountdown(remainingMs, countdownSec)
         }

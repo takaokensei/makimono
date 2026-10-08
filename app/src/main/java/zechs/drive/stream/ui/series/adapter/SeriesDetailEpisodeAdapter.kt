@@ -6,8 +6,10 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import zechs.drive.stream.R
 import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.databinding.ItemSeriesEpisodeCardBinding
+import zechs.drive.stream.ui.series.EpisodeCardAccessibilityLabel
 import zechs.drive.stream.utils.MediaImageLoader
 
 data class SeriesEpisodeItem(
@@ -23,7 +25,7 @@ data class SeriesEpisodeItem(
 
 class SeriesDetailEpisodeAdapter(
     private val onEpisodeClick: (SeriesEpisodeItem) -> Unit,
-    private val onEpisodeLongClick: ((SeriesEpisodeItem) -> Unit)? = null
+    private val onEpisodeLongClick: ((SeriesEpisodeItem, View) -> Unit)? = null
 ) : ListAdapter<SeriesEpisodeItem, SeriesDetailEpisodeAdapter.EpisodeViewHolder>(DiffCallback) {
 
     init {
@@ -61,28 +63,37 @@ class SeriesDetailEpisodeAdapter(
             binding.cardEpisodeItem.setOnLongClickListener {
                 val position = bindingAdapterPosition
                 if (position != RecyclerView.NO_POSITION && onEpisodeLongClick != null) {
-                    onEpisodeLongClick.invoke(getItem(position))
+                    onEpisodeLongClick.invoke(getItem(position), binding.cardEpisodeItem)
                     true
                 } else {
                     false
                 }
             }
 
-            binding.cardEpisodeItem.setOnFocusChangeListener { v, hasFocus ->
-                if (hasFocus) {
-                    v.animate().scaleX(1.05f).scaleY(1.05f).translationZ(12f).setDuration(150L).start()
-                    binding.ivPlayOverlay.visibility = View.VISIBLE
-                } else {
-                    v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(150L).start()
-                    binding.ivPlayOverlay.visibility = View.GONE
-                }
+            zechs.drive.stream.utils.FocusEngine.attach(
+                binding.cardEpisodeItem,
+                zechs.drive.stream.utils.FocusEngine.FocusKind.CARD
+            ) { _, hasFocus ->
+                binding.ivPlayOverlay.visibility = if (hasFocus) View.VISIBLE else View.GONE
+                updateSynopsisVisibility(hasFocus)
             }
         }
 
         fun bind(item: SeriesEpisodeItem) {
             binding.tvEpisodeTitle.text = item.displayTitle
             binding.tvEpisodeDuration.text = item.durationText
+            binding.tvEpisodeDuration.visibility = if (item.durationText.isBlank()) View.GONE else View.VISIBLE
             binding.tvAudioBadge.text = item.audioBadgeText
+            binding.tvAudioBadge.visibility = if (item.audioBadgeText.isBlank()) View.GONE else View.VISIBLE
+
+            // Google Drive descriptions are optional and user-authored. Reveal them only
+            // on the focused episode so the rail remains scannable at rest.
+            binding.tvEpisodeSynopsis.text = item.file.description
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+                ?.take(MAX_DESCRIPTION_LENGTH)
+                .orEmpty()
+            updateSynopsisVisibility(binding.cardEpisodeItem.hasFocus())
 
             if (item.episodeNumber != null && item.episodeNumber > 0) {
                 binding.tvEpNumberBadge.visibility = View.VISIBLE
@@ -101,12 +112,38 @@ class SeriesDetailEpisodeAdapter(
                 binding.tvEpisodeProgressPercent.visibility = View.GONE
             }
 
+            val context = binding.root.context
+            val progressDescription = when {
+                item.progressPercent >= 95 -> context.getString(R.string.series_episode_accessibility_watched)
+                item.progressPercent > 0 -> context.getString(
+                    R.string.series_episode_accessibility_in_progress,
+                    item.progressPercent
+                )
+                else -> null
+            }
+            binding.cardEpisodeItem.contentDescription = EpisodeCardAccessibilityLabel.build(
+                actionAndTitle = context.getString(
+                    R.string.series_episode_card_accessibility_play,
+                    item.displayTitle
+                ),
+                duration = item.durationText,
+                audio = item.audioBadgeText,
+                progress = progressDescription
+            )
+
             val thumbUrl = item.file.thumbnailLarge ?: item.file.thumbnailLink ?: item.file.posterUrl
             MediaImageLoader.card(binding.ivEpisodeThumb, thumbUrl)
+        }
+
+        private fun updateSynopsisVisibility(hasFocus: Boolean) {
+            binding.tvEpisodeSynopsis.visibility =
+                if (hasFocus && binding.tvEpisodeSynopsis.text.isNotBlank()) View.VISIBLE else View.GONE
         }
     }
 
     companion object DiffCallback : DiffUtil.ItemCallback<SeriesEpisodeItem>() {
+        private const val MAX_DESCRIPTION_LENGTH = 600
+
         override fun areItemsTheSame(oldItem: SeriesEpisodeItem, newItem: SeriesEpisodeItem): Boolean =
             oldItem.file.id == newItem.file.id
 

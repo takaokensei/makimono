@@ -50,7 +50,7 @@
         android:layout_marginTop="40dp"
         android:layout_marginBottom="16dp"
         android:fontFamily="@font/inter"
-        android:text="Quem está assistindo?"
+        android:text="@string/profile_selection_title"
         android:textColor="?attr/colorTextPrimary"
         android:textSize="@dimen/profile_title_size"
         android:textStyle="bold"
@@ -88,9 +88,10 @@
         android:letterSpacing="0.08"
         android:paddingHorizontal="32dp"
         android:paddingVertical="12dp"
-        android:text="GERENCIAR PERFIS"
+        android:text="@string/profile_manage_action"
+        android:textAllCaps="false"
         android:textColor="?attr/colorTextPrimary"
-        android:textSize="13sp"
+        style="@style/TextAppearance.Makimono.TV.Callout"
         android:textStyle="bold"
         app:backgroundTint="@null"
         app:layout_constraintEnd_toEndOf="parent"
@@ -128,9 +129,9 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:fontFamily="@font/inter"
-            android:text="Configurações"
+            android:text="@string/profile_settings_action"
             android:textColor="@color/layout_literal_e2e8f0"
-            android:textSize="12sp"
+            style="@style/TextAppearance.Makimono.TV.Body"
             android:textStyle="bold" />
 
     </LinearLayout>

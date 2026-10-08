@@ -48,13 +48,15 @@ sealed class SeriesDetailUiState {
         val seasonTabs: List<SeasonTab>,
         val currentEpisodes: List<SeriesEpisodeItem>,
         val continueWatchingItem: SeriesEpisodeItem?,
+        val trailerItem: SeriesEpisodeItem? = null,
         val continueWatchingSubtitle: String,
         val isStarred: Boolean,
         val isFollowed: Boolean = false,
         val fallbackPosterUrl: String? = null,
-        val qualityBadge: String = "1080p",
-        val audioBadge: String = "Dual Áudio PT-BR / JA",
-        val subtitleBadge: String = "Multi Subs"
+        val qualityBadge: String? = null,
+        val audioBadge: String? = null,
+        val subtitleBadge: String? = null,
+        val hasIncompleteDriveListing: Boolean = false
     ) : SeriesDetailUiState()
     data class Error(val message: String) : SeriesDetailUiState()
 }
@@ -126,7 +128,14 @@ class SeriesDetailViewModel @Inject constructor(
                 }
 
                 // 2. Fetch Drive files in folder
-                val driveFiles = fetchAllDriveVideos(folderId)
+                val driveResult = fetchAllDriveVideos(folderId)
+                val driveFiles = driveResult.files
+                if (driveFiles.isEmpty() && driveResult.errorMessage != null) {
+                    withContext(Dispatchers.Main) {
+                        _uiState.value = SeriesDetailUiState.Error(driveResult.errorMessage)
+                    }
+                    return@launch
+                }
                 if (driveFiles.isEmpty()) {
                     withContext(Dispatchers.Main) {
                         _uiState.value = SeriesDetailUiState.Error("Nenhum arquivo de vídeo encontrado na pasta.")
@@ -157,7 +166,8 @@ class SeriesDetailViewModel @Inject constructor(
                     fetchedAnime = null,
                     aniListMeta = null,
                     arcs = emptyList(),
-                    fallbackPosterUrl = cachedPoster
+                    fallbackPosterUrl = cachedPoster,
+                    hasIncompleteDriveListing = driveResult.isIncomplete
                 )
                 withContext(Dispatchers.Main) {
                     _uiState.value = shellState
@@ -185,7 +195,8 @@ class SeriesDetailViewModel @Inject constructor(
                     fetchedAnime = fetchedAnime,
                     aniListMeta = aniListMeta,
                     arcs = fetchedArcs,
-                    fallbackPosterUrl = finalPoster
+                    fallbackPosterUrl = finalPoster,
+                    hasIncompleteDriveListing = driveResult.isIncomplete
                 )
                 withContext(Dispatchers.Main) {
                     val previous = _uiState.value as? SeriesDetailUiState.Success
@@ -218,7 +229,8 @@ class SeriesDetailViewModel @Inject constructor(
         fetchedAnime: TenraiAnimeService.TenraiAnimeEntry?,
         aniListMeta: AnimeMetadata?,
         arcs: List<TenraiAnimeService.TenraiFranchiseArc>,
-        fallbackPosterUrl: String?
+        fallbackPosterUrl: String?,
+        hasIncompleteDriveListing: Boolean
     ): SeriesDetailUiState.Success {
         allEpisodeItems = driveFiles.map { file ->
             mapToEpisodeItem(file, watchMap[file.id], arcs)
@@ -242,7 +254,7 @@ class SeriesDetailViewModel @Inject constructor(
             )
         }
 
-        val continueItem = determineContinueWatchingItem(allEpisodeItems)
+        val continueItem = PrimaryEpisodeSelection.select(allEpisodeItems)
         val continueSubtitle = continueItem?.let { item ->
             val epText = item.episodeNumber?.let { "Ep. $it" } ?: "Ep. 01"
             if (item.watchedDuration > 0 && item.totalDuration > item.watchedDuration) {
@@ -261,26 +273,48 @@ class SeriesDetailViewModel @Inject constructor(
             seasonTabs = tabs,
             currentEpisodes = getEpisodesForGroup(allSeasonGroups.firstOrNull()),
             continueWatchingItem = continueItem,
+            trailerItem = SeriesDetailEpisodeSelection.firstTrailer(allEpisodeItems),
             continueWatchingSubtitle = continueSubtitle,
             isStarred = isFolderStarred,
             isFollowed = isFolderFollowed,
             fallbackPosterUrl = fallbackPosterUrl,
-            qualityBadge = detectQuality(driveFiles),
-            audioBadge = detectAudio(driveFiles),
-            subtitleBadge = "Multi Subs"
+            qualityBadge = SeriesMediaMetadataPolicy.quality(
+                driveFiles.map { it.name }, listingComplete = !hasIncompleteDriveListing
+            ),
+            audioBadge = SeriesMediaMetadataPolicy.audio(
+                driveFiles.map { it.name }, listingComplete = !hasIncompleteDriveListing
+            ),
+            subtitleBadge = SeriesMediaMetadataPolicy.subtitles(
+                driveFiles.map { it.name }, listingComplete = !hasIncompleteDriveListing
+            ),
+            hasIncompleteDriveListing = hasIncompleteDriveListing
         )
     }
 
-    private suspend fun fetchAllDriveVideos(folderId: String): List<DriveFile> {
-        val directRes = driveRepository.getAllFiles(
+    private data class DriveVideoFetch(
+        val files: List<DriveFile>,
+        val isIncomplete: Boolean,
+        val errorMessage: String? = null
+    )
+
+    private suspend fun fetchAllDriveVideos(folderId: String): DriveVideoFetch {
+        val directRes = driveRepository.getAllFilesDetailed(
             query = "'$folderId' in parents and trashed = false",
             pageSize = 100
         )
-        if (directRes !is Resource.Success || directRes.data.isNullOrEmpty()) {
-            return emptyList()
+        val directCollection = when (directRes) {
+            is Resource.Success -> directRes.data
+            is Resource.Error -> directRes.data
+            is Resource.Loading -> null
+        }
+        if (directCollection == null) {
+            val message = (directRes as? Resource.Error)?.message
+                ?: "Não foi possível carregar os arquivos desta pasta."
+            return DriveVideoFetch(emptyList(), isIncomplete = true, errorMessage = message)
         }
 
-        val items = directRes.data.map { it.toDriveFile() }
+        var isIncomplete = !directCollection.isComplete || directRes is Resource.Error
+        val items = directCollection.files.map { it.toDriveFile() }
         val videoFiles = items.filter { it.isVideoFile || (it.isShortcut && it.isShortcutVideo) }.toMutableList()
         val subfolders = items.filter { it.isFolder || it.isShortcutFolder }
 
@@ -288,24 +322,34 @@ class SeriesDetailViewModel @Inject constructor(
         if (subfolders.isNotEmpty() && videoFiles.size <= 2) {
             for (sub in subfolders) {
                 val subId = if (sub.isShortcut) sub.shortcutDetails.targetId ?: sub.id else sub.id
-                val subRes = driveRepository.getAllFiles(
+                val subRes = driveRepository.getAllFilesDetailed(
                     query = "'$subId' in parents and trashed = false",
                     pageSize = 100
                 )
-                if (subRes is Resource.Success && !subRes.data.isNullOrEmpty()) {
-                    val subVideos = subRes.data.map { it.toDriveFile() }
+                val subCollection = when (subRes) {
+                    is Resource.Success -> subRes.data
+                    is Resource.Error -> subRes.data
+                    is Resource.Loading -> null
+                }
+                if (subCollection == null) {
+                    isIncomplete = true
+                    continue
+                }
+                if (!subCollection.isComplete || subRes is Resource.Error) isIncomplete = true
+                if (subCollection.files.isNotEmpty()) {
+                    val subVideos = subCollection.files.map { it.toDriveFile() }
                         .filter { it.isVideoFile || (it.isShortcut && it.isShortcutVideo) }
                     videoFiles.addAll(subVideos)
                 }
             }
         }
 
-        return videoFiles.sortedWith { a, b ->
+        return DriveVideoFetch(videoFiles.sortedWith { a, b ->
             SeasonEpisodeGrouper.compareItems(
                 a.name, EpisodeParser.parse(a.name),
                 b.name, EpisodeParser.parse(b.name)
             )
-        }
+        }, isIncomplete = isIncomplete)
     }
 
     private fun mapToEpisodeItem(
@@ -314,7 +358,10 @@ class SeriesDetailViewModel @Inject constructor(
         arcs: List<TenraiAnimeService.TenraiFranchiseArc>
     ): SeriesEpisodeItem {
         val parsed = EpisodeParser.parse(file.name)
-        val epNum = parsed.episode?.toInt()
+        // OP/ED and other extras can contain a number (for example OP4a), but that
+        // number is a variant index, not a regular episode and must never be mapped
+        // to a franchise episode title or shown with an EP badge.
+        val epNum = parsed.episode?.toInt()?.takeUnless { parsed.isSpecial }
 
         // Match canonical episode title from franchise arcs
         var canonName: String? = null
@@ -327,54 +374,28 @@ class SeriesDetailViewModel @Inject constructor(
             }
         }
 
-        val cleanRawName = file.name
-            .substringBeforeLast('.')
-            .replace(Regex("\\[.*?\\]|\\(.*?\\)"), "")
-            .trim()
-
-        val displayTitle = when {
-            canonName != null && epNum != null -> "Episódio ${String.format(Locale.ROOT, "%02d", epNum)} - $canonName"
-            epNum != null -> "Episódio ${String.format(Locale.ROOT, "%02d", epNum)} - $cleanRawName"
-            else -> cleanRawName
-        }
+        val presentation = presentSeriesEpisode(file.name, canonName)
 
         val progress = watch?.watchProgress() ?: 0
         val durationText = if (watch != null && watch.totalDuration > 0) {
             val totalMin = (watch.totalDuration / 1000) / 60
             "$totalMin min"
         } else {
-            "24 min"
+            ""
         }
 
-        val audioText = if (file.name.contains("dual", ignoreCase = true) || file.name.contains("multi", ignoreCase = true)) {
-            "Dual Áudio"
-        } else {
-            "Japonês"
-        }
+        val audioText = SeriesMediaMetadataPolicy.audioLabelForFile(file.name).orEmpty()
 
         return SeriesEpisodeItem(
             file = file,
-            displayTitle = displayTitle,
-            episodeNumber = epNum,
+            displayTitle = presentation.displayTitle,
+            episodeNumber = presentation.episodeNumber,
             durationText = durationText,
             audioBadgeText = audioText,
             progressPercent = progress,
             watchedDuration = watch?.watchedDuration ?: 0L,
             totalDuration = watch?.totalDuration ?: 0L
         )
-    }
-
-    private fun determineContinueWatchingItem(episodes: List<SeriesEpisodeItem>): SeriesEpisodeItem? {
-        // 1. Check for partially watched episode (progress in 1..94)
-        val inProgress = episodes.firstOrNull { it.progressPercent in 1..94 }
-        if (inProgress != null) return inProgress
-
-        // 2. Check for first unwatched episode
-        val firstUnwatched = episodes.firstOrNull { it.progressPercent == 0 }
-        if (firstUnwatched != null) return firstUnwatched
-
-        // 3. Default to first episode
-        return episodes.firstOrNull()
     }
 
     fun selectSeasonTab(tab: SeasonTab) {
@@ -395,11 +416,10 @@ class SeriesDetailViewModel @Inject constructor(
 
     private fun getEpisodesForGroup(group: SeasonGroup?): List<SeriesEpisodeItem> {
         if (group == null || group.id == "season_all") {
-            val nonMusicEpisodes = allEpisodeItems.filter { item ->
-                val parsed = EpisodeParser.parse(item.file.name)
-                SeasonEpisodeGrouper.categorize(item.file.name, parsed) != SeasonEpisodeGrouper.ItemCategory.MUSIC
-            }
-            return if (nonMusicEpisodes.isNotEmpty()) nonMusicEpisodes else allEpisodeItems
+            val groupFileIds = group?.fileItems.orEmpty().mapNotNull {
+                (it as? FilesDataModel.File)?.driveFile?.id
+            }.toSet()
+            return SeriesDetailEpisodeSelection.allEpisodes(allEpisodeItems, groupFileIds)
         }
         val groupFileIds = group.fileItems.mapNotNull {
             (it as? FilesDataModel.File)?.driveFile?.id
@@ -518,7 +538,7 @@ class SeriesDetailViewModel @Inject constructor(
             val selectedTabId = currentState.seasonTabs.firstOrNull { it.isSelected }?.id
             val targetGroup = allSeasonGroups.firstOrNull { it.id == selectedTabId }
             val filtered = getEpisodesForGroup(targetGroup)
-            val continueItem = determineContinueWatchingItem(allEpisodeItems)
+            val continueItem = PrimaryEpisodeSelection.select(allEpisodeItems)
             val continueSubtitle = continueItem?.let { item ->
                 val epText = item.episodeNumber?.let { "Ep. $it" } ?: "Ep. 01"
                 if (item.watchedDuration > 0 && item.totalDuration > item.watchedDuration) {
@@ -546,20 +566,4 @@ class SeriesDetailViewModel @Inject constructor(
         setEpisodeWatched(file, false)
     }
 
-    private fun detectQuality(files: List<DriveFile>): String {
-        return when {
-            files.any { it.name.contains("2160p", ignoreCase = true) || it.name.contains("4k", ignoreCase = true) } -> "4K UHD"
-            files.any { it.name.contains("1080p", ignoreCase = true) } -> "1080p"
-            files.any { it.name.contains("720p", ignoreCase = true) } -> "720p"
-            else -> "1080p"
-        }
-    }
-
-    private fun detectAudio(files: List<DriveFile>): String {
-        return if (files.any { it.name.contains("dual", ignoreCase = true) || it.name.contains("pt-br", ignoreCase = true) }) {
-            "Dual Áudio PT-BR / JA"
-        } else {
-            "Áudio Original (JA)"
-        }
-    }
 }

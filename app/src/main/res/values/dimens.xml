@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <dimen name="settings_category_min_height">48dp</dimen>
+    <dimen name="settings_category_corner_radius">20dp</dimen>
+    <dimen name="settings_category_stroke_width">1dp</dimen>
+    <dimen name="settings_category_spacing">6dp</dimen>
     <!--
         Google TV / Android TV guidelines (and most consumer TV panels still sold today)
         recommend keeping interactive and text content at least 5% inset from each edge
@@ -23,12 +27,14 @@
     <dimen name="home_shelf_height">152dp</dimen>
 
     <!-- Profile Selection (Default / Phone portrait) -->
-    <dimen name="profile_avatar_size">104dp</dimen>
+    <dimen name="profile_avatar_size">112dp</dimen>
+    <dimen name="profile_name_width">130dp</dimen>
     <dimen name="profile_card_margin_horizontal">10dp</dimen>
     <dimen name="profile_card_margin_vertical">10dp</dimen>
     <dimen name="profile_title_size">26sp</dimen>
 
     <!-- Player UI -->
+    <dimen name="player_technical_hud_top_margin">32dp</dimen>
     <dimen name="next_episode_card_offset">84dp</dimen>
 
     <!-- Accessibility Improvements (A11Y-01) -->
@@ -67,4 +73,31 @@
     <dimen name="content_padding">@dimen/spacing_4</dimen>
     <dimen name="horizontal_padding">@dimen/spacing_4</dimen>
     <dimen name="vertical_padding">@dimen/spacing_3</dimen>
+
+    <!-- Design System Spacing (T1.4) -->
+    <dimen name="space_1">4dp</dimen>
+    <dimen name="space_2">8dp</dimen>
+    <dimen name="space_3">12dp</dimen>
+    <dimen name="space_4">16dp</dimen>
+    <dimen name="space_5">24dp</dimen>
+    <dimen name="space_6">32dp</dimen>
+    <dimen name="space_7">40dp</dimen>
+    <dimen name="space_8">48dp</dimen>
+    <dimen name="space_9">64dp</dimen>
+    <dimen name="space_10">80dp</dimen>
+
+    <!-- Radius tokens (T1.4) -->
+    <dimen name="radius_s">8dp</dimen>
+    <dimen name="radius_m">12dp</dimen>
+    <dimen name="radius_l">20dp</dimen>
+    <dimen name="radius_pill">999dp</dimen>
+
+    <!-- TV Safe Areas (T1.4) -->
+    <dimen name="safe_h">48dp</dimen>
+    <dimen name="safe_v">27dp</dimen>
+
+    <!-- Focus engine scale & elevation tokens (T1.4) -->
+    <item name="focus_scale_card" type="dimen" format="float">1.08</item>
+    <item name="focus_scale_button" type="dimen" format="float">1.04</item>
+    <dimen name="focus_elevation">12dp</dimen>
 </resources>

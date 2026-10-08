@@ -35,7 +35,9 @@ object SeasonEpisodeGrouper {
     private val ONE_PIECE_ARCS = listOf(
         CanonicalArc("Romance Dawn & East Blue", 1, 61),
         CanonicalArc("Alabasta", 62, 135),
-        CanonicalArc("Skypiea", 136, 206),
+        // G-8 (196–206) follows Skypiea; keeping the ranges disjoint prevents
+        // the same episode from appearing in both groups.
+        CanonicalArc("Skypiea", 136, 195),
         CanonicalArc("G-8 / The Naval Fortress", 196, 206),
         CanonicalArc("The Foxy Pirate Crew", 207, 228),
         CanonicalArc("Water Seven", 229, 263),
@@ -243,7 +245,10 @@ object SeasonEpisodeGrouper {
             if (canonicalArcs != null) {
                 val arcGroups = groupFilesByCanonicalArcs(canonicalArcs, videoItems)
                 if (arcGroups.size > 1) {
-                    return addAllEpisodesOption(arcGroups, sortedFiles)
+                    val primaryEpisodes = sortedFiles.filter { item ->
+                        categorize(item.driveFile.name, EpisodeParser.parse(item.driveFile.name)) == ItemCategory.STORY
+                    }.ifEmpty { sortedFiles }
+                    return addAllEpisodesOption(arcGroups, primaryEpisodes)
                 }
             }
 
@@ -374,7 +379,10 @@ object SeasonEpisodeGrouper {
             }
 
             if (groups.isNotEmpty()) {
-                return addAllEpisodesOption(groups, sortedFiles)
+                val primaryEpisodes = sortedFiles.filter { item ->
+                    categorize(item.driveFile.name, EpisodeParser.parse(item.driveFile.name)) == ItemCategory.STORY
+                }.ifEmpty { sortedFiles }
+                return addAllEpisodesOption(groups, primaryEpisodes)
             }
 
             // Batch grouping (> 25 episodes)
@@ -429,7 +437,10 @@ object SeasonEpisodeGrouper {
         if (canonicalArcs != null) {
             val arcGroups = groupPlaylistByCanonicalArcs(canonicalArcs, playlist)
             if (arcGroups.size > 1) {
-                return addAllPlaylistOption(arcGroups, sortedPlaylist)
+                val primaryEpisodes = sortedPlaylist.filter { item ->
+                    categorize(item.title, EpisodeParser.parse(item.title)) == ItemCategory.STORY
+                }.ifEmpty { sortedPlaylist }
+                return addAllPlaylistOption(arcGroups, primaryEpisodes)
             }
         }
 
@@ -559,7 +570,10 @@ object SeasonEpisodeGrouper {
         }
 
         if (groups.isNotEmpty()) {
-            return addAllPlaylistOption(groups, sortedPlaylist)
+            val primaryEpisodes = sortedPlaylist.filter { item ->
+                categorize(item.title, EpisodeParser.parse(item.title)) == ItemCategory.STORY
+            }.ifEmpty { sortedPlaylist }
+            return addAllPlaylistOption(groups, primaryEpisodes)
         }
 
         if (playlist.size > 25) {
@@ -606,10 +620,13 @@ object SeasonEpisodeGrouper {
         files: List<FilesDataModel.File>
     ): List<SeasonGroup> {
         val groups = mutableListOf<SeasonGroup>()
+        val storyFiles = files.filter { item ->
+            categorize(item.driveFile.name, EpisodeParser.parse(item.driveFile.name)) == ItemCategory.STORY
+        }
         val matchedFiles = mutableSetOf<FilesDataModel.File>()
 
         for (arc in arcs) {
-            val arcItems = files.filter { item ->
+            val arcItems = storyFiles.filter { item ->
                 val ep = EpisodeParser.parse(item.driveFile.name).episode?.toInt()
                 ep != null && ep in arc.startEp..arc.endEp
             }.sortedWith { a, b ->
@@ -630,7 +647,7 @@ object SeasonEpisodeGrouper {
             }
         }
 
-        val unmatched = files.filterNot { matchedFiles.contains(it) }
+        val unmatched = storyFiles.filterNot { matchedFiles.contains(it) }
         if (unmatched.isNotEmpty()) {
             groups.add(
                 SeasonGroup(
@@ -644,6 +661,33 @@ object SeasonEpisodeGrouper {
             )
         }
 
+        val specials = files.filter { item ->
+            categorize(item.driveFile.name, EpisodeParser.parse(item.driveFile.name)) == ItemCategory.SPECIAL
+        }.sortedWith { a, b ->
+            compareItems(a.driveFile.name, EpisodeParser.parse(a.driveFile.name), b.driveFile.name, EpisodeParser.parse(b.driveFile.name))
+        }
+        if (specials.isNotEmpty()) {
+            groups += SeasonGroup("specials_ovas", "Especiais & OVAs", "${specials.size} episódios", fileItems = specials)
+        }
+
+        val music = files.filter { item ->
+            categorize(item.driveFile.name, EpisodeParser.parse(item.driveFile.name)) == ItemCategory.MUSIC
+        }.sortedWith { a, b ->
+            compareItems(a.driveFile.name, EpisodeParser.parse(a.driveFile.name), b.driveFile.name, EpisodeParser.parse(b.driveFile.name))
+        }
+        if (music.isNotEmpty()) {
+            groups += SeasonGroup("openings_endings", "Aberturas & Encerramentos", "${music.size} faixas", fileItems = music)
+        }
+
+        val promos = files.filter { item ->
+            categorize(item.driveFile.name, EpisodeParser.parse(item.driveFile.name)) == ItemCategory.PROMO
+        }.sortedWith { a, b ->
+            compareItems(a.driveFile.name, EpisodeParser.parse(a.driveFile.name), b.driveFile.name, EpisodeParser.parse(b.driveFile.name))
+        }
+        if (promos.isNotEmpty()) {
+            groups += SeasonGroup("promos_trailers", "Trailers & Promos", "${promos.size} vídeos", fileItems = promos)
+        }
+
         return groups
     }
 
@@ -652,10 +696,13 @@ object SeasonEpisodeGrouper {
         playlist: List<PlaylistItem>
     ): List<SeasonGroup> {
         val groups = mutableListOf<SeasonGroup>()
+        val storyItems = playlist.filter { item ->
+            categorize(item.title, EpisodeParser.parse(item.title)) == ItemCategory.STORY
+        }
         val matched = mutableSetOf<PlaylistItem>()
 
         for (arc in arcs) {
-            val arcItems = playlist.filter { item ->
+            val arcItems = storyItems.filter { item ->
                 val ep = EpisodeParser.parse(item.title).episode?.toInt()
                 ep != null && ep in arc.startEp..arc.endEp
             }.sortedWith { a, b ->
@@ -676,7 +723,7 @@ object SeasonEpisodeGrouper {
             }
         }
 
-        val unmatched = playlist.filterNot { matched.contains(it) }
+        val unmatched = storyItems.filterNot { matched.contains(it) }
         if (unmatched.isNotEmpty()) {
             groups.add(
                 SeasonGroup(
@@ -688,6 +735,27 @@ object SeasonEpisodeGrouper {
                     }
                 )
             )
+        }
+
+        val specials = playlist.filter { item ->
+            categorize(item.title, EpisodeParser.parse(item.title)) == ItemCategory.SPECIAL
+        }.sortedWith { a, b -> compareItems(a.title, EpisodeParser.parse(a.title), b.title, EpisodeParser.parse(b.title)) }
+        if (specials.isNotEmpty()) {
+            groups += SeasonGroup("specials_ovas", "Especiais & OVAs", "${specials.size} episódios", playlistItems = specials)
+        }
+
+        val music = playlist.filter { item ->
+            categorize(item.title, EpisodeParser.parse(item.title)) == ItemCategory.MUSIC
+        }.sortedWith { a, b -> compareItems(a.title, EpisodeParser.parse(a.title), b.title, EpisodeParser.parse(b.title)) }
+        if (music.isNotEmpty()) {
+            groups += SeasonGroup("openings_endings", "Aberturas & Encerramentos", "${music.size} faixas", playlistItems = music)
+        }
+
+        val promos = playlist.filter { item ->
+            categorize(item.title, EpisodeParser.parse(item.title)) == ItemCategory.PROMO
+        }.sortedWith { a, b -> compareItems(a.title, EpisodeParser.parse(a.title), b.title, EpisodeParser.parse(b.title)) }
+        if (promos.isNotEmpty()) {
+            groups += SeasonGroup("promos_trailers", "Trailers & Promos", "${promos.size} vídeos", playlistItems = promos)
         }
 
         return groups

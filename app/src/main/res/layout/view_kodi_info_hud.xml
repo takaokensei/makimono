@@ -38,7 +38,7 @@
                 android:fontFamily="@font/inter"
                 android:text="KODI MEDIA INFO"
                 android:textColor="?attr/colorAccentPrimary"
-                android:textSize="13sp"
+                style="@style/TextAppearance.Makimono.TV.Callout"
                 android:textStyle="bold" />
 
             <TextView
@@ -47,7 +47,7 @@
                 android:fontFamily="@font/inter"
                 android:text="[INFO]"
                 android:textColor="?attr/colorTextSecondary"
-                android:textSize="11sp" />
+                style="@style/TextAppearance.Makimono.TV.Caption" />
         </LinearLayout>
 
         <View
@@ -64,7 +64,7 @@
             android:fontFamily="@font/inter"
             android:text="VÍDEO"
             android:textColor="?attr/colorAccentSecondary"
-            android:textSize="11sp"
+            style="@style/TextAppearance.Makimono.TV.Caption"
             android:textStyle="bold" />
 
         <TextView
@@ -74,8 +74,18 @@
             android:layout_marginTop="2dp"
             android:fontFamily="@font/inter"
             android:textColor="?attr/colorTextPrimary"
-            android:textSize="13sp"
-            tools:text="HEVC (H.265) • HW MediaCodec" />
+            style="@style/TextAppearance.Makimono.TV.Callout"
+            tools:text="HEVC (H.265)" />
+
+        <TextView
+            android:id="@+id/tvHudVideoDecoder"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:fontFamily="@font/inter"
+            android:textColor="?attr/colorTextSecondary"
+            style="@style/TextAppearance.Makimono.TV.Body"
+            tools:text="Decoder: c2.android.hevc.decoder" />
 
         <TextView
             android:id="@+id/tvHudVideoResolution"
@@ -84,8 +94,8 @@
             android:layout_marginTop="2dp"
             android:fontFamily="@font/inter"
             android:textColor="?attr/colorTextSecondary"
-            android:textSize="12sp"
-            tools:text="1920x1080 @ 23.976 fps" />
+            style="@style/TextAppearance.Makimono.TV.Body"
+            tools:text="1920x1080 • 23.976 fps" />
 
         <View
             android:layout_width="match_parent"
@@ -101,7 +111,7 @@
             android:fontFamily="@font/inter"
             android:text="ÁUDIO"
             android:textColor="?attr/colorAccentSecondary"
-            android:textSize="11sp"
+            style="@style/TextAppearance.Makimono.TV.Caption"
             android:textStyle="bold" />
 
         <TextView
@@ -111,8 +121,8 @@
             android:layout_marginTop="2dp"
             android:fontFamily="@font/inter"
             android:textColor="?attr/colorTextPrimary"
-            android:textSize="13sp"
-            tools:text="AAC • 2.0 Estéreo (48.0 kHz)" />
+            style="@style/TextAppearance.Makimono.TV.Callout"
+            tools:text="AAC • Estéreo (2.0) • 48.0 kHz" />
 
         <View
             android:layout_width="match_parent"
@@ -128,7 +138,7 @@
             android:fontFamily="@font/inter"
             android:text="LEGENDA"
             android:textColor="?attr/colorAccentSecondary"
-            android:textSize="11sp"
+            style="@style/TextAppearance.Makimono.TV.Caption"
             android:textStyle="bold" />
 
         <TextView
@@ -138,7 +148,7 @@
             android:layout_marginTop="2dp"
             android:fontFamily="@font/inter"
             android:textColor="?attr/colorTextPrimary"
-            android:textSize="13sp"
+            style="@style/TextAppearance.Makimono.TV.Callout"
             tools:text="★ [Drive] Português (BR) (SRT)" />
 
         <View
@@ -159,9 +169,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:fontFamily="@font/inter"
-                android:text="BUFFER / CACHE"
+            android:text="BUFFER À FRENTE"
                 android:textColor="?attr/colorAccentSecondary"
-                android:textSize="11sp"
+                style="@style/TextAppearance.Makimono.TV.Caption"
                 android:textStyle="bold" />
 
             <View
@@ -175,7 +185,7 @@
                 android:layout_height="wrap_content"
                 android:fontFamily="@font/inter"
                 android:textColor="?attr/colorStatusSuccess"
-                android:textSize="11sp"
+                style="@style/TextAppearance.Makimono.TV.Caption"
                 android:textStyle="bold"
                 tools:text="Saudável" />
         </LinearLayout>
@@ -187,8 +197,8 @@
             android:layout_marginTop="2dp"
             android:fontFamily="@font/inter"
             android:textColor="?attr/colorTextPrimary"
-            android:textSize="13sp"
-            tools:text="28.4s adiantados em RAM" />
+            style="@style/TextAppearance.Makimono.TV.Callout"
+            tools:text="28.4s disponíveis" />
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

@@ -29,7 +29,7 @@
             android:fontFamily="@font/roboto_medium"
             android:text="@string/authorization_url"
             android:textColor="@color/textColor"
-            android:textSize="21sp"
+            style="@style/TextAppearance.Makimono.TV.Title2"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="parent"

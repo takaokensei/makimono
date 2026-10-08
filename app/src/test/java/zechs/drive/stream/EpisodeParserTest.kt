@@ -76,6 +76,18 @@ class EpisodeParserTest {
     }
 
     @Test
+    fun parsesOpeningVariantsWithoutTreatingThemAsRegularEpisodes() {
+        val openingA = EpisodeParser.parse("Bakemonogatari_OP4a_.mkv")
+        val openingB = EpisodeParser.parse("Bakemonogatari_OP4b_.mkv")
+
+        assertTrue(openingA.isSpecial)
+        assertEquals("Bakemonogatari", openingA.showTitle)
+        assertEquals("Abertura 04A", openingA.episodeLabel)
+        assertEquals("Abertura 04B", openingB.episodeLabel)
+        assertEquals("OP", openingA.episodeBadge)
+    }
+
+    @Test
     fun cleansShowTitleCorrectly() {
         val messyTitle = "[Judas] Kimetsu no Yaiba - Yuukaku-hen - 01 (1080p) [12345678]"
         val parsed = EpisodeParser.parse(messyTitle)

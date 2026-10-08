@@ -40,7 +40,7 @@
                 android:layout_weight="1"
                 android:fontFamily="@font/inter"
                 android:textColor="@color/layout_literal_ffffff"
-                android:textSize="16sp"
+                style="@style/TextAppearance.Makimono.TV.Headline"
                 android:textStyle="bold"
                 tools:text="Faixas de Legenda" />
 
@@ -68,11 +68,11 @@
             android:fontFamily="@font/inter"
             android:text="🔍 Buscar Legendas Online (PT-BR)"
             android:textColor="?attr/colorAccentPrimary"
-            android:textSize="12sp"
+            android:textAppearance="@style/TextAppearance.Makimono.TV.Body"
             android:textStyle="bold"
             android:visibility="gone"
             app:cornerRadius="10dp"
-            app:strokeColor="?attr/colorAccentPrimary"
+            app:strokeColor="?attr/colorBorderGlass"
             app:strokeWidth="1dp"
             tools:visibility="visible" />
 
@@ -118,7 +118,7 @@
                 android:layout_height="38dp"
                 android:fontFamily="@font/inter"
                 android:textColor="@color/layout_literal_94a3b8"
-                android:textSize="12sp"
+                android:textAppearance="@style/TextAppearance.Makimono.TV.Body"
                 tools:text="Sincronia" />
 
             <com.google.android.material.button.MaterialButton
@@ -129,7 +129,7 @@
                 android:layout_marginStart="8dp"
                 android:fontFamily="@font/inter"
                 android:textColor="?attr/colorAccentPrimary"
-                android:textSize="12sp"
+                android:textAppearance="@style/TextAppearance.Makimono.TV.Body"
                 tools:text="Tamanho" />
 
         </LinearLayout>

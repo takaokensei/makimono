@@ -28,7 +28,7 @@
         android:translationZ="999dp"
         android:visibility="gone">
 
-        <com.google.android.exoplayer2.ui.PlayerView
+        <androidx.media3.ui.PlayerView
             android:id="@+id/pvVinheta"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -36,6 +36,32 @@
             app:resize_mode="fit"
             app:surface_type="surface_view"
             app:use_controller="false" />
+
+        <!-- Sutil preload indicator matching Apple / Netflix standard -->
+        <LinearLayout
+            android:id="@+id/vinhetaPreloadIndicator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginBottom="28dp"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:alpha="0.85">
+
+            <ProgressBar
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:indeterminateTint="?attr/colorAccentPrimary" />
+
+            <TextView
+                android:id="@+id/tvVinhetaPreloadStatus"
+                style="@style/TextAppearance.Makimono.TV.Badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="Sincronizando biblioteca…"
+                android:textColor="@color/layout_literal_94a3b8" />
+        </LinearLayout>
 
     </FrameLayout>
 

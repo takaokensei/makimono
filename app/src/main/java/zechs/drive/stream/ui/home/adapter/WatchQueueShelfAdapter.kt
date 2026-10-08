@@ -24,6 +24,7 @@ class WatchQueueShelfAdapter(
     }
 
     var onDpadLeftListener: ((android.view.View) -> Boolean)? = null
+    var onDpadVerticalListener: ((android.view.View, Int) -> Boolean)? = null
     var onFocusItemListener: ((android.view.View) -> Unit)? = null
     var onLongClickListener: ((WatchQueueItem) -> Unit)? = null
 
@@ -63,21 +64,29 @@ class WatchQueueShelfAdapter(
                 adapter.onLongClickListener?.invoke(item)
                 true
             }
-            binding.cardShelfItem.setOnFocusChangeListener { v, hasFocus ->
+            zechs.drive.stream.utils.FocusEngine.attach(
+                binding.cardShelfItem,
+                zechs.drive.stream.utils.FocusEngine.FocusKind.CARD
+            ) { v, hasFocus ->
                 if (hasFocus) {
                     adapter.onFocusItemListener?.invoke(v)
-                    v.animate().scaleX(1.05f).scaleY(1.05f).translationZ(12f).setDuration(150L).start()
-                } else {
-                    v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(150L).start()
                 }
             }
             binding.cardShelfItem.setOnKeyListener { v, keyCode, event ->
-                if (event.action == android.view.KeyEvent.ACTION_DOWN &&
-                    keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT &&
-                    bindingAdapterPosition == 0 &&
-                    adapter.onDpadLeftListener?.invoke(v) == true
-                ) {
-                    return@setOnKeyListener true
+                if (event.action == android.view.KeyEvent.ACTION_DOWN) {
+                    when (keyCode) {
+                        android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                            if (bindingAdapterPosition == 0 && adapter.onDpadLeftListener?.invoke(v) == true) {
+                                return@setOnKeyListener true
+                            }
+                        }
+                        android.view.KeyEvent.KEYCODE_DPAD_UP,
+                        android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                            if (adapter.onDpadVerticalListener?.invoke(v, keyCode) == true) {
+                                return@setOnKeyListener true
+                            }
+                        }
+                    }
                 }
                 false
             }

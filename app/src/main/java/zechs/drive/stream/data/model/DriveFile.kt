@@ -14,7 +14,11 @@ data class DriveFile(
     val thumbnailLink: String? = null,
     val shortcutDetails: ShortcutDetails,
     val starred: Starred,
-    val posterUrl: String? = null
+    val posterUrl: String? = null,
+    /** RFC 3339 timestamp supplied by Drive; absent for local/synthetic items. */
+    val modifiedTime: String? = null,
+    /** Optional user-authored Drive description; never inferred from a filename. */
+    val description: String? = null
 ) {
     val humanSize = size?.let { Converter.toHumanSize(it) }
 

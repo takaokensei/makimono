@@ -21,6 +21,9 @@ interface FavoriteDao {
     @Query("SELECT EXISTS(SELECT 1 FROM favorite_folder WHERE folderId = :folderId AND profileId = :profileId AND isFavorite = 1)")
     suspend fun isFavorite(folderId: String, profileId: String): Boolean
 
+    @Query("SELECT folderId FROM favorite_folder WHERE profileId = :profileId AND isFavorite = 1 AND folderId IN (:folderIds)")
+    suspend fun getFavoriteIds(folderIds: List<String>, profileId: String): List<String>
+
     @Query("SELECT EXISTS(SELECT 1 FROM favorite_folder WHERE folderId = :folderId AND profileId = :profileId AND isFavorite = 1)")
     fun observeIsFavorite(folderId: String, profileId: String): Flow<Boolean>
 

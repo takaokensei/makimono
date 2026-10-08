@@ -15,11 +15,11 @@ import zechs.drive.stream.R
 import zechs.drive.stream.data.repository.DriveRepository
 import zechs.drive.stream.data.repository.FollowedFolderRepository
 import zechs.drive.stream.utils.ProfileManager
-import zechs.drive.stream.utils.state.Resource
 
 /**
  * FEAT-05: Periodic background worker that checks every followed folder for
- * new episodes by comparing the current Drive child-count to the cached value.
+ * new episodes by comparing the current count of unique playable video children
+ * to the cached value. A partial Drive traversal is never used as a new baseline.
  *
  * Scheduling: Enqueued with [PeriodicWorkRequestBuilder] at app startup
  * (see [ThisApp.onCreate]) with a minimum interval of 12 h.
@@ -47,7 +47,7 @@ class EpisodeCheckWorker @AssistedInject constructor(
          * Drive Files.list query that counts direct children of a folder.
          * We only request 1 result (pageSize=1) but the totalItemCount from
          * the response is not directly available via the basic Drive v3 API —
-         * instead we use getAllFiles with a small cap to get an accurate count
+         * instead we use getAllFilesDetailed to get an accurate count
          * without loading all content bytes.
          *
          * In practice, most anime folders contain 1–200 episodes, so fetching
@@ -64,9 +64,15 @@ class EpisodeCheckWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         ensureChannel()
 
-        // Read the persisted profile list instead of assuming profile IDs.
-        val profileIds = profileManager.getProfiles().map { it.id }
         var anyFailure = false
+        // Read the persisted profile list instead of assuming profile IDs.
+        val profileIds = try {
+            profileManager.getProfiles().map { it.id }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            return Result.retry()
+        }
 
         for (profileId in profileIds) {
             val followed = try {
@@ -79,45 +85,42 @@ class EpisodeCheckWorker @AssistedInject constructor(
             }
 
             for (folder in followed) {
-                val result = driveRepository.getAllFiles(
-                    query = folderChildrenQuery(folder.folderId),
-                    pageSize = COUNT_PAGE_SIZE,
-                    maxPages = COUNT_MAX_PAGES
-                )
+                val decision = try {
+                    EpisodeCountPolicy.evaluate(
+                        previousVideoCount = folder.lastKnownCount,
+                        result = driveRepository.getAllFilesDetailed(
+                            query = folderChildrenQuery(folder.folderId),
+                            pageSize = COUNT_PAGE_SIZE,
+                            maxPages = COUNT_MAX_PAGES
+                        )
+                    )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    anyFailure = true
+                    continue
+                }
 
-                when (result) {
-                    is Resource.Success -> {
-                        val currentCount = result.data.size
-                        val previousCount = folder.lastKnownCount
-
-                        if (currentCount > previousCount && previousCount > 0) {
-                            // New files detected — fire a notification
-                            val newCount = currentCount - previousCount
-                            postNotification(folder.folderName, newCount, folder.folderId)
+                when (decision) {
+                    is EpisodeCountPolicy.Decision.Complete -> {
+                        if (decision.newEpisodeCount > 0) {
+                            postNotification(folder.folderName, decision.newEpisodeCount, folder.folderId)
                         }
 
-                        // Always update the cached count so subsequent checks
-                        // are anchored to the latest state, even on first run.
-                        runCatching {
+                        try {
                             followedFolderRepository.updateLastKnownCount(
                                 folderId = folder.folderId,
-                                count = currentCount,
+                                count = decision.videoCount,
                                 profileId = profileId
                             )
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                            anyFailure = true
                         }
                     }
 
-                    is Resource.Error -> {
-                        // Non-fatal per folder: log and continue so one 403 on
-                        // a shared folder doesn't block all other checks.
-                        anyFailure = true
-                    }
-
-                    else -> {
-                        // Resource.Loading should never be returned by getAllFiles
-                        // (it's a one-shot suspend call), but the sealed class
-                        // requires exhaustiveness — treat it as a transient skip.
-                    }
+                    EpisodeCountPolicy.Decision.Retry -> anyFailure = true
                 }
             }
         }

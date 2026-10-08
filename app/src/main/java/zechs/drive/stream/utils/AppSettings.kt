@@ -33,6 +33,7 @@ class AppSettings @Inject constructor(
         fun profilePlayerKey(profileId: String) = stringPreferencesKey("profile_${profileId}_player")
         fun profileSubtitleKey(profileId: String) = androidx.datastore.preferences.core.floatPreferencesKey("profile_${profileId}_sub_size")
         fun profileSubtitleStyleKey(profileId: String) = stringPreferencesKey("profile_${profileId}_sub_style")
+        fun profileMotionPreferenceKey(profileId: String) = stringPreferencesKey("profile_${profileId}_motion_preference")
     }
 
     private val gson = Gson()
@@ -117,6 +118,23 @@ class AppSettings @Inject constructor(
             Log.w(TAG, "fetchSubtitleStyle fallback", e)
             SubtitleStyle()
         }
+    }
+
+    suspend fun saveMotionPreference(preference: MotionPreference, profileId: String = currentProfileId()) {
+        sessionStore.edit { settings -> settings[profileMotionPreferenceKey(profileId)] = preference.name }
+        if (profileId == currentProfileId()) {
+            MotionPolicy.updateActiveProfilePreference(preference)
+        }
+        Log.d(TAG, "saveMotionPreference [profile=$profileId]: ${preference.name}")
+    }
+
+    suspend fun fetchMotionPreference(profileId: String = currentProfileId()): MotionPreference {
+        val stored = sessionStore.data.first()[profileMotionPreferenceKey(profileId)]
+        val preference = MotionPreference.entries.firstOrNull { it.name == stored } ?: MotionPreference.SYSTEM
+        if (profileId == currentProfileId()) {
+            MotionPolicy.updateActiveProfilePreference(preference)
+        }
+        return preference
     }
 
     suspend fun saveLastUpdated() {
@@ -228,3 +246,5 @@ enum class VideoPlayer(
             entries.find { it.text.equals(text, ignoreCase = true) } ?: EXO_PLAYER
     }
 }
+
+enum class MotionPreference { SYSTEM, REDUCED }

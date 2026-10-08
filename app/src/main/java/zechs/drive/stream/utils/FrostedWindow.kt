@@ -13,9 +13,17 @@ object FrostedWindow {
         val background = GradientDrawable().apply { cornerRadius = 20 * density }
         window.setBackgroundDrawable(background)
         fun update(enabled: Boolean) {
-            background.setColor(if (enabled) 0xE8081828.toInt() else 0xF2081828.toInt())
+            val allowBlur = MotionPolicy.shouldUseBlur(
+                preference = MotionPolicy.activePreference(),
+                systemAnimationsEnabled = MotionPolicy.areSystemAnimationsEnabled(),
+                crossWindowBlurEnabled = enabled,
+                lowRamDevice = FocusEngine.isLowRam(window.context)
+            )
+            background.setColor(if (allowBlur) 0xE8081828.toInt() else 0xFF081828.toInt())
             window.setDimAmount(0.35f)
-            if (Build.VERSION.SDK_INT >= 31) window.setBackgroundBlurRadius(if (enabled) (24 * density).toInt() else 0)
+            if (Build.VERSION.SDK_INT >= 31) {
+                window.setBackgroundBlurRadius(if (allowBlur) (24 * density).toInt() else 0)
+            }
         }
         update(false)
         if (Build.VERSION.SDK_INT >= 31) {

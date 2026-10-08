@@ -21,8 +21,17 @@ data class GlassMenuItem(
     val title: String,
     val subtitle: String? = null,
     val isSelected: Boolean = false,
-    val tag: Any? = null
+    val tag: Any? = null,
+    val isInteractive: Boolean = true
 )
+
+internal object GlassMenuFocusPolicy {
+    fun initialInteractiveIndex(items: List<GlassMenuItem>): Int? {
+        val selected = items.indexOfFirst { it.isInteractive && it.isSelected }
+        if (selected >= 0) return selected
+        return items.indexOfFirst(GlassMenuItem::isInteractive).takeIf { it >= 0 }
+    }
+}
 
 class PlayerGlassMenuDialog(
     private val context: Context,
@@ -132,9 +141,11 @@ class PlayerGlassMenuDialog(
             setHasFixedSize(false)
         }
 
-        val selectedIndex = items.indexOfFirst { it.isSelected }
-        if (selectedIndex >= 0) {
-            dialogBinding.rvDialogItems.scrollToPosition(selectedIndex)
+        val selectedIndex = items.indexOfFirst { it.isInteractive && it.isSelected }
+        val initialFocusIndex = GlassMenuFocusPolicy.initialInteractiveIndex(items)
+        val initialVisibleIndex = selectedIndex.takeIf { it >= 0 } ?: initialFocusIndex
+        if (initialVisibleIndex != null) {
+            dialogBinding.rvDialogItems.scrollToPosition(initialVisibleIndex)
         }
 
         dialog = AlertDialog.Builder(context, R.style.ThemeOverlay_Makimono_Glass)
@@ -162,8 +173,11 @@ class PlayerGlassMenuDialog(
             zechs.drive.stream.utils.FrostedWindow.apply(this)
         }
         dialogBinding.rvDialogItems.post {
-            val targetPos = if (selectedIndex >= 0) selectedIndex else 0
-            requestInitialItemFocus(dialogBinding, targetPos, attemptsRemaining = 5)
+            if (initialFocusIndex == null) {
+                dialogBinding.btnDialogClose.requestFocus()
+            } else {
+                requestInitialItemFocus(dialogBinding, initialFocusIndex, attemptsRemaining = 5)
+            }
         }
         return this
     }
@@ -185,13 +199,15 @@ class PlayerGlassMenuDialog(
 
         val targetPosition = position.coerceIn(0, itemCount - 1)
         val target = list.findViewHolderForAdapterPosition(targetPosition)?.itemView
-        if (target?.isShown == true && target.requestFocus()) return
+        if (target?.isShown == true && (target.requestFocus() || target.requestFocusFromTouch())) return
 
         if (attemptsRemaining > 0) {
             list.scrollToPosition(targetPosition)
             list.postDelayed({
                 requestInitialItemFocus(dialogBinding, targetPosition, attemptsRemaining - 1)
             }, 32L)
+        } else {
+            dialogBinding.btnDialogClose.requestFocus()
         }
     }
 
@@ -249,14 +265,20 @@ class PlayerGlassMenuDialog(
                 b.ivItemCheck.setImageResource(R.drawable.ic_radio_checked)
                 b.ivItemCheck.imageTintList = ColorStateList.valueOf(accentColor)
                 b.tvItemTitle.setTextColor(Color.parseColor("#FFFFFF"))
+            } else if (!item.isInteractive) {
+                b.ivItemCheck.setImageResource(R.drawable.ic_info_24)
+                b.ivItemCheck.imageTintList = ColorStateList.valueOf(Color.parseColor("#94A3B8"))
+                b.tvItemTitle.setTextColor(Color.parseColor("#E2E8F0"))
             } else {
                 b.ivItemCheck.setImageResource(R.drawable.ic_radio_unchecked)
                 b.ivItemCheck.imageTintList = ColorStateList.valueOf(Color.parseColor("#64748B"))
                 b.tvItemTitle.setTextColor(Color.parseColor("#E2E8F0"))
             }
 
-            b.itemRoot.setOnClickListener {
-                onClick(item)
+            b.itemRoot.apply {
+                isClickable = item.isInteractive
+                isFocusable = item.isInteractive
+                setOnClickListener(if (item.isInteractive) View.OnClickListener { onClick(item) } else null)
             }
         }
 

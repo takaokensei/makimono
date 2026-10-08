@@ -18,11 +18,11 @@ class TvAccessibilityLayoutTest {
     }
 
     @Test
-    fun `profile art catalog reduces density for enlarged text`() {
-        assertEquals(4, TvAccessibilityLayout.profileCatalogColumns(1f, isWallpaperView = false))
-        assertEquals(2, TvAccessibilityLayout.profileCatalogColumns(1.3f, isWallpaperView = false))
-        assertEquals(2, TvAccessibilityLayout.profileCatalogColumns(2f, isWallpaperView = false))
-        assertEquals(2, TvAccessibilityLayout.profileCatalogColumns(1f, isWallpaperView = true))
+    fun `profile art catalog keeps avatar options round and wallpapers panoramic`() {
+        assertEquals(5, TvAccessibilityLayout.profileCatalogColumns(isWallpaperView = false, isLandscape = true))
+        assertEquals(4, TvAccessibilityLayout.profileCatalogColumns(isWallpaperView = false, isLandscape = false))
+        assertEquals(2, TvAccessibilityLayout.profileCatalogColumns(isWallpaperView = true, isLandscape = true))
+        assertEquals(2, TvAccessibilityLayout.profileCatalogColumns(isWallpaperView = true, isLandscape = false))
     }
 
     @Test

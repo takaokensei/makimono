@@ -20,7 +20,7 @@
         android:letterSpacing="0.08"
         android:text="MAKIMONO UPDATER"
         android:textColor="?attr/colorAccentPrimary"
-        android:textSize="12sp"
+        style="@style/TextAppearance.Makimono.TV.Body"
         android:textStyle="bold" />
 
     <TextView
@@ -31,7 +31,7 @@
         android:fontFamily="@font/inter"
         android:text="Baixando atualização..."
         android:textColor="?attr/colorTextPrimary"
-        android:textSize="18sp"
+        style="@style/TextAppearance.Makimono.TV.Headline"
         android:textStyle="bold" />
 
     <TextView
@@ -42,7 +42,7 @@
         android:fontFamily="@font/inter"
         android:text="Preparando pacote..."
         android:textColor="?attr/colorTextSecondary"
-        android:textSize="14sp" />
+        style="@style/TextAppearance.Makimono.TV.Subheadline" />
 
     <com.google.android.material.progressindicator.LinearProgressIndicator
         android:id="@+id/progressBarUpdate"
@@ -68,7 +68,7 @@
             android:fontFamily="@font/inter"
             android:text="0%"
             android:textColor="?attr/colorAccentPrimary"
-            android:textSize="13sp"
+            style="@style/TextAppearance.Makimono.TV.Callout"
             android:textStyle="bold" />
 
         <TextView
@@ -79,7 +79,7 @@
             android:fontFamily="@font/inter"
             android:text="0 MB / 0 MB"
             android:textColor="?attr/colorTextSecondary"
-            android:textSize="12sp" />
+            style="@style/TextAppearance.Makimono.TV.Body" />
     </RelativeLayout>
 
 </LinearLayout>

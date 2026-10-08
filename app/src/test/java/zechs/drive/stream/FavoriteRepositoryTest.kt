@@ -53,8 +53,25 @@ class FavoriteRepositoryTest {
         assertEquals(setOf("folder_1", "folder_2"), ids)
     }
 
+    @Test
+    fun getFavoriteIds_readsMultipleIdsFromOneProfile() = runBlocking {
+        repository.set("folder_1", "Series 1", true)
+        repository.set("folder_2", "Series 2", true)
+        repository.set("folder_other", "Other profile", true, profileId = "other")
+
+        assertEquals(setOf("folder_1", "folder_2"), repository.getFavoriteIds(
+            listOf("folder_1", "folder_2", "folder_other", "folder_1")
+        ))
+        assertEquals(1, fakeDao.bulkQueryCount)
+        assertEquals(listOf("folder_1", "folder_2", "folder_other"), fakeDao.lastBulkQueryIds)
+        assertEquals(emptySet<String>(), repository.getFavoriteIds(listOf(" ", "")))
+        assertEquals(1, fakeDao.bulkQueryCount)
+    }
+
     private class FakeFavoriteDao : FavoriteDao {
         val favorites = mutableMapOf<Pair<String, String>, FavoriteFolder>()
+        var bulkQueryCount = 0
+        var lastBulkQueryIds = emptyList<String>()
 
         override suspend fun setFavorite(favorite: FavoriteFolder) {
             favorites[Pair(favorite.profileId, favorite.folderId)] = favorite
@@ -66,6 +83,12 @@ class FavoriteRepositoryTest {
 
         override suspend fun isFavorite(folderId: String, profileId: String): Boolean {
             return favorites[Pair(profileId, folderId)]?.isFavorite == true
+        }
+
+        override suspend fun getFavoriteIds(folderIds: List<String>, profileId: String): List<String> {
+            bulkQueryCount++
+            lastBulkQueryIds = folderIds
+            return folderIds.filter { favorites[Pair(profileId, it)]?.isFavorite == true }
         }
 
         override fun observeIsFavorite(folderId: String, profileId: String) =

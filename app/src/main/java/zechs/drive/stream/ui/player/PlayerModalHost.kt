@@ -16,6 +16,9 @@ class PlayerModalVisibilityState {
     private var modalDepth = 0
     private var restoreOsdWhenClosed = false
 
+    val isVisible: Boolean
+        get() = modalDepth > 0
+
     fun onModalOpened(osdWasVisible: Boolean): PlayerModalTransition {
         if (modalDepth > 0) {
             modalDepth++

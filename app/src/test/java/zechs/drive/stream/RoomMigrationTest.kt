@@ -69,4 +69,17 @@ class RoomMigrationTest {
             db.execSQL(match { it.contains("CREATE INDEX IF NOT EXISTS `index_followed_folder_profileId`") })
         }
     }
+
+    @Test
+    fun migration_7_8_addsAudioAndSubtitleDelayColumns() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+        WatchListDatabase.MIGRATION_7_8.migrate(db)
+
+        verify(exactly = 1) {
+            db.execSQL("ALTER TABLE `watch_list` ADD COLUMN `audioDelayMs` INTEGER NOT NULL DEFAULT 0")
+        }
+        verify(exactly = 1) {
+            db.execSQL("ALTER TABLE `watch_list` ADD COLUMN `subtitleDelayMs` INTEGER NOT NULL DEFAULT 0")
+        }
+    }
 }

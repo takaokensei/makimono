@@ -36,7 +36,7 @@
             android:paddingEnd="18dp"
             android:text="Pular Abertura"
             android:textColor="@color/layout_literal_ffffffff"
-            android:textSize="13sp"
+            style="@style/TextAppearance.Makimono.TV.Callout"
             android:textStyle="bold"
             android:elevation="6dp"
             app:backgroundTint="@null"

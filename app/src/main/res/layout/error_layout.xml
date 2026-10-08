@@ -18,7 +18,7 @@
         android:text="@string/something_went_wrong"
         android:textAlignment="center"
         android:textColor="?attr/colorTextSecondary"
-        android:textSize="16sp"
+        android:textAppearance="@style/TextAppearance.Makimono.TV.Body"
         app:drawableTint="?attr/colorAccentPrimary"
         app:drawableTopCompat="@drawable/ic_error_72" />
 

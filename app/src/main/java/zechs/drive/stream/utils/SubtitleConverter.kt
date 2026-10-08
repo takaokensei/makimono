@@ -2,7 +2,7 @@ package zechs.drive.stream.utils
 
 import android.net.Uri
 import android.util.Log
-import com.google.android.exoplayer2.util.MimeTypes
+import androidx.media3.common.MimeTypes
 import zechs.drive.stream.data.model.SubtitleItem
 import java.io.File
 

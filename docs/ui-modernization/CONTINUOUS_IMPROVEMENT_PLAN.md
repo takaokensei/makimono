@@ -2,6 +2,8 @@
 
 Data: 04/10/2026. Base revisada: `bb71c27`. Status: C0.1 corrigido; C1.1 corrigido e validado em build, 171 unitários, 6 instrumentados e percurso de saída Exo isolado no MuMu.
 
+**Complemento de escopo — 04/10/2026:** o pedido posterior do proprietário acrescenta login TV por QR/celular, features, customizações e backend. O roteiro executável passa a ser `APPLE_GRADE_PRODUCT_PLAN.md` (Q00–Q26), com contratos em `../architecture/ADR-001-TV-PAIRING.md` e handoff `LUNA_HIGH_EXECUTION.md`. Os ciclos e aceites abaixo são históricos/parciais, não dispensam os novos gates. Continuam a preservação de funcionalidades/dados e a restrição de publicação sem autorização atual específica.
+
 ## 1. Objetivo e autoridade
 
 Chegar a uma experiência comercial refinada e continuar melhorando com evidências: conteúdo em primeiro plano, hierarquia clara, navegação previsível, acessibilidade, movimento preciso e recuperação confiável de falhas.

@@ -43,7 +43,7 @@
                 android:fontFamily="@font/inter"
                 android:maxLines="1"
                 android:textColor="@color/layout_literal_ffffff"
-                android:textSize="14sp"
+                style="@style/TextAppearance.Makimono.TV.Subheadline"
                 android:textStyle="bold"
                 tools:text="Egghead Arc" />
 
@@ -54,7 +54,7 @@
                 android:layout_marginTop="2dp"
                 android:fontFamily="@font/inter"
                 android:textColor="@color/layout_literal_94a3b8"
-                android:textSize="12sp"
+                style="@style/TextAppearance.Makimono.TV.Body"
                 tools:text="Ep. 1086 - 1122 • 37 eps" />
 
         </LinearLayout>

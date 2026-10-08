@@ -37,7 +37,10 @@ class ProfileMigrationTest {
             val restarted = manager()
             restarted.awaitReady()
             assertEquals(edited, restarted.getActiveProfile())
-            assertFalse(restarted.deleteProfile("original-id"))
+            assertEquals(
+                zechs.drive.stream.utils.ProfileManagementPolicy.DeleteBlockReason.LAST_PROFILE,
+                restarted.deleteProfile("original-id")
+            )
         } finally {
             db.close()
             prefs.edit().clear().commit()

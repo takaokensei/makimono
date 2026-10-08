@@ -1,7 +1,9 @@
 package zechs.drive.stream.ui.signin
 
 import android.content.Intent
+import android.content.ActivityNotFoundException
 import android.graphics.Color
+import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
@@ -24,6 +26,7 @@ import zechs.drive.stream.ui.code.DialogCode
 import zechs.drive.stream.utils.ext.hideKeyboardWhenOffFocus
 import zechs.drive.stream.utils.ext.navigateSafe
 import zechs.drive.stream.utils.state.Resource
+import zechs.drive.stream.utils.DeviceUi
 import zechs.drive.stream.utils.util.Constants.Companion.GUIDE_TO_MAKE_DRIVE_CLIENT
 
 
@@ -65,18 +68,17 @@ class SignInFragment : BaseFragment() {
                 Log.e(TAG, "signInText click: client is null after updateClient() returned true")
                 return@setOnClickListener
             }
-            Log.d(TAG, "Auth url: ${client.authUrl()}")
-
-            Intent().setAction(Intent.ACTION_VIEW)
-                .setData(client.authUrl())
-                .also { startActivity(it) }
+            val authUri = client.authUrl()
+            if (authUri == null) {
+                showMessage(R.string.sign_in_invalid_configuration)
+                return@setOnClickListener
+            }
+            openExternalUri(authUri)
         }
 
 
         binding.btnHelp.setOnClickListener {
-            Intent().setAction(Intent.ACTION_VIEW)
-                .setData(Uri.parse(GUIDE_TO_MAKE_DRIVE_CLIENT))
-                .also { startActivity(it) }
+            openExternalUri(Uri.parse(GUIDE_TO_MAKE_DRIVE_CLIENT))
         }
 
         binding.enterCode.setOnClickListener {
@@ -84,13 +86,38 @@ class SignInFragment : BaseFragment() {
                 updateClient()
             }
             MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Please note")
+                .setTitle(R.string.authorization_code_note_title)
                 .setMessage(getString(R.string.important_note_message))
-                .setPositiveButton("Continue") { dialog, _ ->
+                .setPositiveButton(R.string.continue_action) { dialog, _ ->
                     dialog.dismiss()
                     showCodeDialog()
                 }.show()
         }
+
+        binding.btnAdvancedConfig.setOnClickListener {
+            val expanded = !binding.layoutAdvancedConfig.isVisible
+            binding.layoutAdvancedConfig.isVisible = expanded
+            val label = if (expanded) {
+                R.string.advanced_connection_settings_hide
+            } else {
+                R.string.advanced_connection_settings
+            }
+            binding.btnAdvancedConfig.setText(label)
+            binding.btnAdvancedConfig.contentDescription = getString(label)
+        }
+
+        listOf(binding.signInText, binding.enterCode, binding.btnHelp, binding.btnAdvancedConfig)
+            .forEach { action ->
+                action.setOnFocusChangeListener { view, hasFocus ->
+                    if (hasFocus) {
+                        view.post {
+                            if (view.isAttachedToWindow && view.hasFocus()) {
+                                scrollActionIntoSafeArea(view)
+                            }
+                        }
+                    }
+                }
+            }
 
         binding.clientId.editText?.hideKeyboardWhenOffFocus()
         binding.clientSecret.editText?.hideKeyboardWhenOffFocus()
@@ -110,6 +137,15 @@ class SignInFragment : BaseFragment() {
         }
         updateClient()
 
+        if (DeviceUi.isTenFootExperience(requireContext())) {
+            binding.signInText.isFocusableInTouchMode = true
+            binding.signInText.post {
+                if (binding.signInText.isAttachedToWindow && binding.signInText.isShown) {
+                    binding.signInText.requestFocus()
+                }
+            }
+        }
+
         loginObserver()
     }
 
@@ -123,9 +159,14 @@ class SignInFragment : BaseFragment() {
                 }
                 is Resource.Error -> {
                     isLoading(false)
+                    val messageResId = if (response.message == SignInViewModel.AUTHORIZATION_CODE_MISSING) {
+                        R.string.sign_in_authorization_code_missing
+                    } else {
+                        R.string.sign_in_connection_failed
+                    }
                     Snackbar.make(
                         binding.root,
-                        response.message,
+                        getString(messageResId),
                         Snackbar.LENGTH_LONG
                     ).show()
                 }
@@ -155,6 +196,36 @@ class SignInFragment : BaseFragment() {
                 _codeDialog = null
             }
         }
+    }
+
+    private fun openExternalUri(uri: Uri) {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+        } catch (_: ActivityNotFoundException) {
+            showMessage(R.string.sign_in_browser_unavailable)
+        }
+    }
+
+    private fun showMessage(messageResId: Int) {
+        _binding?.let { currentBinding ->
+            Snackbar.make(currentBinding.root, messageResId, Snackbar.LENGTH_LONG).show()
+        }
+    }
+
+    private fun scrollActionIntoSafeArea(action: View) {
+        val scroll = _binding?.signInScrollView ?: return
+        val bounds = Rect()
+        action.getDrawingRect(bounds)
+        scroll.offsetDescendantRectToMyCoords(action, bounds)
+
+        val visibleTop = scroll.scrollY + scroll.paddingTop
+        val visibleBottom = scroll.scrollY + scroll.height - scroll.paddingBottom
+        val scrollBy = when {
+            bounds.bottom > visibleBottom -> bounds.bottom - visibleBottom
+            bounds.top < visibleTop -> bounds.top - visibleTop
+            else -> 0
+        }
+        if (scrollBy != 0) scroll.smoothScrollBy(0, scrollBy)
     }
 
     private fun isLoading(loading: Boolean) {

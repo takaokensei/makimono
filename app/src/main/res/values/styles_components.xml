@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Makimono Reusable Design System Components (T1.6) -->
+
+    <!-- Primary Action Button: White solid pill, dark text -->
+    <style name="Widget.Makimono.Button.Primary" parent="Widget.Material3.Button">
+        <item name="android:minHeight">52dp</item>
+        <item name="android:paddingStart">@dimen/space_6</item>
+        <item name="android:paddingEnd">@dimen/space_6</item>
+        <item name="android:textAppearance">@style/TextAppearance.Makimono.TV.Headline</item>
+        <item name="android:textColor">#FF0A0A0A</item>
+        <item name="backgroundTint">#FFFFFFFF</item>
+        <item name="cornerRadius">@dimen/radius_pill</item>
+        <item name="iconSize">22dp</item>
+        <item name="iconTint">#FF0A0A0A</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <!-- Secondary Action Button: Frosted glass pill -->
+    <style name="Widget.Makimono.Button.Secondary" parent="Widget.Material3.Button.TonalButton">
+        <item name="android:minHeight">52dp</item>
+        <item name="android:paddingStart">@dimen/space_5</item>
+        <item name="android:paddingEnd">@dimen/space_5</item>
+        <item name="android:textAppearance">@style/TextAppearance.Makimono.TV.Headline</item>
+        <item name="android:textColor">#FFFFFFFF</item>
+        <item name="backgroundTint">#26FFFFFF</item>
+        <item name="cornerRadius">@dimen/radius_pill</item>
+        <item name="iconSize">20dp</item>
+        <item name="iconTint">#FFFFFFFF</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <!-- Icon Action Button: 52x52dp circle -->
+    <style name="Widget.Makimono.Button.Icon" parent="Widget.Material3.Button.IconButton">
+        <item name="android:minWidth">52dp</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="backgroundTint">#26FFFFFF</item>
+        <item name="cornerRadius">@dimen/radius_pill</item>
+        <item name="iconSize">22dp</item>
+        <item name="iconTint">#FFFFFFFF</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <!-- Metadata Chip -->
+    <style name="Widget.Makimono.Chip" parent="@android:style/Widget.TextView">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingStart">@dimen/space_3</item>
+        <item name="android:paddingEnd">@dimen/space_3</item>
+        <item name="android:paddingTop">@dimen/space_1</item>
+        <item name="android:paddingBottom">@dimen/space_1</item>
+        <item name="android:background">@drawable/tag_genre_pill_bg</item>
+        <item name="android:textAppearance">@style/TextAppearance.Makimono.TV.Caption</item>
+        <item name="android:textColor">#E6FFFFFF</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <!-- Section Header Title -->
+    <style name="Widget.Makimono.SectionHeader" parent="@android:style/Widget.TextView">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">@dimen/safe_h</item>
+        <item name="android:layout_marginEnd">@dimen/safe_h</item>
+        <item name="android:layout_marginBottom">@dimen/space_4</item>
+        <item name="android:textAppearance">@style/TextAppearance.Makimono.TV.Title2</item>
+        <item name="android:textColor">?attr/colorTextPrimary</item>
+    </style>
+</resources>

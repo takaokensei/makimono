@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/skeletonRowContainer"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="@dimen/safe_h"
+    android:paddingEnd="@dimen/safe_h"
+    android:paddingTop="@dimen/space_4"
+    android:paddingBottom="@dimen/space_4">
+
+    <!-- Section header skeleton line -->
+    <View
+        android:layout_width="180dp"
+        android:layout_height="20dp"
+        android:layout_marginBottom="@dimen/space_3"
+        android:background="@drawable/bg_skeleton_box" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <include layout="@layout/component_skeleton_card_16x9" />
+        <include layout="@layout/component_skeleton_card_16x9" />
+        <include layout="@layout/component_skeleton_card_16x9" />
+        <include layout="@layout/component_skeleton_card_16x9" />
+        <include layout="@layout/component_skeleton_card_16x9" />
+
+    </LinearLayout>
+
+</LinearLayout>

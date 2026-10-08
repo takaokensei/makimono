@@ -29,7 +29,23 @@ class PlayerModalVisibilityStateTest {
         val state = PlayerModalVisibilityState()
 
         assertEquals(PlayerModalTransition.NONE, state.onModalOpened(osdWasVisible = false))
+        assertEquals(true, state.isVisible)
         assertEquals(PlayerModalTransition.NONE, state.onModalClosed())
+        assertEquals(false, state.isVisible)
         assertEquals(PlayerModalTransition.NONE, state.onModalClosed())
+    }
+
+    @Test
+    fun nestedModalRemainsVisibleUntilTheFinalDismissal() {
+        val state = PlayerModalVisibilityState()
+
+        state.onModalOpened(osdWasVisible = true)
+        state.onModalOpened(osdWasVisible = true)
+        assertEquals(true, state.isVisible)
+
+        state.onModalClosed()
+        assertEquals(true, state.isVisible)
+        state.onModalClosed()
+        assertEquals(false, state.isVisible)
     }
 }

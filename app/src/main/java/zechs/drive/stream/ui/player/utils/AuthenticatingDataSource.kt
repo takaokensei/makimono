@@ -1,9 +1,9 @@
 package zechs.drive.stream.ui.player.utils
 
 import android.net.Uri
-import com.google.android.exoplayer2.upstream.*
-import com.google.android.exoplayer2.util.Assertions
-import com.google.android.exoplayer2.util.Log
+import androidx.media3.datasource.*
+import androidx.media3.common.util.Assertions
+import androidx.media3.common.util.Log
 import zechs.drive.stream.data.repository.TokenProvider
 import zechs.drive.stream.ui.player.PlayerActivity.Companion.TAG
 import java.io.IOException

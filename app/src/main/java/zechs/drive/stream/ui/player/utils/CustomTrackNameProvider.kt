@@ -1,9 +1,9 @@
 package zechs.drive.stream.ui.player.utils
 
 import android.content.res.Resources
-import com.google.android.exoplayer2.Format
-import com.google.android.exoplayer2.ui.DefaultTrackNameProvider
-import com.google.android.exoplayer2.util.MimeTypes
+import androidx.media3.common.Format
+import androidx.media3.ui.DefaultTrackNameProvider
+import androidx.media3.common.MimeTypes
 
 
 class CustomTrackNameProvider(

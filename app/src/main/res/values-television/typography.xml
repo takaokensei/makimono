@@ -1,0 +1,60 @@
+<resources>
+    <!-- TV 10-foot UI scale adjustments -->
+    <style name="TextAppearance.Makimono.TV.Display" parent="TextAppearance.Makimono.TV">
+        <item name="android:textSize">40sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">-0.01</item>
+        <item name="android:lineSpacingExtra">0dp</item>
+    </style>
+    <style name="TextAppearance.Makimono.TV.Title1" parent="TextAppearance.Makimono.TV">
+        <item name="android:textSize">32sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">-0.005</item>
+        <item name="android:lineSpacingExtra">0dp</item>
+    </style>
+    <style name="TextAppearance.Makimono.TV.Title2" parent="TextAppearance.Makimono.TV">
+        <item name="android:textSize">24sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:lineSpacingExtra">0dp</item>
+    </style>
+    <style name="TextAppearance.Makimono.TV.Title3" parent="TextAppearance.Makimono.TV">
+        <item name="android:textSize">22sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:lineSpacingExtra">0dp</item>
+    </style>
+    <style name="TextAppearance.Makimono.TV.Headline" parent="TextAppearance.Makimono.TV">
+        <item name="android:textSize">19sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:lineSpacingExtra">2dp</item>
+    </style>
+    <style name="TextAppearance.Makimono.TV.Body" parent="TextAppearance.Makimono.TV">
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:lineSpacingExtra">4dp</item>
+    </style>
+    <style name="TextAppearance.Makimono.TV.Callout" parent="TextAppearance.Makimono.TV">
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.01</item>
+        <item name="android:lineSpacingExtra">2dp</item>
+    </style>
+    <style name="TextAppearance.Makimono.TV.Caption" parent="TextAppearance.Makimono.TV">
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:letterSpacing">0.02</item>
+        <item name="android:lineSpacingExtra">2dp</item>
+    </style>
+    <style name="TextAppearance.Makimono.TV.Badge" parent="TextAppearance.Makimono.TV">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:letterSpacing">0.02</item>
+        <item name="android:lineSpacingExtra">0dp</item>
+    </style>
+    <style name="TextAppearance.Makimono.TV.Numeric" parent="TextAppearance.Makimono.TV.Callout">
+        <item name="android:fontFeatureSettings">tnum</item>
+    </style>
+</resources>

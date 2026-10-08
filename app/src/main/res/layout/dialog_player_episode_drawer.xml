@@ -54,7 +54,7 @@
                     android:fontFamily="@font/inter"
                     android:maxLines="1"
                     android:textColor="@color/layout_literal_ffffff"
-                    android:textSize="16sp"
+                    style="@style/TextAppearance.Makimono.TV.Headline"
                     android:textStyle="bold"
                     tools:text="One Piece" />
 
@@ -67,7 +67,7 @@
                     android:fontFamily="@font/inter"
                     android:maxLines="1"
                     android:textColor="?attr/colorAccentPrimary"
-                    android:textSize="12sp"
+                    style="@style/TextAppearance.Makimono.TV.Body"
                     tools:text="Temporadas &amp; Arcos" />
 
             </LinearLayout>

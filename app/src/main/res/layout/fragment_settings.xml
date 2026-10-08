@@ -29,9 +29,27 @@
                 app:title="@string/app_settings" />
 
         </com.google.android.material.appbar.CollapsingToolbarLayout>
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:fillViewport="true"
+            android:overScrollMode="never"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/settingsCategoryBar"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp" />
+        </HorizontalScrollView>
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/settingsScroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior">
@@ -40,6 +58,19 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/settingsSectionProfile"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="24dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="6dp"
+                android:fontFamily="@font/inter"
+                android:text="PERFIL E BIBLIOTECA"
+                android:textColor="?attr/colorAccentPrimary"
+                style="@style/TextAppearance.Makimono.TV.Body"
+                android:textStyle="bold" />
 
             <!-- User Profiles Setting -->
             <LinearLayout
@@ -77,7 +108,7 @@
                         android:fontFamily="@font/inter"
                         android:text="Perfis de Usuário"
                         android:textColor="?attr/colorTextPrimary"
-                        android:textSize="16sp"
+                        style="@style/TextAppearance.Makimono.TV.Headline"
                         android:textStyle="bold" />
 
                     <TextView
@@ -87,7 +118,7 @@
                         android:fontFamily="@font/inter"
                         android:text="Perfil ativo"
                         android:textColor="?attr/colorTextSecondary"
-                        android:textSize="12sp" />
+                        style="@style/TextAppearance.Makimono.TV.Body" />
 
                 </LinearLayout>
 
@@ -97,7 +128,7 @@
                     android:fontFamily="@font/inter"
                     android:text="Trocar / Gerenciar ›"
                     android:textColor="?attr/colorAccentPrimary"
-                    android:textSize="13sp"
+                    style="@style/TextAppearance.Makimono.TV.Callout"
                     android:textStyle="bold" />
 
             </LinearLayout>
@@ -189,6 +220,52 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/light_dark_and_system"
+                        android:textAppearance="?attr/textAppearanceBodySmall" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/settingReduceMotion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="6dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginBottom="6dp"
+                android:background="@drawable/glass_action_item_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:importantForAccessibility="yes">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_settings_24"
+                    app:tint="?attr/colorAccentPrimary" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/reduce_motion"
+                        android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/tvMotionPreferenceValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/motion_follows_device"
                         android:textAppearance="?attr/textAppearanceBodySmall" />
                 </LinearLayout>
             </LinearLayout>
@@ -379,6 +456,7 @@
 
             <!-- MyAnimeList Section -->
             <TextView
+                android:id="@+id/settingsSectionIntegrations"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="24dp"
@@ -388,7 +466,7 @@
                 android:letterSpacing="0.08"
                 android:text="INTEGRAÇÕES"
                 android:textColor="?attr/colorAccentPrimary"
-                android:textSize="12sp"
+                style="@style/TextAppearance.Makimono.TV.Body"
                 android:textStyle="bold" />
 
             <LinearLayout
@@ -540,6 +618,7 @@
 
             <!-- Playback Experience Section -->
             <TextView
+                android:id="@+id/settingsSectionPlayback"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="24dp"
@@ -549,7 +628,7 @@
                 android:letterSpacing="0.08"
                 android:text="REPRODUÇÃO &amp; GESTOS"
                 android:textColor="?attr/colorAccentPrimary"
-                android:textSize="12sp"
+                style="@style/TextAppearance.Makimono.TV.Body"
                 android:textStyle="bold" />
 
             <!-- Auto-Skip OP/ED Toggle (AniSkip) -->
@@ -640,6 +719,7 @@
 
             <!-- BACKUP & RESTAURAÇÃO (FEAT-07) -->
             <TextView
+                android:id="@+id/settingsSectionData"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="20dp"
@@ -649,7 +729,7 @@
                 android:letterSpacing="0.08"
                 android:text="BACKUP &amp; DADOS"
                 android:textColor="?attr/colorAccentPrimary"
-                android:textSize="12sp"
+                style="@style/TextAppearance.Makimono.TV.Body"
                 android:textStyle="bold" />
 
             <!-- Exportar Backup -->
@@ -688,13 +768,13 @@
                         android:textAppearance="?attr/textAppearanceBodySmall" />
                 </LinearLayout>
 
-                <TextView
+            <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/inter"
                     android:text="Exportar ›"
                     android:textColor="?attr/colorAccentPrimary"
-                    android:textSize="13sp"
+                    style="@style/TextAppearance.Makimono.TV.Callout"
                     android:textStyle="bold" />
             </LinearLayout>
 
@@ -740,12 +820,13 @@
                     android:fontFamily="@font/inter"
                     android:text="Restaurar ›"
                     android:textColor="?attr/colorAccentPrimary"
-                    android:textSize="13sp"
+                    style="@style/TextAppearance.Makimono.TV.Callout"
                     android:textStyle="bold" />
             </LinearLayout>
 
             <!-- Seção Conta & Sessão -->
             <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/settingsSectionSession"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="24dp"
@@ -807,7 +888,7 @@
                     android:fontFamily="@font/inter"
                     android:text="Sair ›"
                     android:textColor="?attr/colorError"
-                    android:textSize="13sp"
+                    style="@style/TextAppearance.Makimono.TV.Callout"
                     android:textStyle="bold" />
             </LinearLayout>
 

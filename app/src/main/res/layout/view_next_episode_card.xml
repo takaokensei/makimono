@@ -91,7 +91,7 @@
                         android:letterSpacing="0.06"
                         android:text="A SEGUIR • 10s"
                         android:textColor="?attr/colorAccentPrimary"
-                        android:textSize="11sp"
+                        style="@style/TextAppearance.Makimono.TV.Caption"
                         android:textStyle="bold" />
 
                     <View
@@ -124,7 +124,7 @@
                     android:fontFamily="@font/inter"
                     android:maxLines="2"
                     android:textColor="@color/layout_literal_ffffffff"
-                    android:textSize="12.5sp"
+                    style="@style/TextAppearance.Makimono.TV.Caption"
                     android:textStyle="bold"
                     tools:text="Tensei Shitara Slime Datta Ken • Ep. 04" />
 
@@ -146,7 +146,7 @@
                     android:paddingBottom="0dp"
                     android:text="Assistir Agora"
                     android:textColor="@color/layout_literal_ffffffff"
-                    android:textSize="11.5sp"
+                    style="@style/TextAppearance.Makimono.TV.Caption"
                     android:textStyle="bold"
                     app:backgroundTint="@null"
                     app:icon="@drawable/ic_play_24"

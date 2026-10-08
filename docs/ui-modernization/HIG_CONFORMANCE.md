@@ -4,6 +4,12 @@ F0 is a diagnostic baseline, not a passing conformance claim. “Gap” identifi
 
 **Evidence:** 12 user-provided screenshots in `docs/ui-audit/current-state/` and 12 fixture recaptures in `docs/ui-audit/after-v2/f0/`. Current capture dimensions: 1920×1080, 320 dpi (logical 960×540 dp). The fixture is debug-only and has the separate application ID `zechs.drive.stream.visualreview`; the signed install and its account data were left intact. **Scope note:** `AUDIT_REPORT.md` requested by the attached mission is absent; the existing review is `docs/ui-modernization/AUDIT.md`.
 
+## Q08 — prévia local de pareamento, sem concessão de acesso
+
+O smoke HTTP local confirma que abrir o locator QR ou consultar o código manual mostra apenas uma prévia do dispositivo: ambas as rotas mantêm o desafio `pending`, não retornam o segredo de polling e não autorizam a TV. Isso aplica clareza de estado e separação entre identificar o aparelho e autenticar uma conta como uma adaptação de experiência do Makimono; não é uma declaração de conformidade Apple nem uma validação do fluxo de contas. OAuth, consentimento, confirmação explícita e sessão ainda não existem.
+
+**Evidência:** `docs/ui-audit/2026-10-07-pairing-live-http/README.md`. Serviço local em loopback, desafio sintético descartável; nenhum navegador/celular real nem conta Google foi usado.
+
 ## F1 token verification
 
 `python tools/check_contrast.py` measures primary and secondary text at ≥7:1 against each palette's base and elevated surfaces, and primary-action text at ≥4.5:1. All six palettes pass. Token and theme resources compile as part of `assembleDebug`; layout adoption, focused-state clearance, and reduced-motion behavior still require later phase verification.
@@ -299,3 +305,120 @@ A fixture não reproduz dados do Drive nem uma stream autenticada; conteúdo de 
 | Build/testes | `assembleDebug testDebugUnitTest --no-daemon -PdistributionBuild` via WSL/JDK 21. | 171 testes, 0 falhas/erros/skips |
 
 O teste usou a fixture de demonstração; autenticação, conteúdo remoto e persistência de preferência na sessão real do Drive não foram alterados nem avaliados. Apenas `zechs.drive.stream.visualreview` foi instalado.
+
+## Reauditoria de 04/10/2026 — aceite global ainda pendente
+
+O parecer independente de conclusão está em [REAUDIT_2026-10-04.md](<C:/Users/Cauã V/Documents/antigravity/intelligent-mendel/docs/ui-modernization/REAUDIT_2026-10-04.md>). Os aceites pontuais F1–F22 acima não encerram C1–C10 do plano contínuo.
+
+Foram repetidos percursos no MuMu em release instalado e APK local, com inspeção de código/HIG. Home/details locais apresentaram composição melhor; fonte 200% teve reflow; toque na seta e sequência BACK foram verificados em Media3/MPV com vinheta local. Persistem rótulos técnicos não confirmados, truncamento silencioso de paginação, extensão FFmpeg Media3 pendente, falta de política de efeitos reduzidos, geometrias de foco concorrentes e Settings sem agrupamento previsto. O toggle Files observado na variante escolhida mede 36dp, portanto o aceite de 48dp no layout base de F22 não é suficiente para aprovar todas as variantes.
+
+171 testes JVM e 6 instrumentados existentes foram conferidos (zero falhas/erros); não rerodados nesta auditoria sem mudança funcional. Novas evidências em `docs/ui-audit/2026-10-04-reaudit/`. Não houve novo aceite global nem release.
+
+## Q02.1 — dados parciais nas listas do player
+
+| Regra | Implementação/evidência | Status |
+|---|---|---|
+| H-L1–L3 — Loading, p. 1 | Playlist e legendas mantêm itens das páginas concluídas; falha/limite é comunicado por Snackbar não modal nos dois engines, sem bloquear o vídeo. Coberto por testes de repositório com falha na segunda página. | Implementado e build/teste validado; runtime Drive pendente |
+| H-F1–F4 — Focus and selection, pp. 1–4 | Aviso não modal não altera seleção de item nem substitui ação; a fixture abre ambas HUDs, mas não reproduz lista parcial nem verifica foco durante atualização assíncrona. | Parcial; teste com Drive autenticado pendente |
+| Integridade da lista | `DriveFolderListing<T>` preserva itens e sinaliza `isComplete`/`message`; `DriveRepositoryTest`: falha após página 1 mantém episódio e legenda. | 2 cenários aprovados |
+
+**Fonte local:** `C:\Work\refs\hig\Loading _ Apple Developer Documentation.pdf`, p. 1; `C:\Work\refs\hig\Focus and selection _ Apple Developer Documentation.pdf`, pp. 1–4. Aplicação Android mantém componentes nativos do app; orientação Apple é referência de experiência, não API a imitar literalmente.
+
+## Q14.1 — superfície do conteúdo abaixo do hero
+
+| Regra | Implementação/evidência | Status |
+|---|---|---|
+| H-L1–L3 — Layout, pp. 1–2 | A área editorial do hero termina numa superfície escura opaca antes das temporadas e episódios. `series-detail-body-contained.png` mostra a separação; a imagem já não atravessa a faixa de episódios. | Corrigido no `layout-land` e verificado no MuMu |
+| H-F2–F4 — Focus and selection, pp. 1–4 | Depois de duas pressões DOWN, `series-detail-dpad.xml` registra foco no primeiro cartão; a captura `series-detail-dpad-focus.png` mostra o item inteiro destacado. | OK na fixture, D-pad |
+
+**Fonte local:** `C:\Work\refs\hig\Layout _ Apple Developer Documentation.pdf`, pp. 1–2. A surface opaca segue o tema Android existente e mantém a mídia como camada editorial separada dos cards.
+
+## Q17.1 — BACK durante a transição dos controles
+
+| Regra | Implementação/evidência | Status |
+|---|---|---|
+| H-R — Remotes, pp. 2–3 | Voltar fecha primeiro a camada de controles; uma segunda tecla recebida durante o fade não encerra o vídeo por engano. A captura após BACK duplo em 45 ms mostra a instrução contextual e o player continua em primeiro plano nos dois engines. | Verificado no MuMu, fixture local |
+| H-F2–F4 — Focus and selection, pp. 1–4 | A decisão de navegação consulta o estado de transição do OSD, não apenas `View.VISIBLE`; foco e reprodução permanecem no contexto do player até uma nova ação deliberada depois da transição. | Unitários + runtime |
+
+**Evidência:** `docs/ui-audit/after-v2/q17.1/exo-back-during-fade.png` e `mpv-back-during-fade.png`. **Fonte local:** `C:\Work\refs\hig\Remotes _ Apple Developer Documentation.pdf`, pp. 2–3; `C:\Work\refs\hig\Focus and selection _ Apple Developer Documentation.pdf`, pp. 1–4. A referência HIG é traduzida para a navegação por controle remoto do Android TV.
+
+## Q01.1 — integridade da HUD técnica
+
+| Regra | Implementação/evidência | Status |
+|---|---|---|
+| Informação da reprodução deve corresponder ao conteúdo ativo | Codec/resolução/FPS usam o `Format` do Media3; decoder usa o callback real. Valores ausentes são rotulados como desconhecidos, sem defaults de 1080p, estéreo, 48 kHz ou HW. | Verificado no Exo/fixture local |
+| Estado de carregamento deve ser inteligível | Buffer é descrito em segundos disponíveis à frente e reserva completa de mídia curta não gera estado “baixo”. | MuMu |
+| H-F — Focus and selection, pp. 1–4 | HUD é leitura contextual e não toma foco do controle de reprodução. | MuMu, fixture local |
+
+**Evidência:** `docs/ui-audit/after-v2/q01.1/exo-technical-hud.png`. **Fonte local:** `C:\Work\refs\hig\Focus and selection _ Apple Developer Documentation.pdf`, pp. 1–4. O painel técnico é adaptado à HUD Android existente. MPV e conteúdo remoto ainda não estão cobertos.
+
+## Q01.4 — resumos de mídia com cobertura explicitada
+
+| Regra | Implementação/evidência | Status |
+|---|---|---|
+| Metadados devem refletir a cobertura observada; pistas ausentes não são confirmação | Resumos de qualidade, áudio e legenda só descrevem uniformidade quando a listagem inteira foi obtida. Página incompleta produz estado parcial; variações já observadas permanecem visíveis. A origem inferida continua identificada como nome do arquivo. | Testes JVM e build; integração Drive incompleta pendente |
+
+**Evidência:** `SeriesMediaMetadataPolicyTest.kt`. **Adaptação:** trata-se de comunicação de incerteza aplicada ao catálogo do Makimono; a classificação é inferida de nomes, não de tracks efetivas, e não afirma certificação HIG.
+
+## Q18.2 — editor de estilo de legendas por D-pad
+
+| Regra | Implementação/evidência | Status |
+|---|---|---|
+| H-F2–F4 — Focus and selection, pp. 1–4 | Seletor modal foca “Personalizar aparência”; editor mostra foco no controle ajustável e o D-pad atravessa conteúdo rolável até ações Salvar/Cancelar. `subtitle-style-nav15.png` registra ação visível focada no fim do percurso. | Verificado no Moto G34, variante `.visualreview`, fixture |
+| H-R — Remotes, pp. 1–2 | BACK sai do editor e retorna ao player; não deixa o seletor antigo em primeiro plano. A alteração temporária 20→21 sp foi salva, reaberta e observada; depois foi revertida a 20 sp. | Verificado no MPV |
+| H-PV1–PV6 — Playing video, pp. 3–4 | A prévia de estilo apresenta a legenda ativa sobre o contexto do vídeo e não exige navegar para uma tela separada do player. | Fixture MPV; fidelidade de ASS/SSA ainda pendente |
+
+**Evidência:** `docs/ui-audit/2026-10-05-subtitle-style/README.md`. **Limite:** ainda sem validação do editor no ExoPlayer, TV/controle físico ou TalkBack; este incremento não fecha Q18.
+
+## Q02.3 — estabilidade da coleção ao receber páginas e capas
+
+| Regra | Implementação/evidência | Status |
+|---|---|---|
+| H-S1 — Lists and tables; H-F2–F4 — Focus and selection | A página seguinte não altera a lista já entregue ao adapter; itens repetidos mantêm sua posição e recebem os dados mais recentes. A fixture de 12 arquivos mantém visível o cartão focado após DOWN/scroll. | Unit tests + smoke local |
+| Atualização assíncrona de metadados | Resolução de posters invalida gerações antigas, reavalia pelo ID e não publica mais o snapshot da página anterior após nova página/erro. | Implementado/testado por inspeção do código; corrida no Drive real pendente |
+
+**Evidência:** `docs/ui-audit/2026-10-05-files-page-merge/README.md`. **Limite:** sem sessão Drive; este registro não prova paginação real, retry, duplicação retornada pelo Google nem uso de controle remoto em TV.
+
+## Q16.1 — agrupamento de arcos sem duplicar episódios
+
+| Regra | Implementação/evidência | Status |
+|---|---|---|
+| H-C — Collections; navegação por conjuntos deve manter membros previsíveis | Faixas de episódio contíguas: Skypiea 136–195, G-8 196–206, arco Foxy começa em 207. Teste verifica que cada item de fronteira pertence a um único grupo. | JVM + build; entrada sintética |
+
+**Limite:** ainda não confrontado com biblioteca Drive real nem todos os arcos customizados; este teste valida somente a fronteira One Piece corrigida.
+
+## Q16.2 — navegação de conteúdo narrativo e extras
+
+| Regra | Implementação/evidência | Status |
+|---|---|---|
+| H-C — Collections; separar conjuntos com finalidade diferente | Em arcos canônicos, somente episódios classificados como história entram nas faixas narrativas; OP/ED, especiais/OVAs e promos têm grupos próprios. | Teste JVM dos agrupadores de arquivos e playlists |
+| H-F — Focus and selection | Os IDs/itens de cada grupo são preservados; este teste lógico não valida foco/rolagem da tela após selecionar um grupo. | Cobertura de UI ainda pendente |
+
+**Limite:** nomes sintéticos e build local; não prova classificação de uma pasta Drive real nem navegação do grupo por controle remoto de TV.
+
+## Q16.3 — coleção principal sem itens bônus na sequência
+
+| Regra | Implementação/evidência | Status |
+|---|---|---|
+| H-C — Collections; cada conjunto tem propósito compreensível | “Todos os Episódios” contém itens narrativos quando existem; OP/ED, especiais e promos continuam selecionáveis nos próprios grupos. Pasta composta somente por extras não produz conjunto principal vazio. | Coberto em testes JVM nos agrupadores de arquivo e playlist |
+| H-PV — Playing video; evitar autoplay inesperado de extras | A playlist baseada no conjunto principal não incorpora bônus após o episódio regular final. | Regra de agrupamento coberta; comportamento de autoplay no engine real pendente |
+
+**Limite:** sem Drive autenticado, vídeo local ou controle remoto de TV neste incremento; a cobertura atual prova composição dos grupos, não a transição de reprodução.
+
+## Q02.5 — páginas completas para playlist e legendas do player
+
+| Regra | Implementação/evidência | Status |
+|---|---|---|
+| H-C — Collections; manter as opções de reprodução previsíveis conforme novos dados chegam | Páginas da playlist são mescladas sem duplicação e mantêm ordenação de episódios nos dois motores. A pasta aberta pelo usuário é preservada ao reproduzir arquivos/atalhos na grade. | Testes JVM e build; Drive real pendente |
+| H-PV — Playing video; manter contexto, controles e legendas durante atualização de dados auxiliares | Playlist e legendas acumulam sem reinicializar o item ativo; consultas são canceláveis ao encerrar/reiniciar o trabalho. | Implementação revisada e testes de política; player em runtime bloqueado |
+
+**Evidência:** `PlaybackPlaylistPolicyTest` e `DriveRepositoryTest`; `testDebugUnitTest assembleDebug` (223 testes, 0 falhas). APK arm64 instalado no Moto G34, mas sem acesso à UI porque o aparelho permaneceu bloqueado. **Limite:** não houve integração com Drive autenticado nem D-pad de TV; não declarar comportamento de playback como validado em runtime.
+
+### Q02.6 — carregamento progressivo da playlist e legendas
+
+| Regra | Implementação/evidência | Status |
+|---|---|---|
+| H-L1–L3 — Loading; apresentar resultados disponíveis sem aguardar trabalho não necessário | A primeira resposta da playlist/legendas usa uma única janela de Drive; páginas seguintes são emitidas incrementalmente, com erro e cursor preservados. | Testes de repositório + build; tempo de resposta real pendente |
+| H-PV — Playing video; itens auxiliares não devem atrasar a reprodução atual | Continuação é cancelável e mantém os lotes já publicados nos Activities Exo/MPV. | Inspeção e unit tests; runtime com Drive pendente |
+
+**Evidência:** `DriveRepositoryTest` (página inicial com cursor, próxima página e falha de continuação), `PlaybackPlaylistPolicyTest`; suíte total 223/223 e `assembleDebug`. **Limite:** não houve medição de rede/Drive nem captura de UI; build instalado, aparelho bloqueado.

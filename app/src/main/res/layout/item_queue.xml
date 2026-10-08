@@ -28,7 +28,7 @@
             android:gravity="center"
             android:text="1"
             android:textColor="?attr/colorOnPrimary"
-            android:textSize="14sp"
+            style="@style/TextAppearance.Makimono.TV.Subheadline"
             android:textStyle="bold" />
 
         <!-- Poster Thumbnail -->
@@ -59,7 +59,7 @@
                 android:maxLines="2"
                 android:text="Nome do Anime"
                 android:textColor="?attr/colorOnSurface"
-                android:textSize="16sp"
+                style="@style/TextAppearance.Makimono.TV.Headline"
                 android:textStyle="bold" />
 
             <TextView
@@ -69,7 +69,7 @@
                 android:fontFamily="@font/inter"
                 android:text="Na fila"
                 android:textColor="?attr/colorTextSecondary"
-                android:textSize="12sp" />
+                style="@style/TextAppearance.Makimono.TV.Body" />
 
         </LinearLayout>
 

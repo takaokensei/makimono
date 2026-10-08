@@ -79,4 +79,11 @@ class WatchListRepository @Inject constructor(
     suspend fun getAllWatchesGlobal(): List<WatchList> =
         watchListDao.getAllWatchesGlobal()
 
+    suspend fun updateDelays(
+        videoId: String,
+        audioDelayMs: Long,
+        subtitleDelayMs: Long,
+        profileId: String = currentProfileId()
+    ): Int = watchListDao.updateDelays(videoId, profileId, audioDelayMs, subtitleDelayMs)
+
 }

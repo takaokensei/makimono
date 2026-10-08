@@ -12,7 +12,10 @@ import zechs.drive.stream.databinding.ItemStarredShelfBinding
 import zechs.drive.stream.utils.MediaImageLoader
 
 class StarredShelfAdapter(
-    private val onClick: (DriveFile) -> Unit
+    private val onClick: (DriveFile) -> Unit,
+    private val folderBadgeTextResId: Int? = null,
+    private val folderSubtitleTextResId: Int? = null,
+    private val showFavoriteBadge: Boolean = folderBadgeTextResId == null
 ) : ListAdapter<DriveFile, StarredShelfAdapter.ViewHolder>(DiffCallback()) {
 
     init {
@@ -26,6 +29,7 @@ class StarredShelfAdapter(
 
     var onFocusItemListener: ((View) -> Unit)? = null
     var onDpadLeftListener: ((View) -> Boolean)? = null
+    var onDpadVerticalListener: ((View, Int) -> Boolean)? = null
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemStarredShelfBinding.inflate(
@@ -50,17 +54,22 @@ class StarredShelfAdapter(
             val isVideo = file.isVideoFile || file.isShortcutVideo
 
             binding.tvStarredTypeBadge.text = when {
-                isFolder -> "PASTA"
-                isVideo -> "VÍDEO"
-                file.isSubtitleFile -> "LEGENDA"
-                else -> "ARQUIVO"
+                isFolder -> adapter.folderBadgeTextResId?.let(binding.root.context::getString)
+                    ?: binding.root.context.getString(R.string.home_starred_type_folder)
+                isVideo -> binding.root.context.getString(R.string.home_starred_type_video)
+                file.isSubtitleFile -> binding.root.context.getString(R.string.home_starred_type_subtitle)
+                else -> binding.root.context.getString(R.string.home_starred_type_file)
             }
 
             binding.tvStarredSubtitle.text = when {
-                isFolder -> "Pasta favoritada • Abrir"
-                isVideo -> file.humanSize?.let { "$it • Reproduzir" } ?: "Vídeo favoritado"
-                else -> file.humanSize ?: "Favoritado"
+                isFolder -> adapter.folderSubtitleTextResId?.let(binding.root.context::getString)
+                    ?: binding.root.context.getString(R.string.home_starred_folder_subtitle)
+                isVideo -> file.humanSize?.let {
+                    binding.root.context.getString(R.string.home_starred_size_and_play, it)
+                } ?: binding.root.context.getString(R.string.home_starred_video_subtitle)
+                else -> file.humanSize ?: binding.root.context.getString(R.string.home_starred_favorite)
             }
+            binding.starredFavoriteBadge.visibility = if (adapter.showFavoriteBadge) View.VISIBLE else View.GONE
 
             val displayImage = file.posterUrl ?: file.thumbnailLarge
             if (!displayImage.isNullOrBlank()) {
@@ -83,19 +92,29 @@ class StarredShelfAdapter(
 
             binding.cardStarredItem.setOnClickListener { onClick(file) }
 
-            binding.cardStarredItem.setOnFocusChangeListener { v, hasFocus ->
+            zechs.drive.stream.utils.FocusEngine.attach(
+                binding.cardStarredItem,
+                zechs.drive.stream.utils.FocusEngine.FocusKind.CARD
+            ) { v, hasFocus ->
                 if (hasFocus) {
                     adapter.onFocusItemListener?.invoke(v)
-                    v.animate().scaleX(1.05f).scaleY(1.05f).translationZ(12f).setDuration(150L).start()
-                } else {
-                    v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(150L).start()
                 }
             }
 
             binding.cardStarredItem.setOnKeyListener { v, keyCode, event ->
-                if (event.action == android.view.KeyEvent.ACTION_DOWN && keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
-                    if (bindingAdapterPosition == 0 && adapter.onDpadLeftListener?.invoke(v) == true) {
-                        return@setOnKeyListener true
+                if (event.action == android.view.KeyEvent.ACTION_DOWN) {
+                    when (keyCode) {
+                        android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                            if (bindingAdapterPosition == 0 && adapter.onDpadLeftListener?.invoke(v) == true) {
+                                return@setOnKeyListener true
+                            }
+                        }
+                        android.view.KeyEvent.KEYCODE_DPAD_UP,
+                        android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                            if (adapter.onDpadVerticalListener?.invoke(v, keyCode) == true) {
+                                return@setOnKeyListener true
+                            }
+                        }
                     }
                 }
                 false

@@ -95,7 +95,9 @@ class BackupSerializer @Inject constructor(
                     videoId = it.videoId,
                     watchedDuration = it.watchedDuration,
                     totalDuration = it.totalDuration,
-                    thumbnailLink = it.thumbnailLink
+                    thumbnailLink = it.thumbnailLink,
+                    audioDelayMs = it.audioDelayMs,
+                    subtitleDelayMs = it.subtitleDelayMs
                 )
             }
 
@@ -223,7 +225,9 @@ class BackupSerializer @Inject constructor(
                         watchedDuration = w.watchedDuration,
                         totalDuration = w.totalDuration,
                         thumbnailLink = w.thumbnailLink,
-                        profileId = pb.id
+                        profileId = pb.id,
+                        audioDelayMs = w.audioDelayMs,
+                        subtitleDelayMs = w.subtitleDelayMs
                     ),
                     profileId = pb.id
                 )
@@ -342,7 +346,9 @@ data class WatchListItemBackup(
     val videoId: String,
     val watchedDuration: Long,
     val totalDuration: Long,
-    val thumbnailLink: String? = null
+    val thumbnailLink: String? = null,
+    val audioDelayMs: Long = 0L,
+    val subtitleDelayMs: Long = 0L
 )
 
 @Keep

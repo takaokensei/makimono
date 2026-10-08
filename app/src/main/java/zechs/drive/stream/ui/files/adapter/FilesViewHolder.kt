@@ -1,8 +1,8 @@
 package zechs.drive.stream.ui.files.adapter
 
-import android.graphics.Color
 import android.view.KeyEvent
 import android.view.View
+import androidx.core.content.ContextCompat
 import androidx.core.view.isGone
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
@@ -18,8 +18,11 @@ import zechs.drive.stream.data.remote.AnimePosterResolver
 import zechs.drive.stream.databinding.ItemDriveFileBinding
 import zechs.drive.stream.databinding.ItemDriveFileGridBinding
 import zechs.drive.stream.databinding.ItemLoadingBinding
+import zechs.drive.stream.databinding.ItemPageErrorBinding
+import zechs.drive.stream.ui.files.FolderPlaceholderPolicy
+import com.bumptech.glide.Glide
 import zechs.drive.stream.utils.EpisodeParser
-import zechs.drive.stream.utils.GlideApp
+import zechs.drive.stream.utils.FocusEngine
 import zechs.drive.stream.utils.MediaImageLoader
 
 sealed class FilesViewHolder(
@@ -53,7 +56,7 @@ sealed class FilesViewHolder(
                         starLoading.isGone = true
                         btnStar.setImageResource(R.drawable.ic_star_filled_24)
                         btnStar.imageTintList = android.content.res.ColorStateList.valueOf(
-                            Color.parseColor("#FFD700")
+                            ContextCompat.getColor(root.context, R.color.amber_500)
                         )
                         btnStar.setOnClickListener {
                             filesAdapter.onStarClickListener.invoke(file, false)
@@ -105,7 +108,7 @@ sealed class FilesViewHolder(
                         ivFileType.setImageResource(R.drawable.ic_subtitles_24)
                     } else {
                         val iconLink = item.iconLink128 ?: R.drawable.ic_my_drive_24
-                        GlideApp.with(ivFileType)
+                        Glide.with(ivFileType)
                             .load(iconLink)
                             .apply(RequestOptions().override(48, 48))
                             .into(ivFileType)
@@ -144,12 +147,9 @@ sealed class FilesViewHolder(
                     return@setOnLongClickListener true
                 }
 
-                root.setOnFocusChangeListener { v, hasFocus ->
+                FocusEngine.attach(root, FocusEngine.FocusKind.LIST_ROW) { v, hasFocus ->
                     if (hasFocus) {
                         filesAdapter.onFocusItemListener?.invoke(v)
-                        v.animate().scaleX(1.02f).scaleY(1.02f).translationZ(6f).setDuration(120L).start()
-                    } else {
-                        v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(120L).start()
                     }
                 }
 
@@ -194,7 +194,7 @@ sealed class FilesViewHolder(
                         gridStarLoading.isGone = true
                         btnGridStar.setImageResource(R.drawable.ic_star_filled_24)
                         btnGridStar.imageTintList = android.content.res.ColorStateList.valueOf(
-                            Color.parseColor("#FFD700")
+                            ContextCompat.getColor(root.context, R.color.amber_500)
                         )
                         btnGridStar.setOnClickListener {
                             filesAdapter.onStarClickListener.invoke(file, false)
@@ -322,6 +322,7 @@ sealed class FilesViewHolder(
                 if (!displayThumb.isNullOrBlank()) {
                     gridBgFallback.isGone = true
                     ivGridFallbackIcon.isGone = true
+                    tvGridFolderInitials.isGone = true
                     ivGridThumb.isGone = false
 
                     if (isVideo && !hasPoster) {
@@ -332,15 +333,21 @@ sealed class FilesViewHolder(
                 } else {
                     ivGridThumb.isGone = true
                     gridBgFallback.isGone = false
-                    ivGridFallbackIcon.isGone = false
 
-                    val iconRes = when {
-                        isFolder -> R.drawable.ic_folder_24
-                        item.isSubtitleFile -> R.drawable.ic_subtitles_24
-                        isVideo -> R.drawable.ic_play_24
-                        else -> R.drawable.ic_my_drive_24
+                    if (isFolder) {
+                        tvGridFolderInitials.text = FolderPlaceholderPolicy.initials(item.name)
+                        tvGridFolderInitials.isVisible = true
+                        ivGridFallbackIcon.isGone = true
+                    } else {
+                        tvGridFolderInitials.isGone = true
+                        ivGridFallbackIcon.isGone = false
+                        val iconRes = when {
+                            item.isSubtitleFile -> R.drawable.ic_subtitles_24
+                            isVideo -> R.drawable.ic_play_24
+                            else -> R.drawable.ic_my_drive_24
+                        }
+                        ivGridFallbackIcon.setImageResource(iconRes)
                     }
-                    ivGridFallbackIcon.setImageResource(iconRes)
                 }
 
                 root.isFocusable = true
@@ -368,14 +375,9 @@ sealed class FilesViewHolder(
                     return@setOnLongClickListener true
                 }
 
-                root.setOnFocusChangeListener { v, hasFocus ->
+                FocusEngine.attach(root, FocusEngine.FocusKind.CARD) { v, hasFocus ->
                     if (hasFocus) {
                         filesAdapter.onFocusItemListener?.invoke(v)
-                        v.animate().scaleX(1.08f).scaleY(1.08f).translationZ(16f).setDuration(180L)
-                            .setInterpolator(android.view.animation.DecelerateInterpolator(1.4f)).start()
-                    } else {
-                        v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(160L)
-                            .setInterpolator(android.view.animation.DecelerateInterpolator(1.4f)).start()
                     }
                 }
 
@@ -401,5 +403,29 @@ sealed class FilesViewHolder(
     class LoadingViewHolder(
         itemBinding: ItemLoadingBinding
     ) : FilesViewHolder(itemBinding)
+
+    class PageErrorViewHolder(
+        private val itemBinding: ItemPageErrorBinding,
+        private val onAction: (zechs.drive.stream.utils.state.ResourceErrorKind) -> Unit
+    ) : FilesViewHolder(itemBinding) {
+        fun bind(item: FilesDataModel.PageError) = with(itemBinding) {
+            val authentication = item.errorKind == zechs.drive.stream.utils.state.ResourceErrorKind.AUTHENTICATION
+            val requiresBack = item.errorKind == zechs.drive.stream.utils.state.ResourceErrorKind.ACCESS_DENIED ||
+                item.errorKind == zechs.drive.stream.utils.state.ResourceErrorKind.NOT_FOUND
+            tvPageErrorMessage.setText(
+                if (authentication) R.string.files_page_error_auth
+                else R.string.files_page_error_generic
+            )
+            btnPageErrorAction.setText(
+                when {
+                    authentication -> R.string.files_page_error_connect
+                    requiresBack -> R.string.files_page_error_back
+                    else -> R.string.retry
+                }
+            )
+            btnPageErrorAction.contentDescription = btnPageErrorAction.text
+            btnPageErrorAction.setOnClickListener { onAction(item.errorKind) }
+        }
+    }
 
 }

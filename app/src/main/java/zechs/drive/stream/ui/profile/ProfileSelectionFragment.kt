@@ -24,6 +24,9 @@ import zechs.drive.stream.data.remote.ProfileArtCatalog
 import zechs.drive.stream.databinding.FragmentProfileSelectionBinding
 import zechs.drive.stream.ui.BaseFragment
 import zechs.drive.stream.utils.ProfileManager
+import zechs.drive.stream.utils.AppSettings
+import zechs.drive.stream.utils.MotionPolicy
+import zechs.drive.stream.utils.MotionPreference
 import zechs.drive.stream.utils.TvFocusRing
 import zechs.drive.stream.utils.TvAccessibilityLayout
 import zechs.drive.stream.utils.ext.navigateSafe
@@ -40,6 +43,9 @@ class ProfileSelectionFragment : BaseFragment() {
 
     @Inject
     lateinit var posterResolver: ProfileArtCatalog
+
+    @Inject
+    lateinit var appSettings: AppSettings
 
     private var focusedProfileId: String? = null
     private lateinit var profilesAdapter: ProfilesAdapter
@@ -105,7 +111,9 @@ class ProfileSelectionFragment : BaseFragment() {
         )
         binding.btnManageProfiles.setOnClickListener {
             profilesAdapter.isManageMode = !profilesAdapter.isManageMode
-            binding.btnManageProfiles.text = if (profilesAdapter.isManageMode) "CONCLUÍDO" else "GERENCIAR PERFIS"
+            binding.btnManageProfiles.setText(
+                if (profilesAdapter.isManageMode) R.string.profile_manage_done else R.string.profile_manage_action
+            )
         }
 
         binding.btnProfileSettings.setOnClickListener {
@@ -119,19 +127,31 @@ class ProfileSelectionFragment : BaseFragment() {
                 try { profileManager.awaitReady() }
                 catch (e: CancellationException) { throw e }
                 catch (_: Exception) {
-                    binding.tvProfilesTitle.text = "Não foi possível abrir os perfis. Reinicie o app para tentar novamente."
+                    binding.tvProfilesTitle.setText(R.string.profile_load_error)
                     binding.btnManageProfiles.isEnabled = false
                     return@repeatOnLifecycle
                 }
                 profileManager.profilesFlow.collect { profiles ->
+                    val activeProfile = profileManager.getActiveProfile()
+                    val motionPreference = try {
+                        appSettings.fetchMotionPreference(activeProfile.id)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                        MotionPreference.SYSTEM
+                    }
+                    profilesAdapter.reduceMotion = MotionPolicy.shouldReduceMotion(
+                        motionPreference,
+                        MotionPolicy.areSystemAnimationsEnabled()
+                    )
                     Glide.with(this@ProfileSelectionFragment)
-                        .load(profileManager.getActiveProfile().backgroundUrl)
+                        .load(activeProfile.backgroundUrl)
                         .placeholder(R.drawable.bg_profile_fantasy)
                         .error(R.drawable.bg_profile_fantasy)
                         .format(DecodeFormat.PREFER_RGB_565)
                         .diskCacheStrategy(DiskCacheStrategy.ALL)
                         .into(binding.ivFantasyBg)
-                    val activeId = profileManager.getActiveProfile().id
+                    val activeId = activeProfile.id
                     val items = mutableListOf<ProfileUiModel>()
                     profiles.forEach { profile ->
                         items.add(ProfileUiModel.ProfileItem(profile, isActive = profile.id == activeId))
@@ -158,7 +178,10 @@ class ProfileSelectionFragment : BaseFragment() {
     }
 
     private fun showEditProfileDialog(profile: UserProfile) {
-        val options = arrayOf("Editar nome, imagens e status", "Excluir Perfil")
+        val options = arrayOf(
+            getString(R.string.profile_edit_menu_action),
+            getString(R.string.profile_delete_menu_action)
+        )
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(profile.name)
             .setItems(options) { _, which ->
@@ -168,23 +191,33 @@ class ProfileSelectionFragment : BaseFragment() {
                         if (profileManager.getProfiles().size <= 1) {
                             android.widget.Toast.makeText(
                                 requireContext(),
-                                "Não é possível excluir o único perfil existente.",
+                                getString(R.string.profile_delete_only_profile),
                                 android.widget.Toast.LENGTH_SHORT
                             ).show()
                         } else {
                             MaterialAlertDialogBuilder(requireContext())
-                                .setTitle("Excluir " + profile.name + "?")
-                                .setMessage("O perfil e suas preferências locais serão removidos.")
-                                .setPositiveButton("Excluir") { _, _ ->
+                                .setTitle(getString(R.string.profile_delete_title, profile.name))
+                                .setMessage(R.string.profile_delete_message)
+                                .setPositiveButton(R.string.profile_delete_action) { _, _ ->
                                     viewLifecycleOwner.lifecycleScope.launch {
-                                        try { profileManager.deleteProfile(profile.id) }
+                                        try {
+                                            when (profileManager.deleteProfile(profile.id)) {
+                                                null -> Unit
+                                                zechs.drive.stream.utils.ProfileManagementPolicy.DeleteBlockReason.LAST_ADMINISTRATOR ->
+                                                    android.widget.Toast.makeText(context, R.string.profile_last_admin_required, android.widget.Toast.LENGTH_LONG).show()
+                                                zechs.drive.stream.utils.ProfileManagementPolicy.DeleteBlockReason.LAST_PROFILE ->
+                                                    android.widget.Toast.makeText(context, R.string.profile_last_required, android.widget.Toast.LENGTH_SHORT).show()
+                                                zechs.drive.stream.utils.ProfileManagementPolicy.DeleteBlockReason.PROFILE_NOT_FOUND ->
+                                                    android.widget.Toast.makeText(context, R.string.profile_not_found, android.widget.Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
                                         catch (e: CancellationException) { throw e }
                                         catch (_: Exception) {
-                                            android.widget.Toast.makeText(context, "Falha ao excluir perfil", android.widget.Toast.LENGTH_LONG).show()
+                                            android.widget.Toast.makeText(context, R.string.profile_delete_error, android.widget.Toast.LENGTH_LONG).show()
                                         }
                                     }
                                 }
-                                .setNegativeButton("Cancelar", null)
+                                .setNegativeButton(R.string.profile_cancel_action, null)
                                 .show().also { dialog -> dialog.window?.decorView?.let(TvFocusRing::install) }
                         }
                     }

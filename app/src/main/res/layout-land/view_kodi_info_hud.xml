@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/hudCard"
+    android:layout_width="340dp"
+    android:layout_height="wrap_content"
+    app:cardBackgroundColor="?attr/colorBgGlass"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="16dp"
+    app:strokeColor="?attr/colorBorderGlass"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="12dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="10dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_info_24"
+                app:tint="?attr/colorAccentPrimary" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:fontFamily="@font/inter"
+                android:text="KODI MEDIA INFO"
+                android:textColor="?attr/colorAccentPrimary"
+                style="@style/TextAppearance.Makimono.TV.Body"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/inter"
+                android:text="[INFO]"
+                android:textColor="?attr/colorTextSecondary"
+                style="@style/TextAppearance.Makimono.TV.Badge" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="5dp"
+            android:background="?attr/colorBorderGlass" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/inter"
+            android:text="VÍDEO"
+            android:textColor="?attr/colorAccentSecondary"
+            style="@style/TextAppearance.Makimono.TV.Badge"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvHudVideoCodec"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/inter"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textColor="?attr/colorTextPrimary"
+            style="@style/TextAppearance.Makimono.TV.Body"
+            tools:text="AVC (H.264)" />
+
+        <TextView
+            android:id="@+id/tvHudVideoDecoder"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/inter"
+            android:maxLines="1"
+            android:ellipsize="middle"
+            android:textColor="?attr/colorTextSecondary"
+            style="@style/TextAppearance.Makimono.TV.Caption"
+            tools:text="Decoder: c2.qti.avc.decoder" />
+
+        <TextView
+            android:id="@+id/tvHudVideoResolution"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/inter"
+            android:maxLines="1"
+            android:textColor="?attr/colorTextSecondary"
+            style="@style/TextAppearance.Makimono.TV.Caption"
+            tools:text="1920×1080 • 30.000 fps" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="5dp"
+            android:background="?attr/colorBorderGlass" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/inter"
+            android:text="ÁUDIO"
+            android:textColor="?attr/colorAccentSecondary"
+            style="@style/TextAppearance.Makimono.TV.Badge"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvHudAudioInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/inter"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textColor="?attr/colorTextPrimary"
+            style="@style/TextAppearance.Makimono.TV.Body"
+            tools:text="AAC • Estéreo (2.0) • 48.0 kHz" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="5dp"
+            android:background="?attr/colorBorderGlass" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/inter"
+            android:text="LEGENDA"
+            android:textColor="?attr/colorAccentSecondary"
+            style="@style/TextAppearance.Makimono.TV.Badge"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvHudSubtitleInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/inter"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textColor="?attr/colorTextPrimary"
+            style="@style/TextAppearance.Makimono.TV.Body"
+            tools:text="Português (BR) [Drive] • SRT" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="5dp"
+            android:background="?attr/colorBorderGlass" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="@font/inter"
+                android:text="BUFFER À FRENTE"
+                android:textColor="?attr/colorAccentSecondary"
+                style="@style/TextAppearance.Makimono.TV.Badge"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvHudBufferBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/inter"
+                android:textColor="?attr/colorStatusSuccess"
+                style="@style/TextAppearance.Makimono.TV.Badge"
+                android:textStyle="bold"
+                tools:text="Tudo carregado" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvHudBufferDuration"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/inter"
+            android:maxLines="1"
+            android:textColor="?attr/colorTextPrimary"
+            style="@style/TextAppearance.Makimono.TV.Body"
+            tools:text="2.9s disponíveis" />
+
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

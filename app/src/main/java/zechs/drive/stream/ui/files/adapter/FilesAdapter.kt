@@ -8,13 +8,16 @@ import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.databinding.ItemDriveFileBinding
 import zechs.drive.stream.databinding.ItemDriveFileGridBinding
 import zechs.drive.stream.databinding.ItemLoadingBinding
+import zechs.drive.stream.databinding.ItemPageErrorBinding
+import zechs.drive.stream.utils.state.ResourceErrorKind
 
 class FilesAdapter(
     val onClickListener: (DriveFile) -> Unit,
     val onLongClickListener: (DriveFile) -> Unit,
     val onStarClickListener: (DriveFile, Boolean) -> Unit,
     val onPlayClickListener: ((DriveFile) -> Unit)? = null,
-    val compactCatalog: Boolean = false
+    val compactCatalog: Boolean = false,
+    val onPageErrorAction: (ResourceErrorKind) -> Unit = {}
 ) : ListAdapter<FilesDataModel, FilesViewHolder>(FilesItemDiffCallback()) {
 
     init {
@@ -26,6 +29,7 @@ class FilesAdapter(
         return when (val item = getItem(position)) {
             is FilesDataModel.File -> item.driveFile.id.hashCode().toLong()
             is FilesDataModel.Loading -> Long.MAX_VALUE
+            is FilesDataModel.PageError -> Long.MAX_VALUE - 1
         }
     }
 
@@ -50,6 +54,13 @@ class FilesAdapter(
                     parent, false
                 )
             )
+            R.layout.item_page_error -> FilesViewHolder.PageErrorViewHolder(
+                ItemPageErrorBinding.inflate(
+                    LayoutInflater.from(parent.context),
+                    parent, false
+                ),
+                onPageErrorAction
+            )
             R.layout.item_drive_file_grid -> FilesViewHolder.DriveFileGridViewHolder(
                 ItemDriveFileGridBinding.inflate(
                     LayoutInflater.from(parent.context),
@@ -72,6 +83,7 @@ class FilesAdapter(
         val item = getItem(position)
         when (holder) {
             is FilesViewHolder.LoadingViewHolder -> item as FilesDataModel.Loading
+            is FilesViewHolder.PageErrorViewHolder -> holder.bind(item as FilesDataModel.PageError)
             is FilesViewHolder.DriveFileViewHolder -> holder.bind(item as FilesDataModel.File)
             is FilesViewHolder.DriveFileGridViewHolder -> holder.bind(item as FilesDataModel.File)
         }
@@ -80,6 +92,7 @@ class FilesAdapter(
     override fun getItemViewType(position: Int): Int {
         return when (getItem(position)) {
             is FilesDataModel.Loading -> R.layout.item_loading
+            is FilesDataModel.PageError -> R.layout.item_page_error
             is FilesDataModel.File -> if (isGridMode) R.layout.item_drive_file_grid else R.layout.item_drive_file
         }
     }

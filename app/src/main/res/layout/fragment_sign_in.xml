@@ -4,177 +4,226 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:clickable="true"
-    android:focusable="true"
-    android:focusableInTouchMode="true"
+    android:background="?attr/colorBgBase"
+    android:focusable="false"
     tools:context=".ui.signin.SignInFragment">
 
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/signInScrollView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:fillViewport="true">
+        android:clipToPadding="true"
+        android:fillViewport="true"
+        android:paddingStart="@dimen/safe_h"
+        android:paddingTop="@dimen/space_6"
+        android:paddingEnd="@dimen/safe_h"
+        android:paddingBottom="@dimen/safe_v">
 
         <LinearLayout
             android:id="@+id/layoutConfigure"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:gravity="center_horizontal"
             android:orientation="vertical"
-            android:padding="24dp">
+            android:paddingBottom="@dimen/space_5">
+
+            <ImageView
+                android:id="@+id/ivMakimonoLogo"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginBottom="@dimen/space_3"
+                android:contentDescription="@string/app_name"
+                android:src="@drawable/ic_makimono_torii"
+                app:tint="?attr/colorAccentPrimary" />
 
             <com.google.android.material.textview.MaterialTextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                android:text="@string/configure_your_drive_client"
-                android:textAppearance="?attr/textAppearanceHeadlineSmall" />
-
-            <com.google.android.material.textview.MaterialTextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="@string/client_id" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/clientId"
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:id="@+id/tvConnectDriveTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:hint="@string/client_id"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/tvExample">
+                android:gravity="center"
+                android:text="@string/connect_drive_title"
+                android:textAppearance="@style/TextAppearance.Makimono.TV.Display"
+                android:textColor="?attr/colorTextPrimary" />
 
-                <com.google.android.material.textfield.TextInputEditText
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/tvConnectDriveDescription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_2"
+                android:layout_marginBottom="@dimen/space_6"
+                android:gravity="center"
+                android:maxWidth="640dp"
+                android:text="@string/connect_drive_description"
+                android:textAppearance="@style/TextAppearance.Makimono.TV.Body"
+                android:textColor="?attr/colorTextSecondary" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/space_5"
+                app:cardBackgroundColor="?attr/colorBgSurface"
+                app:cardCornerRadius="@dimen/radius_l"
+                app:cardElevation="0dp"
+                app:strokeColor="?attr/colorBorderGlass"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="text"
-                    android:maxLines="1"
-                    android:text="@string/default_client_id" />
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical"
+                    android:paddingStart="@dimen/space_6"
+                    android:paddingTop="@dimen/space_6"
+                    android:paddingEnd="@dimen/space_6"
+                    android:paddingBottom="@dimen/space_5">
 
-            </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/signInText"
+                        style="@style/Widget.Makimono.Button.Primary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/connect_drive_action"
+                        android:fontFamily="@font/inter"
+                        android:minHeight="56dp"
+                        android:text="@string/connect_drive_action"
+                        app:icon="@drawable/ic_my_drive_24"
+                        app:iconGravity="textStart"
+                        app:iconTint="?attr/colorOnPrimary" />
 
-            <com.google.android.material.textview.MaterialTextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="@string/client_secret" />
+                    <com.google.android.material.textview.MaterialTextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_3"
+                        android:gravity="center"
+                        android:text="@string/connect_drive_privacy_note"
+                        android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                        android:textColor="?attr/colorTextTertiary" />
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/client_secret"
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:hint="@string/client_secret"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/tvExample">
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/enterCode"
+                        style="@style/Widget.Makimono.Button.Secondary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_4"
+                        android:minHeight="52dp"
+                        android:text="@string/enter_authorization_code"
+                        app:icon="@drawable/ic_unlock_24"
+                        app:iconGravity="textStart" />
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="text"
-                    android:maxLines="1"
-                    android:text="@string/default_client_secret" />
-
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textview.MaterialTextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="@string/redirect_uri" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/redirect_uri"
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:hint="@string/redirect_uri"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/tvExample">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="text"
-                    android:maxLines="1"
-                    android:text="@string/default_redirect_uri" />
-
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textview.MaterialTextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="@string/scopes" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/scopes"
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:clickable="false"
-                android:enabled="false"
-                android:focusable="false"
-                android:hint="@string/scopes"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/tvExample">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="text"
-                    android:maxLines="1"
-                    android:text="@string/drive_scope" />
-
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:orientation="horizontal">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnHelp"
-                    style="@style/Widget.Material3.Button.OutlinedButton.Icon"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:layout_marginEnd="8dp"
-                    android:layout_weight="1"
-                    android:fontFamily="@font/roboto_medium"
-                    android:text="@string/need_help"
-                    app:icon="@drawable/ic_external_24"
-                    app:iconGravity="textStart" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/signInText"
-                    style="@style/Widget.Material3.Button"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    android:fontFamily="@font/roboto_medium"
-                    android:text="@string/sign_in" />
-            </LinearLayout>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnHelp"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_2"
+                        android:minHeight="48dp"
+                        android:text="@string/need_help"
+                        app:icon="@drawable/ic_external_24"
+                        app:iconGravity="textStart" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/enterCode"
+                android:id="@+id/btnAdvancedConfig"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="24dp"
-                android:layout_marginBottom="16dp"
-                android:text="@string/enter_authorization_code" />
+                android:layout_marginBottom="64dp"
+                android:minHeight="48dp"
+                android:text="@string/advanced_connection_settings"
+                android:contentDescription="@string/advanced_connection_settings" />
 
+            <LinearLayout
+                android:id="@+id/layoutAdvancedConfig"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_3"
+                android:background="@drawable/bg_surface_raised"
+                android:orientation="vertical"
+                android:padding="@dimen/space_5"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/space_4"
+                    android:text="@string/advanced_connection_description"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                    android:textColor="?attr/colorTextSecondary" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/clientId"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/space_3"
+                    android:hint="@string/client_id">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="text"
+                        android:maxLines="1"
+                        android:text="@string/default_client_id" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/client_secret"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/space_3"
+                    android:hint="@string/client_secret">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textPassword"
+                        android:maxLines="1"
+                        android:text="@string/default_client_secret" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/redirect_uri"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/space_3"
+                    android:hint="@string/redirect_uri">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textUri"
+                        android:maxLines="1"
+                        android:text="@string/default_redirect_uri" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/scopes"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clickable="false"
+                    android:enabled="false"
+                    android:focusable="false"
+                    android:hint="@string/scopes">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="text"
+                        android:maxLines="1"
+                        android:text="@string/drive_scope" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="128dp"
+                android:importantForAccessibility="no" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

@@ -49,7 +49,7 @@ object EpisodeParser {
 
     // Promotional videos, Creditless OPs/EDs, CMs, Previews
     private val PROMO_EXTRA_REGEX = Pattern.compile(
-        "(?i)(?:[\\s_.-]|\\b)(pv|cm|ncop|nced|op|ed|preview|teaser|special|sp|ova|oad)\\s*(\\d{0,3})(?:[\\s_.-]|\\b)"
+        "(?i)(?:[\\s_.-]|\\b)(pv|cm|ncop|nced|op|ed|preview|teaser|special|sp|ova|oad)\\s*(\\d{0,3})([a-z]?)(?:[\\s_.-]|\\b)"
     )
 
     // Standalone Special / OVA
@@ -143,9 +143,13 @@ object EpisodeParser {
         if (promoMatcher.find()) {
             val tag = promoMatcher.group(1)?.uppercase(Locale.ROOT) ?: "PV"
             val num = promoMatcher.group(2)?.toIntOrNull()
+            val variant = promoMatcher.group(3)
+                ?.takeIf { it.isNotBlank() }
+                ?.uppercase(Locale.ROOT)
+                .orEmpty()
             val titlePart = base.substring(0, promoMatcher.start()).trim()
             val showTitle = cleanShowTitle(titlePart)
-            val numStr = if (num != null) String.format(Locale.ROOT, " %02d", num) else ""
+            val numStr = if (num != null) String.format(Locale.ROOT, " %02d%s", num, variant) else ""
             val epLabel = when (tag) {
                 "NCOP" -> "Abertura$numStr"
                 "NCED" -> "Encerramento$numStr"

@@ -125,10 +125,9 @@
                     android:id="@+id/tvBreadcrumbRoot"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
-                    android:text="Animes"
-                    android:textColor="@color/layout_literal_94a3b8"
-                    android:textSize="13sp" />
+                    android:text="@string/series_breadcrumb_library"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                    android:textColor="@color/layout_literal_94a3b8" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -136,17 +135,16 @@
                     android:layout_marginStart="8dp"
                     android:layout_marginEnd="8dp"
                     android:text="›"
-                    android:textColor="@color/layout_literal_64748b"
-                    android:textSize="14sp" />
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Body"
+                    android:textColor="@color/layout_literal_64748b" />
 
                 <TextView
                     android:id="@+id/tvBreadcrumbCurrent"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
-                    android:text="Séries"
-                    android:textColor="@color/layout_literal_cbd5e1"
-                    android:textSize="13sp" />
+                    android:text="@string/series_breadcrumb_titles"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                    android:textColor="@color/layout_literal_cbd5e1" />
             </LinearLayout>
 
             <View
@@ -223,15 +221,14 @@
                 android:id="@+id/tvJapaneseTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-black"
                 android:includeFontPadding="false"
                 android:letterSpacing="0.04"
                 android:shadowColor="@color/layout_literal_80000000"
                 android:shadowDx="0"
                 android:shadowDy="2"
                 android:shadowRadius="6"
+                android:textAppearance="@style/TextAppearance.Makimono.TV.Title2"
                 android:textColor="@color/layout_literal_99ffffff"
-                android:textSize="22sp"
                 android:visibility="gone"
                 tools:text="グリザイアの楽園"
                 tools:visibility="visible" />
@@ -242,14 +239,13 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:fontFamily="sans-serif-black"
                 android:includeFontPadding="false"
                 android:shadowColor="@color/layout_literal_cc000000"
                 android:shadowDx="0"
                 android:shadowDy="3"
                 android:shadowRadius="10"
+                android:textAppearance="@style/TextAppearance.Makimono.TV.Display"
                 android:textColor="@color/layout_literal_ffffff"
-                android:textSize="32sp"
                 tools:text="Grisaia no Rakuen" />
 
             <!-- Subtitle / English Title -->
@@ -259,12 +255,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:fontFamily="sans-serif-medium"
                 android:includeFontPadding="false"
                 android:letterSpacing="0.08"
                 android:textAllCaps="true"
+                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
                 android:textColor="@color/layout_literal_38bdf8"
-                android:textSize="12sp"
                 tools:text="THE EDEN OF GRISAIA" />
 
             <!-- Meta Row 1: Age Rating | Year | Status | MAL Rating -->
@@ -278,6 +273,7 @@
 
                 <TextView
                     android:id="@+id/tvAgeRating"
+                    style="@style/TextAppearance.Makimono.TV.Caption"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/badge_age_rating_bg"
@@ -286,12 +282,12 @@
                     android:paddingEnd="7dp"
                     android:paddingBottom="2dp"
                     android:textColor="@color/layout_literal_ffffff"
-                    android:textSize="11sp"
                     android:textStyle="bold"
                     tools:text="16+" />
 
                 <TextView
                     android:id="@+id/tvReleaseYear"
+                    style="@style/TextAppearance.Makimono.TV.Caption"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
@@ -301,13 +297,13 @@
                     android:paddingEnd="8dp"
                     android:paddingBottom="2dp"
                     android:textColor="@color/layout_literal_cbd5e1"
-                    android:textSize="11sp"
                     tools:text="2015" />
 
                 <TextView
                     android:layout_marginStart="8dp"
             android:visibility="gone"
             android:id="@+id/tvSeriesStatus"
+                    style="@style/TextAppearance.Makimono.TV.Caption"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/glass_meta_pill_bg"
@@ -316,7 +312,6 @@
                     android:paddingEnd="8dp"
                     android:paddingBottom="2dp"
                     android:textColor="@color/layout_literal_cbd5e1"
-                    android:textSize="11sp"
                     tools:text="Completo" />
 
                 <!-- Rating pill -->
@@ -338,21 +333,21 @@
 
                     <TextView
                         android:id="@+id/tvMalScore"
+                        style="@style/TextAppearance.Makimono.TV.Callout"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="5dp"
                         android:fontFamily="sans-serif-bold"
                         android:textColor="@color/layout_literal_ffffff"
-                        android:textSize="12sp"
                         tools:text="8.2" />
 
                     <TextView
+                        style="@style/TextAppearance.Makimono.TV.Caption"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="4dp"
                         android:textColor="@color/layout_literal_94a3b8"
-                        android:textSize="11sp"
-                        android:text="MAL" />
+                        android:text="@string/series_source_mal" />
                 </LinearLayout>
 
             </LinearLayout>
@@ -368,6 +363,7 @@
 
                 <!-- 1080p -->
                 <LinearLayout
+                    android:id="@+id/qualityBadgeContainer"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/glass_meta_pill_bg"
@@ -386,16 +382,17 @@
 
                     <TextView
                         android:id="@+id/tvQualityBadge"
+                        style="@style/TextAppearance.Makimono.TV.Caption"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="5dp"
-                        android:text="1080p"
-                        android:textColor="@color/layout_literal_e2e8f0"
-                        android:textSize="11sp" />
+                        android:text=""
+                        android:textColor="@color/layout_literal_e2e8f0" />
                 </LinearLayout>
 
                 <!-- Dual Áudio -->
                 <LinearLayout
+                    android:id="@+id/audioBadgeContainer"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
@@ -415,16 +412,17 @@
 
                     <TextView
                         android:id="@+id/tvAudioTrackBadge"
+                        style="@style/TextAppearance.Makimono.TV.Caption"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="5dp"
-                        android:text="Dual Áudio PT-BR / JA"
-                        android:textColor="@color/layout_literal_e2e8f0"
-                        android:textSize="11sp" />
+                        android:text=""
+                        android:textColor="@color/layout_literal_e2e8f0" />
                 </LinearLayout>
 
                 <!-- Multi Subs -->
                 <LinearLayout
+                    android:id="@+id/subtitleBadgeContainer"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
@@ -444,12 +442,12 @@
 
                     <TextView
                         android:id="@+id/tvSubtitleBadge"
+                        style="@style/TextAppearance.Makimono.TV.Caption"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="5dp"
-                        android:text="Multi Subs"
-                        android:textColor="@color/layout_literal_e2e8f0"
-                        android:textSize="11sp" />
+                        android:text=""
+                        android:textColor="@color/layout_literal_e2e8f0" />
                 </LinearLayout>
 
             </LinearLayout>
@@ -457,6 +455,7 @@
             <!-- Synopsis -->
             <TextView
                 android:id="@+id/tvSynopsis"
+                style="@style/TextAppearance.Makimono.TV.Callout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
@@ -465,8 +464,25 @@
                 android:lineSpacingExtra="3dp"
                 android:maxLines="3"
                 android:textColor="@color/layout_literal_94a3b8"
-                android:textSize="12.5sp"
                 tools:text="Após ser atacada por um vampiro e sobreviver, Koyomi Araragi se vê envolvido com diversas garotas ligadas a excentricidades sobrenaturais..." />
+
+            <TextView
+                android:id="@+id/tvSynopsisMore"
+                style="@style/TextAppearance.Makimono.TV.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:clickable="true"
+                android:contentDescription="@string/series_synopsis_expand"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:gravity="center_vertical"
+                android:minWidth="104dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="@string/series_synopsis_expand"
+                android:textColor="@color/layout_literal_38bdf8"
+                android:textStyle="bold"
+                android:visibility="gone" />
 
             <!-- Actions Row: Continue Watch / Play | Trailer | Favorite | Watched -->
             <LinearLayout
@@ -508,28 +524,28 @@
                         android:orientation="vertical">
 
                         <TextView
-                            android:text="Reproduzir"
+                            android:text="@string/series_action_play"
             android:textStyle="bold"
             android:id="@+id/tvPrimaryActionTitle"
+                            style="@style/TextAppearance.Makimono.TV.Body"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:duplicateParentState="true"
                             android:fontFamily="sans-serif-bold"
                             android:includeFontPadding="false"
                             android:textColor="@color/detail_primary_action_foreground"
-                            android:textSize="13sp"
                             tools:text="Continuar Assistindo" />
 
                         <TextView
                             android:maxLines="1"
             android:id="@+id/tvPrimaryActionSubtitle"
+                            style="@style/TextAppearance.Makimono.TV.Caption"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:duplicateParentState="true"
                             android:fontFamily="sans-serif"
                             android:includeFontPadding="false"
                             android:textColor="@color/detail_primary_action_foreground"
-                            android:textSize="10sp"
                             tools:text="Ep. 4 • 14:28 restante" />
 
                     </LinearLayout>
@@ -548,7 +564,8 @@
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
                     android:paddingStart="16dp"
-                    android:paddingEnd="16dp">
+                    android:paddingEnd="16dp"
+                    android:visibility="gone">
 
                     <ImageView
                         android:layout_width="18dp"
@@ -558,13 +575,13 @@
                         app:tint="@color/layout_literal_e2e8f0" />
 
                     <TextView
+                        style="@style/TextAppearance.Makimono.TV.Callout"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
                         android:fontFamily="sans-serif-medium"
-                        android:text="Ver Trailer"
-                        android:textColor="@color/layout_literal_f8fafc"
-                        android:textSize="12sp" />
+                        android:text="@string/series_action_trailer"
+                        android:textColor="@color/layout_literal_f8fafc" />
                 </LinearLayout>
 
                 <!-- Favoritar -->
@@ -592,14 +609,28 @@
 
                     <TextView
                         android:id="@+id/tvFavoriteText"
+                        style="@style/TextAppearance.Makimono.TV.Callout"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
                         android:fontFamily="sans-serif-medium"
-                        android:text="Favoritar"
-                        android:textColor="@color/layout_literal_f8fafc"
-                        android:textSize="12sp" />
+                        android:text="@string/series_action_favorite"
+                        android:textColor="@color/layout_literal_f8fafc" />
                 </LinearLayout>
+
+                <ImageButton
+                    android:id="@+id/btnMoreActions"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginStart="12dp"
+                    android:background="@drawable/btn_secondary_action_bg"
+                    android:contentDescription="@string/series_more_actions"
+                    android:padding="13dp"
+                    android:src="@drawable/ic_more_vert_24"
+                    android:tint="@color/layout_literal_e2e8f0"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true" />
 
                 <!-- Seguir pasta e receber alertas de episódios -->
                 <LinearLayout
@@ -614,7 +645,8 @@
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
                     android:paddingStart="16dp"
-                    android:paddingEnd="16dp">
+                    android:paddingEnd="16dp"
+                    android:visibility="gone">
 
                     <ImageView
                         android:id="@+id/ivFollowIcon"
@@ -626,13 +658,13 @@
 
                     <TextView
                         android:id="@+id/tvFollowText"
+                        style="@style/TextAppearance.Makimono.TV.Callout"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
                         android:fontFamily="sans-serif-medium"
-                        android:text="Seguir"
-                        android:textColor="@color/layout_literal_f8fafc"
-                        android:textSize="12sp" />
+                        android:text="@string/series_action_follow"
+                        android:textColor="@color/layout_literal_f8fafc" />
                 </LinearLayout>
 
                 <!-- Marcar como Assistido -->
@@ -648,7 +680,8 @@
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
                     android:paddingStart="16dp"
-                    android:paddingEnd="16dp">
+                    android:paddingEnd="16dp"
+                    android:visibility="gone">
 
                     <ImageView
                         android:id="@+id/ivMarkWatchedIcon"
@@ -659,13 +692,13 @@
 
                     <TextView
                         android:id="@+id/tvMarkWatchedText"
+                        style="@style/TextAppearance.Makimono.TV.Callout"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
                         android:fontFamily="sans-serif-medium"
-                        android:text="Marcar como Assistido"
-                        android:textColor="@color/layout_literal_f8fafc"
-                        android:textSize="12sp" />
+                        android:text="@string/series_action_mark_watched"
+                        android:textColor="@color/layout_literal_f8fafc" />
                 </LinearLayout>
 
             </LinearLayout>
@@ -692,6 +725,19 @@
             tools:itemCount="6"
             tools:listitem="@layout/item_series_season_tab" />
 
+        <TextView
+            android:id="@+id/tvPartialListingNotice"
+            style="@style/TextAppearance.Makimono.TV.Callout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="40dp"
+            android:layout_marginTop="8dp"
+            android:text="@string/series_partial_listing_notice"
+            android:textColor="@color/layout_literal_94a3b8"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/rvSeasonTabs" />
+
         <!-- 7. Episodes Horizontal Rail (16:9 Cards) -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvEpisodes"
@@ -706,7 +752,7 @@
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/rvSeasonTabs"
+            app:layout_constraintTop_toBottomOf="@id/tvPartialListingNotice"
             tools:itemCount="6"
             tools:listitem="@layout/item_series_episode_card" />
 
@@ -726,13 +772,13 @@
 
         <TextView
             android:id="@+id/tvEmptyEpisodes"
+            style="@style/TextAppearance.Makimono.TV.Body"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
             android:fontFamily="sans-serif-medium"
-            android:text="Nenhum episódio encontrado nesta categoria."
+            android:text="@string/series_empty_category"
             android:textColor="@color/layout_literal_94a3b8"
-            android:textSize="14sp"
             android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -743,7 +789,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="Tentar novamente"
+            android:text="@string/series_retry"
             android:textColor="?attr/colorTextPrimary"
             android:visibility="gone"
             app:backgroundTint="?attr/colorBgSurface"

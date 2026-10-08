@@ -1,6 +1,7 @@
 package zechs.drive.stream.utils
 
 import android.widget.ImageView
+import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import zechs.drive.stream.R
@@ -27,16 +28,16 @@ object MediaImageLoader {
         placeholder: Int
     ) {
         if (url.isNullOrBlank()) {
-            GlideApp.with(view).clear(view)
+            Glide.with(view).clear(view)
             view.setImageResource(placeholder)
             return
         }
 
-        val thumbnailRequest = GlideApp.with(view)
+        val thumbnailRequest = Glide.with(view)
             .load(url)
             .sizeMultiplier(0.18f)
 
-        GlideApp.with(view)
+        Glide.with(view)
             .load(url)
             .override(width, height)
             .centerCrop()

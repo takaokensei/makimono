@@ -20,12 +20,14 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.bumptech.glide.load.engine.DiskCacheStrategy
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
 import zechs.drive.stream.R
 import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.data.model.PlaylistItem
 import zechs.drive.stream.data.model.WatchList
 import zechs.drive.stream.data.model.WatchQueueItem
+import zechs.drive.stream.data.repository.FollowedFolderRepository
 import zechs.drive.stream.data.remote.ProfileArtCatalog
 import zechs.drive.stream.databinding.FragmentHomeBinding
 import zechs.drive.stream.ui.BaseFragment
@@ -33,13 +35,15 @@ import zechs.drive.stream.ui.FocusedItemScroll
 import zechs.drive.stream.ui.files.adapter.FilesAdapter
 import zechs.drive.stream.ui.files.adapter.FilesDataModel
 import zechs.drive.stream.ui.home.adapter.ContinueWatchingAdapter
+import zechs.drive.stream.ui.home.adapter.StarredShelfAdapter
 import zechs.drive.stream.ui.home.adapter.WatchQueueShelfAdapter
 import zechs.drive.stream.ui.player.PlayerLauncher
-import zechs.drive.stream.utils.GlideApp
 import zechs.drive.stream.utils.MediaImageLoader
 import zechs.drive.stream.utils.ProfileManager
 import zechs.drive.stream.utils.TvAccessibilityLayout
 import zechs.drive.stream.utils.VideoPlayer
+import zechs.drive.stream.utils.AppSettings
+import zechs.drive.stream.utils.MotionPolicy
 import zechs.drive.stream.utils.ext.navigateSafe
 import zechs.drive.stream.utils.ext.resolveThemeColor
 import javax.inject.Inject
@@ -63,6 +67,12 @@ class HomeFragment : BaseFragment() {
     @Inject
     lateinit var profileArtCatalog: ProfileArtCatalog
 
+    @Inject
+    lateinit var appSettings: AppSettings
+
+    @Inject
+    lateinit var followedFolderRepository: FollowedFolderRepository
+
     private var isGridMode = true
     private var currentTab = "Início"
     private var previousTabBeforeSearch: String? = null
@@ -71,6 +81,9 @@ class HomeFragment : BaseFragment() {
     private var heroAutoFocused = false
     private var lastFocusedItemId: String? = null
     private var lastProfileConfiguration: String? = null
+    private var reduceMotionEnabled = false
+    private var featuredPreviewScheduler: FeaturedPreviewScheduler? = null
+    private var featuredHeroBinder: FeaturedHeroBinder? = null
 
     private val voiceSearchLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
@@ -108,8 +121,8 @@ class HomeFragment : BaseFragment() {
     private val continueWatchingAdapter = ContinueWatchingAdapter { watchItem ->
         playWatchItem(watchItem)
     }.apply {
-        onLongClickListener = { watchItem ->
-            showContinueWatchingContextMenu(watchItem)
+        onLongClickListener = { watchItem, focusAnchor ->
+            showContinueWatchingContextMenu(watchItem, focusAnchor)
         }
     }
 
@@ -120,6 +133,22 @@ class HomeFragment : BaseFragment() {
             showQueueItemContextMenu(item)
         }
     }
+
+    private val starredShelfAdapter = StarredShelfAdapter(
+        onClick = ::handleOpenFolder
+    )
+
+    private val recentlyAddedAdapter = StarredShelfAdapter(
+        onClick = ::handleOpenFolder,
+        folderBadgeTextResId = R.string.home_recently_added_type_series,
+        folderSubtitleTextResId = R.string.home_recently_added_subtitle
+    )
+
+    private val followedEpisodesAdapter = StarredShelfAdapter(
+        onClick = ::handleOpenFolder,
+        folderBadgeTextResId = R.string.home_followed_type,
+        folderSubtitleTextResId = R.string.home_followed_subtitle
+    )
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -135,6 +164,13 @@ class HomeFragment : BaseFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         _binding = FragmentHomeBinding.bind(view)
+        featuredHeroBinder = FeaturedHeroBinder(binding, requireContext())
+        featuredPreviewScheduler = FeaturedPreviewScheduler(viewLifecycleOwner.lifecycleScope) {
+            viewModel.previewFeatured(it)
+        }
+
+        refreshMotionPreference()
+        configureHomePosterShelfMeasurements()
 
         setupAnimeGrid()
         setupHeaderSearch()
@@ -155,6 +191,9 @@ class HomeFragment : BaseFragment() {
             requireContext(), androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false
         )
         binding.rvContinueWatchingShelf.adapter = continueWatchingAdapter
+        continueWatchingAdapter.onDpadVerticalListener = { focused, keyCode ->
+            focusAdjacentHomeShelf(binding.rvContinueWatchingShelf, focused, keyCode)
+        }
 
         binding.rvWatchQueueShelf.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(
             requireContext(), androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false
@@ -164,11 +203,85 @@ class HomeFragment : BaseFragment() {
             if (usesOverlaySidebar()) expandSidebar() else focusCurrentNavItem()
             true
         }
+        watchQueueAdapter.onDpadVerticalListener = { focused, keyCode ->
+            focusAdjacentHomeShelf(binding.rvWatchQueueShelf, focused, keyCode)
+        }
         watchQueueAdapter.onFocusItemListener = { v ->
             lastFocusedAnimeView = v
+            HomeShelfScroll.alignHeading(binding.contentScrollView, binding.tvQueueShelfLabel, v)
+            val position = binding.rvWatchQueueShelf.getChildAdapterPosition(v)
+            watchQueueAdapter.currentList.getOrNull(position)?.let { item ->
+                findLibraryFolderForTitle(item.name)?.let { folder ->
+                    scheduleFeaturedPreview(folder, v)
+                }
+            }
+        }
+
+        binding.rvStarredShelf?.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(
+            requireContext(), androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false
+        )
+        binding.rvStarredShelf?.adapter = starredShelfAdapter
+        starredShelfAdapter.onDpadLeftListener = {
+            if (usesOverlaySidebar()) expandSidebar() else focusCurrentNavItem()
+            true
+        }
+        starredShelfAdapter.onDpadVerticalListener = { focused, keyCode ->
+            binding.rvStarredShelf?.let { focusAdjacentHomeShelf(it, focused, keyCode) } ?: false
+        }
+        starredShelfAdapter.onFocusItemListener = { v ->
+            lastFocusedAnimeView = v
+            binding.rvStarredShelf?.let {
+                HomeShelfScroll.alignHeading(binding.contentScrollView, binding.tvMyListShelfLabel, v)
+            }
+            val position = binding.rvStarredShelf?.getChildAdapterPosition(v)
+                ?: androidx.recyclerview.widget.RecyclerView.NO_POSITION
+            starredShelfAdapter.currentList.getOrNull(position)?.let { folder ->
+                scheduleFeaturedPreview(folder, v)
+            }
+        }
+
+        binding.rvRecentlyAddedShelf.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(
+            requireContext(), androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false
+        )
+        binding.rvRecentlyAddedShelf.adapter = recentlyAddedAdapter
+        recentlyAddedAdapter.onDpadLeftListener = {
+            if (usesOverlaySidebar()) expandSidebar() else focusCurrentNavItem()
+            true
+        }
+        recentlyAddedAdapter.onDpadVerticalListener = { focused, keyCode ->
+            focusAdjacentHomeShelf(binding.rvRecentlyAddedShelf, focused, keyCode)
+        }
+        recentlyAddedAdapter.onFocusItemListener = { v ->
+            lastFocusedAnimeView = v
+            HomeShelfScroll.alignHeading(binding.contentScrollView, binding.tvRecentlyAddedShelfLabel, v)
+            val position = binding.rvRecentlyAddedShelf.getChildAdapterPosition(v)
+            recentlyAddedAdapter.currentList.getOrNull(position)?.let { folder ->
+                scheduleFeaturedPreview(folder, v)
+            }
+        }
+
+        binding.rvNewEpisodesShelf.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(
+            requireContext(), androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false
+        )
+        binding.rvNewEpisodesShelf.adapter = followedEpisodesAdapter
+        followedEpisodesAdapter.onDpadLeftListener = {
+            if (usesOverlaySidebar()) expandSidebar() else focusCurrentNavItem()
+            true
+        }
+        followedEpisodesAdapter.onDpadVerticalListener = { focused, keyCode ->
+            focusAdjacentHomeShelf(binding.rvNewEpisodesShelf, focused, keyCode)
+        }
+        followedEpisodesAdapter.onFocusItemListener = { v ->
+            lastFocusedAnimeView = v
+            HomeShelfScroll.alignHeading(binding.contentScrollView, binding.tvNewEpisodesShelfLabel, v)
+            val position = binding.rvNewEpisodesShelf.getChildAdapterPosition(v)
+            followedEpisodesAdapter.currentList.getOrNull(position)?.let { folder ->
+                scheduleFeaturedPreview(folder, v)
+            }
         }
 
         setupTenFootFocusChain()
+        observeFollowedEpisodesShelf()
 
         binding.tvShelfViewHistory?.setOnClickListener {
             showWatchHistoryDialog()
@@ -186,6 +299,7 @@ class HomeFragment : BaseFragment() {
         observeAnimeLibrary()
         observeRecentWatches()
         observeWatchQueue()
+        observeStarredShelf()
         observeFeaturedAnime()
         observeProfileConfiguration()
         observeLogOutState()
@@ -196,8 +310,29 @@ class HomeFragment : BaseFragment() {
 
         // Load anime library immediately on opening
         viewModel.loadAnimeLibrary()
+        viewModel.getStarredFiles()
         viewModel.getRecentWatches()
         viewModel.getWatchHistory()
+    }
+
+    private fun refreshMotionPreference() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val profileId = profileManager.getActiveProfile().id
+            reduceMotionEnabled = runCatching {
+                MotionPolicy.shouldReduceMotion(
+                    appSettings.fetchMotionPreference(profileId),
+                    MotionPolicy.areSystemAnimationsEnabled()
+                )
+            }.getOrDefault(false)
+            if (reduceMotionEnabled) {
+                binding.root.findFocus()?.let { focused ->
+                    focused.animate().cancel()
+                    focused.scaleX = 1f
+                    focused.scaleY = 1f
+                    focused.translationZ = 0f
+                }
+            }
+        }
     }
 
     private fun observeProfileConfiguration() {
@@ -223,7 +358,8 @@ class HomeFragment : BaseFragment() {
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         if (!isLandscape) return 2
 
-        val contentWidth = resources.configuration.screenWidthDp - 128 - 44
+        val railWidthDp = (binding.navRail.layoutParams.width / resources.displayMetrics.density).toInt()
+        val contentWidth = resources.configuration.screenWidthDp - railWidthDp - 44
         return (contentWidth / 132).coerceIn(3, 7)
     }
 
@@ -239,6 +375,9 @@ class HomeFragment : BaseFragment() {
         val info = binding.btnFeaturedInfo
         val continueShelf = binding.rvContinueWatchingShelf
         val queueShelf = binding.rvWatchQueueShelf
+        val starredShelf = binding.rvStarredShelf
+        val followedShelf = binding.rvNewEpisodesShelf
+        val recentlyAddedShelf = binding.rvRecentlyAddedShelf
         val catalog = binding.rvAnimeLibrary
 
         listOf(
@@ -264,7 +403,7 @@ class HomeFragment : BaseFragment() {
         // Rebuild vertical links after layout so no explicit link points at a hidden row.
         val root = binding.root
         val focusLayoutListener = android.view.ViewTreeObserver.OnGlobalLayoutListener {
-            val rows = listOfNotNull(continueShelf, queueShelf, catalog).filter { it.isShown }
+            val rows = listOfNotNull(continueShelf, queueShelf, followedShelf, starredShelf, recentlyAddedShelf, catalog).filter { it.isShown }
             val heroTarget = play?.takeIf { it.isShown } ?: search
             play?.nextFocusDownId = rows.firstOrNull()?.id ?: View.NO_ID
             info?.nextFocusDownId = rows.firstOrNull()?.id ?: View.NO_ID
@@ -283,7 +422,53 @@ class HomeFragment : BaseFragment() {
             }
         })
 
-        FocusedItemScroll.install(viewport = binding.contentScrollView, rows = listOfNotNull(continueShelf, queueShelf, catalog))
+        FocusedItemScroll.install(viewport = binding.contentScrollView, rows = listOfNotNull(continueShelf, queueShelf, followedShelf, starredShelf, recentlyAddedShelf, catalog))
+    }
+
+    /** Keeps D-pad movement within the corresponding column as it crosses Home shelves. */
+    private fun focusAdjacentHomeShelf(
+        source: androidx.recyclerview.widget.RecyclerView,
+        focusedChild: View,
+        keyCode: Int
+    ): Boolean {
+        val rows = listOfNotNull(
+            binding.rvContinueWatchingShelf,
+            binding.rvWatchQueueShelf,
+            binding.rvNewEpisodesShelf,
+            binding.rvStarredShelf,
+            binding.rvRecentlyAddedShelf,
+            binding.rvAnimeLibrary
+        ).filter { it.isShown && (it.adapter?.itemCount ?: 0) > 0 }
+        val sourceIndex = rows.indexOf(source)
+        if (sourceIndex < 0) return false
+
+        val targetIndex = when (keyCode) {
+            android.view.KeyEvent.KEYCODE_DPAD_UP -> sourceIndex - 1
+            android.view.KeyEvent.KEYCODE_DPAD_DOWN -> sourceIndex + 1
+            else -> return false
+        }
+        if (targetIndex < 0) {
+            (binding.btnFeaturedPlay?.takeIf { it.isShown } ?: binding.etSearchAnime).requestFocus()
+            return true
+        }
+        val target = rows.getOrNull(targetIndex) ?: return false
+        val sourcePosition = source.getChildAdapterPosition(focusedChild)
+            .takeIf { it != androidx.recyclerview.widget.RecyclerView.NO_POSITION } ?: 0
+        val targetPosition = if (target.layoutManager is GridLayoutManager) {
+            sourcePosition % (target.layoutManager as GridLayoutManager).spanCount
+        } else {
+            sourcePosition
+        }.coerceIn(0, (target.adapter?.itemCount ?: 1) - 1)
+
+        target.scrollToPosition(targetPosition)
+        target.postDelayed({
+            if (target.findViewHolderForAdapterPosition(targetPosition)?.itemView?.requestFocus() != true) {
+                target.postDelayed({
+                    target.findViewHolderForAdapterPosition(targetPosition)?.itemView?.requestFocus()
+                }, 64)
+            }
+        }, 64)
+        return true
     }
 
     private fun setupAnimeGrid() {
@@ -293,15 +478,37 @@ class HomeFragment : BaseFragment() {
         binding.rvAnimeLibrary.adapter = animeAdapter
     }
 
+    /** Poster cards are taller than landscape video cards; keep their rails at their measured content height. */
+    private fun configureHomePosterShelfMeasurements() {
+        listOf(
+            binding.rvNewEpisodesShelf,
+            binding.rvStarredShelf,
+            binding.rvRecentlyAddedShelf
+        ).forEach { shelf ->
+            shelf.isNestedScrollingEnabled = false
+            shelf.layoutParams = shelf.layoutParams.apply {
+                height = ViewGroup.LayoutParams.WRAP_CONTENT
+            }
+        }
+    }
+
     private var catalogSort = 0
 
     private fun submitCatalog() {
         val source = viewModel.filteredAnimes.value
         val titles = compareBy<DriveFile> { zechs.drive.stream.data.remote.AnimePosterResolver.cleanAnimeTitle(it.name).lowercase(java.util.Locale.ROOT) }
-        val ordered = when (catalogSort) {
+        val sorted = when (catalogSort) {
             1 -> source.sortedWith(titles)
             2 -> source.sortedWith(titles.reversed())
             else -> source
+        }
+        val focusedItems = (0 until animeAdapter.itemCount).mapNotNull { position ->
+            (animeAdapter.currentList.getOrNull(position) as? FilesDataModel.File)?.driveFile
+        }
+        val ordered = if (catalogSort == 0 && binding.rvAnimeLibrary.hasFocus()) {
+            preserveFocusedShelfOrder(focusedItems, sorted)
+        } else {
+            sorted
         }
         animeAdapter.submitList(ordered.map { FilesDataModel.File(it) })
     }
@@ -366,7 +573,7 @@ class HomeFragment : BaseFragment() {
         }
 
         binding.btnVoiceSearch.setOnFocusChangeListener { v, hasFocus ->
-            v.animate().scaleX(if (hasFocus) 1.15f else 1.0f).scaleY(if (hasFocus) 1.15f else 1.0f).setDuration(120L).start()
+            animateFocus(v, hasFocus, scale = 1.15f)
             val context = requireContext()
             val activeColor = context.resolveThemeColor(R.attr.colorAccentPrimary)
             val inactiveColor = context.resolveThemeColor(R.attr.colorTextSecondary)
@@ -374,6 +581,23 @@ class HomeFragment : BaseFragment() {
                 if (hasFocus) activeColor else inactiveColor
             )
         }
+    }
+
+    private fun animateFocus(view: View, hasFocus: Boolean, scale: Float, elevation: Float = 0f) {
+        if (reduceMotionEnabled) {
+            view.animate().cancel()
+            view.scaleX = 1f
+            view.scaleY = 1f
+            view.translationZ = 0f
+            return
+        }
+        val targetScale = if (hasFocus) scale else 1f
+        view.animate()
+            .scaleX(targetScale)
+            .scaleY(targetScale)
+            .translationZ(if (hasFocus) elevation else 0f)
+            .setDuration(120L)
+            .start()
     }
 
     private fun launchVoiceSearch() {
@@ -495,7 +719,8 @@ class HomeFragment : BaseFragment() {
                     val resolvedId = folderId ?: "root"
                     val action = HomeFragmentDirections.actionHomeFragmentToFilesFragment(
                         name = folderName,
-                        query = "'$resolvedId' in parents and trashed = false"
+                        query = "'$resolvedId' in parents and trashed = false",
+                        folderPath = arrayOf(resolvedId)
                     )
                     findNavController().navigateSafe(action)
                 }
@@ -524,12 +749,11 @@ class HomeFragment : BaseFragment() {
             )
 
             navItems.forEach { item ->
+                // On a touchscreen attached to a TV-style launcher, the first tap can otherwise
+                // only move focus. Consume the gesture and route one click on ACTION_UP.
+                zechs.drive.stream.utils.SingleTapActivation.install(item)
                 item.setOnFocusChangeListener { v, hasFocus ->
-                    if (hasFocus) {
-                        v.animate().scaleX(1.04f).scaleY(1.04f).translationZ(6f).setDuration(120L).start()
-                    } else {
-                        v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(120L).start()
-                    }
+                    animateFocus(v, hasFocus, scale = 1.04f, elevation = 6f)
                 }
 
                 item.setOnKeyListener { _, keyCode, event ->
@@ -552,11 +776,15 @@ class HomeFragment : BaseFragment() {
         // Setup D-pad Left on anime adapter to expand sidebar when on leftmost column
         animeAdapter.onFocusItemListener = { v ->
             lastFocusedAnimeView = v
+            HomeShelfScroll.alignHeading(binding.contentScrollView, binding.tvHomeCatalogTitle, v)
             val pos = binding.rvAnimeLibrary.getChildAdapterPosition(v)
             if (pos != androidx.recyclerview.widget.RecyclerView.NO_POSITION && pos < animeAdapter.currentList.size) {
                 val item = animeAdapter.currentList[pos]
                 if (item is FilesDataModel.File) {
                     lastFocusedItemId = item.driveFile.id
+                    if (item.driveFile.isFolder || item.driveFile.isShortcutFolder) {
+                        scheduleFeaturedPreview(item.driveFile, v)
+                    }
                 }
             }
         }
@@ -572,6 +800,13 @@ class HomeFragment : BaseFragment() {
 
         continueWatchingAdapter.onFocusItemListener = { v ->
             lastFocusedAnimeView = v
+            HomeShelfScroll.alignHeading(binding.contentScrollView, binding.tvShelfLabel, v)
+            val position = binding.rvContinueWatchingShelf.getChildAdapterPosition(v)
+            continueWatchingAdapter.currentList.getOrNull(position)?.let { item ->
+                findLibraryFolderForTitle(item.name)?.let { folder ->
+                    scheduleFeaturedPreview(folder, v)
+                }
+            }
         }
 
         continueWatchingAdapter.onDpadLeftListener = {
@@ -596,6 +831,9 @@ class HomeFragment : BaseFragment() {
         if (currentTab != "Início") return
         val hasRecent = viewModel.recentWatches.value.isNotEmpty()
         val hasQueue = viewModel.watchQueue.value.isNotEmpty()
+        val hasMyList = starredShelfAdapter.itemCount > 0
+        val hasFollowed = followedEpisodesAdapter.itemCount > 0
+        val hasRecentlyAdded = recentlyAddedAdapter.itemCount > 0
         binding.rvContinueWatchingShelf.visibility = if (hasRecent) View.VISIBLE else View.GONE
         binding.shelfHeaderRow?.visibility = if (hasRecent || hasQueue) View.VISIBLE else View.GONE
         binding.tvShelfLabel?.visibility = if (hasRecent) View.VISIBLE else View.GONE
@@ -603,11 +841,18 @@ class HomeFragment : BaseFragment() {
         binding.tvShelfViewQueue?.visibility = if (hasQueue) View.VISIBLE else View.GONE
         binding.tvQueueShelfLabel?.visibility = if (hasQueue) View.VISIBLE else View.GONE
         binding.rvWatchQueueShelf?.visibility = if (hasQueue) View.VISIBLE else View.GONE
-        binding.tvShelfLabel?.text = "Continuar assistindo"
+        binding.tvNewEpisodesShelfLabel.visibility = if (hasFollowed) View.VISIBLE else View.GONE
+        binding.rvNewEpisodesShelf.visibility = if (hasFollowed) View.VISIBLE else View.GONE
+        binding.tvMyListShelfLabel?.visibility = if (hasMyList) View.VISIBLE else View.GONE
+        binding.rvStarredShelf?.visibility = if (hasMyList) View.VISIBLE else View.GONE
+        binding.tvRecentlyAddedShelfLabel.visibility = if (hasRecentlyAdded) View.VISIBLE else View.GONE
+        binding.rvRecentlyAddedShelf.visibility = if (hasRecentlyAdded) View.VISIBLE else View.GONE
+        binding.tvShelfLabel?.setText(R.string.home_continue_watching)
     }
 
     override fun onResume() {
         super.onResume()
+        if (_binding != null) refreshMotionPreference()
         findNavController().currentBackStackEntry?.savedStateHandle?.remove<String>("homeTab")?.let { tab ->
             selectTab(tab)
             viewModel.filterStarred(tab == "Favoritos")
@@ -615,6 +860,7 @@ class HomeFragment : BaseFragment() {
         viewModel.getRecentWatches()
         viewModel.getWatchHistory()
         viewModel.getLastWatched()
+        viewModel.getStarredFiles()
         if (currentTab == "Favoritos") {
             viewModel.filterStarred(true)
         }
@@ -644,6 +890,10 @@ class HomeFragment : BaseFragment() {
         val target = when {
             binding.featuredHeroContainer?.visibility == View.VISIBLE -> binding.btnFeaturedPlay
             binding.rvContinueWatchingShelf.visibility == View.VISIBLE && continueWatchingAdapter.itemCount > 0 -> binding.rvContinueWatchingShelf
+            binding.rvWatchQueueShelf?.visibility == View.VISIBLE && watchQueueAdapter.itemCount > 0 -> binding.rvWatchQueueShelf
+            binding.rvNewEpisodesShelf.visibility == View.VISIBLE && followedEpisodesAdapter.itemCount > 0 -> binding.rvNewEpisodesShelf
+            binding.rvStarredShelf?.visibility == View.VISIBLE && starredShelfAdapter.itemCount > 0 -> binding.rvStarredShelf
+            binding.rvRecentlyAddedShelf.visibility == View.VISIBLE && recentlyAddedAdapter.itemCount > 0 -> binding.rvRecentlyAddedShelf
             binding.rvAnimeLibrary.visibility == View.VISIBLE -> binding.rvAnimeLibrary
             else -> binding.contentScrollView
         }
@@ -764,9 +1014,9 @@ class HomeFragment : BaseFragment() {
         binding.btnFeaturedPlay?.setOnFocusChangeListener { v, hasFocus ->
             if (hasFocus) {
                 lastFocusedAnimeView = v
-                v.animate().scaleX(1.05f).scaleY(1.05f).translationZ(8f).setDuration(120L).start()
+                animateFocus(v, true, scale = 1.05f, elevation = 8f)
             } else {
-                v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(120L).start()
+                animateFocus(v, false, scale = 1.05f, elevation = 8f)
             }
         }
 
@@ -784,17 +1034,17 @@ class HomeFragment : BaseFragment() {
         binding.btnFeaturedInfo?.setOnFocusChangeListener { v, hasFocus ->
             if (hasFocus) {
                 lastFocusedAnimeView = v
-                v.animate().scaleX(1.05f).scaleY(1.05f).translationZ(8f).setDuration(120L).start()
+                animateFocus(v, true, scale = 1.05f, elevation = 8f)
             } else {
-                v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(120L).start()
+                animateFocus(v, false, scale = 1.05f, elevation = 8f)
             }
         }
 
         binding.userProfilePill?.setOnFocusChangeListener { v, hasFocus ->
             if (hasFocus) {
-                v.animate().scaleX(1.05f).scaleY(1.05f).translationZ(6f).setDuration(120L).start()
+                animateFocus(v, true, scale = 1.05f, elevation = 6f)
             } else {
-                v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(120L).start()
+                animateFocus(v, false, scale = 1.05f, elevation = 6f)
             }
         }
 
@@ -826,6 +1076,7 @@ class HomeFragment : BaseFragment() {
         this * resources.displayMetrics.density
 
     private fun selectTab(tab: String) {
+        if (tab != "Início") featuredPreviewScheduler?.cancel()
         currentTab = tab
         if (tab == "Início" || tab == "Animes" || tab == "Favoritos") {
             binding.root.findViewById<View>(R.id.topHeaderBar)?.visibility = View.VISIBLE
@@ -852,6 +1103,12 @@ class HomeFragment : BaseFragment() {
                     shelfHeaderRow?.visibility = View.GONE
                     rvContinueWatchingShelf.visibility = View.GONE
                     rvWatchQueueShelf?.visibility = View.GONE
+                    tvNewEpisodesShelfLabel.visibility = View.GONE
+                    rvNewEpisodesShelf.visibility = View.GONE
+                    tvMyListShelfLabel?.visibility = View.GONE
+                    rvStarredShelf?.visibility = View.GONE
+                    tvRecentlyAddedShelfLabel.visibility = View.GONE
+                    rvRecentlyAddedShelf.visibility = View.GONE
                     tvQueueShelfLabel?.visibility = View.GONE
                     tvShelfViewQueue?.visibility = View.GONE
                     layoutHomeEmpty?.visibility = View.GONE
@@ -868,6 +1125,12 @@ class HomeFragment : BaseFragment() {
                     shelfHeaderRow?.visibility = View.GONE
                     rvContinueWatchingShelf.visibility = View.GONE
                     rvWatchQueueShelf?.visibility = View.GONE
+                    tvNewEpisodesShelfLabel.visibility = View.GONE
+                    rvNewEpisodesShelf.visibility = View.GONE
+                    tvMyListShelfLabel?.visibility = View.GONE
+                    rvStarredShelf?.visibility = View.GONE
+                    tvRecentlyAddedShelfLabel.visibility = View.GONE
+                    rvRecentlyAddedShelf.visibility = View.GONE
                     tvQueueShelfLabel?.visibility = View.GONE
                     tvShelfViewQueue?.visibility = View.GONE
                     layoutHomeEmpty?.visibility = View.GONE
@@ -884,6 +1147,12 @@ class HomeFragment : BaseFragment() {
                     shelfHeaderRow?.visibility = View.GONE
                     rvContinueWatchingShelf.visibility = View.GONE
                     rvWatchQueueShelf?.visibility = View.GONE
+                    tvNewEpisodesShelfLabel.visibility = View.GONE
+                    rvNewEpisodesShelf.visibility = View.GONE
+                    tvMyListShelfLabel?.visibility = View.GONE
+                    rvStarredShelf?.visibility = View.GONE
+                    tvRecentlyAddedShelfLabel.visibility = View.GONE
+                    rvRecentlyAddedShelf.visibility = View.GONE
                     tvQueueShelfLabel?.visibility = View.GONE
                     tvShelfViewQueue?.visibility = View.GONE
                     layoutHomeEmpty?.visibility = View.GONE
@@ -977,8 +1246,23 @@ class HomeFragment : BaseFragment() {
                             val hasRecent = viewModel.recentWatches.value.isNotEmpty()
                             val hasFeatured = viewModel.featuredAnime.value != null
                             val hasQueue = viewModel.watchQueue.value.isNotEmpty()
-                            binding.layoutHomeEmpty?.visibility = if (!hasRecent && !hasFeatured && !hasQueue && viewModel.animeLibrary.value.isEmpty() && !viewModel.isLoadingAnime.value) View.VISIBLE else View.GONE
+                            val hasMyList = starredShelfAdapter.itemCount > 0
+                            val hasRecentlyAdded = recentlyAddedAdapter.itemCount > 0
+                            binding.layoutHomeEmpty?.visibility = if (!hasRecent && !hasFeatured && !hasQueue && !hasMyList && !hasRecentlyAdded && viewModel.animeLibrary.value.isEmpty() && !viewModel.isLoadingAnime.value) View.VISIBLE else View.GONE
                         }
+                    }
+                }
+
+                launch {
+                    viewModel.animeLibrary.collect { files ->
+                        val sortedRecent = recentlyModifiedLibraryFolders(files)
+                        val recentToShow = if (binding.rvRecentlyAddedShelf.hasFocus()) {
+                            preserveFocusedShelfOrder(recentlyAddedAdapter.currentList, sortedRecent)
+                        } else {
+                            sortedRecent
+                        }
+                        recentlyAddedAdapter.submitList(recentToShow)
+                        if (currentTab == "Início") refreshInicioShelfUi()
                     }
                 }
 
@@ -1000,6 +1284,16 @@ class HomeFragment : BaseFragment() {
                                     }
                                     .show()
                             }
+                        }
+                    }
+                }
+
+                launch {
+                    viewModel.searchNotice.collect { message ->
+                        if (!message.isNullOrBlank() && viewModel.searchQuery.value.isNotBlank()) {
+                            com.google.android.material.snackbar.Snackbar
+                                .make(binding.root, message, com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
+                                .show()
                         }
                     }
                 }
@@ -1038,7 +1332,7 @@ class HomeFragment : BaseFragment() {
                                 val emptySubMessage = when {
                                     state.isOffline -> getString(R.string.home_error_offline_submessage)
                                     state.isAuthError -> getString(R.string.home_error_auth_submessage)
-                                    else -> state.message
+                                    else -> zechs.drive.stream.ui.common.StateView.sanitizeErrorMessage(state.message)
                                 }
                                 binding.layoutHomeEmpty?.findViewById<TextView>(R.id.tvEmptyMessage)?.text = emptyMessage
                                 binding.layoutHomeEmpty?.findViewById<TextView>(R.id.tvEmptySubMessage)?.text = emptySubMessage
@@ -1088,6 +1382,37 @@ class HomeFragment : BaseFragment() {
         }
     }
 
+    private fun observeStarredShelf() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                combine(viewModel.starredFiles, viewModel.animeLibrary) { starred, library ->
+                    filterStarredLibraryFolders(starred, library)
+                }.collect { files ->
+                    starredShelfAdapter.submitList(files)
+                    if (currentTab == "Início") refreshInicioShelfUi()
+                }
+            }
+        }
+    }
+
+    private fun observeFollowedEpisodesShelf() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                profileManager.activeProfileFlow.collectLatest { profile ->
+                    combine(
+                        viewModel.animeLibrary,
+                        followedFolderRepository.observeFollowed(profile.id)
+                    ) { library, followed ->
+                        filterFollowedLibraryFolders(followed, library)
+                    }.collect { files ->
+                        followedEpisodesAdapter.submitList(files)
+                        if (currentTab == "Início") refreshInicioShelfUi()
+                    }
+                }
+            }
+        }
+    }
+
     /**
      * Streaming-style entry point: on TV / landscape shells the cursor starts on the
      * hero's "Assistir agora" button instead of the sidebar's "Início" item. Runs once,
@@ -1121,60 +1446,20 @@ class HomeFragment : BaseFragment() {
                             binding.layoutHomeEmpty?.visibility = View.GONE
                             focusHeroOnFirstShow()
                         }
-                        binding.tvFeaturedTitle?.text = featured.title
-
-                        if (!featured.titleJapanese.isNullOrBlank()) {
-                            binding.tvFeaturedJapaneseTitle?.text = featured.titleJapanese
-                            binding.tvFeaturedJapaneseTitle?.visibility = View.VISIBLE
-                        } else {
-                            binding.tvFeaturedJapaneseTitle?.visibility = View.GONE
-                        }
-
-                        val cleanSynopsis = featured.synopsis
-                            ?.replace(Regex("<br\\s*/?>", RegexOption.IGNORE_CASE), " ")
-                            ?.replace(Regex("<[^>]+>"), "")
-                            ?.replace(Regex("\\s+"), " ")
-                            ?.trim()
-                        if (!cleanSynopsis.isNullOrBlank()) {
-                            binding.tvFeaturedSynopsis?.text = cleanSynopsis
-                            binding.tvFeaturedSynopsis?.visibility = View.VISIBLE
-                        } else {
-                            binding.tvFeaturedSynopsis?.visibility = View.GONE
-                        }
-
-                        // Dynamic genre pills
-                        binding.layoutFeaturedGenres?.removeAllViews()
-                        featured.genres.take(4).forEach { genreName ->
-                            val pill = android.widget.TextView(requireContext()).apply {
-                                text = genreName
-                                textSize = 11f
-                                setTextColor(android.graphics.Color.parseColor("#E6FFFFFF"))
-                                setBackgroundResource(R.drawable.tag_genre_pill_bg)
-                                val dp = resources.displayMetrics.density
-                                setPadding((10 * dp).toInt(), (4 * dp).toInt(), (10 * dp).toInt(), (4 * dp).toInt())
-                                val params = android.widget.LinearLayout.LayoutParams(
-                                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-                                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-                                ).apply {
-                                    marginEnd = (8 * resources.displayMetrics.density).toInt()
-                                }
-                                layoutParams = params
-                            }
-                            binding.layoutFeaturedGenres?.addView(pill)
-                        }
-
-                        val imgToLoad = featured.backdropUrl ?: featured.posterUrl
-                        if (!imgToLoad.isNullOrBlank()) {
-                            binding.ivFeaturedBackdrop?.let { iv ->
-                                MediaImageLoader.backdrop(iv, imgToLoad)
-                            }
-                        }
+                        featuredHeroBinder?.bind(featured, reduceMotionEnabled)
 
                         binding.btnFeaturedPlay?.setOnClickListener {
                             val file = viewModel.animeLibrary.value.firstOrNull {
                                 it.id == featured.folderId || it.shortcutDetails.targetId == featured.folderId
                             }
-                            if (file != null) {
+                            if (featured.isFocusedPreview) {
+                                val action = HomeFragmentDirections.actionHomeFragmentToSeriesDetailFragment(
+                                    name = featured.title,
+                                    folderId = featured.folderId,
+                                    posterUrl = featured.posterUrl ?: featured.backdropUrl
+                                )
+                                findNavController().navigateSafe(action)
+                            } else if (file != null) {
                                 handleQuickPlay(file)
                             } else {
                                 val folderFile = DriveFile(
@@ -1209,6 +1494,29 @@ class HomeFragment : BaseFragment() {
                     }
                 }
             }
+        }
+    }
+
+    private fun scheduleFeaturedPreview(folder: DriveFile, focusAnchor: View) {
+        if (currentTab != "Início" || !(folder.isFolder || folder.isShortcutFolder)) return
+        featuredPreviewScheduler?.schedule(folder) {
+            _binding != null && currentTab == "Início" &&
+                focusAnchor.isAttachedToWindow && focusAnchor.hasFocus()
+        }
+    }
+
+    private fun findLibraryFolderForTitle(fileName: String): DriveFile? {
+        val parsed = zechs.drive.stream.utils.EpisodeParser.parse(fileName)
+        val title = parsed.showTitle.ifBlank { parsed.cleanTitle }
+        val normalized = zechs.drive.stream.data.remote.AnimePosterResolver
+            .cleanAnimeTitle(title)
+            .trim()
+            .lowercase(java.util.Locale.ROOT)
+        if (normalized.isBlank()) return null
+        return viewModel.animeLibrary.value.firstOrNull { file ->
+            (file.isFolder || file.isShortcutFolder) &&
+                zechs.drive.stream.data.remote.AnimePosterResolver.cleanAnimeTitle(file.name)
+                    .trim().lowercase(java.util.Locale.ROOT) == normalized
         }
     }
 
@@ -1364,35 +1672,34 @@ class HomeFragment : BaseFragment() {
         }
     }
 
-    private fun showContinueWatchingContextMenu(watchItem: WatchList) {
-        val parsed = zechs.drive.stream.utils.EpisodeParser.parse(watchItem.name)
-        val title = parsed.showTitle.ifBlank { parsed.cleanTitle }
-
-        val options = arrayOf(
-            "Continuar assistindo (${watchItem.watchProgress()}%)",
-            "Assistir do início (0:00)",
-            "Marcar como concluído",
-            "Remover de Continuar Assistindo"
-        )
-
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
-            .setTitle(title)
-            .setItems(options) { dialog, which ->
-                dialog.dismiss()
-                when (which) {
-                    0 -> playWatchItem(watchItem, startFromBeginning = false)
-                    1 -> playWatchItem(watchItem, startFromBeginning = true)
-                    2 -> {
-                        viewModel.markWatchItemFinished(watchItem)
-                        com.google.android.material.snackbar.Snackbar.make(binding.root, "Episódio marcado como concluído", 1500).show()
-                    }
-                    3 -> {
-                        viewModel.removeWatchItem(watchItem)
-                        com.google.android.material.snackbar.Snackbar.make(binding.root, "Item removido de Continuar Assistindo", 1500).show()
-                    }
+    private fun showContinueWatchingContextMenu(watchItem: WatchList, focusAnchor: View) {
+        zechs.drive.stream.ui.home.ContinueWatchingContextMenu.show(
+            context = requireContext(),
+            watchItem = watchItem,
+            focusAnchor = focusAnchor
+        ) { action ->
+            when (action) {
+                zechs.drive.stream.ui.home.ContinueWatchingContextMenu.Action.RESUME ->
+                    playWatchItem(watchItem, startFromBeginning = false)
+                zechs.drive.stream.ui.home.ContinueWatchingContextMenu.Action.RESTART ->
+                    playWatchItem(watchItem, startFromBeginning = true)
+                zechs.drive.stream.ui.home.ContinueWatchingContextMenu.Action.OPEN_SERIES -> {
+                    val series = findLibraryFolderForTitle(watchItem.name)
+                    if (series != null) handleOpenFolder(series)
+                    else Toast.makeText(requireContext(), R.string.home_series_not_found, Toast.LENGTH_SHORT).show()
+                }
+                zechs.drive.stream.ui.home.ContinueWatchingContextMenu.Action.MARK_FINISHED -> {
+                    viewModel.markWatchItemFinished(watchItem)
+                    com.google.android.material.snackbar.Snackbar.make(binding.root, R.string.home_marked_finished, 1500).show()
+                }
+                zechs.drive.stream.ui.home.ContinueWatchingContextMenu.Action.REMOVE -> {
+                    viewModel.removeWatchItem(watchItem)
+                    com.google.android.material.snackbar.Snackbar.make(binding.root, R.string.home_continue_removed, com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
+                        .setAction(R.string.undo) { viewModel.restoreWatchItem(watchItem) }
+                        .show()
                 }
             }
-            .show()
+        }
     }
 
     private fun playWatchItem(watchItem: WatchList, startFromBeginning: Boolean = false) {
@@ -1470,6 +1777,9 @@ class HomeFragment : BaseFragment() {
     }
 
     override fun onDestroyView() {
+        featuredPreviewScheduler?.cancel()
+        featuredPreviewScheduler = null
+        featuredHeroBinder = null
         super.onDestroyView()
         _binding = null
     }

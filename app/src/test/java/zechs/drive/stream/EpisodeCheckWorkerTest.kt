@@ -1,175 +1,137 @@
 package zechs.drive.stream
 
-import io.mockk.coEvery
-import io.mockk.coJustRun
-import io.mockk.coVerify
-import io.mockk.mockk
-import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
-import zechs.drive.stream.data.local.FollowedFolder
 import zechs.drive.stream.data.model.File
-import zechs.drive.stream.data.repository.DriveRepository
-import zechs.drive.stream.data.repository.FollowedFolderRepository
+import zechs.drive.stream.data.model.FileCollectionResult
+import zechs.drive.stream.data.model.DriveQueryContext
+import zechs.drive.stream.data.model.ShortcutDetails
 import zechs.drive.stream.utils.state.Resource
+import zechs.drive.stream.worker.EpisodeCountPolicy
 
-/**
- * FEAT-05 unit tests for the new-episode check logic.
- *
- * We test the core decision logic without starting a real WorkManager or
- * posting a real [NotificationManager] notification.  [EpisodeCheckWorker] is
- * not directly instantiated here — instead the decision logic is extracted into
- * the helper functions below that mirror the worker's algorithm.
- */
+/** Exercises the exact pure policy used by EpisodeCheckWorker. */
 class EpisodeCheckWorkerTest {
 
-    private val driveRepository: DriveRepository = mockk()
-    private val followedFolderRepository: FollowedFolderRepository = mockk()
-
-    // -------------------------------------------------------------------------
-    // Helpers that replicate the worker's core algorithm without AndroidContext
-    // -------------------------------------------------------------------------
-
-    /**
-     * Runs the episode-check logic for a single profile, returns the set of
-     * folder IDs for which a notification would be fired.
-     */
-    private suspend fun runCheckForProfile(
-        profileId: String
-    ): Set<String> {
-        val notified = mutableSetOf<String>()
-        val followed = followedFolderRepository.getFollowedSync(profileId)
-
-        for (folder in followed) {
-            val result = driveRepository.getAllFiles(
-                query = "'${folder.folderId}' in parents and trashed = false",
-                pageSize = 100,
-                maxPages = 3
+    @Test
+    fun `complete listing counts only unique playable video files`() {
+        val listing = complete(
+            video("episode-1", "Episode 01.mkv"),
+            video("episode-1", "Episode 01.mkv"), // repeated across Drive pages
+            video("episode-2", "Episode 02", mimeType = "video/mp4"),
+            video("subtitle", "Episode 02.srt", mimeType = "application/x-subrip"),
+            video("folder", "Season 2", mimeType = "application/vnd.google-apps.folder"),
+            video(
+                id = "shortcut",
+                name = "Episode 03",
+                mimeType = "application/vnd.google-apps.shortcut",
+                shortcutDetails = ShortcutDetails(targetMimeType = "video/mp4")
             )
-            if (result is Resource.Success) {
-                val currentCount = result.data.size
-                if (currentCount > folder.lastKnownCount && folder.lastKnownCount > 0) {
-                    notified += folder.folderId
-                }
-                followedFolderRepository.updateLastKnownCount(
-                    folderId = folder.folderId,
-                    count = currentCount,
-                    profileId = profileId
-                )
-            }
-        }
-        return notified
-    }
-
-    // -------------------------------------------------------------------------
-    // Tests
-    // -------------------------------------------------------------------------
-
-    @Test
-    fun `no followed folders — no notification, no updateLastKnownCount`() = runTest {
-        coEvery { followedFolderRepository.getFollowedSync("caua") } returns emptyList()
-
-        val notified = runCheckForProfile("caua")
-
-        assert(notified.isEmpty())
-        coVerify(exactly = 0) { followedFolderRepository.updateLastKnownCount(any(), any(), any()) }
-    }
-
-    @Test
-    fun `count unchanged — no notification, count still updated`() = runTest {
-        val folder = FollowedFolder(
-            profileId = "caua",
-            folderId = "folder_123",
-            folderName = "Naruto",
-            lastKnownCount = 5
         )
-        coEvery { followedFolderRepository.getFollowedSync("caua") } returns listOf(folder)
-        coEvery { driveRepository.getAllFiles(any(), any(), any()) } returns
-            Resource.Success(buildFakeFiles(5))
-        coJustRun { followedFolderRepository.updateLastKnownCount("folder_123", 5, "caua") }
 
-        val notified = runCheckForProfile("caua")
+        val decision = EpisodeCountPolicy.evaluate(2, Resource.Success(listing))
 
-        assert(notified.isEmpty()) { "Expected no notification when count is unchanged" }
-        coVerify(exactly = 1) {
-            followedFolderRepository.updateLastKnownCount("folder_123", 5, "caua")
-        }
+        assertEquals(EpisodeCountPolicy.Decision.Complete(videoCount = 3, newEpisodeCount = 1), decision)
     }
 
     @Test
-    fun `new episodes detected — notification fired and count updated`() = runTest {
-        val folder = FollowedFolder(
-            profileId = "caua",
-            folderId = "folder_456",
-            folderName = "One Piece",
-            lastKnownCount = 10
+    fun `first complete check establishes baseline without notification`() {
+        val decision = EpisodeCountPolicy.evaluate(
+            previousVideoCount = 0,
+            result = Resource.Success(complete(video("episode-1", "episode.mkv")))
         )
-        coEvery { followedFolderRepository.getFollowedSync("caua") } returns listOf(folder)
-        coEvery { driveRepository.getAllFiles(any(), any(), any()) } returns
-            Resource.Success(buildFakeFiles(13))
-        coJustRun { followedFolderRepository.updateLastKnownCount("folder_456", 13, "caua") }
 
-        val notified = runCheckForProfile("caua")
-
-        assert("folder_456" in notified) { "Expected notification for folder_456" }
-        coVerify(exactly = 1) {
-            followedFolderRepository.updateLastKnownCount("folder_456", 13, "caua")
-        }
+        assertEquals(EpisodeCountPolicy.Decision.Complete(videoCount = 1, newEpisodeCount = 0), decision)
     }
 
     @Test
-    fun `first check (lastKnownCount == 0) — no notification but count saved`() = runTest {
-        // On first check the baseline should be stored without notifying the
-        // user — otherwise every followed folder triggers a spurious alert.
-        val folder = FollowedFolder(
-            profileId = "anime",
-            folderId = "folder_789",
-            folderName = "Attack on Titan",
-            lastKnownCount = 0
-        )
-        coEvery { followedFolderRepository.getFollowedSync("anime") } returns listOf(folder)
-        coEvery { driveRepository.getAllFiles(any(), any(), any()) } returns
-            Resource.Success(buildFakeFiles(87))
-        coJustRun { followedFolderRepository.updateLastKnownCount("folder_789", 87, "anime") }
+    fun `complete empty listing resets count without notifying`() {
+        val decision = EpisodeCountPolicy.evaluate(previousVideoCount = 5, result = Resource.Success(complete()))
 
-        val notified = runCheckForProfile("anime")
-
-        assert(notified.isEmpty()) { "First check should not notify — baseline is being established" }
-        coVerify(exactly = 1) {
-            followedFolderRepository.updateLastKnownCount("folder_789", 87, "anime")
-        }
+        assertEquals(EpisodeCountPolicy.Decision.Complete(videoCount = 0, newEpisodeCount = 0), decision)
     }
 
     @Test
-    fun `drive error — no notification, no count update`() = runTest {
-        val folder = FollowedFolder(
-            profileId = "caua",
-            folderId = "folder_err",
-            folderName = "Berserk",
-            lastKnownCount = 5
+    fun `incomplete page never updates baseline`() {
+        val partial = FileCollectionResult(
+            files = listOf(video("episode-9", "episode-9.mkv")),
+            isComplete = false,
+            nextPageToken = "page-2",
+            pagesFetched = 1,
+            queryContext = testQueryContext,
+            incompleteReason = FileCollectionResult.IncompleteReason.PAGE_LIMIT
         )
-        coEvery { followedFolderRepository.getFollowedSync("caua") } returns listOf(folder)
-        coEvery { driveRepository.getAllFiles(any(), any(), any()) } returns
-            Resource.Error("Network error")
 
-        val notified = runCheckForProfile("caua")
-
-        assert(notified.isEmpty())
-        coVerify(exactly = 0) { followedFolderRepository.updateLastKnownCount(any(), any(), any()) }
+        assertEquals(EpisodeCountPolicy.Decision.Retry, EpisodeCountPolicy.evaluate(8, Resource.Success(partial)))
     }
 
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
+    @Test
+    fun `complete flag with continuation token is rejected as inconsistent`() {
+        val inconsistent = FileCollectionResult(
+            files = listOf(video("episode-9", "episode-9.mkv")),
+            isComplete = true,
+            nextPageToken = "page-2",
+            pagesFetched = 1,
+            queryContext = testQueryContext
+        )
 
-    private fun buildFakeFiles(count: Int): List<File> =
-        (1..count).map { i ->
-            File(
-                id = "file_$i",
-                name = "episode_$i.mkv",
-                mimeType = "video/x-matroska",
-                size = null,
-                iconLink = "https://drive.google.com/icon.png",
-                thumbnailLink = null
-            )
-        }
+        assertEquals(EpisodeCountPolicy.Decision.Retry, EpisodeCountPolicy.evaluate(8, Resource.Success(inconsistent)))
+    }
+
+    @Test
+    fun `request failure with partial files never updates baseline`() {
+        val partial = FileCollectionResult(
+            files = listOf(video("episode-9", "episode-9.mkv")),
+            isComplete = false,
+            nextPageToken = "page-2",
+            pagesFetched = 1,
+            queryContext = testQueryContext,
+            incompleteReason = FileCollectionResult.IncompleteReason.REQUEST_FAILED
+        )
+
+        assertEquals(EpisodeCountPolicy.Decision.Retry, EpisodeCountPolicy.evaluate(8, Resource.Error("offline", partial)))
+    }
+
+    @Test
+    fun `a deletion does not emit a negative new episode count`() {
+        val decision = EpisodeCountPolicy.evaluate(
+            previousVideoCount = 8,
+            result = Resource.Success(complete(video("episode-1", "episode-1.mkv")))
+        )
+
+        assertEquals(EpisodeCountPolicy.Decision.Complete(videoCount = 1, newEpisodeCount = 0), decision)
+    }
+
+    @Test
+    fun `errors without partial results are retried`() {
+        assertTrue(EpisodeCountPolicy.evaluate(1, Resource.Error("offline")) is EpisodeCountPolicy.Decision.Retry)
+    }
+
+    private fun complete(vararg files: File) = FileCollectionResult(
+        files = files.toList(),
+        isComplete = true,
+        nextPageToken = null,
+        pagesFetched = 1,
+        queryContext = testQueryContext
+    )
+
+    private val testQueryContext = DriveQueryContext(
+        query = "trashed=false",
+        pageSize = 100,
+        orderBy = "name"
+    )
+
+    private fun video(
+        id: String,
+        name: String,
+        mimeType: String = "video/x-matroska",
+        shortcutDetails: ShortcutDetails = ShortcutDetails()
+    ) = File(
+        id = id,
+        name = name,
+        size = null,
+        iconLink = "",
+        mimeType = mimeType,
+        shortcutDetails = shortcutDetails
+    )
 }

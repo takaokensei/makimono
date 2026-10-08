@@ -19,6 +19,10 @@ class SignInViewModel @Inject constructor(
     private val driveRepository: Lazy<DriveRepository>
 ) : ViewModel() {
 
+    companion object {
+        const val AUTHORIZATION_CODE_MISSING = "authorization_code_missing"
+    }
+
     private val _loginStatus = MutableLiveData<Resource<AuthorizationResponse>>()
     val loginStatus: LiveData<Resource<AuthorizationResponse>>
         get() = _loginStatus
@@ -38,7 +42,7 @@ class SignInViewModel @Inject constructor(
             trimmed
         }
         if (authCode.isNullOrEmpty()) {
-            _loginStatus.postValue(Resource.Error("Authorization code not found, please check url"))
+            _loginStatus.postValue(Resource.Error(AUTHORIZATION_CODE_MISSING))
         } else {
             val targetClient = client ?: zechs.drive.stream.utils.util.Constants.DEFAULT_CLIENT
             val response = driveRepository.get().fetchRefreshToken(targetClient, authCode)

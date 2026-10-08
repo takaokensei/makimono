@@ -59,7 +59,7 @@
                 android:fontFamily="@font/inter"
                 android:text="Anime"
                 android:textColor="@color/layout_literal_ffffff"
-                android:textSize="17sp"
+                style="@style/TextAppearance.Makimono.TV.Headline"
                 android:textStyle="bold" />
 
             <TextView
@@ -69,7 +69,7 @@
                 android:fontFamily="@font/inter"
                 android:text="Library"
                 android:textColor="@color/layout_literal_7dd3fc"
-                android:textSize="17sp" />
+                style="@style/TextAppearance.Makimono.TV.Headline" />
 
         </LinearLayout>
 
@@ -100,7 +100,7 @@
                 android:fontFamily="@font/inter"
                 android:text="0 animes"
                 android:textColor="@color/layout_literal_cbd5e1"
-                android:textSize="12sp"
+                style="@style/TextAppearance.Makimono.TV.Body"
                 android:textStyle="bold" />
 
         </LinearLayout>
@@ -145,7 +145,7 @@
             android:singleLine="true"
             android:textColor="@color/layout_literal_f1f5f9"
             android:textColorHint="@color/layout_literal_64748b"
-            android:textSize="13sp" />
+            style="@style/TextAppearance.Makimono.TV.Callout" />
 
         <ImageView
             android:id="@+id/btnVoiceSearch"
@@ -222,7 +222,7 @@
                     android:fontFamily="@font/inter"
                     android:text="Início"
                     android:textColor="@color/layout_literal_94a3b8"
-                    android:textSize="13sp" />
+                    style="@style/TextAppearance.Makimono.TV.Callout" />
 
             </LinearLayout>
 
@@ -256,7 +256,7 @@
                     android:fontFamily="@font/inter"
                     android:text="Animes"
                     android:textColor="@color/layout_literal_ffffff"
-                    android:textSize="13sp"
+                    style="@style/TextAppearance.Makimono.TV.Callout"
                     android:textStyle="bold" />
 
             </LinearLayout>
@@ -290,7 +290,7 @@
                     android:fontFamily="@font/inter"
                     android:text="Pastas"
                     android:textColor="@color/layout_literal_94a3b8"
-                    android:textSize="13sp" />
+                    style="@style/TextAppearance.Makimono.TV.Callout" />
 
             </LinearLayout>
 
@@ -324,7 +324,7 @@
                     android:fontFamily="@font/inter"
                     android:text="Favoritos"
                     android:textColor="@color/layout_literal_94a3b8"
-                    android:textSize="13sp" />
+                    style="@style/TextAppearance.Makimono.TV.Callout" />
 
             </LinearLayout>
 
@@ -356,7 +356,7 @@
                     android:fontFamily="@font/inter"
                     android:text="Configurações"
                     android:textColor="@color/layout_literal_94a3b8"
-                    android:textSize="13sp" />
+                    style="@style/TextAppearance.Makimono.TV.Callout" />
 
             </LinearLayout>
 
@@ -392,13 +392,13 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="6dp"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="12dp"
                     android:layout_marginBottom="8dp"
                     android:fontFamily="@font/inter"
                     android:letterSpacing="0.08"
                     android:text="CONTINUAR ASSISTINDO"
                     android:textColor="@color/layout_literal_7dd3fc"
-                    android:textSize="11sp"
+                    style="@style/TextAppearance.Makimono.TV.Caption"
                     android:textStyle="bold"
                     android:visibility="gone"
                     tools:visibility="visible" />
@@ -424,7 +424,7 @@
                     android:letterSpacing="0.08"
                     android:text="MINHA FILA"
                     android:textColor="@color/layout_literal_7dd3fc"
-                    android:textSize="11sp"
+                    style="@style/TextAppearance.Makimono.TV.Caption"
                     android:textStyle="bold"
                     android:visibility="gone"
                     tools:visibility="visible" />
@@ -439,6 +439,57 @@
                     android:orientation="horizontal"
                     android:visibility="gone"
                     tools:visibility="visible" />
+
+                                <TextView android:id="@+id/tvNewEpisodesShelfLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="6dp" android:layout_marginBottom="8dp" android:fontFamily="@font/inter" android:text="@string/home_new_episodes" android:textColor="@color/layout_literal_ffffff" style="@style/TextAppearance.Makimono.TV.Title3" android:textStyle="bold" android:visibility="gone" />
+                <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvNewEpisodesShelf" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:clipChildren="false" android:clipToPadding="false" android:descendantFocusability="afterDescendants" android:focusable="false" android:orientation="horizontal" android:paddingStart="@dimen/home_content_margin" android:paddingEnd="@dimen/home_content_margin" android:paddingTop="6dp" android:paddingBottom="6dp" android:visibility="gone" /><TextView
+                    android:id="@+id/tvMyListShelfLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:layout_marginBottom="8dp"
+                    android:fontFamily="@font/inter"
+                    android:text="@string/home_my_list"
+                    android:textColor="@color/layout_literal_ffffff"
+                    style="@style/TextAppearance.Makimono.TV.Headline"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvStarredShelf"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/home_shelf_height"
+                    android:layout_marginBottom="12dp"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
+                    android:descendantFocusability="afterDescendants"
+                    android:focusable="false"
+                    android:orientation="horizontal"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/tvRecentlyAddedShelfLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:layout_marginBottom="8dp"
+                    android:fontFamily="@font/inter"
+                    android:text="@string/home_recently_added"
+                    android:textColor="@color/layout_literal_ffffff"
+                    style="@style/TextAppearance.Makimono.TV.Headline"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvRecentlyAddedShelf"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
+                    android:descendantFocusability="afterDescendants"
+                    android:focusable="false"
+                    android:orientation="horizontal"
+                    android:visibility="gone" />
 
                 <!-- Main Anime Library Grid (2 columns on phone) -->
                 <androidx.recyclerview.widget.RecyclerView
@@ -488,7 +539,7 @@
                 android:fontFamily="@font/inter"
                 android:text="Nenhum anime encontrado"
                 android:textColor="?attr/colorTextSecondary"
-                android:textSize="14sp"
+                style="@style/TextAppearance.Makimono.TV.Body"
                 android:textStyle="bold" />
 
         </LinearLayout>

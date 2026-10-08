@@ -1,8 +1,9 @@
-﻿package zechs.drive.stream
+package zechs.drive.stream
 
-import com.google.android.exoplayer2.upstream.DataSpec
-import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
-import com.google.android.exoplayer2.upstream.HttpDataSource
+import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.HttpDataSource
+import androidx.media3.common.util.Log
 import io.mockk.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.test.runTest
@@ -91,7 +92,9 @@ class TokenProviderTest {
         every { wrapped.open(any()) } returns 12345L
 
         val dataSource = AuthenticatingDataSource(wrapped, provider)
-        val dataSpec = DataSpec(android.net.Uri.parse("https://drive.google.com/test"))
+        // android.net.Uri.parse() is a framework stub in local JVM tests (it returns null).
+        // DataSpec only needs a non-null Uri for these mocked data-source interactions.
+        val dataSpec = DataSpec(mockk<android.net.Uri>())
 
         val bytes = dataSource.open(dataSpec)
         assertEquals(12345L, bytes)
@@ -105,19 +108,24 @@ class TokenProviderTest {
         val wrapped: DefaultHttpDataSource = mockk(relaxed = true)
         val provider: TokenProvider = mockk(relaxed = true)
         every { provider.getCachedToken() } returns "stale-token"
-        val dataSpec = DataSpec(android.net.Uri.parse("https://drive.google.com/test"))
+        // Keep the test independent from Android framework Uri implementations.
+        val dataSpec = DataSpec(mockk<android.net.Uri>())
         every { wrapped.open(any()) } throws HttpDataSource.InvalidResponseCodeException(
-            401, "Unauthorized", emptyMap(), dataSpec
+            401, "Unauthorized", null, emptyMap(), dataSpec, ByteArray(0)
         )
 
         val dataSource = AuthenticatingDataSource(wrapped, provider)
 
+        // Media3's default logger forwards to Android Log, which is a stub in local JVM tests.
+        Log.setLogger(mockk(relaxed = true))
         try {
             dataSource.open(dataSpec)
             fail("Expected InvalidResponseCodeException")
         } catch (e: HttpDataSource.InvalidResponseCodeException) {
             assertEquals(401, e.responseCode)
             verify(exactly = 1) { provider.invalidateToken() }
+        } finally {
+            Log.setLogger(Log.Logger.DEFAULT)
         }
     }
 

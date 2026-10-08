@@ -25,6 +25,7 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import zechs.drive.stream.BuildConfig
 import zechs.drive.stream.utils.MakimonoMediaSessionHelper
 import zechs.drive.stream.utils.MakimonoPiPHelper
 import zechs.drive.stream.utils.PlaybackProgressPolicy
@@ -36,34 +37,40 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.transition.AutoTransition
 import androidx.transition.TransitionManager
-import com.google.android.exoplayer2.*
-import com.google.android.exoplayer2.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
-import com.google.android.exoplayer2.mediacodec.MediaCodecSelector
-import com.google.android.exoplayer2.ExoPlaybackException.*
-import com.google.android.exoplayer2.Format.NO_VALUE
-import com.google.android.exoplayer2.audio.AudioAttributes
-import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory
-import com.google.android.exoplayer2.extractor.ts.DefaultTsPayloadReaderFactory
-import com.google.android.exoplayer2.extractor.ts.TsExtractor
-import com.google.android.exoplayer2.source.DefaultMediaSourceFactory
-import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
-import com.google.android.exoplayer2.trackselection.MappingTrackSelector.MappedTrackInfo
-import com.google.android.exoplayer2.trackselection.TrackSelectionOverride
-import com.google.android.exoplayer2.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL
-import com.google.android.exoplayer2.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
-import com.google.android.exoplayer2.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-import com.google.android.exoplayer2.ui.CaptionStyleCompat
-import com.google.android.exoplayer2.ui.PlayerView
-import com.google.android.exoplayer2.ui.SubtitleView
-import com.google.android.exoplayer2.text.Cue
-import com.google.android.exoplayer2.text.CueGroup
+import androidx.media3.common.*
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.SeekParameters
+import androidx.media3.exoplayer.ExoPlaybackException
+import androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
+import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.ExoPlaybackException.*
+import androidx.media3.common.Format.NO_VALUE
+import androidx.media3.common.AudioAttributes
+import androidx.media3.extractor.DefaultExtractorsFactory
+import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
+import androidx.media3.extractor.ts.TsExtractor
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+import androidx.media3.exoplayer.trackselection.MappingTrackSelector.MappedTrackInfo
+import androidx.media3.common.TrackSelectionOverride
+import androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL
+import androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+import androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+import androidx.media3.ui.CaptionStyleCompat
+import androidx.media3.ui.PlayerView
+import androidx.media3.ui.SubtitleView
+import androidx.media3.common.text.Cue
+import androidx.media3.common.text.CueGroup
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.StyleSpan
-import com.google.android.exoplayer2.ui.TrackSelectionDialogBuilder
-import com.google.android.exoplayer2.upstream.DataSource
-import com.google.android.exoplayer2.upstream.DefaultDataSource
-import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
+import androidx.media3.ui.TrackSelectionDialogBuilder
+import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -74,7 +81,7 @@ import zechs.drive.stream.utils.MediaImageLoader
 import zechs.drive.stream.utils.ThumbnailUrl
 import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
-import com.google.android.exoplayer2.util.MimeTypes
+import androidx.media3.common.MimeTypes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -108,6 +115,7 @@ import android.app.UiModeManager
 import android.content.Context
 import android.content.pm.PackageManager
 import zechs.drive.stream.utils.DeviceUi
+import zechs.drive.stream.utils.MotionPolicy
 import android.view.MotionEvent
 import java.util.*
 import javax.inject.Inject
@@ -178,6 +186,8 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     private lateinit var btnPlayPause: MaterialButton
     private lateinit var btnPrevEp: ImageButton
     private lateinit var btnNextEp: ImageButton
+    private lateinit var btnRew: ImageButton
+    private lateinit var btnFfwd: ImageButton
     private lateinit var btnAudio: View
     private lateinit var btnSubtitle: View
     private lateinit var btnEpisodes: View
@@ -198,6 +208,8 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     private lateinit var tvAniSkipLabel: TextView
     private var prevEpisode: PlaylistItem? = null
     private var aniskipPillJob: Job? = null
+    private var tvPlayerClock: TextView? = null
+    private var chapterMarkersView: ChapterMarkersView? = null
 
     // MediaSession
     private var mediaSessionHelper: MakimonoMediaSessionHelper? = null
@@ -216,11 +228,14 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     // Kodi features states
     private var isKodiHudVisible = false
     private var kodiHudUpdateJob: Job? = null
+    private var activeVideoDecoderName: String? = null
     private var forcedSubtitleUri: Uri? = null
     private var activeExternalSubItem: SubtitleItem? = null
     private var activeExternalSubFile: java.io.File? = null
     private var currentSubtitleOffsetMs = 0L
     private var currentSubtitleStyle = zechs.drive.stream.utils.SubtitleStyle()
+    private var isNightModeAudioEnabled = false
+    private var loudnessEnhancer: android.media.audiofx.LoudnessEnhancer? = null
 
     // Playlist & Next Episode Auto-Play
     private var currentFileId: String = ""
@@ -246,20 +261,22 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     private var orientation = Orientation.LANDSCAPE
     private val mainHandler = Handler(Looper.getMainLooper())
     private var ignoreNextCenterKeyUp = false
+    private var handledFocusDirectionKeyCode: Int? = null
     private var isCenterLongPressSpeeding = false
     private var speedBeforeCenterHold = 1.0f
     private val centerLongPressRunnable = Runnable {
         if (!isControlsShowing() && !controlsLocked && ::player.isInitialized && player.isPlaying) {
             isCenterLongPressSpeeding = true
             speedBeforeCenterHold = player.playbackParameters.speed
-            player.playbackParameters = com.google.android.exoplayer2.PlaybackParameters(2.0f)
+            player.playbackParameters = androidx.media3.common.PlaybackParameters(2.0f)
             gestureHelper.showSpeedPill()
             ignoreNextCenterKeyUp = true
         }
     }
-    private var cumulativeSeekSeconds = 0
+    private val seekStepPolicy = zechs.drive.stream.utils.SeekStepPolicy()
+    private var reduceMotionEnabled = false
     private val resetSeekAccumulatorRunnable = Runnable {
-        cumulativeSeekSeconds = 0
+        seekStepPolicy.reset()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -277,6 +294,14 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
 
         binding = ActivityPlayerBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        lifecycleScope.launch {
+            reduceMotionEnabled = runCatching {
+                MotionPolicy.shouldReduceMotion(
+                    appSettings.get().fetchMotionPreference(),
+                    MotionPolicy.areSystemAnimationsEnabled()
+                )
+            }.getOrDefault(false)
+        }
 
         // P2-10: substitui onBackPressed() deprecado pelo dispatcher moderno.
         onBackPressedDispatcher.addCallback(object : androidx.activity.OnBackPressedCallback(true) {
@@ -302,6 +327,8 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         btnPlayPause = playerView.findViewById(R.id.btnPlayPause)
         btnPrevEp = playerView.findViewById(R.id.btnPrevEp)
         btnNextEp = playerView.findViewById(R.id.btnNextEp)
+        btnRew = playerView.findViewById(R.id.exo_rew)
+        btnFfwd = playerView.findViewById(R.id.exo_ffwd)
         btnAudio = playerView.findViewById(R.id.btnAudio)
         btnSubtitle = playerView.findViewById(R.id.btnSubtitle)
         btnEpisodes = playerView.findViewById(R.id.btnEpisodes)
@@ -320,6 +347,8 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         skipIntroRow = playerView.findViewById(R.id.skipIntroRow)
         aniskipPill = playerView.findViewById(R.id.aniskipPill)
         tvAniSkipLabel = playerView.findViewById(R.id.tvAniSkipLabel)
+        tvPlayerClock = playerView.findViewById(R.id.tvPlayerClock)
+        chapterMarkersView = playerView.findViewById(R.id.chapterMarkersView)
 
         // Back button
         toolbar.setNavigationOnClickListener {
@@ -328,12 +357,56 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         btnBack.setOnClickListener {
             finish()
         }
+        // PlayerView may consume the first touch while toggling its controller. Keep the
+        // dedicated exit target deterministic for touch: one completed tap invokes the same
+        // accessible click action exactly once.
+        btnBack.setOnTouchListener { view, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    view.isPressed = true
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    view.isPressed = event.x >= 0f && event.x < view.width &&
+                        event.y >= 0f && event.y < view.height
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    val activate = view.isPressed && event.x >= 0f && event.x < view.width &&
+                        event.y >= 0f && event.y < view.height
+                    view.isPressed = false
+                    if (activate) view.performClick()
+                    true
+                }
+                MotionEvent.ACTION_CANCEL -> {
+                    view.isPressed = false
+                    true
+                }
+                else -> false
+            }
+        }
 
         btnPrevEp.setOnClickListener {
             playPrevEpisodeDirectly()
         }
         btnNextEp.setOnClickListener {
             playNextEpisodeDirectly()
+        }
+
+        btnRew.setOnClickListener {
+            mainHandler.removeCallbacks(resetSeekAccumulatorRunnable)
+            val deltaSeconds = seekStepPolicy.onSeekPress(-1)
+            seekRelative(deltaSeconds * 1000L)
+            gestureHelper.showSeekRipple(seekStepPolicy.cumulativeSeconds)
+            mainHandler.postDelayed(resetSeekAccumulatorRunnable, zechs.drive.stream.utils.SeekStepPolicy.TIMEOUT_MS)
+        }
+
+        btnFfwd.setOnClickListener {
+            mainHandler.removeCallbacks(resetSeekAccumulatorRunnable)
+            val deltaSeconds = seekStepPolicy.onSeekPress(1)
+            seekRelative(deltaSeconds * 1000L)
+            gestureHelper.showSeekRipple(seekStepPolicy.cumulativeSeconds)
+            mainHandler.postDelayed(resetSeekAccumulatorRunnable, zechs.drive.stream.utils.SeekStepPolicy.TIMEOUT_MS)
         }
 
         skipIntroRow.setOnClickListener {
@@ -427,7 +500,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                 items = items
             ) { selected ->
                 val chosenSpeed = selected.tag as? Float ?: 1.0f
-                player.playbackParameters = PlaybackParameters(chosenSpeed)
+                player.playbackParameters = PlaybackParameters(chosenSpeed, 1.0f)
                 val idx = speed.indexOfFirst { it.startsWith(chosenSpeed.toString()) }.takeIf { it >= 0 } ?: 2
                 speedSnackbar(idx)
             }.show()
@@ -449,7 +522,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             hudBinding = binding.gestureHud,
             callback = object : PlayerGestureCallback {
                 override fun onToggleControls() {
-                    if (playerView.isControllerVisible) {
+                    if (isControlsShowing()) {
                         animateHideController()
                     } else {
                         animateShowController()
@@ -483,12 +556,12 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
 
                 override fun onSetSpeed(speed: Float) {
                     if (::player.isInitialized) {
-                        player.playbackParameters = PlaybackParameters(speed)
+                        player.playbackParameters = PlaybackParameters(speed, 1.0f)
                     }
                 }
 
                 override fun isControlsLocked(): Boolean = controlsLocked
-                override fun isControllerVisible(): Boolean = playerView.isControllerVisible
+                override fun isControllerVisible(): Boolean = isControlsShowing()
                 override fun getTouchIgnoredViews(): List<View> = listOf(
                     toolbar,
                     btnBack,
@@ -527,6 +600,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         currentFileId = intent.getStringExtra("fileId") ?: ""
         currentTitle = intent.getStringExtra("title") ?: ""
         currentThumbnailLink = intent.getStringExtra("thumbnailLink")
+        val siblingFolderId = intent.getStringExtra(PlayerLauncher.EXTRA_SIBLING_FOLDER_ID)
 
         @Suppress("DEPRECATION")
         val rawPlaylist = intent.getSerializableExtra("playlist") as? ArrayList<PlaylistItem>
@@ -534,14 +608,17 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             playlist = rawPlaylist.toMutableList()
             updateNextEpisode()
         } else if (currentFileId.isNotEmpty()) {
-            viewModel.fetchSiblings(currentFileId)
+            viewModel.fetchSiblings(currentFileId, siblingFolderId)
         }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.playlistChannel.consumeAsFlow().collect { list ->
-                    if (playlist.isEmpty() && list.isNotEmpty()) {
-                        playlist = list.toMutableList()
+                    if (list.message != null) {
+                        Snackbar.make(playerView, list.message, Snackbar.LENGTH_LONG).show()
+                    }
+                    if (list.items.isNotEmpty()) {
+                        playlist = PlaybackPlaylistPolicy.merge(playlist, list.items).toMutableList()
                         updateNextEpisode()
                     }
                 }
@@ -553,14 +630,17 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         if (rawSubtitles != null && rawSubtitles.isNotEmpty()) {
             folderSubtitles = rawSubtitles.toMutableList()
         } else if (currentFileId.isNotEmpty()) {
-            viewModel.fetchSubtitles(currentFileId)
+            viewModel.fetchSubtitles(currentFileId, siblingFolderId)
         }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.subtitlesChannel.consumeAsFlow().collect { list ->
-                    if (list.isNotEmpty()) {
-                        folderSubtitles = list.toMutableList()
+                    if (list.message != null) {
+                        Snackbar.make(playerView, list.message, Snackbar.LENGTH_LONG).show()
+                    }
+                    if (list.items.isNotEmpty()) {
+                        folderSubtitles = PlaybackPlaylistPolicy.mergeSubtitles(folderSubtitles, list.items).toMutableList()
                         loadMatchingExternalSubtitles()
                     }
                 }
@@ -725,6 +805,20 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                     }
                     it.codecs?.let { codec ->
                         subtitleText += codec
+                    }
+
+                    // Kodi CRenderManager AFR: Match display refresh rate to video fps
+                    if (it.frameRate > 0) {
+                        val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            display
+                        } else {
+                            @Suppress("DEPRECATION")
+                            windowManager.defaultDisplay
+                        }
+                        val match = zechs.drive.stream.utils.AutoFrameRatePolicy.findBestDisplayMode(display, it.frameRate.toDouble())
+                        if (match != null) {
+                            zechs.drive.stream.utils.AutoFrameRatePolicy.applyRefreshRate(window, match)
+                        }
                     }
                 }
 
@@ -914,8 +1008,22 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             .setSeekBackIncrementMs(10_000)
             .build()
 
-        playerView.setControllerVisibilityListener { visibility ->
+        player.addAnalyticsListener(object : AnalyticsListener {
+            override fun onVideoDecoderInitialized(
+                eventTime: AnalyticsListener.EventTime,
+                decoderName: String,
+                initializedTimestampMs: Long,
+                initializationDurationMs: Long
+            ) {
+                activeVideoDecoderName = decoderName
+                if (isKodiHudVisible) updateKodiInfoHud()
+            }
+        })
+
+        playerView.setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { visibility ->
             val isVisible = visibility == View.VISIBLE
+            val becameVisible = isVisible && !controllerVisible
+            controllerVisible = isVisible
             if (!isVisible) {
                 zechs.drive.stream.utils.TvFocusRing.clear(playerView)
             }
@@ -925,11 +1033,14 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                 binding.nextEpisodeCard.root.animate().translationY(targetCardY).setDuration(220L).start()
             }
 
-            if (isVisible) {
+            if (becameVisible) {
                 handleLockingControls()
                 btnPlayPause.post {
                     btnPlayPause.requestFocus()
                 }
+            }
+
+            if (isVisible) {
                 if (::player.isInitialized) {
                     updateIntroButtonVisibility(player.currentPosition)
                 }
@@ -938,7 +1049,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                     updateIntroButtonVisibility(player.currentPosition)
                 }
             }
-        }
+        })
 
         lifecycleScope.launch {
             try {
@@ -958,6 +1069,10 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // Modal pickers own D-pad and BACK while open; do not let the player
+        // shortcuts change tracks or leave playback behind the dialog.
+        if (playerModalVisibilityState.isVisible) return super.dispatchKeyEvent(event)
+
         // Give the focused exit button priority over skip-intro/next-episode shortcuts.
         val activateExit = event.keyCode in listOf(
             KeyEvent.KEYCODE_DPAD_CENTER,
@@ -986,6 +1101,43 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             return true
         }
 
+        if (handledFocusDirectionKeyCode == event.keyCode) {
+            if (event.action == KeyEvent.ACTION_UP) handledFocusDirectionKeyCode = null
+            return true
+        }
+
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            val direction = when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP -> zechs.drive.stream.utils.PlayerFocusDirection.UP
+                KeyEvent.KEYCODE_DPAD_DOWN -> zechs.drive.stream.utils.PlayerFocusDirection.DOWN
+                else -> null
+            }
+            val focusedItem = when {
+                btnBack.isFocused -> zechs.drive.stream.utils.PlayerFocusItem.EXIT
+                btnPlayPause.isFocused -> zechs.drive.stream.utils.PlayerFocusItem.PLAY_PAUSE
+                else -> zechs.drive.stream.utils.PlayerFocusItem.OTHER
+            }
+            val target = direction?.let {
+                zechs.drive.stream.utils.PlayerDpadFocus.next(
+                    direction = it,
+                    controlsVisible = isControlsShowing(),
+                    controlsTransitioning = isHidingControls,
+                    blockingOverlayVisible = binding.nextEpisodeCard.root.isVisible ||
+                        binding.netflixSkipRow.isVisible,
+                    focusedItem = focusedItem
+                )
+            }
+            if (target != null) {
+                handledFocusDirectionKeyCode = event.keyCode
+                when (target) {
+                    zechs.drive.stream.utils.PlayerFocusItem.EXIT -> btnBack.requestFocus()
+                    zechs.drive.stream.utils.PlayerFocusItem.PLAY_PAUSE -> btnPlayPause.requestFocus()
+                    zechs.drive.stream.utils.PlayerFocusItem.OTHER -> Unit
+                }
+                return true
+            }
+        }
+
         if (event.action == KeyEvent.ACTION_UP) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_CENTER,
@@ -996,7 +1148,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                     if (isCenterLongPressSpeeding) {
                         isCenterLongPressSpeeding = false
                         if (::player.isInitialized) {
-                            player.playbackParameters = com.google.android.exoplayer2.PlaybackParameters(speedBeforeCenterHold)
+                            player.playbackParameters = androidx.media3.common.PlaybackParameters(speedBeforeCenterHold)
                         }
                         gestureHelper.hideSpeedPill()
                         ignoreNextCenterKeyUp = true
@@ -1054,11 +1206,10 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                 KeyEvent.KEYCODE_DPAD_LEFT -> {
                     if (!isControlsShowing()) {
                         mainHandler.removeCallbacks(resetSeekAccumulatorRunnable)
-                        if (cumulativeSeekSeconds > 0) cumulativeSeekSeconds = 0
-                        cumulativeSeekSeconds -= 10
-                        seekRelative(-10_000L)
-                        gestureHelper.showSeekRipple(cumulativeSeekSeconds)
-                        mainHandler.postDelayed(resetSeekAccumulatorRunnable, 1200L)
+                        val deltaSeconds = seekStepPolicy.onSeekPress(-1)
+                        seekRelative(deltaSeconds * 1000L)
+                        gestureHelper.showSeekRipple(seekStepPolicy.cumulativeSeconds)
+                        mainHandler.postDelayed(resetSeekAccumulatorRunnable, zechs.drive.stream.utils.SeekStepPolicy.TIMEOUT_MS)
                         return true
                     }
                 }
@@ -1066,18 +1217,17 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                 KeyEvent.KEYCODE_DPAD_RIGHT -> {
                     if (!isControlsShowing()) {
                         mainHandler.removeCallbacks(resetSeekAccumulatorRunnable)
-                        if (cumulativeSeekSeconds < 0) cumulativeSeekSeconds = 0
-                        cumulativeSeekSeconds += 10
-                        seekRelative(10_000L)
-                        gestureHelper.showSeekRipple(cumulativeSeekSeconds)
-                        mainHandler.postDelayed(resetSeekAccumulatorRunnable, 1200L)
+                        val deltaSeconds = seekStepPolicy.onSeekPress(1)
+                        seekRelative(deltaSeconds * 1000L)
+                        gestureHelper.showSeekRipple(seekStepPolicy.cumulativeSeconds)
+                        mainHandler.postDelayed(resetSeekAccumulatorRunnable, zechs.drive.stream.utils.SeekStepPolicy.TIMEOUT_MS)
                         return true
                     }
                 }
 
                 KeyEvent.KEYCODE_DPAD_UP,
                 KeyEvent.KEYCODE_DPAD_DOWN -> {
-                    if (!playerView.isControllerVisible) {
+                    if (!isControlsShowing()) {
                         playerView.showController()
                         btnPlayPause.post { btnPlayPause.requestFocus() }
                         return true
@@ -1150,7 +1300,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     private fun isControlsShowing(): Boolean {
         if (!::playerView.isInitialized) return false
         return zechs.drive.stream.utils.PlayerControllerVisibility.isVisible(
-            controllerVisible = playerView.isControllerVisible,
+            controllerVisible = controllerVisible,
             isHiding = isHidingControls
         )
     }
@@ -1195,22 +1345,51 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             binding.netflixSkipRow.visibility = View.GONE
             return true
         }
-        if (isControlsShowing()) {
-            animateHideController()
+        if (zechs.drive.stream.utils.PlayerControllerVisibility.shouldConsumeBack(
+                controllerVisible = controllerVisible,
+                isHiding = isHidingControls
+            )
+        ) {
+            if (isControlsShowing()) {
+                animateHideController()
+                gestureHelper.showNotification(getString(R.string.player_back_again_to_exit))
+            }
             return true
         }
         return false
     }
 
+    private var controllerVisible = false
     private var isHidingControls = false
 
     private fun animateHideController(onComplete: (() -> Unit)? = null) {
         if (!::playerView.isInitialized) return
         zechs.drive.stream.utils.TvFocusRing.clear(playerView)
         isHidingControls = true
+        if (reduceMotionEnabled) {
+            listOf(titleBlock, controlsScrollView, mainControlsRoot, skipIntroRow)
+                .forEach { it.animate().cancel() }
+            playerView.findViewById<View>(R.id.topScrim)?.animate()?.cancel()
+            playerView.hideController()
+            titleBlock.translationY = 0f
+            titleBlock.alpha = 1f
+            controlsScrollView.translationY = 0f
+            controlsScrollView.alpha = 1f
+            mainControlsRoot.alpha = 1f
+            skipIntroRow.alpha = 1f
+            playerView.findViewById<View>(R.id.topScrim)?.alpha = 1f
+            isHidingControls = false
+            onComplete?.invoke()
+            return
+        }
         val density = resources.displayMetrics.density
-        val animDuration = 220L
+        val animDuration = 150L
         val topScrim = playerView.findViewById<View>(R.id.topScrim)
+
+        // T4.6: Restore subtitle baseline clearance when OSD hides
+        playerView.subtitleView?.setBottomPaddingFraction(
+            SubtitleElevationPolicy.resolve(false).exoPaddingFraction
+        )
 
         titleBlock.animate().cancel()
         controlsScrollView.animate().cancel()
@@ -1218,8 +1397,8 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         skipIntroRow.animate().cancel()
         topScrim?.animate()?.cancel()
 
-        titleBlock.animate().translationY(-30f * density).alpha(0f).setDuration(animDuration).start()
-        controlsScrollView.animate().translationY(50f * density).alpha(0f).setDuration(animDuration).start()
+        titleBlock.animate().translationY(-8f * density).alpha(0f).setDuration(animDuration).start()
+        controlsScrollView.animate().translationY(8f * density).alpha(0f).setDuration(animDuration).start()
         mainControlsRoot.animate().alpha(0f).setDuration(animDuration).start()
         skipIntroRow.animate().alpha(0f).setDuration(animDuration).start()
 
@@ -1240,13 +1419,38 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     private fun animateShowController() {
         if (!::playerView.isInitialized) return
         isHidingControls = false
+
+        // T4.1: Update top bar clock with current time
+        try {
+            val timeFormat = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+            tvPlayerClock?.text = timeFormat.format(java.util.Date())
+        } catch (_: Exception) {}
+
+        // T4.6: Elevate subtitles above bottom capsule HUD
+        playerView.subtitleView?.setBottomPaddingFraction(
+            SubtitleElevationPolicy.resolve(true).exoPaddingFraction
+        )
+
+        if (reduceMotionEnabled) {
+            listOf(titleBlock, controlsScrollView, mainControlsRoot)
+                .forEach { it.animate().cancel() }
+            playerView.findViewById<View>(R.id.topScrim)?.animate()?.cancel()
+            titleBlock.translationY = 0f
+            titleBlock.alpha = 1f
+            controlsScrollView.translationY = 0f
+            controlsScrollView.alpha = 1f
+            mainControlsRoot.alpha = 1f
+            playerView.findViewById<View>(R.id.topScrim)?.alpha = 1f
+            playerView.showController()
+            return
+        }
         val density = resources.displayMetrics.density
         val animDuration = 220L
         val topScrim = playerView.findViewById<View>(R.id.topScrim)
 
-        titleBlock.translationY = -25f * density
+        titleBlock.translationY = -8f * density
         titleBlock.alpha = 0f
-        controlsScrollView.translationY = 40f * density
+        controlsScrollView.translationY = 8f * density
         controlsScrollView.alpha = 0f
         mainControlsRoot.alpha = 0f
         topScrim?.alpha = 0f
@@ -1265,11 +1469,11 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     }
 
     private fun handleLockingControls() {
-        TransitionManager.beginDelayedTransition(
-            playerView, AutoTransition().apply {
-                duration = 150L
-            }
-        )
+        if (!reduceMotionEnabled) {
+            TransitionManager.beginDelayedTransition(
+                playerView, AutoTransition().apply { duration = 150L }
+            )
+        }
         if (controlsLocked) {
             lockControls()
         } else {
@@ -1298,6 +1502,10 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     }
 
     private fun releasePlayer() {
+        try {
+            loudnessEnhancer?.release()
+        } catch (_: Exception) {}
+        loudnessEnhancer = null
         if (::player.isInitialized) {
             player.removeListener(playerListener)
             player.clearMediaItems()
@@ -1311,6 +1519,10 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         hasScrobbledThisEp = false
         hasPromptedRating = false
         currentMalAnime = null
+        activeVideoDecoderName = null
+
+        val reviewMediaUri = intent.getStringExtra("reviewMediaUri")
+            ?.takeIf { BuildConfig.DEBUG && it.isNotBlank() }
 
         val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") }
         val title = currentTitle.ifBlank { intent.getStringExtra("title") }
@@ -1319,7 +1531,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         currentEpNumber = parsed.episode?.toInt() ?: 1
 
         val searchTitle = parsed.showTitle.ifBlank { title ?: "" }
-        if (searchTitle.isNotBlank()) {
+        if (reviewMediaUri == null && searchTitle.isNotBlank()) {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
                     val matched = malRepository.get().matchAnime(searchTitle)
@@ -1363,7 +1575,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             // Keep controllerAutoShow false so seeks do not force the OSD to pop up
             controllerAutoShow = false
             // Auto-hide controls after 4.5 seconds of inactivity so UI disappears naturally
-            controllerShowTimeoutMs = 4500
+            controllerShowTimeoutMs = if (reviewMediaUri != null) 30_000 else 4500
         }
 
         val audioAttributes = AudioAttributes.Builder()
@@ -1371,8 +1583,37 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
             .build()
 
+        if (reviewMediaUri != null) {
+            playerView.useController = true
+            player.repeatMode = Player.REPEAT_MODE_OFF
+            player.setAudioAttributes(audioAttributes, true)
+            player.addListener(object : Player.Listener {
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_READY && !isFinishing && !isDestroyed) {
+                        player.pause()
+                        animateShowController()
+                        btnPlayPause.post { btnPlayPause.requestFocus() }
+                    }
+                }
+            })
+            player.setMediaItem(MediaItem.fromUri(Uri.parse(reviewMediaUri)))
+            player.prepare()
+            player.playWhenReady = true
+            player.play()
+            playerView.showController()
+            btnPlayPause.post { btnPlayPause.requestFocus() }
+            return
+        }
+
         if (fileId != null) {
             viewModel.getWatch(fileId)
+            lifecycleScope.launch {
+                val (_, savedSubDelay) = viewModel.getDelays(fileId)
+                if (savedSubDelay != 0L) {
+                    currentSubtitleOffsetMs = savedSubDelay
+                    Log.d(TAG, "Restored saved subtitle offset: ${savedSubDelay}ms")
+                }
+            }
             val streamUri = getStreamUrl(fileId)
 
             val subConfigs = mutableListOf<MediaItem.SubtitleConfiguration>()
@@ -1676,7 +1917,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         skipIntroRow.visibility = View.GONE
 
         val card = binding.nextEpisodeCard
-        card.root.translationY = if (playerView.isControllerVisible) -resources.getDimensionPixelOffset(R.dimen.next_episode_card_offset).toFloat() else 0f
+        card.root.translationY = if (controllerVisible) -resources.getDimensionPixelOffset(R.dimen.next_episode_card_offset).toFloat() else 0f
 
         val parsed = EpisodeParser.parse(next.title)
         card.tvNextEpisodeTitle.text = parsed.cleanTitle
@@ -1852,6 +2093,18 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         parsedChapters = existing.sortedBy { it.startTimeMs }
         Log.d(TAG, "Updated parsedChapters with AniSkip: ${parsedChapters.size} total")
         if (::player.isInitialized) {
+            val markers = parsedChapters.map { ch ->
+                ChapterMarker(
+                    startMs = ch.startTimeMs,
+                    endMs = ch.endTimeMs,
+                    color = if (ch.type == MatroskaChapterParser.ChapterType.OPENING || ch.type == MatroskaChapterParser.ChapterType.ENDING) {
+                        0xFF22D3EE.toInt()
+                    } else {
+                        0xCCFFFFFF.toInt()
+                    }
+                )
+            }
+            chapterMarkersView?.setMarkers(player.duration, markers)
             updateIntroButtonVisibility(player.currentPosition)
         }
     }
@@ -1904,7 +2157,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             btnSkipIntro.text = label
             binding.btnNetflixSkip.text = label
 
-            if (!playerView.isControllerVisible) {
+            if (!controllerVisible) {
                 // Watching video without HUD: show floating Netflix-style pill
                 binding.netflixSkipRow.animate().cancel()
                 binding.netflixSkipRow.alpha = 1f
@@ -1928,7 +2181,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
 
         // 3. Fallback for files WITHOUT chapters: only show skip button in the HUD controls when controller is open
         val hasRecognizedChapters = parsedChapters.any { it.type != MatroskaChapterParser.ChapterType.OTHER }
-        if (!hasRecognizedChapters && playerView.isControllerVisible) {
+        if (!hasRecognizedChapters && controllerVisible) {
             val isFirst140s = positionMs in 1_000L..140_000L
             if (isFirst140s) {
                 btnSkipIntro.text = "Pular Abertura (+90s)"
@@ -2095,6 +2348,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             )
         }
 
+        val nightModeLabel = if (isNightModeAudioEnabled) "Modo Noturno (Ativo)" else "Modo Noturno (Desat.)"
         PlayerGlassMenuDialog(
             context = this,
             title = getString(R.string.select_audio),
@@ -2108,7 +2362,41 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             Snackbar.make(playerView, "Áudio: ${chosen.name}", 750).apply {
                 anchorView = progressViewGroup
             }.show()
+        }.setFooterPrimary(nightModeLabel) {
+            toggleNightModeAudio()
         }.show()
+    }
+
+    private fun toggleNightModeAudio() {
+        isNightModeAudioEnabled = !isNightModeAudioEnabled
+        if (isNightModeAudioEnabled) {
+            try {
+                val sessionId = player.audioSessionId
+                if (sessionId != android.media.AudioManager.ERROR) {
+                    if (loudnessEnhancer == null) {
+                        loudnessEnhancer = android.media.audiofx.LoudnessEnhancer(sessionId)
+                    }
+                    // Boost speech clarity (+6 dB target gain in mB: 600mB)
+                    loudnessEnhancer?.setTargetGain(600)
+                    loudnessEnhancer?.enabled = true
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "LoudnessEnhancer could not be attached: ${e.message}")
+            }
+            player.volume = 1.0f
+            Snackbar.make(playerView, "Modo Noturno ativado: Vozes realçadas e picos balanceados", 2500).apply {
+                anchorView = progressViewGroup
+            }.show()
+        } else {
+            try {
+                loudnessEnhancer?.enabled = false
+            } catch (e: Exception) {
+                Log.w(TAG, "Error disabling LoudnessEnhancer: ${e.message}")
+            }
+            Snackbar.make(playerView, "Modo Noturno desativado: Áudio original", 2000).apply {
+                anchorView = progressViewGroup
+            }.show()
+        }
     }
 
     private fun showSubtitleTrackDialog() {
@@ -2436,6 +2724,10 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         ) { selected ->
             val chosenOffset = selected.tag as? Long ?: 0L
             currentSubtitleOffsetMs = chosenOffset
+            val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") ?: "" }
+            if (fileId.isNotBlank()) {
+                viewModel.saveDelays(fileId, 0L, currentSubtitleOffsetMs)
+            }
 
             val activeSub = activeExternalSubItem
             val activeFile = activeExternalSubFile
@@ -2476,45 +2768,20 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         val vFormat = player.videoFormat
         val aFormat = player.audioFormat
 
-        // 1. Video Codec & Decoder
-        val mime = vFormat?.sampleMimeType ?: "Desconhecido"
-        val codecPretty = when {
-            mime.contains("hevc", true) -> "HEVC (H.265)"
-            mime.contains("avc", true) -> "AVC (H.264)"
-            mime.contains("vp9", true) -> "VP9"
-            mime.contains("av01", true) -> "AV1"
-            else -> mime.substringAfterLast("/")
-        }
-        binding.kodiInfoHud.tvHudVideoCodec.text = "$codecPretty • HW MediaCodec"
+        binding.kodiInfoHud.tvHudVideoCodec.text = MediaInfoDisplay.videoCodec(vFormat?.sampleMimeType)
+        binding.kodiInfoHud.tvHudVideoDecoder.text = activeVideoDecoderName
+            ?.let { "Decoder: $it" }
+            ?: "Decoder não reportado"
+        binding.kodiInfoHud.tvHudVideoResolution.text = listOf(
+            MediaInfoDisplay.videoDimensions(vFormat?.width, vFormat?.height),
+            MediaInfoDisplay.frameRate(vFormat?.frameRate)
+        ).joinToString(" • ")
 
-        // 2. Video Resolution & Framerate
-        val width = vFormat?.width ?: 0
-        val height = vFormat?.height ?: 0
-        val fps = vFormat?.frameRate ?: 0f
-        val fpsText = if (fps > 0) String.format(Locale.US, "%.3f fps", fps) else "Taxa Dinâmica"
-        val resText = if (width > 0 && height > 0) "${width}x${height} @ $fpsText" else "1080p @ $fpsText"
-        binding.kodiInfoHud.tvHudVideoResolution.text = resText
-
-        // 3. Audio Info
-        val audioMime = aFormat?.sampleMimeType ?: "Áudio Padrão"
-        val audioCodec = when {
-            audioMime.contains("mp4a", true) || audioMime.contains("aac", true) -> "AAC"
-            audioMime.contains("opus", true) -> "Opus"
-            audioMime.contains("flac", true) -> "FLAC"
-            audioMime.contains("ac3", true) -> "Dolby Digital (AC-3)"
-            audioMime.contains("eac3", true) -> "Dolby Digital Plus (E-AC-3)"
-            else -> audioMime.substringAfterLast("/")
-        }
-        val channels = when (aFormat?.channelCount) {
-            1 -> "Mono (1.0)"
-            2 -> "Estéreo (2.0)"
-            6 -> "Surround (5.1)"
-            8 -> "Surround (7.1)"
-            else -> "Estéreo"
-        }
-        val sampleRateHz = aFormat?.sampleRate ?: 0
-        val sampleRate = if (sampleRateHz > 0) "${sampleRateHz / 1000f} kHz" else "48 kHz"
-        binding.kodiInfoHud.tvHudAudioInfo.text = "$audioCodec • $channels ($sampleRate)"
+        binding.kodiInfoHud.tvHudAudioInfo.text = MediaInfoDisplay.audioSummary(
+            mimeType = aFormat?.sampleMimeType,
+            channelCount = aFormat?.channelCount,
+            sampleRateHz = aFormat?.sampleRate
+        )
 
         // 4. Subtitle Info
         val activeSub = player.currentTracks.groups
@@ -2532,9 +2799,13 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         val bufferedPos = player.bufferedPosition
         val currentPos = player.currentPosition
         val bufferSecs = maxOf(0.0, (bufferedPos - currentPos) / 1000.0)
-        binding.kodiInfoHud.tvHudBufferDuration.text = String.format(Locale.US, "%.1fs em buffer (RAM)", bufferSecs)
+        binding.kodiInfoHud.tvHudBufferDuration.text = String.format(Locale.US, "%.1fs disponíveis à frente", bufferSecs)
 
-        if (bufferSecs >= 12.0) {
+        val hasBufferedToEnd = player.duration > 0L && bufferedPos >= player.duration
+        if (hasBufferedToEnd) {
+            binding.kodiInfoHud.tvHudBufferBadge.text = "Tudo carregado"
+            binding.kodiInfoHud.tvHudBufferBadge.setTextColor(Color.parseColor("#4CAF50"))
+        } else if (bufferSecs >= 12.0) {
             binding.kodiInfoHud.tvHudBufferBadge.text = "🟢 Saudável (>12s)"
             binding.kodiInfoHud.tvHudBufferBadge.setTextColor(Color.parseColor("#4CAF50"))
         } else if (bufferSecs >= 4.0) {
@@ -2705,15 +2976,24 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     }
 
     private fun launchMpvFallback() {
-        val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") ?: return }
-        val title = currentTitle.ifBlank { intent.getStringExtra("title") ?: return }
+        val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId").orEmpty() }
+        val title = currentTitle.ifBlank { intent.getStringExtra("title").orEmpty() }
+        if (fileId.isBlank() || title.isBlank()) {
+            Snackbar.make(
+                playerView,
+                R.string.player_engine_fallback_missing_media,
+                Snackbar.LENGTH_LONG
+            ).apply {
+                anchorView = progressViewGroup
+            }.show()
+            return
+        }
         val thumbnailLink = currentThumbnailLink ?: intent.getStringExtra("thumbnailLink")
         val theme = intent.getIntExtra("theme", 0)
         val currentPos = if (::player.isInitialized) player.currentPosition else 0L
 
         lifecycleScope.launch {
             try {
-                Toast.makeText(this@PlayerActivity, getString(R.string.switching_to_mpv), Toast.LENGTH_SHORT).show()
                 // P0-04: o token de acesso não transita mais em extras de
                 // Intent; o MPVActivity o obtém via TokenProvider.
                 run {
@@ -2722,19 +3002,34 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                         putExtra("title", title)
                         putExtra("thumbnailLink", thumbnailLink)
                         putExtra("theme", theme)
+                        putExtra(PlayerLauncher.EXTRA_PROFILE_ID, viewModel.playbackProfileIdForHandoff)
+                        PlaybackProfileSessionPolicy.siblingFolderIdForHandoff(
+                            intent.getStringExtra(PlayerLauncher.EXTRA_SIBLING_FOLDER_ID)
+                        )?.let { putExtra(PlayerLauncher.EXTRA_SIBLING_FOLDER_ID, it) }
+                        putExtra(
+                            PlayerLauncher.EXTRA_START_POSITION,
+                            PlaybackProfileSessionPolicy.explicitPositionForHandoff(currentPos)
+                        )
                         putExtra("playlist", ArrayList(playlist))
                         putExtra("subtitles", ArrayList(folderSubtitles))
-                        if (currentPos > 0) {
-                            putExtra("startPosition", currentPos)
-                        }
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                     }
-                    finish()
                     startActivity(mpvIntent)
+                    Toast.makeText(this@PlayerActivity, getString(R.string.switching_to_mpv), Toast.LENGTH_SHORT).show()
+                    finish()
                     return@launch
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error launching MPV fallback", e)
+                if (!isFinishing) {
+                    Snackbar.make(
+                        playerView,
+                        R.string.player_engine_fallback_failed,
+                        Snackbar.LENGTH_LONG
+                    ).apply {
+                        anchorView = progressViewGroup
+                    }.show()
+                }
             }
         }
     }
@@ -2759,7 +3054,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
 
         // 0. Mid-stream HTTP 401 recovery: automatically refresh token and resume playback
         val isHttp401 = (exoException?.type == TYPE_SOURCE) &&
-                ((exoException.sourceException as? com.google.android.exoplayer2.upstream.HttpDataSource.InvalidResponseCodeException)?.responseCode == 401 ||
+                ((exoException.sourceException as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.responseCode == 401 ||
                         error.message?.contains("401") == true ||
                         errorDetailed?.contains("401") == true)
 
@@ -2846,7 +3141,11 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             launchMpvFallback()
             return
         } else {
-            errorSnackbar(errorGeneral, errorDetailed, canOpenMpv = false)
+            errorSnackbar(
+                errorGeneral,
+                errorDetailed,
+                canOpenMpv = PlaybackFallbackPolicy.shouldOfferMpv(error.errorCode)
+            )
         }
     }
 
@@ -2891,7 +3190,8 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                 videoId = fileId,
                 watchedDuration = watchedDuration,
                 totalDuration = totalDuration,
-                thumbnailLink = thumbnailLink
+                thumbnailLink = thumbnailLink,
+                subtitleDelayMs = currentSubtitleOffsetMs
             )
         }
     }
@@ -2938,6 +3238,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         mediaSessionHelper?.release()
         mediaSessionHelper = null
         releasePlayer()
+        zechs.drive.stream.utils.AutoFrameRatePolicy.resetRefreshRate(window)
         super.onDestroy()
     }
 

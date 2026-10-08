@@ -12,7 +12,7 @@
         android:fontFamily="@font/inter"
         android:text="Nome do Perfil"
         android:textColor="?attr/colorTextPrimary"
-        android:textSize="14sp"
+        style="@style/TextAppearance.Makimono.TV.Subheadline"
         android:textStyle="bold" />
 
     <EditText
@@ -28,7 +28,7 @@
         android:paddingHorizontal="14dp"
         android:textColor="?attr/colorTextPrimary"
         android:textColorHint="?attr/colorTextSecondary"
-        android:textSize="14sp" />
+        style="@style/TextAppearance.Makimono.TV.Subheadline" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -37,7 +37,7 @@
         android:fontFamily="@font/inter"
         android:text="Escolha um Avatar"
         android:textColor="?attr/colorTextPrimary"
-        android:textSize="14sp"
+        style="@style/TextAppearance.Makimono.TV.Subheadline"
         android:textStyle="bold" />
 
     <RadioGroup
@@ -55,7 +55,7 @@
             android:fontFamily="@font/inter"
             android:text="Guerreiro (Cauã)"
             android:textColor="?attr/colorTextPrimary"
-            android:textSize="13sp" />
+            style="@style/TextAppearance.Makimono.TV.Callout" />
 
         <RadioButton
             android:id="@+id/rbAvatarAnime"
@@ -65,7 +65,7 @@
             android:fontFamily="@font/inter"
             android:text="Espiral Ciano (Anime)"
             android:textColor="?attr/colorTextPrimary"
-            android:textSize="13sp" />
+            style="@style/TextAppearance.Makimono.TV.Callout" />
 
     </RadioGroup>
 

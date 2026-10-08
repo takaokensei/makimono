@@ -8,6 +8,8 @@ import android.view.ViewGroup
 import android.graphics.Color
 import android.widget.LinearLayout
 import android.content.res.Configuration
+import android.content.res.ColorStateList
+import android.view.Gravity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.view.isInvisible
@@ -19,6 +21,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.transition.TransitionManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.button.MaterialButton
 import zechs.drive.stream.databinding.ItemThemePreviewBinding
 import com.google.android.material.snackbar.Snackbar
 import com.bumptech.glide.Glide
@@ -28,9 +31,12 @@ import zechs.drive.stream.databinding.FragmentSettingsBinding
 import zechs.drive.stream.ui.BaseFragment
 import zechs.drive.stream.ui.main.MainViewModel
 import zechs.drive.stream.utils.AppTheme
+import zechs.drive.stream.utils.MotionPolicy
+import zechs.drive.stream.utils.MotionPreference
 import zechs.drive.stream.utils.BackupSerializer
 import zechs.drive.stream.utils.VideoPlayer
 import zechs.drive.stream.utils.TvAccessibilityLayout
+import zechs.drive.stream.utils.SingleTapActivation
 import zechs.drive.stream.utils.state.Resource
 import zechs.drive.stream.utils.ext.resolveThemeColor
 import dagger.hilt.android.AndroidEntryPoint
@@ -44,16 +50,29 @@ class SettingsFragment : BaseFragment() {
 
     companion object {
         const val TAG = "SettingsFragment"
+        private const val STATE_SETTINGS_CATEGORY = "settings_category"
     }
 
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
     private var tvFocusEnabled = false
+    private var reduceMotionEnabled = false
+    private var selectedSettingsCategory = 0
+    private val categoryButtons = mutableListOf<MaterialButton>()
+
+    private data class SettingsCategory(
+        val labelRes: Int,
+        val sectionId: Int,
+        val rowIds: List<Int>
+    )
 
     private val mainViewModel by activityViewModels<MainViewModel>()
 
     @Inject
     lateinit var malRepository: MalRepository
+
+    @Inject
+    lateinit var driveRepository: zechs.drive.stream.data.repository.DriveRepository
 
     @Inject
     lateinit var malSessionManager: MalSessionManager
@@ -103,6 +122,7 @@ class SettingsFragment : BaseFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         _binding = FragmentSettingsBinding.bind(view)
+        selectedSettingsCategory = savedInstanceState?.getInt(STATE_SETTINGS_CATEGORY, 0) ?: 0
 
         binding.toolbar.setNavigationOnClickListener {
             findNavController().navigateUp()
@@ -115,6 +135,7 @@ class SettingsFragment : BaseFragment() {
         setupThemeMenu()
         setupDefaultPlayerMenu()
         setupSubtitleAppearanceSetting()
+        setupMotionPreference()
         refreshConfigurableSummaries()
         setupStorageAndCacheSetting()
         setupCheckForUpdates()
@@ -122,7 +143,162 @@ class SettingsFragment : BaseFragment() {
         setupPlaybackExperience()
         setupBackupRestore()
         setupLogOut()
+        setupCategoryNavigation()
         setupTvFocus()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putInt(STATE_SETTINGS_CATEGORY, selectedSettingsCategory)
+        super.onSaveInstanceState(outState)
+    }
+
+    private fun setupCategoryNavigation() {
+        val categories = listOf(
+            SettingsCategory(
+                R.string.settings_category_profile,
+                R.id.settingsSectionProfile,
+                listOf(R.id.settingSelectProfile, R.id.settingLibraryRoot)
+            ),
+            SettingsCategory(
+                R.string.settings_category_appearance,
+                R.id.settingsSectionProfile,
+                listOf(R.id.settingSelectTheme, R.id.settingReduceMotion)
+            ),
+            SettingsCategory(
+                R.string.settings_category_playback,
+                R.id.settingsSectionPlayback,
+                listOf(
+                    R.id.settingDefaultPlayer,
+                    R.id.settingSubtitleSize,
+                    R.id.settingAutoSkipToggle,
+                    R.id.settingGesturesToggle
+                )
+            ),
+            SettingsCategory(
+                R.string.settings_category_integrations,
+                R.id.settingsSectionIntegrations,
+                listOf(
+                    R.id.settingMalAccount,
+                    R.id.settingMalTransferToTv,
+                    R.id.settingMalSyncToggle
+                )
+            ),
+            SettingsCategory(
+                R.string.settings_category_data,
+                R.id.settingsSectionData,
+                listOf(
+                    R.id.settingClearCache,
+                    R.id.settingCheckForUpdate,
+                    R.id.settingExportBackup,
+                    R.id.settingImportBackup,
+                    R.id.settingLogOut
+                )
+            )
+        )
+        selectedSettingsCategory = selectedSettingsCategory.coerceIn(categories.indices)
+        val categoryBar = binding.settingsCategoryBar
+        categoryBar.removeAllViews()
+        categoryButtons.clear()
+
+        categories.forEachIndexed { index, category ->
+            val button = MaterialButton(
+                requireContext(),
+                null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle
+            ).apply {
+                id = View.generateViewId()
+                text = getString(category.labelRes)
+                isAllCaps = false
+                minHeight = resources.getDimensionPixelSize(R.dimen.settings_category_min_height)
+                minimumHeight = minHeight
+                insetTop = 0
+                insetBottom = 0
+                cornerRadius = resources.getDimensionPixelSize(R.dimen.settings_category_corner_radius)
+                strokeWidth = resources.getDimensionPixelSize(R.dimen.settings_category_stroke_width)
+                isFocusable = true
+                isFocusableInTouchMode = true
+                setOnClickListener { selectSettingsCategory(index, categories) }
+                // TV-style controls can consume the first touch only to acquire focus.
+                // Route a deliberate tap through the regular click listener immediately.
+                // Let the horizontal category scroller take over drag gestures while
+                // preserving single-tap activation for buttons that only gain focus.
+                SingleTapActivation.install(this, disallowParentIntercept = false)
+                setOnFocusChangeListener { view, hasFocus ->
+                    if (hasFocus && !reduceMotionEnabled) {
+                        view.animate().scaleX(1.025f).scaleY(1.025f).setDuration(100L).start()
+                    } else {
+                        view.animate().cancel()
+                        view.scaleX = 1f
+                        view.scaleY = 1f
+                    }
+                }
+            }
+            val margin = resources.getDimensionPixelSize(R.dimen.settings_category_spacing)
+            val isVerticalMenu = categoryBar.orientation == LinearLayout.VERTICAL
+            categoryBar.addView(button, LinearLayout.LayoutParams(
+                if (isVerticalMenu) ViewGroup.LayoutParams.MATCH_PARENT else ViewGroup.LayoutParams.WRAP_CONTENT,
+                resources.getDimensionPixelSize(R.dimen.settings_category_min_height)
+            ).apply {
+                if (isVerticalMenu) {
+                    topMargin = margin / 2
+                    bottomMargin = margin / 2
+                } else {
+                    marginStart = if (index == 0) 0 else margin
+                    marginEnd = margin
+                }
+            })
+            categoryButtons += button
+        }
+        applySettingsCategory(categories)
+    }
+
+    private fun selectSettingsCategory(index: Int, categories: List<SettingsCategory>) {
+        if (index !in categories.indices) return
+        selectedSettingsCategory = index
+        applySettingsCategory(categories)
+        binding.settingsScroll.smoothScrollTo(0, 0)
+        updateSettingsFocusOrder()
+        if (tvFocusEnabled) {
+            val firstRow = categories[index].rowIds.firstOrNull()?.let { id ->
+                binding.root.findViewById<View>(id)
+            }
+            firstRow?.post { firstRow.requestFocus() }
+        }
+    }
+
+    private fun applySettingsCategory(categories: List<SettingsCategory>) {
+        val visibleCategory = categories.getOrNull(selectedSettingsCategory) ?: return
+        val allRowIds = categories.flatMap(SettingsCategory::rowIds).toSet()
+        allRowIds.forEach { id -> binding.root.findViewById<View>(id)?.isVisible = id in visibleCategory.rowIds }
+        listOf(
+            R.id.settingsSectionProfile,
+            R.id.settingsSectionIntegrations,
+            R.id.settingsSectionPlayback,
+            R.id.settingsSectionData,
+            R.id.settingsSectionSession
+        ).forEach { id ->
+            binding.root.findViewById<View>(id)?.isVisible = id == visibleCategory.sectionId ||
+                (id == R.id.settingsSectionSession && selectedSettingsCategory == 4)
+        }
+        binding.settingsSectionProfile.setText(
+            if (selectedSettingsCategory == 1) R.string.settings_section_appearance
+            else R.string.settings_section_profile
+        )
+        categoryButtons.forEachIndexed { index, button ->
+            val selected = index == selectedSettingsCategory
+            button.backgroundTintList = ColorStateList.valueOf(
+                Color.parseColor(if (selected) "#2630D5E8" else "#121A2633")
+            )
+            button.strokeColor = ColorStateList.valueOf(
+                Color.parseColor(if (selected) "#7430D5E8" else "#3B71849A")
+            )
+            button.setTextColor(Color.parseColor(if (selected) "#FF45DDF0" else "#FFE2EAF2"))
+            button.contentDescription = getString(
+                R.string.settings_category_accessibility,
+                getString(categories[index].labelRes),
+                if (selected) getString(R.string.settings_category_selected_suffix) else ""
+            )
+        }
     }
 
     private fun setupTvFocus() {
@@ -132,27 +308,19 @@ class SettingsFragment : BaseFragment() {
 
         zechs.drive.stream.utils.TvFocusRing.install(binding.root)
 
-        val rows = listOfNotNull(
-            binding.settingSelectProfile,
-            binding.settingLibraryRoot,
-            binding.settingSelectTheme,
-            binding.settingDefaultPlayer,
-            binding.settingSubtitleSize,
-            binding.settingClearCache,
-            binding.settingCheckForUpdate,
-            binding.settingMalAccount,
-            binding.settingMalSyncToggle,
-            binding.settingAutoSkipToggle,
-            binding.settingGesturesToggle,
-            binding.settingExportBackup,
-            binding.settingImportBackup,
-            binding.settingLogOut
-        )
+        val rows = allSettingsRows()
 
         TvAccessibilityLayout.adaptSettingsRows(requireContext(), rows)
 
         rows.forEach { row ->
             row.setOnFocusChangeListener { view, hasFocus ->
+                if (reduceMotionEnabled) {
+                    view.animate().cancel()
+                    view.scaleX = 1f
+                    view.scaleY = 1f
+                    view.translationZ = 0f
+                    return@setOnFocusChangeListener
+                }
                 view.animate()
                     .scaleX(if (hasFocus) 1.015f else 1f)
                     .scaleY(if (hasFocus) 1.015f else 1f)
@@ -166,48 +334,72 @@ class SettingsFragment : BaseFragment() {
         binding.switchMalSync.isFocusable = false
         binding.switchAutoSkip.isFocusable = false
         binding.switchGestures.isFocusable = false
-        binding.settingSelectProfile?.apply {
-            if (isTv) isFocusableInTouchMode = true
-            post { requestFocus() }
-        }
+        binding.settingSelectProfile.apply { if (isTv) isFocusableInTouchMode = true }
+        categoryButtons.forEach { it.isFocusableInTouchMode = true }
+        categoryButtons.firstOrNull()?.let { button -> button.post { button.requestFocus() } }
     }
+
+    private fun allSettingsRows(): List<View> = listOf(
+        binding.settingSelectProfile,
+        binding.settingLibraryRoot,
+        binding.settingSelectTheme,
+        binding.settingReduceMotion,
+        binding.settingDefaultPlayer,
+        binding.settingSubtitleSize,
+        binding.settingClearCache,
+        binding.settingCheckForUpdate,
+        binding.settingMalAccount,
+        binding.settingMalTransferToTv,
+        binding.settingMalSyncToggle,
+        binding.settingAutoSkipToggle,
+        binding.settingGesturesToggle,
+        binding.settingExportBackup,
+        binding.settingImportBackup,
+        binding.settingLogOut
+    )
 
     private fun updateSettingsFocusOrder(rows: List<View>? = null) {
         if (!tvFocusEnabled || _binding == null) return
-        val candidates = rows ?: listOfNotNull(
-            binding.settingSelectProfile,
-            binding.settingLibraryRoot,
-            binding.settingSelectTheme,
-            binding.settingDefaultPlayer,
-            binding.settingSubtitleSize,
-            binding.settingClearCache,
-            binding.settingCheckForUpdate,
-            binding.settingMalAccount,
-            binding.settingMalSyncToggle,
-            binding.settingAutoSkipToggle,
-            binding.settingGesturesToggle,
-            binding.settingExportBackup,
-            binding.settingImportBackup,
-            binding.settingLogOut
-        )
+        val candidates = rows ?: allSettingsRows()
         val visibleRows = candidates.filter { it.isShown && it.isFocusable }
-        val backButton = (0 until binding.toolbar.childCount)
-            .asSequence()
-            .map(binding.toolbar::getChildAt)
-            .firstOrNull { it.contentDescription == binding.toolbar.navigationContentDescription }
-        if (backButton?.id == View.NO_ID) {
-            backButton.id = View.generateViewId()
+        val backButton = findToolbarBackButton()
+        val verticalMenu = binding.settingsCategoryBar.orientation == LinearLayout.VERTICAL
+        categoryButtons.forEachIndexed { index, button ->
+            if (verticalMenu) {
+                button.nextFocusLeftId = button.id
+                button.nextFocusRightId = visibleRows.firstOrNull()?.id ?: button.id
+                button.nextFocusUpId = categoryButtons.getOrNull(index - 1)?.id
+                    ?: backButton?.id
+                    ?: button.id
+                button.nextFocusDownId = categoryButtons.getOrNull(index + 1)?.id ?: button.id
+            } else {
+                button.nextFocusLeftId = categoryButtons.getOrNull(index - 1)?.id ?: button.id
+                button.nextFocusRightId = categoryButtons.getOrNull(index + 1)?.id ?: button.id
+                button.nextFocusDownId = visibleRows.firstOrNull()?.id ?: button.id
+                button.nextFocusUpId = backButton?.id ?: button.id
+            }
         }
         if (visibleRows.isNotEmpty()) {
-            backButton?.nextFocusDownId = visibleRows.first().id
+            backButton?.nextFocusDownId = categoryButtons.firstOrNull()?.id ?: visibleRows.first().id
         }
         visibleRows.forEachIndexed { index, row ->
             row.nextFocusUpId = visibleRows.getOrNull(index - 1)?.id
+                ?: categoryButtons.getOrNull(selectedSettingsCategory)?.id
                 ?: backButton?.id?.takeIf { it != View.NO_ID }
                 ?: row.id
             row.nextFocusDownId = visibleRows.getOrNull(index + 1)?.id ?: row.id
+            if (verticalMenu) {
+                row.nextFocusLeftId = categoryButtons.getOrNull(selectedSettingsCategory)?.id ?: row.id
+                row.nextFocusRightId = row.id
+            }
         }
     }
+
+    private fun findToolbarBackButton(): View? = (0 until binding.toolbar.childCount)
+        .asSequence()
+        .map(binding.toolbar::getChildAt)
+        .firstOrNull { it.contentDescription == binding.toolbar.navigationContentDescription }
+        ?.also { if (it.id == View.NO_ID) it.id = View.generateViewId() }
 
     private fun setupUserProfileSection() {
         viewLifecycleOwner.lifecycleScope.launch {
@@ -241,32 +433,33 @@ class SettingsFragment : BaseFragment() {
 
         refreshValue()
         binding.settingLibraryRoot.setOnClickListener {
-            val input = android.widget.EditText(requireContext()).apply {
-                hint = getString(R.string.library_folder_hint)
-                setText(profileManager.getLibraryRoot().second.orEmpty())
-                setSelection(text?.length ?: 0)
-                isSingleLine = true
-                setBackgroundResource(R.drawable.glass_input_bg)
-                setPadding(32, 24, 32, 24)
-            }
-            val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
-                .setTitle("Pasta da biblioteca")
-                .setMessage("Deixe vazio para usar a raiz do Meu Drive.")
-                .setView(input)
-                .setPositiveButton("Salvar") { _, _ ->
-                    val name = input.text?.toString()?.trim().orEmpty()
+            val (_, currentName) = profileManager.getLibraryRoot()
+            DriveFolderPickerDialog(
+                context = requireContext(),
+                lifecycleScope = viewLifecycleOwner.lifecycleScope,
+                initialSelectionName = currentName,
+                loadPage = { parentId, pageToken ->
+                    driveRepository.getFiles(
+                        query = LibraryRootFolderQuery.forParent(parentId),
+                        pageToken = pageToken,
+                        pageSize = 100
+                    )
+                },
+                onSelected = { rootId, rootName ->
                     viewLifecycleOwner.lifecycleScope.launch {
-                        profileManager.setLibraryRoot(null, name.ifBlank { null })
+                        profileManager.setLibraryRoot(rootId, rootName)
                         refreshValue()
+                        Snackbar.make(
+                            binding.root,
+                            getString(R.string.library_root_selected),
+                            Snackbar.LENGTH_SHORT
+                        ).show()
                     }
+                },
+                onDismiss = {
+                    binding.settingLibraryRoot.post { binding.settingLibraryRoot.requestFocus() }
                 }
-                .setNegativeButton("Cancelar", null)
-                .create()
-            dialog.setOnShowListener {
-                dialog.window?.let { w -> zechs.drive.stream.utils.TvFocusRing.install(w.decorView) }
-                input.requestFocus()
-            }
-            dialog.show()
+            ).show()
         }
     }
 
@@ -383,6 +576,74 @@ class SettingsFragment : BaseFragment() {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    private fun setupMotionPreference() {
+        val profileId = profileManager.getActiveProfile().id
+
+        fun updateSummary(preference: MotionPreference) {
+            binding.tvMotionPreferenceValue.text = when (preference) {
+                MotionPreference.REDUCED -> getString(R.string.motion_reduced)
+                MotionPreference.SYSTEM -> getString(R.string.motion_follows_device)
+            }
+            reduceMotionEnabled = MotionPolicy.shouldReduceMotion(
+                preference,
+                MotionPolicy.areSystemAnimationsEnabled()
+            )
+            if (reduceMotionEnabled) {
+                binding.root.findFocus()?.let { focused ->
+                    focused.animate().cancel()
+                    focused.scaleX = 1f
+                    focused.scaleY = 1f
+                    focused.translationZ = 0f
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val initial = runCatching { appSettings.fetchMotionPreference(profileId) }
+                .getOrDefault(MotionPreference.SYSTEM)
+            updateSummary(initial)
+        }
+
+        binding.settingReduceMotion.setOnClickListener {
+            val options = arrayOf(
+                getString(R.string.motion_follows_device),
+                getString(R.string.motion_reduced)
+            )
+            val profileForSelection = profileManager.getActiveProfile().id
+            viewLifecycleOwner.lifecycleScope.launch {
+                val current = runCatching { appSettings.fetchMotionPreference(profileForSelection) }
+                    .getOrDefault(MotionPreference.SYSTEM)
+                val selected = if (current == MotionPreference.REDUCED) 1 else 0
+                val dialog = MaterialAlertDialogBuilder(
+                    requireContext(),
+                    R.style.ThemeOverlay_DriveStream_Dialog
+                )
+                    .setTitle(R.string.reduce_motion)
+                    .setSingleChoiceItems(options, selected) { dialogInterface, index ->
+                        val preference = if (index == 1) MotionPreference.REDUCED else MotionPreference.SYSTEM
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            runCatching { appSettings.saveMotionPreference(preference, profileForSelection) }
+                                .onSuccess {
+                                    updateSummary(preference)
+                                    showSnackBar("Preferência de movimento salva")
+                                }
+                                .onFailure { error ->
+                                    Log.e(TAG, "Error saving motion preference", error)
+                                    showSnackBar("Não foi possível salvar a preferência")
+                                }
+                        }
+                        dialogInterface.dismiss()
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .create()
+                dialog.setOnShowListener {
+                    dialog.window?.let { window -> zechs.drive.stream.utils.TvFocusRing.install(window.decorView) }
+                }
+                dialog.show()
             }
         }
     }

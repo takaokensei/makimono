@@ -19,7 +19,7 @@
         android:letterSpacing="0.08"
         android:text="SISTEMA DE TEMAS"
         android:textColor="?attr/colorAccentPrimary"
-        android:textSize="12sp"
+        style="@style/TextAppearance.Makimono.TV.Body"
         android:textStyle="bold" />
 
     <TextView
@@ -30,7 +30,7 @@
         android:fontFamily="@font/inter"
         android:text="Escolha a aparência do app"
         android:textColor="?attr/colorTextPrimary"
-        android:textSize="18sp"
+        style="@style/TextAppearance.Makimono.TV.Headline"
         android:textStyle="bold" />
 
     <ScrollView

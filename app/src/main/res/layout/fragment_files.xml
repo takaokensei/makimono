@@ -62,7 +62,7 @@
                 android:maxLines="1"
                 android:textColor="?attr/colorTextPrimary"
                 android:textColorHint="?attr/colorTextSecondary"
-                android:textSize="14sp" />
+                style="@style/TextAppearance.Makimono.TV.Subheadline" />
 
             <ImageView
                 android:id="@+id/btnClearSearch"
@@ -118,7 +118,7 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/inter"
                     android:textColor="?attr/colorTextSecondary"
-                    android:textSize="11sp"
+                    style="@style/TextAppearance.Makimono.TV.Caption"
                     android:textStyle="bold"
                     tools:text="25 itens" />
             </LinearLayout>
@@ -146,7 +146,7 @@
                 android:fontFamily="@font/inter"
                 android:text="Episódios"
                 android:textColor="?attr/colorTextPrimary"
-                android:textSize="18sp"
+                style="@style/TextAppearance.Makimono.TV.Headline"
                 android:textStyle="bold" />
 
             <!-- Season Selector Pill / Dropdown Button -->
@@ -168,7 +168,7 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/inter"
                     android:textColor="?attr/colorTextPrimary"
-                    android:textSize="13sp"
+                    style="@style/TextAppearance.Makimono.TV.Callout"
                     android:textStyle="bold"
                     tools:text="Egghead Arc" />
 
@@ -191,7 +191,9 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:clipChildren="false"
+        android:clipToPadding="false">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvList"
@@ -214,11 +216,24 @@
             tools:visibility="visible" />
 
         <include
+            android:id="@+id/filesSkeleton"
+            layout="@layout/component_skeleton_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
+
+        <include
             android:id="@+id/error"
             layout="@layout/error_layout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:visibility="gone" />
+
+        <zechs.drive.stream.ui.common.StateView
+            android:id="@+id/stateView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:visibility="gone" />
 
     </FrameLayout>

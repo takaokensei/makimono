@@ -5,8 +5,10 @@
     <dimen name="tv_nav_rail_width">128dp</dimen>
     <dimen name="tv_shelf_card_width">232dp</dimen>
     <dimen name="tv_shelf_card_height">131dp</dimen>
-    <dimen name="profile_avatar_size">128dp</dimen>
-    <dimen name="profile_card_margin_horizontal">9dp</dimen>
+    <dimen name="profile_avatar_size">76dp</dimen>
+    <dimen name="profile_name_width">130dp</dimen>
+    <dimen name="profile_card_margin_horizontal">14dp</dimen>
     <dimen name="profile_card_margin_vertical">8dp</dimen>
     <dimen name="profile_title_size">32sp</dimen>
+    <dimen name="player_technical_hud_top_margin">20dp</dimen>
 </resources>

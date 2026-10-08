@@ -34,6 +34,11 @@
             android:name="query"
             app:argType="string"
             app:nullable="true" />
+        <argument
+            android:name="folderPath"
+            app:argType="string[]"
+            app:nullable="true"
+            android:defaultValue="@null" />
         <action
             android:id="@+id/action_filesFragment_self"
             app:destination="@id/filesFragment" />

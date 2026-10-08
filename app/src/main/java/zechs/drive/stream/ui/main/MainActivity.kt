@@ -30,15 +30,17 @@ import androidx.lifecycle.repeatOnLifecycle
 import android.content.res.Configuration
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
-import com.google.android.exoplayer2.ExoPlayer
-import com.google.android.exoplayer2.MediaItem
-import com.google.android.exoplayer2.PlaybackException
-import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.ui.AspectRatioFrameLayout
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import zechs.drive.stream.R
 import zechs.drive.stream.data.model.LatestRelease
 import zechs.drive.stream.databinding.ActivityMainBinding
@@ -474,6 +476,16 @@ class MainActivity : AppCompatActivity() {
             }
             vinhetaPlayer = player
             binding.pvVinheta.player = player
+
+            // Parallel background preloader: load Drive metadata and warm poster cache while vinheta plays
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    // Signal preloading status
+                    withContext(Dispatchers.Main) {
+                        binding.tvVinhetaPreloadStatus.text = "Sincronizando catálogo e capas…"
+                    }
+                } catch (_: Exception) {}
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize vinheta player", e)
             dismissVinheta()

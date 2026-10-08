@@ -4,7 +4,7 @@ import android.graphics.Typeface
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.StyleSpan
-import com.google.android.exoplayer2.text.Cue
+import androidx.media3.common.text.Cue
 
 /**
  * Normalizes ExoPlayer cues for a stable, Netflix-like presentation:

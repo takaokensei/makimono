@@ -24,6 +24,7 @@ import zechs.drive.stream.data.local.CatalogEntry
 import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.data.model.WatchList
 import zechs.drive.stream.data.model.WatchQueueItem
+import zechs.drive.stream.data.local.FollowedFolder
 import zechs.drive.stream.data.repository.CatalogRepository
 import zechs.drive.stream.data.repository.DriveRepository
 import zechs.drive.stream.data.repository.WatchListRepository
@@ -34,6 +35,74 @@ import zechs.drive.stream.utils.ProfileManager
 import zechs.drive.stream.utils.SessionManager
 import zechs.drive.stream.utils.state.Resource
 import javax.inject.Inject
+
+internal fun mergeCatalogSnapshot(
+    refreshedFiles: List<DriveFile>,
+    cachedFiles: List<DriveFile>,
+    isComplete: Boolean
+): List<DriveFile> {
+    if (isComplete) return refreshedFiles
+
+    val refreshedIds = refreshedFiles.mapTo(mutableSetOf()) { it.id }
+    return (refreshedFiles + cachedFiles.filterNot { it.id in refreshedIds })
+        .distinctBy { it.id }
+}
+
+/**
+ * The configured library folder is a container, never a catalog item. Drive
+ * shortcuts can point back at that same container, so compare both file and
+ * shortcut target ids before promoting entries to a title or hero.
+ */
+internal fun excludeLibraryRoot(
+    files: List<DriveFile>,
+    libraryRootId: String
+): List<DriveFile> = files.filterNot { file ->
+    file.id == libraryRootId || file.shortcutDetails.targetId == libraryRootId
+}
+
+fun filterStarredLibraryFolders(
+    starredFiles: List<DriveFile>,
+    libraryFiles: List<DriveFile>
+): List<DriveFile> {
+    val starredIds = starredFiles.flatMap { file ->
+        listOfNotNull(file.id, file.shortcutDetails.targetId)
+    }.toSet()
+    return libraryFiles
+        .filter { file ->
+            (file.isFolder || file.isShortcutFolder) &&
+                (file.id in starredIds || file.shortcutDetails.targetId?.let(starredIds::contains) == true)
+        }
+        .distinctBy { it.shortcutDetails.targetId ?: it.id }
+}
+
+/** Returns only series folders with a Drive timestamp, newest first. */
+internal fun recentlyModifiedLibraryFolders(
+    files: List<DriveFile>,
+    limit: Int = 20
+): List<DriveFile> = files
+    .asSequence()
+    .filter { it.isFolder || it.isShortcutFolder }
+    .filter { !it.modifiedTime.isNullOrBlank() }
+    .sortedByDescending { it.modifiedTime }
+    .take(limit.coerceAtLeast(0))
+    .toList()
+
+internal fun filterFollowedLibraryFolders(
+    followedFolders: List<FollowedFolder>,
+    libraryFiles: List<DriveFile>
+): List<DriveFile> {
+    val byId = buildMap {
+        libraryFiles.forEach { file ->
+            put(file.id, file)
+            file.shortcutDetails.targetId?.let { put(it, file) }
+        }
+    }
+    return followedFolders
+        .sortedByDescending { it.followedAt }
+        .mapNotNull { byId[it.folderId] }
+        .filter { it.isFolder || it.isShortcutFolder }
+        .distinctBy { it.shortcutDetails.targetId ?: it.id }
+}
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -78,6 +147,9 @@ class HomeViewModel @Inject constructor(
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
+    private val _searchNotice = MutableStateFlow<String?>(null)
+    val searchNotice: StateFlow<String?> = _searchNotice.asStateFlow()
+
     private var searchJob: Job? = null
 
     val watchQueue: StateFlow<List<WatchQueueItem>> =
@@ -98,11 +170,20 @@ class HomeViewModel @Inject constructor(
         val genres: List<String> = emptyList(),
         val backdropUrl: String? = null,
         val folderId: String,
-        val posterUrl: String? = null
+        val posterUrl: String? = null,
+        val year: Int? = null,
+        val episodeCount: Int? = null,
+        val score: Float? = null,
+        val ageRating: String? = null,
+        val isFocusedPreview: Boolean = false,
+        val clearLogoUrl: String? = null
     )
 
     private val _featuredAnime = MutableStateFlow<FeaturedAnime?>(null)
     val featuredAnime = _featuredAnime.asStateFlow()
+    private var featuredSpotlightJob: Job? = null
+    private var featuredRequestId = 0L
+    private var focusedFeaturedFolderId: String? = null
 
     data class FileToken(
         val fileId: String,
@@ -137,6 +218,16 @@ class HomeViewModel @Inject constructor(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e(TAG, "Error removing watch item", e)
+        }
+    }
+
+    fun restoreWatchItem(watchItem: WatchList) = viewModelScope.launch(Dispatchers.IO) {
+        try {
+            watchListRepository.insertWatch(watchItem)
+            _recentWatches.value = watchListRepository.getRecentWatches()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.e(TAG, "Error restoring watch item", e)
         }
     }
 
@@ -190,11 +281,16 @@ class HomeViewModel @Inject constructor(
 
             if (!configuredName.isNullOrBlank()) {
                 val escapedName = configuredName.replace("'", "\\'")
-                val response = driveRepository.get().getAllFiles(
+                val response = driveRepository.get().getAllFilesDetailed(
                     query = "name = '$escapedName' and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut') and trashed=false",
                     pageSize = 25
                 )
-                val folder = (response as? Resource.Success)?.data?.firstOrNull()
+                val listing = when (response) {
+                    is Resource.Success -> response.data
+                    is Resource.Error -> response.data
+                    is Resource.Loading -> null
+                }
+                val folder = listing?.files?.firstOrNull()
                 if (folder != null) {
                     val resolvedId = if (folder.shortcutDetails.targetId != null) {
                         folder.shortcutDetails.targetId
@@ -206,7 +302,12 @@ class HomeViewModel @Inject constructor(
                     withContext(Dispatchers.Main) { onResult(resolvedId, folder.name) }
                     return@launch
                 }
-                Log.w(TAG, "Configured library folder not found: $configuredName")
+                val error = (response as? Resource.Error)?.message
+                Log.w(TAG, error ?: "Configured library folder not found: $configuredName")
+                // An explicitly configured folder must never silently widen the library
+                // to the entire Drive when lookup fails or returns an incomplete page.
+                withContext(Dispatchers.Main) { onResult(null, configuredName) }
+                return@launch
             }
 
             // An unset profile uses Drive root. The user can choose a narrower
@@ -379,6 +480,7 @@ class HomeViewModel @Inject constructor(
         _isLoadingAnime.value = true
         _libraryLoadError.value = null
         _homeState.value = HomeState.Loading
+        _featuredAnime.value = null
         getLibraryRootFolder { folderId, folderName ->
             viewModelScope.launch(Dispatchers.IO) loadLibrary@{
                 try {
@@ -387,47 +489,63 @@ class HomeViewModel @Inject constructor(
 
                         // Offline-first: if local catalog cache has children, present them immediately
                         val cachedChildren = catalogRepository.getChildren(folderId)
+                        val cachedDriveFiles = excludeLibraryRoot(cachedChildren.map { entry ->
+                            DriveFile(
+                                id = entry.id,
+                                name = entry.name,
+                                size = null,
+                                mimeType = entry.mimeType,
+                                iconLink = null,
+                                thumbnailLink = entry.posterUrl,
+                                posterUrl = entry.posterUrl,
+                                shortcutDetails = zechs.drive.stream.data.model.ShortcutDetails(),
+                                starred = zechs.drive.stream.data.model.Starred.UNSTARRED
+                            )
+                        }, folderId)
                         if (cachedChildren.isNotEmpty() && _animeLibrary.value.isEmpty()) {
-                            val cachedDriveFiles = cachedChildren.map { entry ->
-                                DriveFile(
-                                    id = entry.id,
-                                    name = entry.name,
-                                    size = null,
-                                    mimeType = entry.mimeType,
-                                    iconLink = null,
-                                    thumbnailLink = entry.posterUrl,
-                                    posterUrl = entry.posterUrl,
-                                    shortcutDetails = zechs.drive.stream.data.model.ShortcutDetails(),
-                                    starred = zechs.drive.stream.data.model.Starred.UNSTARRED
-                                )
-                            }
                             _animeLibrary.value = cachedDriveFiles
                             _filteredAnimes.value = cachedDriveFiles
                             resolveFeaturedSpotlight(cachedDriveFiles)
                         }
 
                         val query = "'$folderId' in parents and trashed=false"
-                        val response = driveRepository.get().getAllFiles(
+                        val response = driveRepository.get().getAllFilesDetailed(
                             query = query,
                             pageSize = 100
                         )
+                        val listing = when (response) {
+                            is Resource.Success -> response.data
+                            is Resource.Error -> response.data
+                            is Resource.Loading -> null
+                        }
 
-                        if (response is Resource.Error) {
-                            _libraryLoadError.value = response.message ?: "Não foi possível carregar a biblioteca."
+                        if (listing == null || (response is Resource.Error && listing.files.isEmpty())) {
+                            val message = (response as? Resource.Error)?.message
+                                ?: "Não foi possível carregar a biblioteca."
+                            _libraryLoadError.value = message
                             _isLoadingAnime.value = false
-                            val isOffline = response.message?.contains("network", ignoreCase = true) == true
-                            val isAuthError = response.message?.contains("401", ignoreCase = true) == true || 
-                                              response.message?.contains("403", ignoreCase = true) == true
+                            val isOffline = message.contains("network", ignoreCase = true)
+                            val isAuthError = message.contains("401", ignoreCase = true) ||
+                                message.contains("403", ignoreCase = true)
                             _homeState.value = HomeState.Error(
-                                message = response.message ?: "Não foi possível carregar a biblioteca.",
+                                message = message,
                                 isOffline = isOffline,
                                 isAuthError = isAuthError
                             )
                             return@loadLibrary
                         }
 
-                        if (response is Resource.Success && response.data != null) {
-                            val rawFiles = response.data.map { it.toDriveFile() }
+                        val listingWarning = if (listing.isComplete) null else when (listing.incompleteReason) {
+                            zechs.drive.stream.data.model.FileCollectionResult.IncompleteReason.PAGE_LIMIT ->
+                                "Catálogo parcial: o limite de páginas do Drive foi atingido."
+                            zechs.drive.stream.data.model.FileCollectionResult.IncompleteReason.FILE_LIMIT ->
+                                "Catálogo parcial: o limite de arquivos do Drive foi atingido."
+                            else -> "Catálogo parcial: não foi possível carregar todos os itens do Drive."
+                        }
+                        val rawFiles = excludeLibraryRoot(
+                            listing.files.map { it.toDriveFile() },
+                            folderId
+                        )
                             // Hide non-video / non-folder files (such as folder.ico, .apk, .ini, etc.)
                             val animeFiles = rawFiles.filter { file ->
                                 val isMediaOrFolder = file.isFolder || file.isShortcutFolder || file.isVideoFile || file.isShortcutVideo
@@ -452,27 +570,37 @@ class HomeViewModel @Inject constructor(
                                 } else file
                             }
 
-                            _animeLibrary.value = mappedFiles
-                            _filteredAnimes.value = mappedFiles
-                            _isLoadingAnime.value = false
-                            resolveFeaturedSpotlight(mappedFiles)
+                        // A partial network result must not erase items from the last complete
+                        // offline catalog. Fresh Drive values win when an id exists in both.
+                        val displayFiles = mergeCatalogSnapshot(
+                            refreshedFiles = mappedFiles,
+                            cachedFiles = cachedDriveFiles,
+                            isComplete = listing.isComplete
+                        )
 
-                            // Cache folder contents offline in Room
-                            catalogRepository.cacheFolderContents(
-                                parentId = folderId,
-                                entries = mappedFiles.map {
-                                    CatalogEntry(
-                                        id = it.id,
-                                        name = it.name,
-                                        mimeType = it.mimeType,
-                                        parentId = folderId,
-                                        posterUrl = it.posterUrl
-                                    )
-                                }
-                            )
+                            _animeLibrary.value = displayFiles
+                            _filteredAnimes.value = displayFiles
+                            _isLoadingAnime.value = false
+                            resolveFeaturedSpotlight(displayFiles)
+
+                            // Never replace a complete offline snapshot with a truncated response.
+                            if (listing.isComplete) {
+                                catalogRepository.cacheFolderContents(
+                                    parentId = folderId,
+                                    entries = mappedFiles.map {
+                                        CatalogEntry(
+                                            id = it.id,
+                                            name = it.name,
+                                            mimeType = it.mimeType,
+                                            parentId = folderId,
+                                            posterUrl = it.posterUrl
+                                        )
+                                    }
+                                )
+                            }
 
                             // Resolve posters in batches so the catalog is not republished per item.
-                            val updatedList = mappedFiles.toMutableList()
+                            val updatedList = displayFiles.toMutableList()
                             var pendingPublish = false
                             for (i in updatedList.indices.take(100)) {
                                 val file = updatedList[i]
@@ -499,10 +627,7 @@ class HomeViewModel @Inject constructor(
                                 _filteredAnimes.value = updatedList.toList()
                             }
                             _homeState.value = HomeState.Content
-                    } else {
-                        _isLoadingAnime.value = false
-                        _homeState.value = HomeState.Empty("Nenhum anime encontrado na biblioteca.")
-                    }
+                            if (listingWarning != null) _libraryLoadError.value = listingWarning
                 } else {
                     Log.w(TAG, "Pasta de biblioteca não encontrada no Google Drive.")
                     _isLoadingAnime.value = false
@@ -523,9 +648,21 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun resolveFeaturedSpotlight(files: List<DriveFile>) = viewModelScope.launch(Dispatchers.IO) {
+    fun previewFeatured(file: DriveFile) {
+        val folder = if (file.isFolder || file.isShortcutFolder) file else return
+        val targetId = folder.shortcutDetails.targetId ?: folder.id
+        if (focusedFeaturedFolderId == targetId) return
+        focusedFeaturedFolderId = targetId
+        resolveFeaturedSpotlight(listOf(folder), isFocusedPreview = true)
+    }
+
+    private fun resolveFeaturedSpotlight(
+        files: List<DriveFile>,
+        isFocusedPreview: Boolean = false
+    ) {
+        if (!isFocusedPreview && focusedFeaturedFolderId != null) return
         val folders = files.filter { it.isFolder || it.isShortcutFolder }
-        if (folders.isEmpty()) return@launch
+        if (folders.isEmpty()) return
 
         // Prefer starred anime, or the first folder
         val chosenFolder = folders.firstOrNull { it.starred == zechs.drive.stream.data.model.Starred.STARRED }
@@ -535,6 +672,11 @@ class HomeViewModel @Inject constructor(
         val targetId = if (chosenFolder.isShortcut && chosenFolder.shortcutDetails.targetId != null) {
             chosenFolder.shortcutDetails.targetId
         } else chosenFolder.id
+        val fallbackArtUrl = chosenFolder.posterUrl ?: chosenFolder.thumbnailLink
+
+        if (isFocusedPreview) focusedFeaturedFolderId = targetId
+        val requestId = ++featuredRequestId
+        featuredSpotlightJob?.cancel()
 
         // Show a local hero immediately so a slow AniList/Tenrai lookup does not blank the Home.
         _featuredAnime.value = FeaturedAnime(
@@ -542,65 +684,78 @@ class HomeViewModel @Inject constructor(
             titleJapanese = null,
             synopsis = null,
             genres = emptyList(),
-            backdropUrl = chosenFolder.posterUrl ?: chosenFolder.thumbnailLink,
+            backdropUrl = fallbackArtUrl,
             folderId = targetId,
-            posterUrl = chosenFolder.posterUrl ?: chosenFolder.thumbnailLink
+            posterUrl = fallbackArtUrl,
+            isFocusedPreview = isFocusedPreview
         )
 
-        try {
-            val aniListMeta = animePosterResolver.resolveMetadata(cleanTitle)
-            val results = if (aniListMeta == null) tenraiAnimeService.searchAnime(cleanTitle) else emptyList()
-            val entry = results.firstOrNull()
+        featuredSpotlightJob = viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val aniListMeta = animePosterResolver.resolveMetadata(cleanTitle)
+                val results = if (aniListMeta == null) tenraiAnimeService.searchAnime(cleanTitle) else emptyList()
+                val entry = results.firstOrNull()
+                if (requestId != featuredRequestId) return@launch
 
-            if (aniListMeta != null) {
-                _featuredAnime.value = FeaturedAnime(
-                    title = aniListMeta.titleRomaji ?: cleanTitle,
-                    titleJapanese = aniListMeta.titleNative,
-                    synopsis = aniListMeta.synopsis ?: "Assista a esta incrível série disponível na sua biblioteca.",
-                    genres = aniListMeta.genres,
-                    backdropUrl = aniListMeta.bannerUrl ?: aniListMeta.posterUrl,
-                    folderId = targetId,
-                    posterUrl = aniListMeta.posterUrl ?: chosenFolder.posterUrl
-                )
-            } else if (entry != null) {
-                _featuredAnime.value = FeaturedAnime(
-                    title = entry.titleEnglish ?: entry.title,
-                    titleJapanese = entry.titleJapanese,
-                    synopsis = entry.synopsis,
-                    genres = entry.genres,
-                    backdropUrl = entry.imageUrl,
-                    folderId = targetId,
-                    posterUrl = chosenFolder.posterUrl ?: entry.imageUrl
-                )
-            } else {
-                _featuredAnime.value = FeaturedAnime(
-                    title = chosenFolder.name,
-                    titleJapanese = null,
-                    synopsis = "Assista a esta incrível série disponível na sua biblioteca.",
-                    genres = emptyList(),
-                    backdropUrl = chosenFolder.posterUrl,
-                    folderId = targetId,
-                    posterUrl = chosenFolder.posterUrl
-                )
+                if (aniListMeta != null) {
+                    _featuredAnime.value = FeaturedAnime(
+                        title = aniListMeta.titleEnglish ?: aniListMeta.titleRomaji ?: cleanTitle,
+                        titleJapanese = aniListMeta.titleNative,
+                        synopsis = aniListMeta.synopsis,
+                        genres = aniListMeta.genres,
+                        backdropUrl = aniListMeta.bannerUrl ?: aniListMeta.posterUrl ?: fallbackArtUrl,
+                        folderId = targetId,
+                        posterUrl = aniListMeta.posterUrl ?: fallbackArtUrl,
+                        year = aniListMeta.year,
+                        episodeCount = aniListMeta.episodeCount,
+                        score = aniListMeta.score,
+                        isFocusedPreview = isFocusedPreview,
+                        clearLogoUrl = aniListMeta.clearLogoUrl
+                    )
+                } else if (entry != null) {
+                    _featuredAnime.value = FeaturedAnime(
+                        title = entry.titleEnglish ?: entry.title,
+                        titleJapanese = entry.titleJapanese,
+                        synopsis = entry.synopsis,
+                        genres = entry.genres,
+                        backdropUrl = entry.imageUrl ?: fallbackArtUrl,
+                        folderId = targetId,
+                        posterUrl = chosenFolder.posterUrl ?: entry.imageUrl ?: fallbackArtUrl,
+                        year = entry.year,
+                        episodeCount = entry.episodes,
+                        score = entry.score?.toFloat(),
+                        ageRating = entry.rating,
+                        isFocusedPreview = isFocusedPreview
+                    )
+                } else {
+                    _featuredAnime.value = FeaturedAnime(
+                        title = chosenFolder.name,
+                        backdropUrl = fallbackArtUrl,
+                        folderId = targetId,
+                        posterUrl = fallbackArtUrl,
+                        isFocusedPreview = isFocusedPreview
+                    )
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "Error resolving featured spotlight", e)
+                if (requestId == featuredRequestId) {
+                    _featuredAnime.value = FeaturedAnime(
+                        title = chosenFolder.name,
+                        backdropUrl = fallbackArtUrl,
+                        folderId = targetId,
+                        posterUrl = fallbackArtUrl,
+                        isFocusedPreview = isFocusedPreview
+                    )
+                }
             }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.e(TAG, "Error resolving featured spotlight", e)
-            _featuredAnime.value = FeaturedAnime(
-                title = chosenFolder.name,
-                titleJapanese = null,
-                synopsis = null,
-                genres = emptyList(),
-                backdropUrl = chosenFolder.posterUrl,
-                folderId = targetId,
-                posterUrl = chosenFolder.posterUrl
-            )
         }
     }
 
     fun filterAnimes(query: String) {
         val trimmed = query.trim()
         _searchQuery.value = trimmed
+        _searchNotice.value = null
         searchJob?.cancel()
         if (trimmed.isBlank()) {
             _isSearching.value = false
@@ -646,18 +801,35 @@ class HomeViewModel @Inject constructor(
             // 2. Global Google Drive search with pagination
             val sanitized = trimmed.replace("'", "\\'")
             val driveQuery = "name contains '$sanitized' and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut' or mimeType contains 'video/') and trashed=false"
-            val response = driveRepository.get().getAllFiles(
+            val response = driveRepository.get().getAllFilesDetailed(
                 query = driveQuery,
-                pageSize = 50,
-                maxPages = 3
+                pageSize = 50
             )
-            if (response is Resource.Success && response.data != null && _searchQuery.value == trimmed) {
-                val remoteFiles = response.data.map { it.toDriveFile() }.filter { file ->
+            val listing = when (response) {
+                is Resource.Success -> response.data
+                is Resource.Error -> response.data
+                is Resource.Loading -> null
+            }
+            if (listing != null && _searchQuery.value == trimmed) {
+                val remoteFiles = listing.files.map { it.toDriveFile() }.filter { file ->
                     val isFolder = file.isFolder || file.isShortcutFolder
                     val isVideo = file.isVideoFile || file.isShortcutVideo
                     (isFolder || isVideo) && !file.name.startsWith(".")
                 }
                 mergeSearchResults(remoteFiles)
+                if (!listing.isComplete) {
+                    _searchNotice.value = when (listing.incompleteReason) {
+                        zechs.drive.stream.data.model.FileCollectionResult.IncompleteReason.PAGE_LIMIT ->
+                            "Busca parcial: o limite de páginas foi atingido. Refine os termos para encontrar outros itens."
+                        zechs.drive.stream.data.model.FileCollectionResult.IncompleteReason.FILE_LIMIT ->
+                            "Busca parcial: o limite de arquivos foi atingido. Refine os termos para encontrar outros itens."
+                        else -> "Busca parcial: não foi possível carregar todos os resultados do Drive."
+                    }
+                } else if (response is Resource.Error) {
+                    _searchNotice.value = "Busca parcial: não foi possível carregar todos os resultados do Drive."
+                }
+            } else if (response is Resource.Error && _searchQuery.value == trimmed) {
+                _searchNotice.value = response.message
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -704,12 +876,22 @@ class HomeViewModel @Inject constructor(
             }
             val status = if (starred) zechs.drive.stream.data.model.Starred.STARRED
             else zechs.drive.stream.data.model.Starred.UNSTARRED
-            _animeLibrary.value = _animeLibrary.value.map { item ->
+            val updatedLibrary = _animeLibrary.value.map { item ->
                 if (item.id == file.id || item.shortcutDetails.targetId == targetId) item.copy(starred = status) else item
             }
+            _animeLibrary.value = updatedLibrary
             _filteredAnimes.value = _filteredAnimes.value.map { item ->
                 if (item.id == file.id || item.shortcutDetails.targetId == targetId) item.copy(starred = status) else item
             }
+            val currentStarred = _starredFiles.value.filterNot {
+                it.id == targetId || it.shortcutDetails.targetId == targetId
+            }
+            val libraryFavorite = updatedLibrary.firstOrNull {
+                it.id == file.id || it.shortcutDetails.targetId == targetId
+            }
+            _starredFiles.value = if (starred && libraryFavorite != null) {
+                currentStarred + libraryFavorite.copy(starred = zechs.drive.stream.data.model.Starred.STARRED)
+            } else currentStarred
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e(TAG, "Error updating Home favorite", e)
@@ -789,12 +971,17 @@ class HomeViewModel @Inject constructor(
             }
 
             // 2. Query the anime folder to find video files
-            val response = driveRepository.get().getAllFiles(
+            val response = driveRepository.get().getAllFilesDetailed(
                 query = "'$folderId' in parents and trashed=false",
                 pageSize = 100
             )
-            if (response is Resource.Success && response.data != null) {
-                val files = response.data.map { it.toDriveFile() }
+            val listing = when (response) {
+                is Resource.Success -> response.data
+                is Resource.Error -> response.data
+                is Resource.Loading -> null
+            }
+            if (listing?.isComplete == true) {
+                val files = listing.files.map { it.toDriveFile() }
                 val videos = files.filter { it.isVideoFile || it.isShortcutVideo }
                     .sortedWith { a, b -> zechs.drive.stream.utils.EpisodeParser.naturalCompare(a.name, b.name) }
 
@@ -851,12 +1038,22 @@ class HomeViewModel @Inject constructor(
                     val subFolderId = if (subFolder.isShortcut && subFolder.shortcutDetails.targetId != null) {
                         subFolder.shortcutDetails.targetId
                     } else subFolder.id
-                    val subResponse = driveRepository.get().getAllFiles(
+                    val subResponse = driveRepository.get().getAllFilesDetailed(
                         query = "'$subFolderId' in parents and trashed=false",
                         pageSize = 100
                     )
-                    if (subResponse is Resource.Success && subResponse.data != null) {
-                        val subFiles = subResponse.data.map { it.toDriveFile() }
+                    val subListing = when (subResponse) {
+                        is Resource.Success -> subResponse.data
+                        is Resource.Error -> subResponse.data
+                        is Resource.Loading -> null
+                    }
+                    if (subListing == null || !subListing.isComplete) {
+                        Log.w(TAG, "Episode folder listing incomplete; opening the series page instead: $subFolderId")
+                        withContext(Dispatchers.Main) { onResult(null, 0L) }
+                        return@launch
+                    }
+                    if (subListing.files.isNotEmpty()) {
+                        val subFiles = subListing.files.map { it.toDriveFile() }
                         val subVideos = subFiles.filter { it.isVideoFile || it.isShortcutVideo }
                             .sortedWith { a, b -> zechs.drive.stream.utils.EpisodeParser.naturalCompare(a.name, b.name) }
                         if (subVideos.isNotEmpty()) {

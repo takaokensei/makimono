@@ -3,9 +3,12 @@ package zechs.drive.stream.utils
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.StateListDrawable
 import android.util.TypedValue
 import android.view.View
+import android.view.ViewGroup
 import android.view.ViewTreeObserver
+import androidx.recyclerview.widget.RecyclerView
 import androidx.core.content.ContextCompat
 import zechs.drive.stream.R
 
@@ -21,6 +24,7 @@ object TvFocusRing {
     fun install(root: View) {
         if (root.getTag(R.id.tv_focus_ring_installed) == true) return
         root.setTag(R.id.tv_focus_ring_installed, true)
+        disablePlatformContainerHighlights(root)
         var target: View? = null
         var ring: Drawable? = null
 
@@ -44,6 +48,9 @@ object TvFocusRing {
         fun isValidFocusTarget(v: View?): Boolean {
             if (v == null) return false
             if (v === root) return false // Never draw focus ring on the root container/player surface
+            // Profile cards put selection/focus on the round avatar itself. A rectangular overlay
+            // around the card recreates the gray tile treatment the profile picker is designed to avoid.
+            if (v.id == R.id.cardProfileRoot) return false
             if (!v.isShown) return false // Must be visible and have all visible ancestors
             if (v.visibility != View.VISIBLE) return false
             if (v.alpha < 0.1f) return false
@@ -62,6 +69,10 @@ object TvFocusRing {
                 return false
             }
             if (v.id == R.id.player_view) return false
+            // FocusEngine provides motion/depth, not a visible outline. Keep the shared ring for
+            // its targets unless their own background already declares a focused state.
+            // Profile cards are excluded above because their circular avatar owns the indicator.
+            if (hasFocusedBackground(v.background)) return false
 
             return belongsToRoot(v)
         }
@@ -71,13 +82,20 @@ object TvFocusRing {
             if (isValidFocusTarget(focused)) {
                 val targetView = focused!!
                 target = targetView
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    // This overlay owns focus visuals when the component background has no
+                    // focused state; the platform's rectangular highlight would clash with it.
+                    targetView.defaultFocusHighlightEnabled = false
+                }
                 val accent = root.context.resolveThemeColor(R.attr.colorAccentPrimary)
                 val fill = root.context.resolveThemeColor(R.attr.colorFocusFill)
                 val density = root.resources.displayMetrics.density
-                val cornerRadius = if (targetView.height <= 56 * density) {
-                    targetView.height / 2f
-                } else {
-                    12 * density
+                val isAvatarArt = targetView.id == R.id.cardArtRoot &&
+                    targetView.width <= targetView.height * 1.25f
+                val cornerRadius = when {
+                    isAvatarArt -> minOf(targetView.width, targetView.height) / 2f
+                    targetView.height <= 56 * density -> targetView.height / 2f
+                    else -> 12 * density
                 }
                 ring = GradientDrawable().apply {
                     setColor(if (targetView.height <= 56 * density) fill else Color.TRANSPARENT)
@@ -92,6 +110,7 @@ object TvFocusRing {
 
         val listener = ViewTreeObserver.OnGlobalFocusChangeListener { _, focused -> update(focused) }
         val layout = ViewTreeObserver.OnGlobalLayoutListener {
+            disablePlatformContainerHighlights(root)
             val currentFocus = root.findFocus()
             if (target !== currentFocus || (target != null && !isValidFocusTarget(target))) {
                 update(currentFocus)
@@ -120,6 +139,22 @@ object TvFocusRing {
                 v.removeOnAttachStateChangeListener(this)
             }
         })
+    }
+
+    private fun disablePlatformContainerHighlights(root: View) {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) return
+        if (root is RecyclerView) root.defaultFocusHighlightEnabled = false
+        if (root is ViewGroup) {
+            for (index in 0 until root.childCount) disablePlatformContainerHighlights(root.getChildAt(index))
+        }
+    }
+
+    private fun hasFocusedBackground(drawable: Drawable?): Boolean {
+        val selector = drawable as? StateListDrawable ?: return false
+        return FocusSelectorPolicy.hasFocusedState(
+            stateSpecs = (0 until selector.stateCount).map(selector::getStateSet),
+            focusedStateAttribute = android.R.attr.state_focused
+        )
     }
 
     private fun android.content.Context.resolveThemeColor(attribute: Int): Int {

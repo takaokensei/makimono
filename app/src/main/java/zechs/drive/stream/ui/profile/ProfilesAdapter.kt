@@ -1,8 +1,10 @@
 package zechs.drive.stream.ui.profile
 
 import android.view.LayoutInflater
+import android.graphics.Typeface
+import android.view.View
 import android.view.ViewGroup
-import androidx.core.content.ContextCompat
+import android.view.animation.DecelerateInterpolator
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -37,6 +39,26 @@ class ProfilesAdapter(
         }
     }
 
+    var reduceMotion: Boolean = false
+        set(value) {
+            field = value
+            if (value) {
+                for (index in 0 until itemCount) {
+                    (recyclerView?.findViewHolderForAdapterPosition(index) as? ProfileViewHolder)
+                        ?.binding?.cardProfileRoot?.let { card ->
+                            card.animate().cancel()
+                            card.scaleX = 1f
+                            card.scaleY = 1f
+                            card.alpha = 1f
+                            card.translationY = 0f
+                            card.setTag(R.id.profile_entry_animation_played, true)
+                        }
+                }
+            }
+        }
+
+    private var recyclerView: RecyclerView? = null
+
     var isManageMode: Boolean = false
         set(value) {
             field = value
@@ -64,16 +86,28 @@ class ProfilesAdapter(
 
         init {
             if (android.os.Build.VERSION.SDK_INT >= 26) binding.cardProfileRoot.defaultFocusHighlightEnabled = false
-            binding.cardProfileRoot.setOnFocusChangeListener { view, hasFocus ->
-                val scale = if (hasFocus) 1.035f else 1.0f
-                view.animate()
-                    .scaleX(scale)
-                    .scaleY(scale)
-                    .setDuration(180L)
-                    .start()
-                binding.cardProfileRoot.isSelected = hasFocus
-                if (hasFocus) (currentList.getOrNull(bindingAdapterPosition) as? ProfileUiModel.ProfileItem)
-                    ?.profile?.let(onProfileFocused)
+            // Touch should activate the selected profile immediately, even when the card had no
+            // prior keyboard focus. Keep parent interception enabled so the profile carousel can
+            // still scroll horizontally when a gesture moves beyond touch slop.
+            zechs.drive.stream.utils.SingleTapActivation.install(
+                binding.cardProfileRoot,
+                disallowParentIntercept = false
+            )
+            zechs.drive.stream.utils.FocusEngine.attach(
+                binding.cardProfileRoot,
+                zechs.drive.stream.utils.FocusEngine.FocusKind.CARD
+            ) { view, hasFocus ->
+                val focusedItem = currentList.getOrNull(bindingAdapterPosition) as? ProfileUiModel.ProfileItem
+                binding.avatarContainer.isSelected = hasFocus || focusedItem?.isActive == true
+                val nameHighlighted = hasFocus || focusedItem?.isActive == true
+                binding.tvProfileName.isSelected = nameHighlighted
+                binding.tvProfileName.setTypeface(
+                    binding.tvProfileName.typeface,
+                    if (nameHighlighted) Typeface.BOLD else Typeface.NORMAL
+                )
+                if (hasFocus) {
+                    focusedItem?.profile?.let(onProfileFocused)
+                }
             }
         }
 
@@ -92,20 +126,36 @@ class ProfilesAdapter(
                         .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
                         .into(binding.ivProfileAvatar)
                     binding.tvProfileRole.text = listOfNotNull(
-                        "Admin".takeIf { profile.isAdmin }, "Kids".takeIf { profile.isKids }).joinToString(" · ")
+                        itemView.context.getString(R.string.profile_role_admin).takeIf { profile.isAdmin },
+                        itemView.context.getString(R.string.profile_role_kids).takeIf { profile.isKids }
+                    ).joinToString(" · ")
                     binding.tvProfileRole.visibility = if (profile.isAdmin || profile.isKids)
-                        android.view.View.VISIBLE else android.view.View.INVISIBLE
+                        android.view.View.VISIBLE else android.view.View.GONE
                     binding.ivProfileAvatar.isVisible = true
                     binding.ivAddIcon.isVisible = false
+                    binding.avatarContainer.setBackgroundResource(R.drawable.item_profile_avatar_ring)
+                    // Let the portrait fill the circular focus ring; the picker follows the
+                    // clean, avatar-first layout from the reference instead of a backing tile.
+                    val ringInset = (1 * itemView.resources.displayMetrics.density).toInt()
+                    binding.avatarContainer.setPadding(ringInset, ringInset, ringInset, ringInset)
 
-                    binding.cardProfileRoot.background = ContextCompat.getDrawable(
-                        itemView.context,
-                        R.drawable.bg_profile_surface
+                    binding.cardProfileRoot.background = null
+                    binding.cardProfileRoot.isSelected = item.isActive
+                    binding.avatarContainer.isSelected = item.isActive
+                    binding.tvProfileName.isSelected = item.isActive
+                    binding.tvProfileName.setTypeface(
+                        binding.tvProfileName.typeface,
+                        if (item.isActive) Typeface.BOLD else Typeface.NORMAL
                     )
 
                     // Tick indicator
                     binding.badgeStatusTick.isVisible = false
-                    binding.cardProfileRoot.contentDescription = "${profile.name}${if (item.isActive) ", perfil ativo" else ""}"
+                    binding.cardProfileRoot.contentDescription = buildList {
+                        add(profile.name)
+                        if (profile.isAdmin) add(itemView.context.getString(R.string.profile_role_admin_accessibility))
+                        if (profile.isKids) add(itemView.context.getString(R.string.profile_role_kids_accessibility))
+                        if (item.isActive) add(itemView.context.getString(R.string.profile_active_accessibility))
+                    }.joinToString(", ")
 
                     // Manage mode edit icon
                     binding.ivEditBadge.isVisible = isManageMode
@@ -120,18 +170,23 @@ class ProfilesAdapter(
                 }
                 is ProfileUiModel.AddProfileItem -> {
                     binding.tvProfileRole.visibility = android.view.View.INVISIBLE
+                    binding.cardProfileRoot.contentDescription =
+                        itemView.context.getString(R.string.profile_add_accessibility)
                     com.bumptech.glide.Glide.with(binding.ivProfileAvatar).clear(binding.ivProfileAvatar)
-                    binding.tvProfileName.text = "Adicionar perfil"
+                    binding.tvProfileName.setText(R.string.profile_add_accessibility)
+                    binding.tvProfileName.isSelected = false
+                    binding.tvProfileName.setTypeface(binding.tvProfileName.typeface, Typeface.NORMAL)
                     binding.ivProfileAvatar.setImageDrawable(null)
                     binding.ivProfileAvatar.isVisible = false
                     binding.ivAddIcon.isVisible = true
+                    binding.avatarContainer.setBackgroundResource(R.drawable.item_profile_add_ring)
+                    binding.avatarContainer.setPadding(0, 0, 0, 0)
+                    binding.avatarContainer.isSelected = false
                     binding.badgeStatusTick.isVisible = false
                     binding.ivEditBadge.isVisible = false
 
-                    binding.cardProfileRoot.background = ContextCompat.getDrawable(
-                        itemView.context,
-                        R.drawable.bg_profile_surface
-                    )
+                    binding.cardProfileRoot.background = null
+                    binding.cardProfileRoot.isSelected = false
 
                     binding.cardProfileRoot.setOnClickListener {
                         onAddProfileClicked()
@@ -150,7 +205,64 @@ class ProfilesAdapter(
         return ProfileViewHolder(binding)
     }
 
+    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
+        super.onAttachedToRecyclerView(recyclerView)
+        this.recyclerView = recyclerView
+    }
+
+    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+        this.recyclerView = null
+        super.onDetachedFromRecyclerView(recyclerView)
+    }
+
     override fun onBindViewHolder(holder: ProfileViewHolder, position: Int) {
         holder.bind(getItem(position))
+        prepareEntrance(holder.itemView)
+    }
+
+    private fun prepareEntrance(view: View) {
+        if (view.getTag(R.id.profile_entry_animation_played) == true) return
+        if (reduceMotion) {
+            view.alpha = 1f
+            view.translationY = 0f
+            view.setTag(R.id.profile_entry_animation_played, true)
+        } else {
+            view.alpha = 0f
+            view.translationY = 10f * view.resources.displayMetrics.density
+        }
+    }
+
+    override fun onViewAttachedToWindow(holder: ProfileViewHolder) {
+        super.onViewAttachedToWindow(holder)
+        val card = holder.itemView
+        if (card.getTag(R.id.profile_entry_animation_played) == true) return
+        card.setTag(R.id.profile_entry_animation_played, true)
+        if (reduceMotion) {
+            card.alpha = 1f
+            card.translationY = 0f
+            return
+        }
+        val position = holder.bindingAdapterPosition.coerceAtLeast(0)
+        card.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setStartDelay(position * 40L)
+            .setDuration(180L)
+            .setInterpolator(DecelerateInterpolator())
+            .start()
+    }
+
+    override fun onViewDetachedFromWindow(holder: ProfileViewHolder) {
+        val card = holder.itemView
+        if (card.getTag(R.id.profile_entry_animation_played) == true &&
+            (card.alpha < 1f || card.translationY != 0f)
+        ) {
+            card.animate().cancel()
+            card.alpha = 1f
+            card.translationY = 0f
+            card.scaleX = 1f
+            card.scaleY = 1f
+        }
+        super.onViewDetachedFromWindow(holder)
     }
 }

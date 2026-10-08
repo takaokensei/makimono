@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -16,11 +18,14 @@ import kotlinx.coroutines.launch
 import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.data.model.Starred
 import zechs.drive.stream.data.repository.DriveRepository
+import zechs.drive.stream.data.repository.DriveFailureClassifier
 import zechs.drive.stream.ui.files.FilesFragment.Companion.TAG
 import zechs.drive.stream.ui.files.adapter.FilesDataModel
+import zechs.drive.stream.ui.files.adapter.FilesPageMerger
 import zechs.drive.stream.utils.Event
 import zechs.drive.stream.utils.SessionManager
 import zechs.drive.stream.utils.state.Resource
+import zechs.drive.stream.utils.state.ResourceErrorKind
 import java.net.SocketTimeoutException
 import zechs.drive.stream.data.remote.AnimePosterResolver
 import zechs.drive.stream.data.repository.FolderMetadataRepository
@@ -46,12 +51,18 @@ class FilesViewModel @Inject constructor(
 
     fun getFirstEpisodeInFolder(folderId: String, onResult: (DriveFile?) -> Unit) = viewModelScope.launch(Dispatchers.IO) {
         try {
-            val res = driveRepository.getAllFiles(
-                query = "'$folderId' in parents and mimeType contains 'video/' and trashed=false",
-                pageSize = 10
+            val response = driveRepository.getAllFilesDetailed(
+                query = "'$folderId' in parents and trashed=false",
+                pageSize = 100
             )
-            if (res is Resource.Success && res.data.isNotEmpty()) {
-                val videoFiles = res.data.map { it.toDriveFile() }
+            val listing = when (response) {
+                is Resource.Success -> response.data
+                is Resource.Error -> response.data
+                is Resource.Loading -> null
+            }
+            if (listing?.isComplete == true && listing.files.isNotEmpty()) {
+                val videoFiles = listing.files.map { it.toDriveFile() }
+                    .filter { it.isVideoFile || it.isShortcutVideo }
                     .sortedWith { a, b -> zechs.drive.stream.utils.EpisodeParser.naturalCompare(a.name, b.name) }
                 val firstEp = videoFiles.firstOrNull()
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
@@ -77,7 +88,17 @@ class FilesViewModel @Inject constructor(
 
 
     private var nextPageToken: String? = null
+    @Volatile
     private var response: MutableList<FilesDataModel>? = null
+    @Volatile
+    private var responseGeneration = 0L
+    private var posterResolutionJob: Job? = null
+    @Volatile
+    private var pageRequestJob: Job? = null
+    @Volatile
+    private var pageRequestGeneration = 0L
+    private var activeQuery: String? = null
+    private var hasActiveQuery = false
     private val pageSize = 25
 
     var hasLoaded = false
@@ -85,44 +106,100 @@ class FilesViewModel @Inject constructor(
     var hasFailed = false
         private set
 
+    var shouldResumePageRequest = false
+        private set
+
     var isLastPage = nextPageToken == null
         private set
 
-    fun queryFiles(query: String?) = viewModelScope.launch(Dispatchers.IO) {
-        _filesList.postValue(Resource.Loading())
-        try {
-
-            /**
-             * Ensures that current scope is active
-             * else throw CancellationException
-             */
-            ensureActive()
-
-            if (query != null) {
-                getQuery(query)
-            } else {
-                getTeamDrives()
-            }
+    fun queryFiles(query: String?): Job {
+        if (!hasActiveQuery || query != activeQuery) {
+            pageRequestGeneration++
+            pageRequestJob?.cancel()
+            pageRequestJob = null
+            activeQuery = query
+            hasActiveQuery = true
+            nextPageToken = null
+            isLastPage = false
+            hasLoaded = false
             hasFailed = false
-        } catch (cancel: CancellationException) {
-            Log.d(TAG, cancel.message ?: "CancellationException")
-        } catch (timeout: SocketTimeoutException) {
-            _filesList.postValue(Resource.Error("Server timed out"))
-            Log.d(TAG, timeout.message ?: "SocketTimeoutException")
-            hasFailed = true
-        } catch (e: Exception) {
-            _filesList.postValue(Resource.Error(e.message ?: "Something went wrong"))
-            Log.e(TAG, "Something went wrong", e)
-            hasFailed = true
+            shouldResumePageRequest = false
+            responseGeneration++
+            response = null
+            posterResolutionJob?.cancel()
+            _filesList.postValue(Resource.Loading())
+        }
+
+        pageRequestJob?.takeIf { it.isActive }?.let { return it }
+
+        // Replace the retry action with the normal paging indicator while retrying
+        // the same Drive cursor. Loaded rows and the cursor remain untouched.
+        response?.indexOfLast { it is FilesDataModel.PageError }?.takeIf { it >= 0 }?.let { index ->
+            val updated = response.orEmpty().toMutableList().apply {
+                this[index] = FilesDataModel.Loading
+            }
+            response = updated
+            _filesList.postValue(Resource.Success(updated.toList()))
+        }
+
+        val requestGeneration = ++pageRequestGeneration
+        shouldResumePageRequest = false
+        lateinit var requestJob: Job
+        requestJob = viewModelScope.launch(Dispatchers.IO) {
+            _filesList.postValue(Resource.Loading())
+            try {
+                ensureActive()
+                if (query != null) {
+                    getQuery(query, requestGeneration)
+                } else {
+                    getTeamDrives(requestGeneration)
+                }
+            } catch (cancel: CancellationException) {
+                Log.d(TAG, cancel.message ?: "CancellationException")
+            } catch (timeout: SocketTimeoutException) {
+                publishPageError("Server timed out", requestGeneration, ResourceErrorKind.NETWORK)
+                Log.d(TAG, timeout.message ?: "SocketTimeoutException")
+            } catch (e: Exception) {
+                publishPageError(
+                    e.message ?: "Something went wrong",
+                    requestGeneration,
+                    DriveFailureClassifier.fromException(e)
+                )
+                Log.e(TAG, "Something went wrong", e)
+            } finally {
+                if (pageRequestJob === requestJob) pageRequestJob = null
+            }
+        }
+        pageRequestJob = requestJob
+        return requestJob
+    }
+
+    /** Cancel network work when this folder leaves the foreground; its last successful cursor is retained. */
+    fun cancelPendingPageRequest() {
+        val request = pageRequestJob ?: return
+        if (!request.isActive) return
+
+        pageRequestGeneration++
+        pageRequestJob = null
+        request.cancel()
+
+        val current = response ?: return
+        val retained = current.filterNot { it == FilesDataModel.Loading }.toMutableList()
+        if (retained.size != current.size) {
+            response = retained
+            shouldResumePageRequest = retained.isNotEmpty() && !isLastPage
+            _filesList.postValue(Resource.Success(retained.toList()))
         }
     }
 
-    private suspend fun getQuery(query: String) {
+    private suspend fun getQuery(query: String, requestGeneration: Long) {
         val filesResponse = driveRepository.getFiles(
             query = query,
             pageToken = nextPageToken,
             pageSize = pageSize
         )
+        currentCoroutineContext().ensureActive()
+        if (requestGeneration != pageRequestGeneration) return
 
         when (filesResponse) {
             is Resource.Success -> {
@@ -130,37 +207,39 @@ class FilesViewModel @Inject constructor(
 
                 Log.d(TAG, files.toString())
 
+                val driveFiles = files.files.map { it.toDriveFile() }
+                val favoriteTargetsByFileId = driveFiles.associate { file ->
+                    file.id to ((if (file.isShortcut) file.shortcutDetails.targetId else null) ?: file.id)
+                }
+                val favoriteTargetIds = favoriteRepository.getFavoriteIds(favoriteTargetsByFileId.values)
+                currentCoroutineContext().ensureActive()
+                if (requestGeneration != pageRequestGeneration) return
                 nextPageToken = files.nextPageToken
                 isLastPage = nextPageToken == null
-
-                val filesDataModel = mutableListOf<FilesDataModel>()
-
-                val filesList = files.files
-                    .map {
-                        val driveFile = it.toDriveFile()
-                        val targetId = (if (driveFile.isShortcut) driveFile.shortcutDetails.targetId else null) ?: driveFile.id
-                        val isFav = favoriteRepository.isFavorite(targetId)
-                        val starredStatus = if (isFav) Starred.STARRED else driveFile.starred
+                val filesList = driveFiles
+                    .map { driveFile ->
+                        val targetId = favoriteTargetsByFileId.getValue(driveFile.id)
+                        val starredStatus = if (targetId in favoriteTargetIds) Starred.STARRED else driveFile.starred
                         FilesDataModel.File(driveFile.copy(starred = starredStatus))
                     }
                     .distinctBy { it.driveFile.id }
 
-                postSuccess(filesDataModel, filesList)
+                postSuccess(filesList, requestGeneration)
             }
             is Resource.Error -> {
-                _filesList.postValue(
-                    Resource.Error(message = filesResponse.message)
-                )
+                publishPageError(filesResponse.message, requestGeneration, filesResponse.errorKind)
             }
             else -> {}
         }
     }
 
-    private suspend fun getTeamDrives() {
+    private suspend fun getTeamDrives(requestGeneration: Long) {
         val drivesResponse = driveRepository.getDrives(
             pageToken = nextPageToken,
             pageSize = pageSize
         )
+        currentCoroutineContext().ensureActive()
+        if (requestGeneration != pageRequestGeneration) return
 
         when (drivesResponse) {
             is Resource.Success -> {
@@ -171,37 +250,27 @@ class FilesViewModel @Inject constructor(
                 nextPageToken = teamDrives.nextPageToken
                 isLastPage = nextPageToken == null
 
-                val filesDataModel = mutableListOf<FilesDataModel>()
                 val sharedDrives = teamDrives.drives
                     .map { FilesDataModel.File(it.toDriveFile()) }
                     .distinctBy { it.driveFile.id }
 
-                postSuccess(filesDataModel, sharedDrives)
+                postSuccess(sharedDrives, requestGeneration)
             }
             is Resource.Error -> {
-                _filesList.postValue(Resource.Error(drivesResponse.message))
+                publishPageError(drivesResponse.message, requestGeneration, drivesResponse.errorKind)
             }
             else -> {}
         }
     }
 
     private fun postSuccess(
-        filesDataModel: MutableList<FilesDataModel>,
-        filesList: List<FilesDataModel.File>
+        filesList: List<FilesDataModel.File>,
+        requestGeneration: Long
     ) {
-        val existing = response
-        val updated: MutableList<FilesDataModel> = if (existing == null) {
-            filesDataModel.addAll(filesList)
-            filesDataModel
-        } else {
-            // append new list of files
-            existing.addAll(filesList)
-
-            // return new list and remove all Loading
-            existing.filter {
-                it != FilesDataModel.Loading
-            }.toMutableList()
-        }
+        if (requestGeneration != pageRequestGeneration) return
+        hasFailed = false
+        shouldResumePageRequest = false
+        val updated = FilesPageMerger.merge(response, filesList)
 
         // before submitting add Loading
         // if list is not at last page
@@ -210,63 +279,118 @@ class FilesViewModel @Inject constructor(
         }
 
         response = updated
+        val generation = ++responseGeneration
+        posterResolutionJob?.cancel()
+        posterResolutionJob = viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val allMeta = folderMetadataRepository.getAllMetadata().associateBy { it.folderId }
+                ensureActive()
+                if (generation != responseGeneration) return@launch
 
-        attachCachedPostersAndResolveMissing()
-    }
+                val current = response ?: return@launch
+                val withCachedPosters = current.map { item ->
+                    if (item !is FilesDataModel.File) return@map item
+                    val file = item.driveFile
+                    val isFolder = file.isFolder || file.isShortcutFolder
+                    if (!isFolder || !file.posterUrl.isNullOrBlank()) return@map item
 
-    private fun attachCachedPostersAndResolveMissing() = viewModelScope.launch(Dispatchers.IO) {
-        try {
-            val allMeta = folderMetadataRepository.getAllMetadata().associateBy { it.folderId }
-            val list = response
-            if (list != null) {
-                for (i in list.indices) {
-                    val item = list[i]
-                    if (item is FilesDataModel.File) {
-                        val file = item.driveFile
-                        val isFolder = file.isFolder || file.isShortcutFolder
-                        if (isFolder && file.posterUrl.isNullOrBlank()) {
-                            val targetId = if (file.isShortcut) file.shortcutDetails.targetId ?: file.id else file.id
-                            val cached = allMeta[targetId]?.posterUrl
-                            if (!cached.isNullOrBlank()) {
-                                list[i] = FilesDataModel.File(file.copy(posterUrl = cached))
-                            }
-                        }
-                    }
+                    val targetId = if (file.isShortcut) file.shortcutDetails.targetId ?: file.id else file.id
+                    val cached = allMeta[targetId]?.posterUrl
+                    if (cached.isNullOrBlank()) item else FilesDataModel.File(file.copy(posterUrl = cached))
+                }.toMutableList()
+
+                if (generation != responseGeneration) return@launch
+                response = withCachedPosters
+                _filesList.postValue(Resource.Success(withCachedPosters.toList()))
+
+                resolveMissingPosters(generation)
+            } catch (cancel: CancellationException) {
+                throw cancel
+            } catch (e: Exception) {
+                Log.e(TAG, "Error enriching Drive folder posters", e)
+                if (generation == responseGeneration) {
+                    response?.let { _filesList.postValue(Resource.Success(it.toList())) }
                 }
-            }
-            val snapshot = response
-            if (snapshot != null) {
-                _filesList.postValue(Resource.Success(snapshot.toList()))
-            }
-
-            resolveMissingPosters()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error attaching cached posters", e)
-            val fallback = response
-            if (fallback != null) {
-                _filesList.postValue(Resource.Success(fallback))
             }
         }
     }
 
-    private fun resolveMissingPosters() = viewModelScope.launch(Dispatchers.IO) {
-        val currentList = response ?: return@launch
-        for (i in currentList.indices.take(100)) {
-            val item = currentList.getOrNull(i)
-            if (item is FilesDataModel.File) {
-                val file = item.driveFile
-                val isFolder = file.isFolder || file.isShortcutFolder
-                if (isFolder && file.posterUrl.isNullOrBlank()) {
-                    val targetId = if (file.isShortcut) file.shortcutDetails.targetId ?: file.id else file.id
-                    val poster = animePosterResolver.resolvePoster(file.name)
-                    if (!poster.isNullOrBlank()) {
-                        folderMetadataRepository.updatePosterUrl(targetId, file.name, poster)
-                        if (i < currentList.size && currentList[i] is FilesDataModel.File) {
-                            currentList[i] = FilesDataModel.File(file.copy(posterUrl = poster))
-                            _filesList.postValue(Resource.Success(currentList.toList()))
-                        }
-                    }
+    private fun publishPageError(
+        message: String?,
+        requestGeneration: Long,
+        errorKind: ResourceErrorKind? = ResourceErrorKind.UNKNOWN
+    ) {
+        if (requestGeneration != pageRequestGeneration) return
+        hasFailed = true
+        shouldResumePageRequest = false
+        responseGeneration++
+        posterResolutionJob?.cancel()
+        val currentFiles = response
+            ?.filterNot { it == FilesDataModel.Loading }
+            ?.toMutableList()
+        val hasVisibleFiles = currentFiles.orEmpty().any { it is FilesDataModel.File }
+        if (currentFiles != null && hasVisibleFiles && !isLastPage) {
+            currentFiles.removeAll { it is FilesDataModel.PageError }
+            currentFiles += FilesDataModel.PageError(errorKind ?: ResourceErrorKind.UNKNOWN)
+            response = currentFiles
+            _filesList.postValue(
+                Resource.Error(
+                    message = message ?: "Something went wrong",
+                    data = currentFiles.toList(),
+                    errorKind = errorKind ?: ResourceErrorKind.UNKNOWN
+                )
+            )
+            return
+        }
+        if (currentFiles != null) response = currentFiles
+        _filesList.postValue(
+            Resource.Error(
+                message ?: "Something went wrong",
+                currentFiles?.toList(),
+                errorKind ?: ResourceErrorKind.UNKNOWN
+            )
+        )
+    }
+
+    private suspend fun resolveMissingPosters(generation: Long) {
+        val candidateIds = response.orEmpty()
+            .filterIsInstance<FilesDataModel.File>()
+            .take(100)
+            .map { it.driveFile.id }
+
+        for (fileId in candidateIds) {
+            currentCoroutineContext().ensureActive()
+            if (generation != responseGeneration) return
+
+            val file = response.orEmpty()
+                .filterIsInstance<FilesDataModel.File>()
+                .firstOrNull { it.driveFile.id == fileId }
+                ?.driveFile
+                ?: continue
+            val isFolder = file.isFolder || file.isShortcutFolder
+            if (!isFolder || !file.posterUrl.isNullOrBlank()) continue
+
+            val targetId = if (file.isShortcut) file.shortcutDetails.targetId ?: file.id else file.id
+            val poster = animePosterResolver.resolvePoster(file.name)
+            currentCoroutineContext().ensureActive()
+            if (generation != responseGeneration) return
+            if (poster.isNullOrBlank()) continue
+
+            folderMetadataRepository.updatePosterUrl(targetId, file.name, poster)
+            currentCoroutineContext().ensureActive()
+            if (generation != responseGeneration) return
+
+            val latest = response ?: return
+            val index = latest.indexOfFirst {
+                it is FilesDataModel.File && it.driveFile.id == fileId
+            }
+            val current = latest.getOrNull(index) as? FilesDataModel.File
+            if (index >= 0 && current != null && current.driveFile.posterUrl.isNullOrBlank()) {
+                val enriched = latest.toMutableList().apply {
+                    this[index] = FilesDataModel.File(current.driveFile.copy(posterUrl = poster))
                 }
+                response = enriched
+                _filesList.postValue(Resource.Success(enriched.toList()))
             }
         }
     }

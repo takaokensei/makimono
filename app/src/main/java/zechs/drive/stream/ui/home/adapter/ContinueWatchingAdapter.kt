@@ -5,9 +5,12 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import zechs.drive.stream.R
 import zechs.drive.stream.data.model.WatchList
 import zechs.drive.stream.data.model.thumbnailLarge
 import zechs.drive.stream.databinding.ItemContinueWatchingShelfBinding
+import zechs.drive.stream.ui.home.ContinueWatchingProgressPolicy
+import zechs.drive.stream.ui.home.ContinueWatchingInputPolicy
 import zechs.drive.stream.utils.MediaImageLoader
 
 /**
@@ -29,8 +32,9 @@ class ContinueWatchingAdapter(
     }
 
     var onDpadLeftListener: ((android.view.View) -> Boolean)? = null
+    var onDpadVerticalListener: ((android.view.View, Int) -> Boolean)? = null
     var onFocusItemListener: ((android.view.View) -> Unit)? = null
-    var onLongClickListener: ((WatchList) -> Unit)? = null
+    var onLongClickListener: ((WatchList, android.view.View) -> Unit)? = null
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemContinueWatchingShelfBinding.inflate(
@@ -40,7 +44,7 @@ class ContinueWatchingAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(getItem(position), onClick, this)
+            holder.bind(getItem(position), onClick, this)
     }
 
     class ViewHolder(
@@ -50,11 +54,25 @@ class ContinueWatchingAdapter(
         fun bind(watchItem: WatchList, onClick: (WatchList) -> Unit, adapter: ContinueWatchingAdapter) {
             val progressPct = watchItem.watchProgress()
 
-            // Remaining time in minutes (ceil so "1 min restante" not "0 min restante")
-            val watchedSec = (watchItem.watchedDuration / 1000)
-            val totalSec = (watchItem.totalDuration / 1000)
-            val remainingSec = (totalSec - watchedSec).coerceAtLeast(0)
-            val remainingMin = ((remainingSec + 59) / 60).toInt()
+            val context = binding.root.context
+            val remainingLabel = when (
+                val remaining = ContinueWatchingProgressPolicy.remaining(
+                    watchItem.watchedDuration,
+                    watchItem.totalDuration
+                )
+            ) {
+                is ContinueWatchingProgressPolicy.Remaining.Minutes -> context.resources.getQuantityString(
+                    R.plurals.home_continue_remaining_minutes,
+                    remaining.count,
+                    remaining.count
+                )
+                ContinueWatchingProgressPolicy.Remaining.LessThanMinute ->
+                    context.getString(R.string.home_continue_less_than_minute)
+                ContinueWatchingProgressPolicy.Remaining.Unknown ->
+                    context.getString(R.string.home_continue_progress_saved)
+                ContinueWatchingProgressPolicy.Remaining.Complete ->
+                    context.getString(R.string.home_continue_completed)
+            }
 
             val parsed = zechs.drive.stream.utils.EpisodeParser.parse(watchItem.name)
             binding.tvShelfItemTitle.text = parsed.showTitle.ifBlank { parsed.cleanTitle }
@@ -81,11 +99,7 @@ class ContinueWatchingAdapter(
                 binding.tvShelfItemDot.visibility = android.view.View.GONE
             }
 
-            binding.tvShelfItemRemaining.text = if (remainingMin > 0) {
-                "$remainingMin min restante${if (remainingMin > 1) "s" else ""}"
-            } else {
-                "Quase completo"
-            }
+            binding.tvShelfItemRemaining.text = remainingLabel
             binding.pbShelfItemProgress.progress = progressPct
 
             MediaImageLoader.card(
@@ -96,23 +110,47 @@ class ContinueWatchingAdapter(
             binding.cardShelfItem.setOnClickListener { onClick(watchItem) }
 
             binding.cardShelfItem.setOnLongClickListener {
-                adapter.onLongClickListener?.invoke(watchItem)
-                true
+                adapter.onLongClickListener?.let { listener ->
+                    listener(watchItem, binding.cardShelfItem)
+                    true
+                } ?: false
             }
 
-            binding.cardShelfItem.setOnFocusChangeListener { v, hasFocus ->
+            zechs.drive.stream.utils.FocusEngine.attach(
+                binding.cardShelfItem,
+                zechs.drive.stream.utils.FocusEngine.FocusKind.CARD
+            ) { v, hasFocus ->
                 if (hasFocus) {
                     adapter.onFocusItemListener?.invoke(v)
-                    v.animate().scaleX(1.05f).scaleY(1.05f).translationZ(12f).setDuration(150L).start()
-                } else {
-                    v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(150L).start()
                 }
             }
 
             binding.cardShelfItem.setOnKeyListener { v, keyCode, event ->
-                if (event.action == android.view.KeyEvent.ACTION_DOWN && keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
-                    if (bindingAdapterPosition == 0 && adapter.onDpadLeftListener?.invoke(v) == true) {
-                        return@setOnKeyListener true
+                if (event.action == android.view.KeyEvent.ACTION_DOWN) {
+                    when (keyCode) {
+                        android.view.KeyEvent.KEYCODE_MENU -> {
+                            if (ContinueWatchingInputPolicy.shouldOpenContextMenu(
+                                    keyCode = keyCode,
+                                    action = event.action,
+                                    repeatCount = event.repeatCount,
+                                    hasHandler = adapter.onLongClickListener != null
+                                )
+                            ) {
+                                adapter.onLongClickListener?.invoke(watchItem, binding.cardShelfItem)
+                                return@setOnKeyListener true
+                            }
+                        }
+                        android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                            if (bindingAdapterPosition == 0 && adapter.onDpadLeftListener?.invoke(v) == true) {
+                                return@setOnKeyListener true
+                            }
+                        }
+                        android.view.KeyEvent.KEYCODE_DPAD_UP,
+                        android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                            if (adapter.onDpadVerticalListener?.invoke(v, keyCode) == true) {
+                                return@setOnKeyListener true
+                            }
+                        }
                     }
                 }
                 false

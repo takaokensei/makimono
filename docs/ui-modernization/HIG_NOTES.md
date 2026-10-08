@@ -1,5 +1,22 @@
 # Apple HIG notes for Makimono TV
 
+## Planejamento de produto/pareamento — 04/10/2026
+
+Leitura de trechos gerais/tvOS para o novo `APPLE_GRADE_PRODUCT_PLAN.md`, sem afirmar releitura integral do catálogo. Managing accounts (4 páginas; geral pp.1–2 e tvOS p.3), Settings (3 páginas; geral pp.1–2), Split views (4 páginas; geral e tvOS p.3), Collections (2 páginas), Loading (3 páginas; geral pp.1–2), e trechos de Top Shelf, Playing video, Searching, Menus, Toggles, Pickers e Progress indicators. Managing accounts p.3 e Split views p.3 foram rasterizados em 110 dpi e vistos; não foi extraída nova medida de tabela oculta. Nenhum PDF foi copiado para o repo.
+
+Regras adicionais para rastrear na implementação; **ainda não conformidade validada do aplicativo**:
+
+- HG-P01 — Managing accounts p.3 / tvOS: minimizar entrada no controle remoto e favorecer autenticação em outro aparelho. Adaptação: QR/código, OAuth Google no celular e sessão Makimono na TV (Q07–Q12).
+- HG-P02 — Managing accounts pp.1–2 / geral: explicar método/benefício da conta e oferecer gestão/exclusão coerente. Adaptação: conexão Drive explícita, desconexão por aparelho versus conta, exclusão de dados Makimono sem excluir mídia Drive (Q11–Q12/Q20).
+- HG-P03 — Managing accounts p.3 / tvOS: separar credencial compartilhada dos dados de cada espectador e evitar escolha repetitiva desnecessária. Adaptação: OwnerAccount/DeviceSession/Profile separados e restauração configurável de perfil (Q09/Q20–Q22).
+- HG-P04 — Settings pp.1–2 / geral: defaults úteis e opções frequentes no contexto da tarefa. Adaptação: categorias de settings e seleções áudio/legenda/ordem nas telas de uso (Q06/Q18/Q21).
+- HG-P05 — Split views p.3 / tvOS: panes equilibrados e uma hierarquia/título que orientem o conjunto. Adaptação: duas colunas em TV e fluxo sequencial mobile; medidas e breakpoints requerem evidência Android (Q06).
+- HG-P06 — Collections p.1 / geral: fileiras/grades previsíveis e espaço para foco sem sobreposição. Adaptação: lockup focável completo, padding e scroll por identidade (Q04/Q13–Q15).
+- HG-P07 — Loading p.2 / geral: progresso determinado só quando o avanço é conhecido, sem bloquear ações independentes. Adaptação: estados partial/loading/cancel, nenhuma porcentagem inventada (Q02/Q08/Q11).
+- HG-P08 — Playing video pp.3–4 / integração: retomar ponto esperado e preparar saída com contexto relevante. Adaptação: deep links/playback e retorno ao episódio/seleção; integração Apple TV app não é API Android (Q17/Q19/Q23).
+
+Esses IDs só entram como OK em HIG_CONFORMANCE depois de evidência por tela/aparelho. Valores de segurança, HTTP e performance do ADR/plano são decisões de engenharia, não exigências HIG. O pedido novo amplia a exclusão antiga de login/backend; não é desvio visual da HIG.
+
 F0 reference register for the ten local Apple Developer Documentation PDFs. These are design references adapted to Android TV, not platform requirements or a claim of Apple-platform conformance. No PDF was copied into the repository. Page numbers below refer to the printed page number in each supplied PDF (not a web page or a platform not requested).
 
 ## F0 PDF review record

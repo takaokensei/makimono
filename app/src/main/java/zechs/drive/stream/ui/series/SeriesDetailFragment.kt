@@ -36,8 +36,10 @@ import zechs.drive.stream.ui.player2.MPVActivity
 import zechs.drive.stream.ui.series.adapter.SeriesDetailEpisodeAdapter
 import zechs.drive.stream.ui.series.adapter.SeriesDetailSeasonAdapter
 import zechs.drive.stream.ui.series.adapter.SeriesEpisodeItem
+import zechs.drive.stream.ui.series.SeriesEpisodeContextMenu
 import zechs.drive.stream.utils.VideoPlayer
 import zechs.drive.stream.utils.TvAccessibilityLayout
+import zechs.drive.stream.utils.FocusEngine
 import java.util.Locale
 
 @AndroidEntryPoint
@@ -52,6 +54,7 @@ class SeriesDetailFragment : BaseFragment() {
 
     private lateinit var seasonAdapter: SeriesDetailSeasonAdapter
     private lateinit var episodeAdapter: SeriesDetailEpisodeAdapter
+    private lateinit var synopsisDisclosure: SeriesSynopsisDisclosure
     private var hasRestoredInitialFocus = false
 
     override fun onCreateView(
@@ -72,10 +75,8 @@ class SeriesDetailFragment : BaseFragment() {
             binding.actionsRow,
             listOf(
                 binding.btnPrimaryAction,
-                binding.btnTrailer,
                 binding.btnFavorite,
-                binding.btnFollow,
-                binding.btnMarkWatched
+                binding.btnMoreActions
             )
         )
         TvAccessibilityLayout.adaptDetailsSynopsis(requireContext(), binding.tvSynopsis)
@@ -83,6 +84,15 @@ class SeriesDetailFragment : BaseFragment() {
         setupAdapters()
         setupFocusAnimations()
         setupFocusChain()
+        synopsisDisclosure = SeriesSynopsisDisclosure(
+            scrollView = binding.scrollView,
+            synopsis = binding.tvSynopsis,
+            toggle = binding.tvSynopsisMore,
+            fallbackFocus = binding.btnPrimaryAction,
+            expandLabel = getString(R.string.series_synopsis_expand),
+            collapseLabel = getString(R.string.series_synopsis_collapse),
+            onAvailabilityChanged = ::updateSynopsisFocusChain
+        )
         binding.btnRetry.setOnClickListener {
             viewModel.loadSeriesDetails(
                 folderId = args.folderId,
@@ -110,6 +120,19 @@ class SeriesDetailFragment : BaseFragment() {
         binding.btnSearch.setOnClickListener {
             showEpisodeSearchDialog()
         }
+        binding.btnMoreActions.setOnClickListener { showMoreActions() }
+    }
+
+    private fun showMoreActions() {
+        val current = viewModel.uiState.value as? SeriesDetailUiState.Success
+        SeriesMoreActionsDialog.show(
+            context = requireContext(),
+            focusAnchor = binding.btnMoreActions,
+            isFollowed = current?.isFollowed == true,
+            onTrailer = { binding.btnTrailer.performClick() },
+            onFollowToggle = { binding.btnFollow.performClick() },
+            onMarkWatched = { binding.btnMarkWatched.performClick() }
+        )
     }
 
     private fun setupAdapters() {
@@ -122,8 +145,8 @@ class SeriesDetailFragment : BaseFragment() {
             onEpisodeClick = { episodeItem ->
                 playEpisode(episodeItem)
             },
-            onEpisodeLongClick = { episodeItem ->
-                showEpisodeContextMenu(episodeItem)
+            onEpisodeLongClick = { episodeItem, focusAnchor ->
+                showEpisodeContextMenu(episodeItem, focusAnchor)
             }
         )
         binding.rvEpisodes.adapter = episodeAdapter
@@ -132,22 +155,14 @@ class SeriesDetailFragment : BaseFragment() {
     private fun setupFocusAnimations() {
         val actionButtons = listOf(
             binding.btnPrimaryAction,
-            binding.btnTrailer,
             binding.btnFavorite,
-            binding.btnFollow,
-            binding.btnMarkWatched,
+            binding.btnMoreActions,
             binding.btnBack,
             binding.btnSearch
         )
 
         for (btn in actionButtons) {
-            btn.setOnFocusChangeListener { v, hasFocus ->
-                if (hasFocus) {
-                    v.animate().scaleX(1.05f).scaleY(1.05f).translationZ(10f).setDuration(150L).start()
-                } else {
-                    v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(150L).start()
-                }
-            }
+            FocusEngine.attach(btn, FocusEngine.FocusKind.BUTTON)
         }
     }
 
@@ -157,29 +172,33 @@ class SeriesDetailFragment : BaseFragment() {
         // Define focus chain for action buttons
         binding.btnBack.nextFocusRightId = binding.btnSearch.id
         binding.btnSearch.nextFocusRightId = binding.btnPrimaryAction.id
-        binding.btnPrimaryAction.nextFocusRightId = binding.btnTrailer.id
-        binding.btnTrailer.nextFocusRightId = binding.btnFavorite.id
-        binding.btnFavorite.nextFocusRightId = binding.btnFollow.id
-        binding.btnFollow.nextFocusRightId = binding.btnMarkWatched.id
+        binding.btnPrimaryAction.nextFocusRightId = binding.btnFavorite.id
+        binding.btnFavorite.nextFocusRightId = binding.btnMoreActions.id
 
         // Reverse direction
-        binding.btnMarkWatched.nextFocusLeftId = binding.btnFollow.id
-        binding.btnFollow.nextFocusLeftId = binding.btnFavorite.id
-        binding.btnFavorite.nextFocusLeftId = binding.btnTrailer.id
-        binding.btnTrailer.nextFocusLeftId = binding.btnPrimaryAction.id
+        binding.btnMoreActions.nextFocusLeftId = binding.btnFavorite.id
+        binding.btnFavorite.nextFocusLeftId = binding.btnPrimaryAction.id
         binding.btnPrimaryAction.nextFocusLeftId = binding.btnSearch.id
         binding.btnSearch.nextFocusLeftId = binding.btnBack.id
 
         // Connect to season tabs
-        listOf(binding.btnPrimaryAction, binding.btnTrailer, binding.btnFavorite, binding.btnFollow, binding.btnMarkWatched).forEach {
+        listOf(binding.btnPrimaryAction, binding.btnFavorite, binding.btnMoreActions).forEach {
             it.nextFocusDownId = binding.rvSeasonTabs.id
             it.nextFocusUpId = binding.btnBack.id
         }
-        binding.rvSeasonTabs.nextFocusUpId = binding.btnMarkWatched.id
+        binding.rvSeasonTabs.nextFocusUpId = binding.btnMoreActions.id
 
         // Connect season tabs to episodes
         binding.rvSeasonTabs.nextFocusDownId = binding.rvEpisodes.id
         binding.rvEpisodes.nextFocusUpId = binding.rvSeasonTabs.id
+    }
+
+    private fun updateSynopsisFocusChain(hasDisclosure: Boolean) {
+        val upTarget = if (hasDisclosure) binding.tvSynopsisMore.id else binding.btnBack.id
+        listOf(binding.btnPrimaryAction, binding.btnFavorite, binding.btnMoreActions)
+            .forEach { it.nextFocusUpId = upTarget }
+        binding.tvSynopsisMore.nextFocusUpId = binding.btnBack.id
+        binding.tvSynopsisMore.nextFocusDownId = binding.btnPrimaryAction.id
     }
 
     private fun observeUiState() {
@@ -190,6 +209,7 @@ class SeriesDetailFragment : BaseFragment() {
                         is SeriesDetailUiState.Loading -> {
                             binding.pbLoading.visibility = View.VISIBLE
                             binding.tvEmptyEpisodes.visibility = View.GONE
+                            binding.tvPartialListingNotice.visibility = View.GONE
                             binding.btnRetry.visibility = View.GONE
                             binding.tvRomajiTitle.text = state.seriesTitle.ifBlank { args.name }
                             binding.tvEnglishSubtitle.visibility = View.GONE
@@ -201,6 +221,7 @@ class SeriesDetailFragment : BaseFragment() {
 
                         is SeriesDetailUiState.Error -> {
                             binding.pbLoading.visibility = View.GONE
+                            binding.tvPartialListingNotice.visibility = View.GONE
                             binding.tvEmptyEpisodes.visibility = View.VISIBLE
                             binding.tvEmptyEpisodes.text = state.message
                             binding.btnRetry.visibility = View.VISIBLE
@@ -210,6 +231,8 @@ class SeriesDetailFragment : BaseFragment() {
                             binding.pbLoading.visibility = View.GONE
                             binding.tvEmptyEpisodes.visibility = View.GONE
                             binding.btnRetry.visibility = View.GONE
+                            binding.tvPartialListingNotice.visibility =
+                                if (state.hasIncompleteDriveListing) View.VISIBLE else View.GONE
                             bindSeriesData(state)
                         }
                     }
@@ -293,17 +316,21 @@ class SeriesDetailFragment : BaseFragment() {
             binding.tvReleaseYear.visibility = View.GONE
         }
 
-        val statusRaw = state.animeEntry?.status
-        binding.tvSeriesStatus.visibility = if (statusRaw.isNullOrBlank()) View.GONE else View.VISIBLE
-        binding.tvSeriesStatus.text = when {
-            statusRaw.isNullOrBlank() -> "—"
-            statusRaw.contains("Finished", true) -> "Completo"
-            else -> "Em exibição"
+        val airingStatus = SeriesAiringStatusPolicy.classify(state.animeEntry?.status)
+        val airingStatusLabel = when (airingStatus) {
+            SeriesAiringStatus.COMPLETED -> R.string.anime_status_completed
+            SeriesAiringStatus.AIRING -> R.string.anime_status_airing
+            SeriesAiringStatus.UPCOMING -> R.string.anime_status_upcoming
+            SeriesAiringStatus.HIATUS -> R.string.anime_status_hiatus
+            SeriesAiringStatus.CANCELLED -> R.string.anime_status_cancelled
+            null -> null
         }
+        binding.tvSeriesStatus.visibility = if (airingStatusLabel == null) View.GONE else View.VISIBLE
+        airingStatusLabel?.let(binding.tvSeriesStatus::setText)
 
         val scoreVal = state.aniListMetadata?.score ?: state.animeEntry?.score
         binding.layoutRating.visibility = if (scoreVal != null) View.VISIBLE else View.GONE
-        binding.metaRow1.visibility = if (ageRating != null || releaseYear != null || !statusRaw.isNullOrBlank() || scoreVal != null) View.VISIBLE else View.GONE
+        binding.metaRow1.visibility = if (ageRating != null || releaseYear != null || airingStatusLabel != null || scoreVal != null) View.VISIBLE else View.GONE
         if (scoreVal != null) {
             binding.tvMalScore.visibility = View.VISIBLE
             binding.tvMalScore.text = String.format(Locale.US, "%.1f", scoreVal)
@@ -312,26 +339,42 @@ class SeriesDetailFragment : BaseFragment() {
         }
 
         // 4. Meta Row 2 (Tech Specs)
-        binding.tvQualityBadge.text = state.qualityBadge
-        binding.tvAudioTrackBadge.text = state.audioBadge
-        binding.tvSubtitleBadge.text = state.subtitleBadge
+        binding.tvQualityBadge.text = state.qualityBadge.orEmpty()
+        binding.qualityBadgeContainer.visibility = if (state.qualityBadge == null) View.GONE else View.VISIBLE
+        binding.tvQualityBadge.contentDescription = state.qualityBadge?.let {
+            getString(R.string.series_inferred_resolution_from_filename, it)
+        }
+
+        binding.tvAudioTrackBadge.text = state.audioBadge.orEmpty()
+        binding.audioBadgeContainer.visibility = if (state.audioBadge == null) View.GONE else View.VISIBLE
+        binding.tvAudioTrackBadge.contentDescription = state.audioBadge?.let {
+            getString(R.string.series_inferred_audio_from_filename, it)
+        }
+
+        binding.tvSubtitleBadge.text = state.subtitleBadge.orEmpty()
+        binding.subtitleBadgeContainer.visibility = if (state.subtitleBadge == null) View.GONE else View.VISIBLE
+        binding.tvSubtitleBadge.contentDescription = state.subtitleBadge?.let {
+            getString(R.string.series_inferred_subtitles_from_filename, it)
+        }
+        binding.metaRow2.visibility = if (
+            state.qualityBadge != null || state.audioBadge != null || state.subtitleBadge != null
+        ) View.VISIBLE else View.GONE
 
         // 5. Synopsis
         val rawSynopsis = state.aniListMetadata?.synopsis ?: state.animeEntry?.synopsis
-        if (!rawSynopsis.isNullOrBlank()) {
-            val cleanSynopsis = rawSynopsis
+        val cleanSynopsis = rawSynopsis?.takeIf(String::isNotBlank)?.let {
+            it
                 .replace(Regex("<br\\s*/?>"), " ")
                 .replace(Regex("<.*?>"), "")
                 .trim()
-            binding.tvSynopsis.visibility = View.VISIBLE
-            binding.tvSynopsis.text = cleanSynopsis
-        } else {
-            binding.tvSynopsis.visibility = View.GONE
         }
+        synopsisDisclosure.bind(cleanSynopsis)
 
         // 5. Action Buttons
         val canResume = state.continueWatchingItem?.progressPercent in 1..94
-        binding.tvPrimaryActionTitle.text = if (canResume) "Continuar assistindo" else "Reproduzir"
+        binding.tvPrimaryActionTitle.setText(
+            if (canResume) R.string.series_action_continue else R.string.series_action_play
+        )
         binding.tvPrimaryActionSubtitle.text = state.continueWatchingSubtitle
         binding.tvPrimaryActionSubtitle.visibility = if (state.continueWatchingSubtitle.isBlank()) View.GONE else View.VISIBLE
         binding.btnPrimaryAction.setOnClickListener {
@@ -340,11 +383,9 @@ class SeriesDetailFragment : BaseFragment() {
         }
 
         binding.btnTrailer.setOnClickListener {
-            val promoItem = state.currentEpisodes.firstOrNull {
-                it.file.name.contains("PV", true) || it.file.name.contains("Trailer", true)
-            }
+            val promoItem = state.trailerItem
             if (promoItem != null) {
-                playEpisode(promoItem)
+                playEpisode(promoItem, standalone = true)
             } else {
                 val trailerUrl = state.aniListMetadata?.trailerUrl
                 if (!trailerUrl.isNullOrBlank()) {
@@ -402,18 +443,20 @@ class SeriesDetailFragment : BaseFragment() {
                 ContextCompat.getDrawable(requireContext(), R.drawable.ic_star_filled_24)
             )
             binding.ivFavoriteIcon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.amber_500))
-            binding.tvFavoriteText.text = "Favoritado"
+            binding.tvFavoriteText.setText(R.string.series_action_favorited)
         } else {
             binding.ivFavoriteIcon.setImageDrawable(
                 ContextCompat.getDrawable(requireContext(), R.drawable.ic_star_outline_24)
             )
             binding.ivFavoriteIcon.clearColorFilter()
-            binding.tvFavoriteText.text = "Favoritar"
+            binding.tvFavoriteText.setText(R.string.series_action_favorite)
         }
     }
 
     private fun updateFollowButton(isFollowed: Boolean) {
-        binding.tvFollowText.text = if (isFollowed) "Seguindo" else "Seguir"
+        binding.tvFollowText.setText(
+            if (isFollowed) R.string.series_action_following else R.string.series_action_follow
+        )
         binding.ivFollowIcon.setColorFilter(
             ContextCompat.getColor(
                 requireContext(),
@@ -422,60 +465,66 @@ class SeriesDetailFragment : BaseFragment() {
         )
     }
 
-    private fun showEpisodeContextMenu(item: SeriesEpisodeItem) {
+    private fun showEpisodeContextMenu(item: SeriesEpisodeItem, focusAnchor: View) {
         val options = mutableListOf<String>()
         val actions = mutableListOf<() -> Unit>()
 
         if (item.progressPercent in 1..94) {
-            options.add("Continuar assistindo (${item.progressPercent}%)")
+            options.add(getString(R.string.episode_action_continue, item.progressPercent))
             actions.add { playEpisode(item, startFromBeginning = false) }
 
-            options.add("Assistir do início (0:00)")
+            options.add(getString(R.string.episode_action_restart))
             actions.add { playEpisode(item, startFromBeginning = true) }
 
-            options.add("Marcar como assistido (100%)")
+            options.add(getString(R.string.episode_action_mark_watched))
             actions.add { viewModel.setEpisodeWatched(item.file, true) }
 
-            options.add("Limpar progresso")
+            options.add(getString(R.string.episode_action_clear_progress))
             actions.add { viewModel.resetEpisodeProgress(item.file) }
         } else if (item.progressPercent >= 95) {
-            options.add("Assistir novamente (do início)")
+            options.add(getString(R.string.episode_action_watch_again))
             actions.add { playEpisode(item, startFromBeginning = true) }
 
-            options.add("Marcar como não assistido")
+            options.add(getString(R.string.episode_action_mark_unwatched))
             actions.add { viewModel.setEpisodeWatched(item.file, false) }
         } else {
-            options.add("Assistir episódio")
+            options.add(getString(R.string.episode_action_play))
             actions.add { playEpisode(item, startFromBeginning = false) }
 
-            options.add("Marcar como assistido")
+            options.add(getString(R.string.episode_action_mark_watched))
             actions.add { viewModel.setEpisodeWatched(item.file, true) }
         }
 
-        options.add("Copiar nome do arquivo")
+        options.add(getString(R.string.episode_action_copy_filename))
         actions.add {
             val cm = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
             cm?.setPrimaryClip(ClipData.newPlainText("Arquivo", item.file.name))
             Toast.makeText(requireContext(), getString(R.string.file_name_copied), Toast.LENGTH_SHORT).show()
         }
 
-        options.add("Adicionar à fila")
+        options.add(getString(R.string.add_to_queue))
         actions.add { viewModel.addToQueue(item.file) }
 
-        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
-            .setTitle(item.displayTitle)
-            .setItems(options.toTypedArray()) { dialog, which ->
-                dialog.dismiss()
-                actions.getOrNull(which)?.invoke()
-            }
-            .show()
+        SeriesEpisodeContextMenu.show(
+            context = requireContext(),
+            focusAnchor = focusAnchor,
+            title = item.displayTitle,
+            options = options
+        ) { which ->
+            actions.getOrNull(which)?.invoke()
+        }
     }
 
-    private fun playEpisode(item: SeriesEpisodeItem, startFromBeginning: Boolean = false) {
+    private fun playEpisode(
+        item: SeriesEpisodeItem,
+        startFromBeginning: Boolean = false,
+        standalone: Boolean = false
+    ) {
         val currentState = viewModel.uiState.value as? SeriesDetailUiState.Success ?: return
 
-        // Build playlist from current episodes
-        val playlist = ArrayList(currentState.currentEpisodes.map { ep ->
+        // A trailer must not inherit the narrative playlist or autoplay into an episode.
+        val playlistEpisodes = if (standalone) listOf(item) else currentState.currentEpisodes
+        val playlist = ArrayList(playlistEpisodes.map { ep ->
             PlaylistItem(
                 fileId = ep.file.id,
                 title = ep.file.name,
@@ -526,18 +575,18 @@ class SeriesDetailFragment : BaseFragment() {
         val episodes = state.currentEpisodes
         if (episodes.isEmpty()) {
             MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
-                .setTitle("Buscar episódio")
-                .setMessage("Nenhum episódio carregado ainda.")
+                .setTitle(R.string.series_search_episode)
+                .setMessage(R.string.series_no_episode_loaded)
                 .setPositiveButton(android.R.string.ok, null)
                 .show()
             return
         }
         val titles = episodes.map { ep ->
-            val num = ep.episodeNumber?.let { "Ep. ${it.toString().padStart(2, '0')}" } ?: ep.displayTitle
+            val num = ep.episodeNumber?.let { getString(R.string.series_episode_number_short, it) } ?: ep.displayTitle
             "$num • ${ep.displayTitle}"
         }.toTypedArray()
         MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
-            .setTitle("Buscar episódio")
+            .setTitle(R.string.series_search_episode)
             .setItems(titles) { dialog, which ->
                 dialog.dismiss()
                 episodes.getOrNull(which)?.let { playEpisode(it) }

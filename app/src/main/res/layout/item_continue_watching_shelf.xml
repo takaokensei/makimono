@@ -19,7 +19,7 @@
     app:cardCornerRadius="8dp"
     app:cardElevation="0dp"
     app:strokeColor="@color/shelf_card_stroke_color"
-    app:strokeWidth="0dp">
+    app:strokeWidth="2dp">
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -78,7 +78,7 @@
                 android:paddingEnd="6dp"
                 android:paddingBottom="2dp"
                 android:textColor="@color/layout_literal_e2e8f0"
-                android:textSize="12sp"
+                style="@style/TextAppearance.Makimono.TV.Body"
                 android:textStyle="bold"
                 tools:text="T2: Ep. 03" />
 
@@ -103,7 +103,7 @@
                 android:fontFamily="@font/inter"
                 android:maxLines="1"
                 android:textColor="@color/layout_literal_ffffff"
-                android:textSize="15sp"
+                style="@style/TextAppearance.Makimono.TV.Subheadline"
                 android:textStyle="bold"
                 tools:text="Attack on Titan - Ep. 04" />
 
@@ -121,7 +121,7 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/inter"
                     android:textColor="@color/layout_literal_cbd5e1"
-                    android:textSize="12sp"
+                    style="@style/TextAppearance.Makimono.TV.Body"
                     tools:text="Ep. 04" />
 
                 <TextView
@@ -131,7 +131,7 @@
                     android:fontFamily="@font/inter"
                     android:text=" • "
                     android:textColor="@color/layout_literal_64748b"
-                    android:textSize="12sp" />
+                    style="@style/TextAppearance.Makimono.TV.Body" />
 
                 <TextView
                     android:id="@+id/tvShelfItemRemaining"
@@ -139,7 +139,7 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/inter"
                     android:textColor="?attr/colorAccentPrimary"
-                    android:textSize="12sp"
+                    style="@style/TextAppearance.Makimono.TV.Body"
                     android:textStyle="bold"
                     tools:text="9 min restantes" />
 

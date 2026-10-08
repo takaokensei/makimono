@@ -25,8 +25,10 @@ data class AnimeMetadata(
     val synopsis: String? = null,
     val score: Float? = null,
     val year: Int? = null,
+    val episodeCount: Int? = null,
     val genres: List<String> = emptyList(),
-    val trailerUrl: String? = null
+    val trailerUrl: String? = null,
+    val clearLogoUrl: String? = null
 )
 
 @Singleton
@@ -57,6 +59,7 @@ class AnimePosterResolver @Inject constructor() {
                 genres
                 averageScore
                 seasonYear
+                episodes
                 trailer {
                   id
                   site
@@ -191,6 +194,7 @@ class AnimePosterResolver @Inject constructor() {
                 val desc = media.optString("description").takeIf { it.isNotBlank() && it != "null" }
                 val avgScore = media.optInt("averageScore", -1).takeIf { it >= 0 }?.let { it / 10.0f }
                 val year = media.optInt("seasonYear", -1).takeIf { it > 0 }
+                val episodeCount = media.optInt("episodes", -1).takeIf { it > 0 }
 
                 val genresList = mutableListOf<String>()
                 media.optJSONArray("genres")?.let { arr ->
@@ -217,6 +221,7 @@ class AnimePosterResolver @Inject constructor() {
                     synopsis = desc,
                     score = avgScore,
                     year = year,
+                    episodeCount = episodeCount,
                     genres = genresList,
                     trailerUrl = trailerUrl
                 )

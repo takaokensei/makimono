@@ -2,7 +2,7 @@ package zechs.drive.stream.utils
 
 import android.graphics.Color
 import android.graphics.Typeface
-import com.google.android.exoplayer2.ui.CaptionStyleCompat
+import androidx.media3.ui.CaptionStyleCompat
 
 /**
  * Per-profile subtitle appearance and timing normalization preferences.

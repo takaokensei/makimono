@@ -27,7 +27,7 @@
         android:layout_marginBottom="6dp"
         android:fontFamily="@font/inter"
         android:textColor="?attr/colorTextPrimary"
-        android:textSize="18sp"
+        style="@style/TextAppearance.Makimono.TV.Headline"
         android:textStyle="bold"
         tools:text="Sousou no Frieren" />
 
@@ -39,7 +39,7 @@
         android:fontFamily="@font/inter"
         android:text="Você completou todos os episódios! Como você avalia este anime no MyAnimeList?"
         android:textColor="?attr/colorTextSecondary"
-        android:textSize="13sp" />
+        style="@style/TextAppearance.Makimono.TV.Callout" />
 
     <!-- Big Score & Label Preview -->
     <LinearLayout
@@ -58,7 +58,7 @@
             android:fontFamily="@font/inter"
             android:text="—"
             android:textColor="?attr/colorAccentPrimary"
-            android:textSize="36sp"
+            style="@style/TextAppearance.Makimono.TV.Display"
             android:textStyle="bold" />
 
         <TextView
@@ -69,7 +69,7 @@
             android:fontFamily="@font/inter"
             android:text="Escolha uma nota"
             android:textColor="?attr/colorTextPrimary"
-            android:textSize="14sp"
+            style="@style/TextAppearance.Makimono.TV.Subheadline"
             android:textStyle="bold" />
     </LinearLayout>
 

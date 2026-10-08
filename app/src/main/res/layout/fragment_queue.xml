@@ -41,7 +41,7 @@
                 android:fontFamily="@font/inter"
                 android:text="Minha Fila"
                 android:textColor="?attr/colorOnSurface"
-                android:textSize="20sp"
+                style="@style/TextAppearance.Makimono.TV.Title3"
                 android:textStyle="bold" />
 
         </LinearLayout>
@@ -86,7 +86,7 @@
             android:gravity="center"
             android:text="Sua fila está vazia\nAdicione animes para assistir depois"
             android:textColor="?attr/colorTextSecondary"
-            android:textSize="16sp" />
+            style="@style/TextAppearance.Makimono.TV.Headline" />
 
     </LinearLayout>
 

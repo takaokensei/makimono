@@ -21,4 +21,19 @@ class PlayerControllerVisibilityTest {
     fun `controller transition is not treated as an open OSD`() {
         assertFalse(PlayerControllerVisibility.isVisible(controllerVisible = true, isHiding = true))
     }
+
+    @Test
+    fun `back is consumed while controls are visible`() {
+        assertTrue(PlayerControllerVisibility.shouldConsumeBack(controllerVisible = true, isHiding = false))
+    }
+
+    @Test
+    fun `back during hide transition cannot exit the video`() {
+        assertTrue(PlayerControllerVisibility.shouldConsumeBack(controllerVisible = false, isHiding = true))
+    }
+
+    @Test
+    fun `back exits when controls are fully hidden`() {
+        assertFalse(PlayerControllerVisibility.shouldConsumeBack(controllerVisible = false, isHiding = false))
+    }
 }

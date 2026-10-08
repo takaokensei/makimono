@@ -19,6 +19,8 @@ object PlayerLauncher {
     const val EXTRA_PLAYLIST = "playlist"
     const val EXTRA_SUBTITLES = "subtitles"
     const val EXTRA_START_POSITION = "startPosition"
+    const val EXTRA_SIBLING_FOLDER_ID = "siblingFolderId"
+    const val EXTRA_PROFILE_ID = "playbackProfileId"
 
     fun createIntent(
         context: Context,
@@ -31,6 +33,7 @@ object PlayerLauncher {
         themeIndex: Int = AppTheme.OBSIDIAN.value,
         playlist: ArrayList<PlaylistItem>? = null,
         subtitles: ArrayList<SubtitleItem>? = null,
+        siblingFolderId: String? = null,
         startPosition: Long = -1L
     ): Intent {
         val targetClass = when (playerType) {
@@ -46,6 +49,7 @@ object PlayerLauncher {
             putExtra(EXTRA_THEME, themeIndex)
             playlist?.let { putExtra(EXTRA_PLAYLIST, it) }
             subtitles?.let { putExtra(EXTRA_SUBTITLES, it) }
+            siblingFolderId?.let { putExtra(EXTRA_SIBLING_FOLDER_ID, it) }
             // Zero is an explicit "start from beginning" request; -1 means resume
             // from the saved watch position (or begin at zero when none exists).
             if (startPosition >= 0L) {
@@ -65,6 +69,7 @@ object PlayerLauncher {
         themeIndex: Int = AppTheme.OBSIDIAN.value,
         playlist: ArrayList<PlaylistItem>? = null,
         subtitles: ArrayList<SubtitleItem>? = null,
+        siblingFolderId: String? = null,
         startPosition: Long = -1L
     ) {
         val intent = createIntent(
@@ -78,6 +83,7 @@ object PlayerLauncher {
             themeIndex = themeIndex,
             playlist = playlist,
             subtitles = subtitles,
+            siblingFolderId = siblingFolderId,
             startPosition = startPosition
         )
         context.startActivity(intent)

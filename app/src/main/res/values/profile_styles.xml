@@ -1,5 +1,5 @@
 <resources><style name="ShapeAppearance.Makimono.Profile" parent="">
-<item name="cornerFamily">rounded</item><item name="cornerSize">16dp</item>
+<item name="cornerFamily">rounded</item><item name="cornerSize">50%</item>
 </style>
 <style name="ThemeOverlay.Makimono.Glass" parent="ThemeOverlay.Material3.MaterialAlertDialog">
     <item name="android:windowIsTranslucent">true</item>

@@ -20,6 +20,8 @@ data class WatchList(
     val totalDuration: Long,
     val thumbnailLink: String? = null,
     val profileId: String = "",
+    val audioDelayMs: Long = 0L,
+    val subtitleDelayMs: Long = 0L,
     @PrimaryKey(autoGenerate = true) val id: Int? = null
 ) {
 

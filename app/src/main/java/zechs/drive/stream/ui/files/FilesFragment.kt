@@ -50,6 +50,7 @@ import zechs.drive.stream.utils.SeasonGroup
 import zechs.drive.stream.utils.VideoPlayer
 import zechs.drive.stream.utils.TvAccessibilityLayout
 import zechs.drive.stream.utils.state.Resource
+import zechs.drive.stream.utils.state.ResourceErrorKind
 
 
 @AndroidEntryPoint
@@ -158,6 +159,20 @@ class FilesFragment : BaseFragment() {
 
     }
 
+    override fun onStart() {
+        super.onStart()
+        // If the first page was interrupted while Files was backgrounded, resume that query.
+        if (!viewModel.hasLoaded || viewModel.shouldResumePageRequest) {
+            viewModel.queryFiles(args.query)
+        }
+    }
+
+    override fun onStop() {
+        // A folder/player destination must not leave this back-stack entry paging in the background.
+        viewModel.cancelPendingPageRequest()
+        super.onStop()
+    }
+
     private fun setupFilesObserver() {
         if (!viewModel.hasLoaded) {
             viewModel.queryFiles(args.query)
@@ -175,13 +190,17 @@ class FilesFragment : BaseFragment() {
             }
 
             is Resource.Error -> {
-                showSnackBar(response.message)
-                showError(response.message)
+                val partialFiles = response.data
+                if (partialFiles?.any { it is FilesDataModel.File } == true) {
+                    onSuccess(partialFiles)
+                } else {
+                    showError(response.message, response.errorKind)
+                }
             }
 
             is Resource.Loading -> {
                 isLoading = true
-                if (!viewModel.hasLoaded || viewModel.hasFailed) {
+                if (!viewModel.hasLoaded) {
                     isLoading(true)
                 }
                 binding.error.root.apply {
@@ -209,13 +228,11 @@ class FilesFragment : BaseFragment() {
         viewModel.hasLoaded = true
 
         if (files.isEmpty()) {
-            binding.error.apply {
-                root.isVisible = true
-                errorTxt.text = getString(R.string.no_files_found)
-                btnRetry.isGone = true
-                btnConnectDrive.isGone = true
-            }
+            binding.error.root.isGone = true
+            binding.stateView.isVisible = true
+            binding.stateView.setState(zechs.drive.stream.ui.common.StateView.StateType.EMPTY_FOLDER)
         } else {
+            binding.stateView.isGone = true
             binding.error.root.apply {
                 if (isVisible) {
                     isGone = true
@@ -377,7 +394,12 @@ class FilesFragment : BaseFragment() {
             val gridLayoutManager = androidx.recyclerview.widget.GridLayoutManager(requireContext(), spanCount)
             gridLayoutManager.spanSizeLookup = object : androidx.recyclerview.widget.GridLayoutManager.SpanSizeLookup() {
                 override fun getSpanSize(position: Int): Int {
-                    return if (filesAdapter.getItemViewType(position) == R.layout.item_loading) spanCount else 1
+                    val viewType = filesAdapter.getItemViewType(position)
+                    return if (viewType == R.layout.item_loading || viewType == R.layout.item_page_error) {
+                        spanCount
+                    } else {
+                        1
+                    }
                 }
             }
             binding.rvList.layoutManager = gridLayoutManager
@@ -412,19 +434,38 @@ class FilesFragment : BaseFragment() {
         binding.containerItemCount.isVisible = count > 0
         binding.tvItemCount.text = if (count == 1) "1 item" else "$count itens"
         if (listToSubmit.isEmpty() && !isLoading) {
-            binding.error.root.isVisible = true
-            binding.error.errorTxt.text = getString(
-                when (FilesStatePolicy.emptyMessage(allFilesList.isNotEmpty(), query)) {
-                    FilesStatePolicy.EmptyFilesMessage.NO_FILES -> R.string.no_files_found
-                    FilesStatePolicy.EmptyFilesMessage.NO_SEARCH_RESULTS -> R.string.no_search_results
-                }
-            )
-            binding.error.btnRetry.isGone = true
-            binding.error.btnConnectDrive.isGone = true
             binding.rvList.isInvisible = true
+            binding.error.root.isGone = true
+            binding.stateView.isVisible = true
+            when (FilesStatePolicy.emptyMessage(allFilesList.isNotEmpty(), query)) {
+                FilesStatePolicy.EmptyFilesMessage.NO_FILES -> {
+                    binding.stateView.setState(zechs.drive.stream.ui.common.StateView.StateType.EMPTY_FOLDER)
+                    binding.etSearch.nextFocusDownId = binding.rvList.id
+                    binding.btnClearSearch.nextFocusDownId = binding.rvList.id
+                }
+                FilesStatePolicy.EmptyFilesMessage.NO_SEARCH_RESULTS -> {
+                    binding.stateView.showState(
+                        iconRes = R.drawable.ic_search_24,
+                        title = getString(R.string.files_search_empty_title),
+                        message = getString(R.string.files_search_empty_message),
+                        actionText = getString(R.string.files_search_clear_action),
+                        onActionClick = {
+                            binding.etSearch.text?.clear()
+                            binding.etSearch.requestFocus()
+                            binding.etSearch.setSelection(binding.etSearch.text?.length ?: 0)
+                        }
+                    )
+                    binding.etSearch.nextFocusDownId = R.id.btnStateAction
+                    binding.btnClearSearch.nextFocusDownId = R.id.btnStateAction
+                    binding.stateView.findViewById<View>(R.id.btnStateAction).nextFocusUpId = binding.etSearch.id
+                }
+            }
         } else if (listToSubmit.isNotEmpty()) {
+            binding.stateView.isGone = true
             binding.error.root.isGone = true
             binding.rvList.isVisible = true
+            binding.etSearch.nextFocusDownId = binding.rvList.id
+            binding.btnClearSearch.nextFocusDownId = binding.rvList.id
         }
         filesAdapter.submitList(listToSubmit)
     }
@@ -435,37 +476,58 @@ class FilesFragment : BaseFragment() {
         )
     }
 
+    private var shimmerAnimator: android.animation.ValueAnimator? = null
+
     private fun isLoading(hide: Boolean) {
         binding.apply {
             loading.isInvisible = !hide
             rvList.isInvisible = hide
+            if (!hide) {
+                filesSkeleton.root.isVisible = true
+                shimmerAnimator?.cancel()
+                shimmerAnimator = zechs.drive.stream.utils.ShimmerController.start(filesSkeleton.root)
+            } else {
+                filesSkeleton.root.isGone = true
+                shimmerAnimator?.cancel()
+                shimmerAnimator = null
+            }
         }
     }
 
-    private fun showError(msg: String?) {
-        val message = msg ?: getString(R.string.something_went_wrong)
-        val needsDriveLogin = FilesStatePolicy.isAuthenticationError(message)
+    private fun showError(msg: String?, errorKind: ResourceErrorKind?) {
+        val presentation = FilesStatePolicy.errorPresentation(errorKind, msg)
         binding.apply {
             rvList.isInvisible = true
             loading.isInvisible = true
-            error.apply {
-                root.isVisible = true
-                errorTxt.text = message
-                btnConnectDrive.apply {
-                    isVisible = needsDriveLogin
-                    if (needsDriveLogin) {
-                        setOnClickListener { findNavController().navigate(R.id.action_filesFragment_to_signInFragment) }
-                    }
+            error.root.isGone = true
+            filesSkeleton.root.isGone = true
+            shimmerAnimator?.cancel()
+            shimmerAnimator = null
+            stateView.isVisible = true
+            val stateType = when (presentation) {
+                FilesStatePolicy.ErrorPresentation.AUTHENTICATION ->
+                    zechs.drive.stream.ui.common.StateView.StateType.ERROR_AUTH
+                FilesStatePolicy.ErrorPresentation.ACCESS_DENIED ->
+                    zechs.drive.stream.ui.common.StateView.StateType.ERROR_ACCESS_DENIED
+                FilesStatePolicy.ErrorPresentation.RATE_LIMITED ->
+                    zechs.drive.stream.ui.common.StateView.StateType.ERROR_RATE_LIMITED
+                FilesStatePolicy.ErrorPresentation.NOT_FOUND ->
+                    zechs.drive.stream.ui.common.StateView.StateType.ERROR_NOT_FOUND
+                FilesStatePolicy.ErrorPresentation.NETWORK ->
+                    zechs.drive.stream.ui.common.StateView.StateType.ERROR_NETWORK
+                FilesStatePolicy.ErrorPresentation.SERVER ->
+                    zechs.drive.stream.ui.common.StateView.StateType.ERROR_SERVER
+                FilesStatePolicy.ErrorPresentation.UNKNOWN ->
+                    zechs.drive.stream.ui.common.StateView.StateType.ERROR_GENERIC
+            }
+            stateView.setState(stateType) {
+                when (presentation) {
+                    FilesStatePolicy.ErrorPresentation.AUTHENTICATION ->
+                        findNavController().navigate(R.id.action_filesFragment_to_signInFragment)
+                    FilesStatePolicy.ErrorPresentation.ACCESS_DENIED,
+                    FilesStatePolicy.ErrorPresentation.NOT_FOUND -> findNavController().popBackStack()
+                    else -> viewModel.queryFiles(args.query)
                 }
-                btnRetry.apply {
-                    isVisible = true
-                    setOnClickListener {
-                        viewModel.queryFiles(args.query)
-                    }
-                }
-                val initialAction = if (needsDriveLogin) btnConnectDrive else btnRetry
-                initialAction.isFocusableInTouchMode = true
-                initialAction.post { initialAction.requestFocusFromTouch() }
             }
         }
         isLoading = false
@@ -480,6 +542,15 @@ class FilesFragment : BaseFragment() {
             },
             onPlayClickListener = { file ->
                 handleFileOnPlayClick(file)
+            },
+            onPageErrorAction = { errorKind ->
+                when (errorKind) {
+                    ResourceErrorKind.AUTHENTICATION ->
+                        findNavController().navigate(R.id.action_filesFragment_to_signInFragment)
+                    ResourceErrorKind.ACCESS_DENIED,
+                    ResourceErrorKind.NOT_FOUND -> findNavController().popBackStack()
+                    else -> viewModel.queryFiles(args.query)
+                }
             }
         )
     }
@@ -519,25 +590,7 @@ class FilesFragment : BaseFragment() {
     private fun handleFileOnClick(file: DriveFile) {
         Log.d(TAG, file.toString())
         if (file.isFolder && !file.isShortcut) {
-            viewModel.recordFolderOpened(file.id, file.name)
-            val isDriveRoot = args.name == getString(R.string.my_drive) ||
-                    args.name == getString(R.string.shared_drives) ||
-                    args.name == getString(R.string.shared_with_me) ||
-                    args.name.equals("Root", ignoreCase = true)
-            if (isDriveRoot) {
-                val action = FilesFragmentDirections.actionFilesFragmentToSeriesDetailFragment(
-                    name = file.name,
-                    folderId = file.id,
-                    posterUrl = file.posterUrl ?: file.thumbnailLarge ?: file.thumbnailLink
-                )
-                findNavController().navigate(action)
-            } else {
-                val action = FilesFragmentDirections.actionFilesFragmentSelf(
-                    name = file.name,
-                    query = "'${file.id}' in parents and trashed=false"
-                )
-                findNavController().navigate(action)
-            }
+            openFolder(file, file.id)
         } else if (file.isVideoFile) {
             launchVideoPlayer(file)
         } else if (file.isSubtitleFile) {
@@ -553,25 +606,7 @@ class FilesFragment : BaseFragment() {
                     ).show()
                     return
                 }
-                viewModel.recordFolderOpened(targetId, file.name)
-                val isDriveRoot = args.name == getString(R.string.my_drive) ||
-                        args.name == getString(R.string.shared_drives) ||
-                        args.name == getString(R.string.shared_with_me) ||
-                        args.name.equals("Root", ignoreCase = true)
-                if (isDriveRoot) {
-                    val action = FilesFragmentDirections.actionFilesFragmentToSeriesDetailFragment(
-                        name = file.name,
-                        folderId = targetId,
-                        posterUrl = file.posterUrl ?: file.thumbnailLarge ?: file.thumbnailLink
-                    )
-                    findNavController().navigate(action)
-                } else {
-                    val action = FilesFragmentDirections.actionFilesFragmentSelf(
-                        name = file.name,
-                        query = "'$targetId' in parents and trashed=false"
-                    )
-                    findNavController().navigate(action)
-                }
+                openFolder(file, targetId)
             } else if (file.isShortcutVideo) {
                 val targetId = file.shortcutDetails.targetId
                 if (targetId == null) {
@@ -587,6 +622,43 @@ class FilesFragment : BaseFragment() {
             }
         }
 
+    }
+
+    private fun openFolder(file: DriveFile, targetFolderId: String) {
+        val navigation = when (
+            val decision = DriveFolderNavigationPolicy.decide(
+                folderPath = args.folderPath?.toList(),
+                currentQuery = args.query,
+                targetFolderId = targetFolderId
+            )
+        ) {
+            DriveFolderNavigationPolicy.Decision.Cycle -> {
+                showSnackBar(getString(R.string.files_folder_cycle_error))
+                return
+            }
+            is DriveFolderNavigationPolicy.Decision.Navigate -> decision
+        }
+
+        viewModel.recordFolderOpened(targetFolderId, file.name)
+        val isDriveRoot = args.name == getString(R.string.my_drive) ||
+                args.name == getString(R.string.shared_drives) ||
+                args.name == getString(R.string.shared_with_me) ||
+                args.name.equals("Root", ignoreCase = true)
+        if (isDriveRoot) {
+            val action = FilesFragmentDirections.actionFilesFragmentToSeriesDetailFragment(
+                name = file.name,
+                folderId = targetFolderId,
+                posterUrl = file.posterUrl ?: file.thumbnailLarge ?: file.thumbnailLink
+            )
+            findNavController().navigate(action)
+        } else {
+            val action = FilesFragmentDirections.actionFilesFragmentSelf(
+                name = file.name,
+                query = "'$targetFolderId' in parents and trashed=false",
+                folderPath = navigation.folderPath.toTypedArray()
+            )
+            findNavController().navigate(action)
+        }
     }
 
     private fun handleSubtitleFileClick(subFile: DriveFile) {
@@ -734,7 +806,7 @@ class FilesFragment : BaseFragment() {
             val isAtLastItem = firstVisibleItemPosition + visibleItemCount >= totalItemCount
             val isLastPage = viewModel.isLastPage
 
-            if (isAtLastItem && !isLoading && !isLastPage) {
+            if (isAtLastItem && !isLoading && !isLastPage && !viewModel.hasFailed) {
                 Log.d(TAG, "Paginating...")
                 viewModel.queryFiles(args.query)
                 isScrolling = false
@@ -759,7 +831,9 @@ class FilesFragment : BaseFragment() {
             if (position != RecyclerView.NO_POSITION &&
                 position >= filesAdapter.itemCount - 2 &&
                 !isLoading &&
-                !viewModel.isLastPage
+                !viewModel.isLastPage &&
+                !viewModel.hasFailed &&
+                filesAdapter.currentList.getOrNull(position) is FilesDataModel.File
             ) {
                 Log.d(TAG, "Paginating via D-pad focus near end (pos=$position)")
                 viewModel.queryFiles(args.query)

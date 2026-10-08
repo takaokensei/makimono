@@ -38,7 +38,7 @@
             android:layout_marginEnd="12dp"
             android:fontFamily="@font/inter"
             android:textColor="?attr/colorAccentPrimary"
-            android:textSize="13sp"
+            style="@style/TextAppearance.Makimono.TV.Callout"
             android:textStyle="bold"
             tools:text="1089" />
 
@@ -57,7 +57,7 @@
                 android:fontFamily="@font/inter"
                 android:maxLines="1"
                 android:textColor="@color/layout_literal_ffffff"
-                android:textSize="13sp"
+                style="@style/TextAppearance.Makimono.TV.Callout"
                 android:textStyle="bold"
                 tools:text="Episódio 1089" />
 
@@ -70,7 +70,7 @@
                 android:fontFamily="@font/inter"
                 android:maxLines="1"
                 android:textColor="@color/layout_literal_94a3b8"
-                android:textSize="11sp"
+                style="@style/TextAppearance.Makimono.TV.Caption"
                 tools:text="One Piece 1089 1080p.mkv" />
 
         </LinearLayout>

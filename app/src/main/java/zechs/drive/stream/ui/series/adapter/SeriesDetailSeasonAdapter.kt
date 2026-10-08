@@ -7,6 +7,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import zechs.drive.stream.databinding.ItemSeriesSeasonTabBinding
+import zechs.drive.stream.utils.FocusEngine
 
 data class SeasonTab(
     val id: String,
@@ -52,13 +53,7 @@ class SeriesDetailSeasonAdapter(
                 }
             }
 
-            binding.tabPillContainer.setOnFocusChangeListener { v, hasFocus ->
-                if (hasFocus) {
-                    v.animate().scaleX(1.06f).scaleY(1.06f).translationZ(8f).setDuration(150L).start()
-                } else {
-                    v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(150L).start()
-                }
-            }
+            FocusEngine.attach(binding.tabPillContainer, FocusEngine.FocusKind.BUTTON)
         }
 
         fun bind(tab: SeasonTab) {

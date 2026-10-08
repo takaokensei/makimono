@@ -50,7 +50,7 @@
             android:fontFamily="@font/inter"
             android:gravity="end"
             android:textColor="@color/layout_literal_ffffffff"
-            android:textSize="14sp"
+            style="@style/TextAppearance.Makimono.TV.Subheadline"
             android:textStyle="bold"
             tools:text="70%" />
     </LinearLayout>
@@ -97,7 +97,7 @@
             android:fontFamily="@font/inter"
             android:gravity="end"
             android:textColor="@color/layout_literal_ffffffff"
-            android:textSize="14sp"
+            style="@style/TextAppearance.Makimono.TV.Subheadline"
             android:textStyle="bold"
             tools:text="55%" />
     </LinearLayout>
@@ -124,7 +124,7 @@
             android:layout_height="wrap_content"
             android:fontFamily="@font/inter"
             android:textColor="?attr/colorAccentPrimary"
-            android:textSize="22sp"
+            style="@style/TextAppearance.Makimono.TV.Title2"
             android:textStyle="bold"
             tools:text="+00:30" />
 
@@ -135,7 +135,7 @@
             android:layout_marginTop="4dp"
             android:fontFamily="@font/inter"
             android:textColor="@color/layout_literal_ccffffff"
-            android:textSize="14sp"
+            style="@style/TextAppearance.Makimono.TV.Subheadline"
             tools:text="14:20 / 24:00" />
     </LinearLayout>
 
@@ -162,7 +162,7 @@
             android:fontFamily="@font/inter"
             android:text="2.0x ▶▶"
             android:textColor="@color/layout_literal_ffffffff"
-            android:textSize="14sp"
+            style="@style/TextAppearance.Makimono.TV.Subheadline"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -198,7 +198,7 @@
             android:fontFamily="@font/inter"
             android:text="-10s"
             android:textColor="@color/layout_literal_ffffffff"
-            android:textSize="15sp"
+            style="@style/TextAppearance.Makimono.TV.Subheadline"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -227,7 +227,7 @@
             android:fontFamily="@font/inter"
             android:text="+10s"
             android:textColor="@color/layout_literal_ffffffff"
-            android:textSize="15sp"
+            style="@style/TextAppearance.Makimono.TV.Subheadline"
             android:textStyle="bold" />
 
         <ImageView
@@ -238,12 +238,13 @@
             app:tint="@color/layout_literal_ffffffff" />
     </LinearLayout>
 
-    <!-- Top Notification Pill (AniSkip, sync info, etc.) -->
+    <!-- Top-end notification pill stays clear of the player title and back button. -->
     <LinearLayout
         android:id="@+id/gestureNotificationPill"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="top|center_horizontal"
+        android:layout_gravity="top|end"
+        android:layout_marginEnd="32dp"
         android:layout_marginTop="32dp"
         android:background="@drawable/glass_panel_bg"
         android:gravity="center"
@@ -261,7 +262,7 @@
             android:layout_height="wrap_content"
             android:fontFamily="@font/inter"
             android:textColor="@color/layout_literal_ffffffff"
-            android:textSize="14sp"
+            style="@style/TextAppearance.Makimono.TV.Subheadline"
             android:textStyle="bold"
             tools:text="⏩ Abertura pulada automaticamente (AniSkip)" />
     </LinearLayout>

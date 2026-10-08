@@ -21,10 +21,23 @@ data class File(
     val thumbnailLink: String? = null,
     val shortcutDetails: ShortcutDetails = ShortcutDetails(),
     @Json(name = "starred")
-    val starred: Starred = Starred.UNSTARRED
+    val starred: Starred = Starred.UNSTARRED,
+    @Json(name = "modifiedTime")
+    val modifiedTime: String? = null,
+    @Json(name = "description")
+    val description: String? = null
 ) {
     fun toDriveFile() = DriveFile(
-        id, name, size, mimeType, iconLink, thumbnailLink, shortcutDetails, starred
+        id = id,
+        name = name,
+        size = size,
+        mimeType = mimeType,
+        iconLink = iconLink,
+        thumbnailLink = thumbnailLink,
+        shortcutDetails = shortcutDetails,
+        starred = starred,
+        modifiedTime = modifiedTime,
+        description = description
     )
 }
 

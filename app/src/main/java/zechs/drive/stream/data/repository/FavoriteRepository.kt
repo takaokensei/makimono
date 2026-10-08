@@ -44,6 +44,16 @@ class FavoriteRepository @Inject constructor(
         profileId: String = currentProfileId()
     ): Boolean = favoriteDao.isFavorite(folderId, profileId)
 
+    /** Reads one page's favorite state with one Room query and one profile snapshot. */
+    suspend fun getFavoriteIds(
+        folderIds: Collection<String>,
+        profileId: String = currentProfileId()
+    ): Set<String> {
+        val distinctIds = folderIds.asSequence().filter(String::isNotBlank).distinct().toList()
+        if (distinctIds.isEmpty()) return emptySet()
+        return favoriteDao.getFavoriteIds(distinctIds, profileId).toSet()
+    }
+
     fun observeIsFavorite(
         folderId: String,
         profileId: String = currentProfileId()

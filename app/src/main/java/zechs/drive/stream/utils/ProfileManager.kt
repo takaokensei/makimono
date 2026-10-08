@@ -140,6 +140,9 @@ class ProfileManager @Inject constructor(
         mutationMutex.withLock {
             val updated = transform(_profilesFlow.value)
             require(updated.isNotEmpty())
+            if (!ProfileManagementPolicy.hasAdministrator(updated)) {
+                throw LastAdministratorRequiredException()
+            }
             database.getProfileDao().replaceAll(updated.map(ProfileEntity::from))
             _activeProfileFlow.value = updated.firstOrNull { it.id == _activeProfileFlow.value.id }
                 ?: updated.first()
@@ -178,11 +181,12 @@ class ProfileManager @Inject constructor(
         } }
     }
 
-    suspend fun deleteProfile(id: String): Boolean {
+    suspend fun deleteProfile(id: String): ProfileManagementPolicy.DeleteBlockReason? {
         awaitReady()
         return mutationMutex.withLock {
             val current = _profilesFlow.value
-            if (current.size <= 1 || current.none { it.id == id }) return@withLock false
+            val blockedReason = ProfileManagementPolicy.deleteBlockReason(id, current)
+            if (blockedReason != null) return@withLock blockedReason
             val updated = current.filterNot { it.id == id }
             database.withTransaction {
                 profileDataCleaner.get().deleteAllDataForProfile(id)
@@ -190,7 +194,7 @@ class ProfileManager @Inject constructor(
             }
             if (_activeProfileFlow.value.id == id) setActiveProfile(updated.first().id)
             _profilesFlow.value = updated
-            true
+            null
         }
     }
 

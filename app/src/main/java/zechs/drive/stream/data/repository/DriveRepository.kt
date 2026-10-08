@@ -7,6 +7,7 @@ import zechs.drive.stream.data.remote.DriveApi
 import zechs.drive.stream.data.remote.TokenApi
 import zechs.drive.stream.utils.SessionManager
 import zechs.drive.stream.utils.state.Resource
+import zechs.drive.stream.utils.state.ResourceErrorKind
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import retrofit2.HttpException
@@ -63,10 +64,16 @@ class DriveRepository @Inject constructor(
 
     private suspend fun getOrFetchAccessToken(): Resource<String> {
         val client = sessionManager.fetchClient()
-            ?: return Resource.Error("Conecte sua conta do Google Drive para continuar.")
+            ?: return Resource.Error(
+                "Conecte sua conta do Google Drive para continuar.",
+                errorKind = ResourceErrorKind.AUTHENTICATION
+            )
         return when (val tokenResponse = fetchAccessToken(client)) {
             is Resource.Success -> Resource.Success(tokenResponse.data.accessToken)
-            is Resource.Error -> Resource.Error(tokenResponse.message ?: "Falha ao obter token de acesso do Google Drive")
+            is Resource.Error -> Resource.Error(
+                tokenResponse.message,
+                errorKind = tokenResponse.errorKind ?: ResourceErrorKind.UNKNOWN
+            )
             is Resource.Loading -> Resource.Loading()
         }
     }
@@ -79,7 +86,10 @@ class DriveRepository @Inject constructor(
     ): Resource<FilesResponse> {
         val accessToken = when (val tokenRes = getOrFetchAccessToken()) {
             is Resource.Success -> tokenRes.data
-            is Resource.Error -> return Resource.Error(tokenRes.message ?: "Token de acesso não disponível")
+            is Resource.Error -> return Resource.Error(
+                tokenRes.message,
+                errorKind = tokenRes.errorKind ?: ResourceErrorKind.UNKNOWN
+            )
             is Resource.Loading -> return Resource.Loading()
         }
         return try {
@@ -100,7 +110,10 @@ class DriveRepository @Inject constructor(
                     doOnError(retryError)
                 }
             } else {
-                Resource.Error(refreshed.message ?: "Sessão expirada. Faça login novamente nas configurações.")
+                Resource.Error(
+                    refreshed.message ?: "Sessão do Google Drive expirada. Conecte sua conta novamente.",
+                    errorKind = refreshed.errorKind ?: ResourceErrorKind.AUTHENTICATION
+                )
             }
         } catch (e: Exception) {
             doOnError(e)
@@ -123,36 +136,138 @@ class DriveRepository @Inject constructor(
         )
     }
 
-    /** Fetches every page while keeping the existing single-page API intact. */
+    /**
+     * Compatibility API for consumers that require a complete list. A bounded or failed
+     * traversal is returned as an error; any fetched files remain attached as partial data.
+     */
     suspend fun getAllFiles(
         query: String,
         pageSize: Int = 100,
         maxPages: Int = MAX_PAGINATION_PAGES,
         orderBy: String = "folder, name"
     ): Resource<List<File>> {
-        val collected = mutableListOf<File>()
+        return when (val result = getAllFilesDetailed(query, pageSize, maxPages, orderBy)) {
+            is Resource.Success -> {
+                if (result.data.isComplete) {
+                    Resource.Success(result.data.files)
+                } else {
+                    Resource.Error(
+                        message = incompleteListingMessage(result.data.incompleteReason),
+                        data = result.data.files
+                    )
+                }
+            }
+            is Resource.Error -> Resource.Error(result.message, result.data?.files, result.errorKind ?: ResourceErrorKind.UNKNOWN)
+            is Resource.Loading -> Resource.Loading()
+        }
+    }
+
+    /**
+     * Fetches a bounded number of Drive pages and always reports whether the result is complete.
+     * An error after one or more successful pages carries those files and the cursor for recovery.
+     */
+    suspend fun getAllFilesDetailed(
+        query: String,
+        pageSize: Int = 100,
+        maxPages: Int = MAX_PAGINATION_PAGES,
+        orderBy: String = "folder, name"
+    ): Resource<FileCollectionResult> {
+        // A Drive page boundary is not a stable snapshot: files may move or be updated while
+        // pagination is in progress. Keep IDs unique while preserving their first-seen order.
+        // Replacing an existing value retains that order but uses the latest metadata returned.
+        val collected = linkedMapOf<String, File>()
         var pageToken: String? = null
+        var pagesFetched = 0
 
         val boundedPages = maxPages.coerceIn(1, MAX_PAGINATION_PAGES)
         val boundedPageSize = pageSize.coerceIn(1, 100)
+        val queryContext = DriveQueryContext(
+            query = query,
+            pageSize = boundedPageSize,
+            orderBy = orderBy
+        )
 
         repeat(boundedPages) {
             val remaining = MAX_PAGINATED_FILES - collected.size
-            if (remaining <= 0) return Resource.Success(collected)
+            if (remaining <= 0) {
+                return Resource.Success(
+                    FileCollectionResult(
+                        files = collected.values.toList(),
+                        isComplete = pageToken.isNullOrBlank(),
+                        nextPageToken = pageToken,
+                        pagesFetched = pagesFetched,
+                        queryContext = queryContext,
+                        incompleteReason = if (pageToken.isNullOrBlank()) null
+                        else FileCollectionResult.IncompleteReason.FILE_LIMIT
+                    )
+                )
+            }
 
             val effectivePageSize = minOf(boundedPageSize, remaining)
             when (val response = getFiles(query, pageToken, effectivePageSize, orderBy)) {
                 is Resource.Success -> {
-                    collected.addAll(response.data.files)
+                    response.data.files.forEach { file ->
+                        if (file.id in collected) {
+                            collected[file.id] = file
+                        } else if (collected.size < MAX_PAGINATED_FILES) {
+                            collected[file.id] = file
+                        }
+                    }
+                    pagesFetched++
                     pageToken = response.data.nextPageToken
-                    if (pageToken.isNullOrBlank()) return Resource.Success(collected)
+                    if (pageToken.isNullOrBlank()) {
+                        return Resource.Success(
+                            FileCollectionResult(
+                                files = collected.values.toList(),
+                                isComplete = true,
+                                nextPageToken = null,
+                                pagesFetched = pagesFetched,
+                                queryContext = queryContext
+                            )
+                        )
+                    }
                 }
-                is Resource.Error -> return Resource.Error(response.message)
-                is Resource.Loading -> Unit
+                is Resource.Error -> {
+                    return Resource.Error(
+                        message = response.message,
+                        data = FileCollectionResult(
+                            files = collected.values.toList(),
+                            isComplete = false,
+                            nextPageToken = pageToken,
+                            pagesFetched = pagesFetched,
+                            queryContext = queryContext,
+                            incompleteReason = FileCollectionResult.IncompleteReason.REQUEST_FAILED
+                        ),
+                        errorKind = response.errorKind ?: ResourceErrorKind.UNKNOWN
+                    )
+                }
+                is Resource.Loading -> return Resource.Loading()
             }
         }
 
-        return Resource.Success(collected)
+        return Resource.Success(
+            FileCollectionResult(
+                files = collected.values.toList(),
+                isComplete = false,
+                nextPageToken = pageToken,
+                pagesFetched = pagesFetched,
+                queryContext = queryContext,
+                incompleteReason = if (collected.size >= MAX_PAGINATED_FILES) {
+                    FileCollectionResult.IncompleteReason.FILE_LIMIT
+                } else {
+                    FileCollectionResult.IncompleteReason.PAGE_LIMIT
+                }
+            )
+        )
+    }
+
+    private fun incompleteListingMessage(reason: FileCollectionResult.IncompleteReason?): String = when (reason) {
+        FileCollectionResult.IncompleteReason.PAGE_LIMIT ->
+            "A listagem atingiu o limite de páginas e está incompleta. Continue usando o próximo marcador."
+        FileCollectionResult.IncompleteReason.FILE_LIMIT ->
+            "A listagem atingiu o limite de arquivos e está incompleta. Continue usando o próximo marcador."
+        FileCollectionResult.IncompleteReason.REQUEST_FAILED, null ->
+            "Não foi possível concluir a listagem do Google Drive. Tente novamente."
     }
 
     suspend fun getDrives(
@@ -161,7 +276,10 @@ class DriveRepository @Inject constructor(
     ): Resource<DriveResponse> {
         val accessToken = when (val tokenRes = getOrFetchAccessToken()) {
             is Resource.Success -> tokenRes.data
-            is Resource.Error -> return Resource.Error(tokenRes.message ?: "Token de acesso não disponível")
+            is Resource.Error -> return Resource.Error(
+                tokenRes.message,
+                errorKind = tokenRes.errorKind ?: ResourceErrorKind.UNKNOWN
+            )
             is Resource.Loading -> return Resource.Loading()
         }
         return try {
@@ -209,7 +327,10 @@ class DriveRepository @Inject constructor(
         }
 
         val refreshToken = sessionManager.fetchRefreshToken()
-            ?: return Resource.Error("Sessão do Google Drive ausente ou expirada. Conecte sua conta para continuar.")
+            ?: return Resource.Error(
+                "Sessão do Google Drive ausente ou expirada. Conecte sua conta para continuar.",
+                errorKind = ResourceErrorKind.AUTHENTICATION
+            )
 
         return try {
             val token = tokenApi.get().getAccessToken(
@@ -224,7 +345,10 @@ class DriveRepository @Inject constructor(
             if (e is HttpException && e.code() == 400) {
                 val errorBody = try { e.response()?.errorBody()?.string() } catch (_: Exception) { null }
                 Log.e(TAG, "Google OAuth 400 Bad Request: $errorBody", e)
-                Resource.Error("Sessão do Google Drive expirada ou revogada. Faça login novamente para continuar.")
+                Resource.Error(
+                    "Sessão do Google Drive expirada ou revogada. Faça login novamente para continuar.",
+                    errorKind = ResourceErrorKind.AUTHENTICATION
+                )
             } else {
                 doOnError(e)
             }
@@ -284,8 +408,18 @@ class DriveRepository @Inject constructor(
             is IOException -> "Falha de conexão com a rede: ${e.localizedMessage ?: "Verifique sua internet"}"
             else -> e.localizedMessage ?: "Ocorreu um erro desconhecido."
         }
-        return Resource.Error(error)
+        val errorKind = when (e) {
+            is HttpException -> DriveFailureClassifier.fromHttp(e.code(), googleFailureReason(e))
+            else -> DriveFailureClassifier.fromException(e)
+        }
+        return Resource.Error(error, errorKind = errorKind)
     }
+
+    private fun googleFailureReason(error: HttpException): String? = runCatching {
+        val body = error.response()?.errorBody()?.string() ?: return@runCatching null
+        val errors = org.json.JSONObject(body).optJSONObject("error")?.optJSONArray("errors")
+        errors?.optJSONObject(0)?.optString("reason")?.takeIf { it.isNotBlank() }
+    }.getOrNull()
 
     private suspend fun <T> executeWithTokenRetry(block: suspend (accessToken: String) -> T): T {
         val accessToken = when (val tokenRes = getOrFetchAccessToken()) {
@@ -337,88 +471,143 @@ class DriveRepository @Inject constructor(
         }
     }
 
-    suspend fun getFileSiblings(fileId: String): List<PlaylistItem> {
+    suspend fun getFileSiblings(fileId: String, parentFolderId: String? = null): DriveFolderListing<PlaylistItem> {
         return try {
-            val file = executeWithTokenRetry { token ->
-                retryWithBackoff {
-                    driveApi.getFile(
-                        accessToken = "Bearer $token",
-                        fileId = fileId,
-                        fields = "id, name, parents"
-                    )
-                }
-            }
-            val parentId = file.parents?.firstOrNull() ?: return emptyList()
-            val query = "'$parentId' in parents and trashed=false and mimeType != 'application/vnd.google-apps.folder'"
-
-            when (val res = getAllFiles(query = query, pageSize = 100, orderBy = "name")) {
-                is Resource.Success -> {
-                    val list = res.data.map { it.toDriveFile() }.filter { it.isVideoFile }.map {
-                        val effectiveId = if (it.isShortcut && !it.shortcutDetails.targetId.isNullOrEmpty()) {
-                            it.shortcutDetails.targetId
-                        } else {
-                            it.id
-                        }
-                        PlaylistItem(effectiveId, it.name, it.thumbnailLink)
-                    }
-                    list.sortedWith { a, b ->
-                        zechs.drive.stream.utils.SeasonEpisodeGrouper.compareItems(
-                            a.title, zechs.drive.stream.utils.EpisodeParser.parse(a.title),
-                            b.title, zechs.drive.stream.utils.EpisodeParser.parse(b.title)
+            val parentId = parentFolderId ?: run {
+                val file = executeWithTokenRetry { token ->
+                    retryWithBackoff {
+                        driveApi.getFile(
+                            accessToken = "Bearer $token",
+                            fileId = fileId,
+                            fields = "id, name, parents"
                         )
                     }
                 }
-                is Resource.Error -> {
-                    Log.w(TAG, "getFileSiblings error: ${res.message}")
-                    emptyList()
-                }
-                is Resource.Loading -> emptyList()
+                file.parents?.firstOrNull()
+            }
+                ?: return DriveFolderListing(emptyList(), isComplete = true)
+            val query = "'$parentId' in parents and trashed=false and mimeType != 'application/vnd.google-apps.folder'"
+            when (val result = getFiles(query, pageToken = null, pageSize = 100, orderBy = "name")) {
+                is Resource.Success -> result.data.toPlaylistPage(parentId)
+                is Resource.Error -> DriveFolderListing(
+                    items = emptyList(), isComplete = false,
+                    message = result.message ?: "Não foi possível carregar a playlist do Drive.",
+                    sourceFolderId = parentId
+                )
+                is Resource.Loading -> DriveFolderListing(
+                    items = emptyList(), isComplete = false,
+                    message = "A playlist ainda está carregando.", sourceFolderId = parentId
+                )
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.w(TAG, "Failed to get sibling files for fileId=$fileId: ${e.message}")
-            emptyList()
+            DriveFolderListing(emptyList(), isComplete = false, message = "Não foi possível carregar a playlist do Drive.")
         }
     }
 
-    suspend fun getFolderSubtitles(fileId: String): List<SubtitleItem> {
-        return try {
-            val file = executeWithTokenRetry { token ->
-                retryWithBackoff {
-                    driveApi.getFile(
-                        accessToken = "Bearer $token",
-                        fileId = fileId,
-                        fields = "id, name, parents"
-                    )
-                }
-            }
-            val parentId = file.parents?.firstOrNull() ?: return emptyList()
-            val query = "'$parentId' in parents and trashed=false and mimeType != 'application/vnd.google-apps.folder'"
+    suspend fun getNextFileSiblingPage(parentFolderId: String, pageToken: String): DriveFolderListing<PlaylistItem> {
+        val query = "'$parentFolderId' in parents and trashed=false and mimeType != 'application/vnd.google-apps.folder'"
+        return when (val result = getFiles(query, pageToken, pageSize = 100, orderBy = "name")) {
+            is Resource.Success -> result.data.toPlaylistPage(parentFolderId)
+            is Resource.Error -> DriveFolderListing(
+                items = emptyList(), isComplete = false,
+                message = result.message ?: "Não foi possível continuar a playlist do Drive.",
+                nextPageToken = pageToken, sourceFolderId = parentFolderId
+            )
+            is Resource.Loading -> DriveFolderListing(
+                items = emptyList(), isComplete = false,
+                message = "A playlist ainda está carregando.",
+                nextPageToken = pageToken, sourceFolderId = parentFolderId
+            )
+        }
+    }
 
-            when (val res = getAllFiles(query = query, pageSize = 100, orderBy = "name")) {
-                is Resource.Success -> {
-                    res.data.filter { f ->
-                        val name = f.name.lowercase()
-                        name.endsWith(".ass") || name.endsWith(".srt") || name.endsWith(".vtt") ||
-                                name.endsWith(".ssa") || name.endsWith(".sub")
-                    }.map { f ->
-                        SubtitleItem(
-                            id = f.id,
-                            name = f.name
+    suspend fun getFolderSubtitles(fileId: String, parentFolderId: String? = null): DriveFolderListing<SubtitleItem> {
+        return try {
+            val parentId = parentFolderId ?: run {
+                val file = executeWithTokenRetry { token ->
+                    retryWithBackoff {
+                        driveApi.getFile(
+                            accessToken = "Bearer $token",
+                            fileId = fileId,
+                            fields = "id, name, parents"
                         )
                     }
                 }
-                is Resource.Error -> {
-                    Log.w(TAG, "getFolderSubtitles error: ${res.message}")
-                    emptyList()
-                }
-                is Resource.Loading -> emptyList()
+                file.parents?.firstOrNull()
+            }
+                ?: return DriveFolderListing(emptyList(), isComplete = true)
+            val query = "'$parentId' in parents and trashed=false and mimeType != 'application/vnd.google-apps.folder'"
+            when (val result = getFiles(query, pageToken = null, pageSize = 100, orderBy = "name")) {
+                is Resource.Success -> result.data.toSubtitlePage(parentId)
+                is Resource.Error -> DriveFolderListing(
+                    items = emptyList(), isComplete = false,
+                    message = result.message ?: "Não foi possível carregar as legendas do Drive.",
+                    sourceFolderId = parentId
+                )
+                is Resource.Loading -> DriveFolderListing(
+                    items = emptyList(), isComplete = false,
+                    message = "As legendas ainda estão carregando.", sourceFolderId = parentId
+                )
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.w(TAG, "Failed to get subtitles for fileId=$fileId: ${e.message}")
-            emptyList()
+            DriveFolderListing(emptyList(), isComplete = false, message = "Não foi possível carregar as legendas do Drive.")
         }
+    }
+
+    suspend fun getNextFolderSubtitlePage(parentFolderId: String, pageToken: String): DriveFolderListing<SubtitleItem> {
+        val query = "'$parentFolderId' in parents and trashed=false and mimeType != 'application/vnd.google-apps.folder'"
+        return when (val result = getFiles(query, pageToken, pageSize = 100, orderBy = "name")) {
+            is Resource.Success -> result.data.toSubtitlePage(parentFolderId)
+            is Resource.Error -> DriveFolderListing(
+                items = emptyList(), isComplete = false,
+                message = result.message ?: "Não foi possível continuar a leitura das legendas do Drive.",
+                nextPageToken = pageToken, sourceFolderId = parentFolderId
+            )
+            is Resource.Loading -> DriveFolderListing(
+                items = emptyList(), isComplete = false,
+                message = "As legendas ainda estão carregando.",
+                nextPageToken = pageToken, sourceFolderId = parentFolderId
+            )
+        }
+    }
+
+    private fun FilesResponse.toPlaylistPage(parentFolderId: String): DriveFolderListing<PlaylistItem> {
+        val items = files.map { it.toDriveFile() }.filter { it.isVideoFile }
+            .map { file ->
+                val effectiveId = if (file.isShortcut && !file.shortcutDetails.targetId.isNullOrEmpty()) {
+                    file.shortcutDetails.targetId
+                } else file.id
+                PlaylistItem(effectiveId, file.name, file.thumbnailLink)
+            }.sortedWith { a, b ->
+                zechs.drive.stream.utils.SeasonEpisodeGrouper.compareItems(
+                    a.title, zechs.drive.stream.utils.EpisodeParser.parse(a.title),
+                    b.title, zechs.drive.stream.utils.EpisodeParser.parse(b.title)
+                )
+            }
+        return DriveFolderListing(
+            items = items,
+            isComplete = nextPageToken.isNullOrBlank(),
+            nextPageToken = nextPageToken,
+            sourceFolderId = parentFolderId
+        )
+    }
+
+    private fun FilesResponse.toSubtitlePage(parentFolderId: String): DriveFolderListing<SubtitleItem> {
+        val items = files.filter { file ->
+            val name = file.name.lowercase()
+            name.endsWith(".ass") || name.endsWith(".srt") || name.endsWith(".vtt") ||
+                    name.endsWith(".ssa") || name.endsWith(".sub")
+        }.map { file -> SubtitleItem(id = file.id, name = file.name) }
+        return DriveFolderListing(
+            items = items,
+            isComplete = nextPageToken.isNullOrBlank(),
+            nextPageToken = nextPageToken,
+            sourceFolderId = parentFolderId
+        )
     }
 
     suspend fun downloadSubtitle(sub: SubtitleItem, cacheDir: java.io.File): java.io.File? {

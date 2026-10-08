@@ -23,6 +23,7 @@ import zechs.drive.stream.data.remote.TenraiAnimeService
 import zechs.drive.stream.utils.EpisodeParser
 import zechs.drive.stream.utils.SeasonEpisodeGrouper
 import zechs.drive.stream.utils.SeasonGroup
+import zechs.drive.stream.utils.FocusEngine
 
 class PlayerEpisodeDrawerDialog(
     private val activity: Activity,
@@ -267,13 +268,7 @@ class PlayerEpisodeDrawerDialog(
                 onSelected(item)
             }
 
-            holder.binding.cardSeasonItem.setOnFocusChangeListener { v, hasFocus ->
-                if (hasFocus) {
-                    v.animate().scaleX(1.02f).scaleY(1.02f).translationZ(6f).setDuration(120L).start()
-                } else {
-                    v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(120L).start()
-                }
-            }
+            FocusEngine.attach(holder.binding.cardSeasonItem, FocusEngine.FocusKind.BUTTON)
         }
 
         override fun getItemCount(): Int = items.size
@@ -344,13 +339,7 @@ class PlayerEpisodeDrawerDialog(
                 onSelected(item)
             }
 
-            holder.binding.cardEpItem.setOnFocusChangeListener { v, hasFocus ->
-                if (hasFocus) {
-                    v.animate().scaleX(1.02f).scaleY(1.02f).translationZ(6f).setDuration(120L).start()
-                } else {
-                    v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(120L).start()
-                }
-            }
+            FocusEngine.attach(holder.binding.cardEpItem, FocusEngine.FocusKind.CARD)
         }
 
         override fun getItemCount(): Int = items.size

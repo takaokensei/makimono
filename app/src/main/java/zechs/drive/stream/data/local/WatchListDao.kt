@@ -38,4 +38,7 @@ interface WatchListDao {
 
     @Query("SELECT * FROM `watch_list`")
     suspend fun getAllWatchesGlobal(): List<WatchList>
+
+    @Query("UPDATE `watch_list` SET audioDelayMs = :audioDelayMs, subtitleDelayMs = :subtitleDelayMs WHERE videoId = :videoId AND profileId = :profileId")
+    suspend fun updateDelays(videoId: String, profileId: String, audioDelayMs: Long, subtitleDelayMs: Long): Int
 }

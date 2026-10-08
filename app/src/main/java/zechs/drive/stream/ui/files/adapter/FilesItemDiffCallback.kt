@@ -14,6 +14,9 @@ class FilesItemDiffCallback : DiffUtil.ItemCallback<FilesDataModel>() {
                 && oldItem == newItem
         -> true
 
+        oldItem is FilesDataModel.PageError && newItem is FilesDataModel.PageError
+        -> true
+
         oldItem is FilesDataModel.File && newItem is FilesDataModel.File &&
                 oldItem.driveFile.id == newItem.driveFile.id
         -> true

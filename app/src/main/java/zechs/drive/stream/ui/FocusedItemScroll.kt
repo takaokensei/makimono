@@ -1,6 +1,5 @@
 package zechs.drive.stream.ui
 
-import android.graphics.Rect
 import android.view.View
 import android.view.ViewTreeObserver
 import androidx.core.widget.NestedScrollView
@@ -26,15 +25,19 @@ object FocusedItemScroll {
 
             focused?.post {
                 if (!viewport.isShown || !focused.isShown || viewport.height == 0) return@post
-                val bounds = Rect(0, 0, focused.width, focused.height)
-                viewport.offsetDescendantRectToMyCoords(focused, bounds)
-                val visibleTop = viewport.paddingTop
-                val visibleBottom = viewport.height - viewport.paddingBottom
+                val viewportLocation = IntArray(2)
+                val focusedLocation = IntArray(2)
+                viewport.getLocationOnScreen(viewportLocation)
+                focused.getLocationOnScreen(focusedLocation)
+                val focusedTop = focusedLocation[1]
+                val focusedBottom = focusedTop + focused.height
+                val visibleTop = viewportLocation[1] + viewport.paddingTop
+                val visibleBottom = viewportLocation[1] + viewport.height - viewport.paddingBottom
                 val availableHeight = visibleBottom - visibleTop
                 val scrollDelta = when {
-                    bounds.height() > availableHeight -> bounds.top - visibleTop
-                    bounds.top < visibleTop -> bounds.top - visibleTop
-                    bounds.bottom > visibleBottom -> bounds.bottom - visibleBottom
+                    focused.height > availableHeight -> focusedTop - visibleTop
+                    focusedTop < visibleTop -> focusedTop - visibleTop
+                    focusedBottom > visibleBottom -> focusedBottom - visibleBottom
                     else -> 0
                 }
                 if (scrollDelta != 0) viewport.smoothScrollBy(0, scrollDelta)
