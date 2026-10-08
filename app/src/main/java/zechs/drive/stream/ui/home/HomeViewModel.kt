@@ -10,6 +10,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -395,20 +398,29 @@ class HomeViewModel @Inject constructor(
 
     private fun resolveMissingPosters(files: List<DriveFile>) = viewModelScope.launch(Dispatchers.IO) {
         val updatedList = files.toMutableList()
-
-        for (i in updatedList.indices.take(60)) {
+        val targets = updatedList.indices.take(60).filter { i ->
             val file = updatedList[i]
             val isFolder = file.isFolder || file.isShortcutFolder
-            if (isFolder && file.posterUrl.isNullOrBlank()) {
-                val targetId = if (file.isShortcut) file.shortcutDetails.targetId ?: file.id else file.id
-                val poster = animePosterResolver.resolvePoster(file.name)
-                if (!poster.isNullOrBlank()) {
-                    folderMetadataRepository.updatePosterUrl(targetId, file.name, poster)
-                    updatedList[i] = file.copy(posterUrl = poster)
-                    // Emit incrementally so user sees covers populate as soon as fetched
-                    _starredFiles.value = updatedList.toList()
-                }
+            isFolder && file.posterUrl.isNullOrBlank()
+        }
+
+        targets.chunked(6).forEach { chunk ->
+            coroutineScope {
+                chunk.map { index ->
+                    async {
+                        val file = updatedList[index]
+                        val targetId = if (file.isShortcut) file.shortcutDetails.targetId ?: file.id else file.id
+                        val poster = animePosterResolver.resolvePoster(file.name)
+                        if (!poster.isNullOrBlank()) {
+                            folderMetadataRepository.updatePosterUrl(targetId, file.name, poster)
+                            index to poster
+                        } else null
+                    }
+                }.awaitAll()
+            }.filterNotNull().forEach { (index, poster) ->
+                updatedList[index] = updatedList[index].copy(posterUrl = poster)
             }
+            _starredFiles.value = updatedList.toList()
         }
     }
 
@@ -602,38 +614,39 @@ class HomeViewModel @Inject constructor(
                                 )
                             }
 
-                            // Resolve posters in batches so the catalog is not republished per item.
+                            // Resolve posters and metadata concurrently in batches of 6
                             val updatedList = displayFiles.toMutableList()
-                            var pendingPublish = false
-                            for (i in updatedList.indices.take(100)) {
+                            val unresolvedIndices = updatedList.indices.take(120).filter { i ->
                                 val file = updatedList[i]
-                                if ((file.posterUrl.isNullOrBlank() || !file.isMovie) && (file.isFolder || file.isShortcutFolder)) {
-                                    val meta = animePosterResolver.resolveMetadata(file.name)
-                                    val poster = meta?.posterUrl
-                                    if (!poster.isNullOrBlank()) {
-                                        val targetId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
-                                            file.shortcutDetails.targetId
-                                        } else file.id
-                                        val isMovie = meta.isMovie
-                                        folderMetadataRepository.updateMetadataDetails(
-                                            folderId = targetId,
-                                            folderName = file.name,
-                                            posterUrl = poster,
-                                            isMovie = isMovie,
-                                            mediaType = meta.mediaType
-                                        )
-                                        updatedList[i] = file.copy(posterUrl = poster, isMovie = isMovie)
-                                        pendingPublish = true
-                                        // Batch updates every 16 items instead of 8 for better performance
-                                        if (i % 16 == 15) {
-                                            _animeLibrary.value = updatedList.toList()
-                                            applyCurrentFilter()
-                                            pendingPublish = false
-                                        }
-                                    }
-                                }
+                                (file.posterUrl.isNullOrBlank() || !file.isMovie) && (file.isFolder || file.isShortcutFolder)
                             }
-                            if (pendingPublish) {
+
+                            unresolvedIndices.chunked(6).forEach { chunk ->
+                                coroutineScope {
+                                    chunk.map { index ->
+                                        async {
+                                            val file = updatedList[index]
+                                            val meta = animePosterResolver.resolveMetadata(file.name)
+                                            val poster = meta?.posterUrl
+                                            if (!poster.isNullOrBlank()) {
+                                                val targetId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
+                                                    file.shortcutDetails.targetId
+                                                } else file.id
+                                                val isMovie = meta.isMovie
+                                                folderMetadataRepository.updateMetadataDetails(
+                                                    folderId = targetId,
+                                                    folderName = file.name,
+                                                    posterUrl = poster,
+                                                    isMovie = isMovie,
+                                                    mediaType = meta.mediaType
+                                                )
+                                                Triple(index, poster, isMovie)
+                                            } else null
+                                        }
+                                    }.awaitAll()
+                                }.filterNotNull().forEach { (index, poster, isMovie) ->
+                                    updatedList[index] = updatedList[index].copy(posterUrl = poster, isMovie = isMovie)
+                                }
                                 _animeLibrary.value = updatedList.toList()
                                 applyCurrentFilter()
                             }

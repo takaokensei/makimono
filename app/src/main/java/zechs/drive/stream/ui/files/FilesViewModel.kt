@@ -10,6 +10,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -355,45 +358,48 @@ class FilesViewModel @Inject constructor(
         )
     }
 
-    private suspend fun resolveMissingPosters(generation: Long) {
-        val candidateIds = response.orEmpty()
+    private suspend fun resolveMissingPosters(generation: Long) = coroutineScope {
+        val candidateFiles = response.orEmpty()
             .filterIsInstance<FilesDataModel.File>()
+            .map { it.driveFile }
+            .filter { (it.isFolder || it.isShortcutFolder) && it.posterUrl.isNullOrBlank() }
             .take(100)
-            .map { it.driveFile.id }
 
-        for (fileId in candidateIds) {
+        candidateFiles.chunked(6).forEach { chunk ->
             currentCoroutineContext().ensureActive()
-            if (generation != responseGeneration) return
+            if (generation != responseGeneration) return@coroutineScope
 
-            val file = response.orEmpty()
-                .filterIsInstance<FilesDataModel.File>()
-                .firstOrNull { it.driveFile.id == fileId }
-                ?.driveFile
-                ?: continue
-            val isFolder = file.isFolder || file.isShortcutFolder
-            if (!isFolder || !file.posterUrl.isNullOrBlank()) continue
-
-            val targetId = if (file.isShortcut) file.shortcutDetails.targetId ?: file.id else file.id
-            val poster = animePosterResolver.resolvePoster(file.name)
-            currentCoroutineContext().ensureActive()
-            if (generation != responseGeneration) return
-            if (poster.isNullOrBlank()) continue
-
-            folderMetadataRepository.updatePosterUrl(targetId, file.name, poster)
-            currentCoroutineContext().ensureActive()
-            if (generation != responseGeneration) return
-
-            val latest = response ?: return
-            val index = latest.indexOfFirst {
-                it is FilesDataModel.File && it.driveFile.id == fileId
-            }
-            val current = latest.getOrNull(index) as? FilesDataModel.File
-            if (index >= 0 && current != null && current.driveFile.posterUrl.isNullOrBlank()) {
-                val enriched = latest.toMutableList().apply {
-                    this[index] = FilesDataModel.File(current.driveFile.copy(posterUrl = poster))
+            val results = chunk.map { file ->
+                async {
+                    val targetId = if (file.isShortcut) file.shortcutDetails.targetId ?: file.id else file.id
+                    val poster = animePosterResolver.resolvePoster(file.name)
+                    if (!poster.isNullOrBlank()) {
+                        folderMetadataRepository.updatePosterUrl(targetId, file.name, poster)
+                        file.id to poster
+                    } else null
                 }
-                response = enriched
-                _filesList.postValue(Resource.Success(enriched.toList()))
+            }.awaitAll().filterNotNull()
+
+            if (results.isNotEmpty()) {
+                currentCoroutineContext().ensureActive()
+                if (generation != responseGeneration) return@coroutineScope
+                val latest = response ?: return@coroutineScope
+                val enriched = latest.toMutableList()
+                var changed = false
+                results.forEach { (fileId, poster) ->
+                    val index = enriched.indexOfFirst {
+                        it is FilesDataModel.File && it.driveFile.id == fileId
+                    }
+                    val current = enriched.getOrNull(index) as? FilesDataModel.File
+                    if (index >= 0 && current != null && current.driveFile.posterUrl.isNullOrBlank()) {
+                        enriched[index] = FilesDataModel.File(current.driveFile.copy(posterUrl = poster))
+                        changed = true
+                    }
+                }
+                if (changed) {
+                    response = enriched
+                    _filesList.postValue(Resource.Success(enriched.toList()))
+                }
             }
         }
     }
