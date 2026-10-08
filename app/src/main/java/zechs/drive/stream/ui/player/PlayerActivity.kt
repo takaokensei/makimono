@@ -256,6 +256,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     private var currentEpNumber: Int = 1
     private var hasScrobbledThisEp: Boolean = false
     private var hasPromptedRating: Boolean = false
+    private var isMovie: Boolean = false
 
     private var speed = arrayOf("0.25x", "0.5x", "Normal", "1.25x", "1.5x", "2x")
     private var orientation = Orientation.LANDSCAPE
@@ -707,6 +708,9 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     }
 
     private fun updateNextEpisode() {
+        if (::btnEpisodes.isInitialized) {
+            btnEpisodes.visibility = if (isMovie || currentEpNumber == 0 || playlist.size <= 1) View.GONE else View.VISIBLE
+        }
         playbackCoordinator.setPlaylist(playlist, currentFileId, currentTitle)
         if (playlist.isEmpty()) {
             nextEpisode = null
@@ -844,7 +848,13 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                     toolbar.title = getString(R.string.unknown)
                 }
 
-                val epPrefix = if (currentEpNumber > 0) "Episódio ${currentEpNumber.toString().padStart(2, '0')}" else ""
+                val epPrefix = if (isMovie) {
+                    "Filme Completo"
+                } else if (currentEpNumber > 0) {
+                    "Episódio ${currentEpNumber.toString().padStart(2, '0')}"
+                } else {
+                    ""
+                }
                 val fullMeta = if (epPrefix.isNotEmpty() && subtitleText.isNotEmpty()) {
                     "$epPrefix • $subtitleText"
                 } else if (epPrefix.isNotEmpty()) {
@@ -1300,7 +1310,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     private fun isControlsShowing(): Boolean {
         if (!::playerView.isInitialized) return false
         return zechs.drive.stream.utils.PlayerControllerVisibility.isVisible(
-            controllerVisible = controllerVisible,
+            controllerVisible = playerView.isControllerFullyVisible,
             isHiding = isHidingControls
         )
     }
@@ -1526,12 +1536,15 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
 
         val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") }
         val title = currentTitle.ifBlank { intent.getStringExtra("title") }
+        val seriesTitleExtra = intent.getStringExtra(PlayerLauncher.EXTRA_SERIES_TITLE)
+        val isMovieExtra = intent.getBooleanExtra(PlayerLauncher.EXTRA_IS_MOVIE, false)
 
         val parsed = EpisodeParser.parse(title ?: "")
-        currentEpNumber = parsed.episode?.toInt() ?: 1
+        isMovie = isMovieExtra || (parsed.episode == null && (parsed.episodeBadge == "FILME" || parsed.isSpecial || playlist.size <= 1))
+        currentEpNumber = parsed.episode?.toInt() ?: 0
 
         val searchTitle = parsed.showTitle.ifBlank { title ?: "" }
-        if (reviewMediaUri == null && searchTitle.isNotBlank()) {
+        if (reviewMediaUri == null && searchTitle.isNotBlank() && !isMovie && currentEpNumber > 0) {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
                     val matched = malRepository.get().matchAnime(searchTitle)
@@ -1557,10 +1570,19 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             }
         }
 
-        toolbar.title = title
-        tvPlayerTitle.text = parsed.showTitle.ifBlank { parsed.cleanTitle.ifBlank { title ?: "" } }
-        val epText = if (currentEpNumber > 0) "Episódio ${currentEpNumber.toString().padStart(2, '0')}" else ""
+        val displayTitle = if (isMovie && !seriesTitleExtra.isNullOrBlank()) {
+            seriesTitleExtra
+        } else {
+            parsed.showTitle.ifBlank { parsed.cleanTitle.ifBlank { title ?: "" } }
+        }
+
+        toolbar.title = displayTitle
+        tvPlayerTitle.text = displayTitle
+        val epText = if (isMovie || currentEpNumber == 0) "Filme Completo" else "Episódio ${currentEpNumber.toString().padStart(2, '0')}"
         tvPlayerMeta.text = epText
+        if (::btnEpisodes.isInitialized) {
+            btnEpisodes.visibility = if (isMovie || currentEpNumber == 0 || playlist.size <= 1) View.GONE else View.VISIBLE
+        }
 
         mediaSessionHelper?.updateMetadata(
             title = parsed.cleanTitle.ifBlank { title ?: "" },
@@ -3000,6 +3022,8 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                     val mpvIntent = Intent(this@PlayerActivity, MPVActivity::class.java).apply {
                         putExtra("fileId", fileId)
                         putExtra("title", title)
+                        putExtra(PlayerLauncher.EXTRA_SERIES_TITLE, intent.getStringExtra(PlayerLauncher.EXTRA_SERIES_TITLE))
+                        putExtra(PlayerLauncher.EXTRA_IS_MOVIE, isMovie || currentEpNumber == 0)
                         putExtra("thumbnailLink", thumbnailLink)
                         putExtra("theme", theme)
                         putExtra(PlayerLauncher.EXTRA_PROFILE_ID, viewModel.playbackProfileIdForHandoff)

@@ -21,6 +21,7 @@ object PlayerLauncher {
     const val EXTRA_START_POSITION = "startPosition"
     const val EXTRA_SIBLING_FOLDER_ID = "siblingFolderId"
     const val EXTRA_PROFILE_ID = "playbackProfileId"
+    const val EXTRA_IS_MOVIE = "isMovie"
 
     fun createIntent(
         context: Context,
@@ -34,7 +35,8 @@ object PlayerLauncher {
         playlist: ArrayList<PlaylistItem>? = null,
         subtitles: ArrayList<SubtitleItem>? = null,
         siblingFolderId: String? = null,
-        startPosition: Long = -1L
+        startPosition: Long = -1L,
+        isMovie: Boolean = false
     ): Intent {
         val targetClass = when (playerType) {
             VideoPlayer.EXO_PLAYER -> PlayerActivity::class.java
@@ -47,6 +49,7 @@ object PlayerLauncher {
             accessToken?.let { putExtra(EXTRA_ACCESS_TOKEN, it) }
             thumbnailLink?.let { putExtra(EXTRA_THUMBNAIL_LINK, it) }
             putExtra(EXTRA_THEME, themeIndex)
+            putExtra(EXTRA_IS_MOVIE, isMovie)
             playlist?.let { putExtra(EXTRA_PLAYLIST, it) }
             subtitles?.let { putExtra(EXTRA_SUBTITLES, it) }
             siblingFolderId?.let { putExtra(EXTRA_SIBLING_FOLDER_ID, it) }
@@ -70,7 +73,8 @@ object PlayerLauncher {
         playlist: ArrayList<PlaylistItem>? = null,
         subtitles: ArrayList<SubtitleItem>? = null,
         siblingFolderId: String? = null,
-        startPosition: Long = -1L
+        startPosition: Long = -1L,
+        isMovie: Boolean = false
     ) {
         val intent = createIntent(
             context = context,
@@ -84,7 +88,8 @@ object PlayerLauncher {
             playlist = playlist,
             subtitles = subtitles,
             siblingFolderId = siblingFolderId,
-            startPosition = startPosition
+            startPosition = startPosition,
+            isMovie = isMovie
         )
         context.startActivity(intent)
     }

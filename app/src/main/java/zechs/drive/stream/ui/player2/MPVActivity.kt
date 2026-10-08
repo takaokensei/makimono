@@ -215,6 +215,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
     private var currentEpNumber: Int = 1
     private var hasScrobbledThisEp: Boolean = false
     private var hasPromptedRating: Boolean = false
+    private var isMovie: Boolean = false
 
     // Configs
     private var onLoadCommands = mutableListOf<Array<String>>()
@@ -300,6 +301,10 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         currentFileId = intent.getStringExtra("fileId") ?: ""
         currentTitle = intent.getStringExtra("title") ?: ""
         currentThumbnailLink = intent.getStringExtra("thumbnailLink")
+        val isMovieExtra = intent.getBooleanExtra(PlayerLauncher.EXTRA_IS_MOVIE, false)
+        val initialParsed = EpisodeParser.parse(currentTitle)
+        isMovie = isMovieExtra || (initialParsed.episode == null && (initialParsed.episodeBadge == "FILME" || initialParsed.isSpecial))
+        currentEpNumber = initialParsed.episode?.toInt() ?: 0
         val siblingFolderId = intent.getStringExtra(PlayerLauncher.EXTRA_SIBLING_FOLDER_ID)
 
         @Suppress("DEPRECATION")
@@ -648,6 +653,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         prevEpisode = coordinatorState.prevEpisode
 
         if (::controller.isInitialized) {
+            controller.btnEpisodes.visibility = if (isMovie || currentEpNumber == 0 || playlist.size <= 1) View.GONE else View.VISIBLE
             controller.btnPrevEp.isEnabled = prevEpisode != null
             controller.btnPrevEp.alpha = if (prevEpisode != null) 1.0f else 0.35f
             controller.btnNextEp.isEnabled = nextEpisode != null
@@ -1425,11 +1431,14 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         hasScrobbledThisEp = false
         hasPromptedRating = false
         currentMalAnime = null
+        val seriesTitleExtra = intent.getStringExtra(PlayerLauncher.EXTRA_SERIES_TITLE)
+        val isMovieExtra = intent.getBooleanExtra(PlayerLauncher.EXTRA_IS_MOVIE, false)
         val parsed = EpisodeParser.parse(title ?: "")
-        currentEpNumber = parsed.episode?.toInt() ?: 1
+        isMovie = isMovieExtra || (parsed.episode == null && (parsed.episodeBadge == "FILME" || parsed.isSpecial || playlist.size <= 1))
+        currentEpNumber = parsed.episode?.toInt() ?: 0
 
         val searchTitle = parsed.showTitle.ifBlank { title ?: "" }
-        if (searchTitle.isNotBlank()) {
+        if (searchTitle.isNotBlank() && !isMovie && currentEpNumber > 0) {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
                     val matched = malRepository.get().matchAnime(searchTitle)
@@ -1472,10 +1481,19 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
             }
         }
 
-        controller.playerToolbar.title = title
-        controller.tvPlayerTitle.text = parsed.showTitle.ifBlank { parsed.cleanTitle.ifBlank { title ?: "" } }
-        val epText = if (currentEpNumber > 0) "Episódio ${currentEpNumber.toString().padStart(2, '0')}" else ""
+        val displayTitle = if (isMovie && !seriesTitleExtra.isNullOrBlank()) {
+            seriesTitleExtra
+        } else {
+            parsed.showTitle.ifBlank { parsed.cleanTitle.ifBlank { title ?: "" } }
+        }
+
+        controller.playerToolbar.title = displayTitle
+        controller.tvPlayerTitle.text = displayTitle
+        val epText = if (isMovie || currentEpNumber == 0) "Filme Completo" else "Episódio ${currentEpNumber.toString().padStart(2, '0')}"
         controller.tvPlayerMeta.text = epText
+        if (::controller.isInitialized) {
+            controller.btnEpisodes.visibility = if (isMovie || currentEpNumber == 0 || playlist.size <= 1) View.GONE else View.VISIBLE
+        }
 
         mediaSessionHelper?.updateMetadata(
             title = parsed.cleanTitle.ifBlank { title ?: "" },
