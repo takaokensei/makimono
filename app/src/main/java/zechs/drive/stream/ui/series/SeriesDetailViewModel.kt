@@ -56,7 +56,8 @@ sealed class SeriesDetailUiState {
         val qualityBadge: String? = null,
         val audioBadge: String? = null,
         val subtitleBadge: String? = null,
-        val hasIncompleteDriveListing: Boolean = false
+        val hasIncompleteDriveListing: Boolean = false,
+        val isMovie: Boolean = false
     ) : SeriesDetailUiState()
     data class Error(val message: String) : SeriesDetailUiState()
 }
@@ -175,16 +176,33 @@ class SeriesDetailViewModel @Inject constructor(
 
                 val (fetchedAnime, fetchedArcs) = tenraiDeferred.await()
                 val aniListMeta = aniListDeferred.await()
-                animeEntry = fetchedAnime
-                franchiseArcs = fetchedArcs
+
+                val isMovie = aniListMeta?.isMovie == true
+                val isNonAnime = aniListMeta?.isAnime == false
+                val mediaType = aniListMeta?.mediaType
+
+                // If this is a movie or non-anime from TMDB, verify fetchedAnime similarity before trusting it
+                val cleanTitle = AnimePosterResolver.cleanAnimeTitle(seriesTitle)
+                val isLegitAnime = fetchedAnime != null && !isNonAnime && AnimePosterResolver.calculateSimilarity(cleanTitle, fetchedAnime.title) >= 0.45
+                val validAnime = if (isLegitAnime) fetchedAnime else null
+                val validArcs = if (isLegitAnime) fetchedArcs else emptyList()
+
+                animeEntry = validAnime
+                franchiseArcs = validArcs
 
                 // Prioritize AniList high-res poster (extraLarge 460x650), then Tenrai/MAL
                 val finalPoster = aniListMeta?.posterUrl
-                    ?: fetchedAnime?.imageUrl
+                    ?: validAnime?.imageUrl
                     ?: initialPoster
                     ?: cachedPoster
-                if (!finalPoster.isNullOrBlank()) {
-                    folderMetadataRepository.updatePosterUrl(folderId, seriesTitle, finalPoster)
+                if (!finalPoster.isNullOrBlank() || isMovie) {
+                    folderMetadataRepository.updateMetadataDetails(
+                        folderId = folderId,
+                        folderName = seriesTitle,
+                        posterUrl = finalPoster ?: "",
+                        isMovie = isMovie,
+                        mediaType = mediaType
+                    )
                 }
 
                 val enrichedState = buildSuccessState(
@@ -192,9 +210,9 @@ class SeriesDetailViewModel @Inject constructor(
                     seriesTitle = seriesTitle,
                     driveFiles = driveFiles,
                     watchMap = watchMap,
-                    fetchedAnime = fetchedAnime,
+                    fetchedAnime = validAnime,
                     aniListMeta = aniListMeta,
-                    arcs = fetchedArcs,
+                    arcs = validArcs,
                     fallbackPosterUrl = finalPoster,
                     hasIncompleteDriveListing = driveResult.isIncomplete
                 )
@@ -232,38 +250,65 @@ class SeriesDetailViewModel @Inject constructor(
         fallbackPosterUrl: String?,
         hasIncompleteDriveListing: Boolean
     ): SeriesDetailUiState.Success {
+        val isMovie = aniListMeta?.isMovie == true || (driveFiles.size == 1 && driveFiles.none { it.name.contains("Ep", ignoreCase = true) || it.name.contains("E0", ignoreCase = true) })
+        val movieCanonical = if (isMovie) (aniListMeta?.titleRomaji ?: aniListMeta?.titleEnglish ?: seriesTitle) else null
+        val fallbackThumb = if (isMovie) (aniListMeta?.bannerUrl ?: aniListMeta?.posterUrl ?: fallbackPosterUrl) else null
         allEpisodeItems = driveFiles.map { file ->
-            mapToEpisodeItem(file, watchMap[file.id], arcs)
+            mapToEpisodeItem(
+                file = file,
+                watch = watchMap[file.id],
+                arcs = arcs,
+                isMovie = isMovie,
+                canonicalMovieTitle = movieCanonical,
+                fallbackThumbnail = fallbackThumb
+            )
         }
 
         val fileModels = driveFiles.map { FilesDataModel.File(it) }
         allSeasonGroups = SeasonEpisodeGrouper.groupFiles(seriesTitle, fileModels)
-        val tabs = allSeasonGroups.mapIndexed { index, group ->
-            val icon = when {
-                group.id == "season_all" -> R.drawable.ic_list_view_24
-                group.id.startsWith("season_") -> R.drawable.ic_play_24
-                group.id.contains("special", true) -> R.drawable.ic_star_filled_24
-                group.id.contains("music", true) || group.id.contains("opening", true) -> R.drawable.ic_audio_24
-                else -> null
+        val tabs = if (isMovie) {
+            allSeasonGroups.mapIndexed { index, group ->
+                val (tabTitle, icon) = when {
+                    group.id == "season_all" || group.id.startsWith("season_") -> "Filme" to R.drawable.ic_movie_24
+                    group.id.contains("special", true) -> group.name to R.drawable.ic_star_filled_24
+                    group.id.contains("music", true) || group.id.contains("opening", true) -> group.name to R.drawable.ic_audio_24
+                    else -> group.name to (if (index == 0) R.drawable.ic_movie_24 else null)
+                }
+                SeasonTab(
+                    id = group.id,
+                    title = tabTitle,
+                    iconRes = icon,
+                    isSelected = index == 0
+                )
             }
-            SeasonTab(
-                id = group.id,
-                title = group.name,
-                iconRes = icon,
-                isSelected = index == 0
-            )
+        } else {
+            allSeasonGroups.mapIndexed { index, group ->
+                val icon = when {
+                    group.id == "season_all" -> R.drawable.ic_list_view_24
+                    group.id.startsWith("season_") -> R.drawable.ic_play_24
+                    group.id.contains("special", true) -> R.drawable.ic_star_filled_24
+                    group.id.contains("music", true) || group.id.contains("opening", true) -> R.drawable.ic_audio_24
+                    else -> null
+                }
+                SeasonTab(
+                    id = group.id,
+                    title = group.name,
+                    iconRes = icon,
+                    isSelected = index == 0
+                )
+            }
         }
 
         val continueItem = PrimaryEpisodeSelection.select(allEpisodeItems)
         val continueSubtitle = continueItem?.let { item ->
-            val epText = item.episodeNumber?.let { "Ep. $it" } ?: "Ep. 01"
+            val epPrefix = if (isMovie) "Filme Completo" else (item.episodeNumber?.let { "Ep. $it" } ?: "Ep. 01")
             if (item.watchedDuration > 0 && item.totalDuration > item.watchedDuration) {
                 val remainingSec = (item.totalDuration - item.watchedDuration) / 1000
-                "$epText • ${String.format(Locale.ROOT, "%02d:%02d", remainingSec / 60, remainingSec % 60)} restante"
+                "$epPrefix • ${String.format(Locale.ROOT, "%02d:%02d", remainingSec / 60, remainingSec % 60)} restante"
             } else {
-                "$epText • Iniciar reprodução"
+                "$epPrefix • Iniciar reprodução"
             }
-        } ?: "Ep. 01 • Iniciar reprodução"
+        } ?: if (isMovie) "Filme Completo • Iniciar reprodução" else "Ep. 01 • Iniciar reprodução"
 
         return SeriesDetailUiState.Success(
             folderId = folderId,
@@ -287,7 +332,8 @@ class SeriesDetailViewModel @Inject constructor(
             subtitleBadge = SeriesMediaMetadataPolicy.subtitles(
                 driveFiles.map { it.name }, listingComplete = !hasIncompleteDriveListing
             ),
-            hasIncompleteDriveListing = hasIncompleteDriveListing
+            hasIncompleteDriveListing = hasIncompleteDriveListing,
+            isMovie = isMovie
         )
     }
 
@@ -355,17 +401,22 @@ class SeriesDetailViewModel @Inject constructor(
     private fun mapToEpisodeItem(
         file: DriveFile,
         watch: WatchList?,
-        arcs: List<TenraiAnimeService.TenraiFranchiseArc>
+        arcs: List<TenraiAnimeService.TenraiFranchiseArc>,
+        isMovie: Boolean = false,
+        canonicalMovieTitle: String? = null,
+        fallbackThumbnail: String? = null
     ): SeriesEpisodeItem {
         val parsed = EpisodeParser.parse(file.name)
         // OP/ED and other extras can contain a number (for example OP4a), but that
         // number is a variant index, not a regular episode and must never be mapped
         // to a franchise episode title or shown with an EP badge.
-        val epNum = parsed.episode?.toInt()?.takeUnless { parsed.isSpecial }
+        val epNum = parsed.episode?.toInt()?.takeUnless { parsed.isSpecial || isMovie }
 
         // Match canonical episode title from franchise arcs
         var canonName: String? = null
-        if (epNum != null) {
+        if (isMovie) {
+            canonName = canonicalMovieTitle
+        } else if (epNum != null) {
             for (arc in arcs) {
                 if (arc.episodes.containsKey(epNum)) {
                     canonName = arc.episodes[epNum]
@@ -374,7 +425,7 @@ class SeriesDetailViewModel @Inject constructor(
             }
         }
 
-        val presentation = presentSeriesEpisode(file.name, canonName)
+        val presentation = presentSeriesEpisode(file.name, canonName, isMovie = isMovie)
 
         val progress = watch?.watchProgress() ?: 0
         val durationText = if (watch != null && watch.totalDuration > 0) {
@@ -385,16 +436,19 @@ class SeriesDetailViewModel @Inject constructor(
         }
 
         val audioText = SeriesMediaMetadataPolicy.audioLabelForFile(file.name).orEmpty()
+        val badge = if (isMovie) "FILME" else null
 
         return SeriesEpisodeItem(
             file = file,
             displayTitle = presentation.displayTitle,
-            episodeNumber = presentation.episodeNumber,
+            episodeNumber = if (isMovie) null else presentation.episodeNumber,
             durationText = durationText,
             audioBadgeText = audioText,
             progressPercent = progress,
             watchedDuration = watch?.watchedDuration ?: 0L,
-            totalDuration = watch?.totalDuration ?: 0L
+            totalDuration = watch?.totalDuration ?: 0L,
+            badgeText = badge,
+            fallbackThumbnailUrl = fallbackThumbnail
         )
     }
 

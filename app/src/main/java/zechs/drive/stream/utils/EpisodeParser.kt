@@ -30,7 +30,7 @@ object EpisodeParser {
 
     // Trailing bare quality tokens like 1080p, WEBRip, etc.
     private val BARE_QUALITY_REGEX = Regex(
-        "(?i)\\b(?:1080p|720p|480p|2160p|4k|x264|x265|hevc|avc|h264|h265|webrip|web-dl|bluray|bdrip|aac|flac|opus|10bit)\\b.*$"
+        "(?i)(?:hdr10\\+|\\b(?:1080p|720p|480p|2160p|4k|uhd|x264|x265|hevc|avc|h264|h265|webrip|web-dl|webdl|bluray|bdrip|brrip|remux|imax|dv|dovi|hdr10|hdr|aac|flac|opus|dts|10bit|8bit|ddp?5\\.1|dd5\\.1|5\\.1|7\\.1)\\b).*$"
     )
 
     private val EXTENSION_REGEX = Regex("\\.[a-zA-Z0-9]{2,4}$")
@@ -246,9 +246,14 @@ object EpisodeParser {
         var lastMatchEnd = -1
         var lastMatchedEp: Double? = null
         while (numMatcher.find()) {
+            val candidate = numMatcher.group(1)?.toDoubleOrNull()
+            // Ignore 4-digit release years (e.g. 1900..2099) when parsing standalone episode numbers
+            if (candidate != null && candidate >= 1900.0 && candidate <= 2099.0 && candidate % 1.0 == 0.0) {
+                continue
+            }
             lastMatchStart = numMatcher.start()
             lastMatchEnd = numMatcher.end()
-            lastMatchedEp = numMatcher.group(1)?.toDoubleOrNull()
+            lastMatchedEp = candidate
         }
         if (lastMatchedEp != null && lastMatchStart >= 0) {
             val titlePart = base.substring(0, lastMatchStart).trim()
@@ -276,7 +281,7 @@ object EpisodeParser {
             showTitle = cleanShowTitle(cleaned.ifBlank { filename }),
             cleanTitle = cleaned.ifBlank { filename },
             episodeLabel = "",
-            episodeBadge = "1"
+            episodeBadge = "FILME"
         )
     }
 
@@ -347,9 +352,14 @@ object EpisodeParser {
 
     private fun cleanTitleString(raw: String): String {
         var result = raw.replace(Regex("\\[[^\\]]*\\]|\\([^\\)]*\\)"), "")
-        result = result.replace(Regex("(?i)\\b(?:1080p|720p|480p|2160p|4k|x264|x265|hevc|avc|h264|h265|webrip|web-dl|bluray|bdrip|aac|flac|opus|10bit)\\b"), "")
+        result = result.replace(Regex("(?i)hdr10\\+"), " ")
+        result = result.replace(
+            Regex("(?i)\\b(?:1080p|720p|480p|2160p|4k|uhd|x264|x265|hevc|avc|h264|h265|webrip|web-dl|webdl|bluray|bdrip|brrip|remux|imax|dv|dovi|hdr10plus|hdr10|hdr|sdr|aac|flac|opus|dts|10bit|8bit|ddp?5\\.1|dd5\\.1|5\\.1|7\\.1|dual(?:[\\s_-]*audio)?|multi(?:[\\s_-]*audio)?|multisub|dublado|legendado)\\b"),
+            " "
+        )
         result = result.replace(Regex("[_.]+"), " ")
-        result = result.trim(' ', '-', '_', '.')
+        result = result.replace(Regex("\\s+"), " ")
+        result = result.trim(' ', '-', '_', '.', '—', '–', ':')
         return result
     }
 

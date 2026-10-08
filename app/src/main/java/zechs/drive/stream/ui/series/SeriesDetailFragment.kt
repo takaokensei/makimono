@@ -181,16 +181,19 @@ class SeriesDetailFragment : BaseFragment() {
         binding.btnPrimaryAction.nextFocusLeftId = binding.btnSearch.id
         binding.btnSearch.nextFocusLeftId = binding.btnBack.id
 
-        // Connect to season tabs
+        updateFocusChain(isMovie = false, hasSeasonTabs = true)
+    }
+
+    private fun updateFocusChain(isMovie: Boolean, hasSeasonTabs: Boolean) {
+        if (!DeviceUi.isTenFootExperience(requireContext())) return
+        val downTarget = if (hasSeasonTabs) binding.rvSeasonTabs.id else binding.rvEpisodes.id
         listOf(binding.btnPrimaryAction, binding.btnFavorite, binding.btnMoreActions).forEach {
-            it.nextFocusDownId = binding.rvSeasonTabs.id
+            it.nextFocusDownId = downTarget
             it.nextFocusUpId = binding.btnBack.id
         }
         binding.rvSeasonTabs.nextFocusUpId = binding.btnMoreActions.id
-
-        // Connect season tabs to episodes
         binding.rvSeasonTabs.nextFocusDownId = binding.rvEpisodes.id
-        binding.rvEpisodes.nextFocusUpId = binding.rvSeasonTabs.id
+        binding.rvEpisodes.nextFocusUpId = downTarget
     }
 
     private fun updateSynopsisFocusChain(hasDisclosure: Boolean) {
@@ -279,8 +282,16 @@ class SeriesDetailFragment : BaseFragment() {
             }
         }
 
+        val isMovie = state.isMovie
+        binding.tvBreadcrumbRoot.text = if (isMovie) {
+            getString(R.string.movies)
+        } else {
+            getString(R.string.series_breadcrumb_library)
+        }
+
         // 2. Titles Block
-        val japaneseTitle = state.aniListMetadata?.titleNative ?: state.animeEntry?.titleJapanese
+        val isMovieOrNonAnime = isMovie || state.aniListMetadata?.isAnime == false
+        val japaneseTitle = if (isMovieOrNonAnime) null else (state.aniListMetadata?.titleNative ?: state.animeEntry?.titleJapanese)
         if (!japaneseTitle.isNullOrBlank()) {
             binding.tvJapaneseTitle.visibility = View.VISIBLE
             binding.tvJapaneseTitle.text = japaneseTitle
@@ -292,6 +303,7 @@ class SeriesDetailFragment : BaseFragment() {
             ?: state.animeEntry?.title?.takeIf { it.isNotBlank() }
             ?: state.seriesTitle
         binding.tvRomajiTitle.text = canonicalTitle
+        binding.tvBreadcrumbCurrent.text = canonicalTitle
 
         val englishSubtitle = state.aniListMetadata?.titleEnglish
             ?: state.animeEntry?.titleEnglish
@@ -334,31 +346,45 @@ class SeriesDetailFragment : BaseFragment() {
         if (scoreVal != null) {
             binding.tvMalScore.visibility = View.VISIBLE
             binding.tvMalScore.text = String.format(Locale.US, "%.1f", scoreVal)
+            val isTmdb = state.aniListMetadata?.isAnime == false || state.aniListMetadata?.mediaType != null
+            binding.tvRatingSource?.text = if (isTmdb) "TMDB" else getString(R.string.series_source_mal)
         } else {
             binding.tvMalScore.visibility = View.GONE
         }
 
         // 4. Meta Row 2 (Tech Specs)
-        binding.tvQualityBadge.text = state.qualityBadge.orEmpty()
-        binding.qualityBadgeContainer.visibility = if (state.qualityBadge == null) View.GONE else View.VISIBLE
-        binding.tvQualityBadge.contentDescription = state.qualityBadge?.let {
+        val cleanQuality = state.qualityBadge?.replace(" · nome", "")?.replace("Parcial", "HD")
+        binding.tvQualityBadge.text = cleanQuality.orEmpty()
+        binding.qualityBadgeContainer.visibility = if (cleanQuality.isNullOrBlank()) View.GONE else View.VISIBLE
+        binding.tvQualityBadge.contentDescription = cleanQuality?.let {
             getString(R.string.series_inferred_resolution_from_filename, it)
         }
 
-        binding.tvAudioTrackBadge.text = state.audioBadge.orEmpty()
-        binding.audioBadgeContainer.visibility = if (state.audioBadge == null) View.GONE else View.VISIBLE
-        binding.tvAudioTrackBadge.contentDescription = state.audioBadge?.let {
+        val cleanAudio = state.audioBadge?.replace(" · nome", "")?.replace("Dual", "Dual Áudio")
+        binding.tvAudioTrackBadge.text = cleanAudio.orEmpty()
+        binding.audioBadgeContainer.visibility = if (cleanAudio.isNullOrBlank()) View.GONE else View.VISIBLE
+        binding.tvAudioTrackBadge.contentDescription = cleanAudio?.let {
             getString(R.string.series_inferred_audio_from_filename, it)
         }
 
-        binding.tvSubtitleBadge.text = state.subtitleBadge.orEmpty()
-        binding.subtitleBadgeContainer.visibility = if (state.subtitleBadge == null) View.GONE else View.VISIBLE
-        binding.tvSubtitleBadge.contentDescription = state.subtitleBadge?.let {
+        val cleanSubtitle = state.subtitleBadge?.replace(" · nome", "")
+        binding.tvSubtitleBadge.text = cleanSubtitle.orEmpty()
+        binding.subtitleBadgeContainer.visibility = if (cleanSubtitle.isNullOrBlank()) View.GONE else View.VISIBLE
+        binding.tvSubtitleBadge.contentDescription = cleanSubtitle?.let {
             getString(R.string.series_inferred_subtitles_from_filename, it)
         }
         binding.metaRow2.visibility = if (
-            state.qualityBadge != null || state.audioBadge != null || state.subtitleBadge != null
+            !cleanQuality.isNullOrBlank() || !cleanAudio.isNullOrBlank() || !cleanSubtitle.isNullOrBlank()
         ) View.VISIBLE else View.GONE
+
+        // Genres Row
+        val genres = state.aniListMetadata?.genres ?: state.animeEntry?.genres.orEmpty()
+        if (genres.isNotEmpty()) {
+            binding.tvGenres?.visibility = View.VISIBLE
+            binding.tvGenres?.text = genres.take(4).joinToString(" • ")
+        } else {
+            binding.tvGenres?.visibility = View.GONE
+        }
 
         // 5. Synopsis
         val rawSynopsis = state.aniListMetadata?.synopsis ?: state.animeEntry?.synopsis
@@ -420,7 +446,15 @@ class SeriesDetailFragment : BaseFragment() {
         }
 
         // 6. Season Tabs
-        seasonAdapter.submitList(state.seasonTabs)
+        if (isMovie) {
+            binding.rvSeasonTabs.visibility = View.GONE
+            binding.tvEpisodesHeading?.visibility = View.GONE
+        } else {
+            binding.rvSeasonTabs.visibility = if (state.seasonTabs.isEmpty()) View.GONE else View.VISIBLE
+            binding.tvEpisodesHeading?.visibility = View.VISIBLE
+            binding.tvEpisodesHeading?.text = getString(R.string.series_heading_episodes)
+            seasonAdapter.submitList(state.seasonTabs)
+        }
 
         // 7. Episodes Rail
         episodeAdapter.submitList(state.currentEpisodes)
@@ -429,6 +463,8 @@ class SeriesDetailFragment : BaseFragment() {
         } else {
             binding.tvEmptyEpisodes.visibility = View.GONE
         }
+
+        updateFocusChain(isMovie, hasSeasonTabs = !isMovie && state.seasonTabs.isNotEmpty())
 
         // Do not steal focus again when the metadata enrichment state arrives.
         if (!hasRestoredInitialFocus) {
@@ -543,16 +579,33 @@ class SeriesDetailFragment : BaseFragment() {
             -1L
         }
 
+        val isMovie = currentState.isMovie
+        val canonicalTitle = currentState.aniListMetadata?.titleRomaji
+            ?: currentState.animeEntry?.title?.takeIf { it.isNotBlank() }
+            ?: currentState.seriesTitle
+
+        val launchTitle = if (isMovie) {
+            canonicalTitle
+        } else {
+            file.name
+        }
+        val seriesTitle = if (isMovie) {
+            canonicalTitle
+        } else {
+            args.name
+        }
+
         PlayerLauncher.launch(
             context = requireContext(),
             playerType = mainViewModel.currentPlayerIndex,
             fileId = fileId,
-            title = file.name,
-            seriesTitle = args.name,
+            title = launchTitle,
+            seriesTitle = seriesTitle,
             thumbnailLink = thumb,
             themeIndex = mainViewModel.currentThemeIndex,
             playlist = playlist,
-            startPosition = startPos
+            startPosition = startPos,
+            isMovie = isMovie
         )
     }
 

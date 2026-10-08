@@ -20,7 +20,9 @@ data class SeriesEpisodeItem(
     val audioBadgeText: String,
     val progressPercent: Int,
     val watchedDuration: Long,
-    val totalDuration: Long
+    val totalDuration: Long,
+    val badgeText: String? = null,
+    val fallbackThumbnailUrl: String? = null
 )
 
 class SeriesDetailEpisodeAdapter(
@@ -81,10 +83,13 @@ class SeriesDetailEpisodeAdapter(
 
         fun bind(item: SeriesEpisodeItem) {
             binding.tvEpisodeTitle.text = item.displayTitle
+            val hasDuration = item.durationText.isNotBlank()
             binding.tvEpisodeDuration.text = item.durationText
-            binding.tvEpisodeDuration.visibility = if (item.durationText.isBlank()) View.GONE else View.VISIBLE
+            binding.tvEpisodeDuration.visibility = if (hasDuration) View.VISIBLE else View.GONE
+            val hasAudio = item.audioBadgeText.isNotBlank()
             binding.tvAudioBadge.text = item.audioBadgeText
-            binding.tvAudioBadge.visibility = if (item.audioBadgeText.isBlank()) View.GONE else View.VISIBLE
+            binding.tvAudioBadge.visibility = if (hasAudio) View.VISIBLE else View.GONE
+            binding.tvEpisodeDot1.visibility = if (hasDuration && hasAudio) View.VISIBLE else View.GONE
 
             // Google Drive descriptions are optional and user-authored. Reveal them only
             // on the focused episode so the rail remains scannable at rest.
@@ -95,9 +100,13 @@ class SeriesDetailEpisodeAdapter(
                 .orEmpty()
             updateSynopsisVisibility(binding.cardEpisodeItem.hasFocus())
 
-            if (item.episodeNumber != null && item.episodeNumber > 0) {
+            val badge = item.badgeText ?: if (item.episodeNumber != null && item.episodeNumber > 0) {
+                String.format("EP %02d", item.episodeNumber)
+            } else null
+
+            if (badge != null) {
                 binding.tvEpNumberBadge.visibility = View.VISIBLE
-                binding.tvEpNumberBadge.text = String.format("EP %02d", item.episodeNumber)
+                binding.tvEpNumberBadge.text = badge
             } else {
                 binding.tvEpNumberBadge.visibility = View.GONE
             }
@@ -131,7 +140,10 @@ class SeriesDetailEpisodeAdapter(
                 progress = progressDescription
             )
 
-            val thumbUrl = item.file.thumbnailLarge ?: item.file.thumbnailLink ?: item.file.posterUrl
+            val thumbUrl = item.file.thumbnailLarge
+                ?: item.file.thumbnailLink
+                ?: item.fallbackThumbnailUrl
+                ?: item.file.posterUrl
             MediaImageLoader.card(binding.ivEpisodeThumb, thumbUrl)
         }
 

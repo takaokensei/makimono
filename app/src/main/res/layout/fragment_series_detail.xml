@@ -342,6 +342,7 @@
                         tools:text="8.2" />
 
                     <TextView
+                        android:id="@+id/tvRatingSource"
                         style="@style/TextAppearance.Makimono.TV.Caption"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -451,6 +452,17 @@
                 </LinearLayout>
 
             </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvGenres"
+                style="@style/TextAppearance.Makimono.TV.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textColor="@color/layout_literal_94a3b8"
+                android:visibility="gone"
+                tools:text="Ação • Aventura • Ficção Científica"
+                tools:visibility="visible" />
 
             <!-- Synopsis -->
             <TextView
