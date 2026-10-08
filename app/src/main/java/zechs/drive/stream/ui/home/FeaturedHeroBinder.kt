@@ -32,7 +32,34 @@ internal class FeaturedHeroBinder(
         }
         binding.tvFeaturedTitle?.text = featured.title
         binding.tvFeaturedOverline?.setText(R.string.home_featured_overline)
-        binding.layoutFeaturedGenres?.visibility = View.GONE
+        if (featured.genres.isNotEmpty()) {
+            binding.layoutFeaturedGenres?.let { container ->
+                container.removeAllViews()
+                container.visibility = View.VISIBLE
+                val density = context.resources.displayMetrics.density
+                featured.genres.take(3).forEach { genreName ->
+                    val pill = android.widget.TextView(context).apply {
+                        text = genreName
+                        setTextAppearance(R.style.TextAppearance_Makimono_TV_Caption)
+                        setBackgroundResource(R.drawable.glass_meta_pill_bg)
+                        setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.layout_literal_cbd5e1))
+                        val padH = (8 * density).toInt()
+                        val padV = (2 * density).toInt()
+                        setPadding(padH, padV, padH, padV)
+                        val lp = android.widget.LinearLayout.LayoutParams(
+                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                        ).apply {
+                            marginEnd = (6 * density).toInt()
+                        }
+                        layoutParams = lp
+                    }
+                    container.addView(pill)
+                }
+            }
+        } else {
+            binding.layoutFeaturedGenres?.visibility = View.GONE
+        }
 
         val separator = context.getString(R.string.home_featured_separator)
         val metadata = buildList {

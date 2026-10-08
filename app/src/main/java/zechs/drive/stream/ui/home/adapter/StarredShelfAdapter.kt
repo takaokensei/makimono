@@ -76,14 +76,20 @@ class StarredShelfAdapter(
                 binding.folderBgView.visibility = View.GONE
                 binding.ivWatermarkIcon.visibility = View.GONE
                 binding.ivStarredThumb.visibility = View.VISIBLE
+                binding.tvStarredTypeBadge.visibility = View.GONE
+                binding.tvStarredSubtitle.visibility = View.GONE
 
                 MediaImageLoader.poster(binding.ivStarredThumb, displayImage)
             } else if (isFolder) {
+                binding.tvStarredTypeBadge.visibility = View.VISIBLE
+                binding.tvStarredSubtitle.visibility = View.VISIBLE
                 binding.folderBgView.visibility = View.VISIBLE
                 binding.ivWatermarkIcon.setImageResource(R.drawable.ic_folder_24)
                 binding.ivWatermarkIcon.visibility = View.VISIBLE
                 binding.ivStarredThumb.visibility = View.GONE
             } else {
+                binding.tvStarredTypeBadge.visibility = View.VISIBLE
+                binding.tvStarredSubtitle.visibility = View.VISIBLE
                 binding.folderBgView.visibility = View.GONE
                 binding.ivWatermarkIcon.setImageResource(R.drawable.ic_play_24)
                 binding.ivWatermarkIcon.visibility = View.VISIBLE

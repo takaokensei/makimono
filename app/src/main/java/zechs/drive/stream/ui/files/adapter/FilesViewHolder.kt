@@ -300,10 +300,11 @@ sealed class FilesViewHolder(
                     text = codecTag
                 }
 
+                val displayThumb = item.posterUrl ?: item.thumbnailLarge ?: item.thumbnailLink
                 val ext = item.name.substringAfterLast('.', "").uppercase()
                 tvGridTypeBadge.apply {
                     val badgeText = when {
-                        isFolder -> "PASTA"
+                        isFolder -> null
                         ext.isNotEmpty() && ext.length in 2..4 -> ext
                         item.isSubtitleFile -> "LEGENDA"
                         else -> null
@@ -318,7 +319,6 @@ sealed class FilesViewHolder(
                 // Folder button hidden — folder access is via long-press on the card itself
                 btnGridFolder.isVisible = false
 
-                val displayThumb = item.posterUrl ?: item.thumbnailLarge ?: item.thumbnailLink
                 if (!displayThumb.isNullOrBlank()) {
                     gridBgFallback.isGone = true
                     ivGridFallbackIcon.isGone = true

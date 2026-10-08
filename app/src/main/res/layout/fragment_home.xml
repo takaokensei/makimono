@@ -799,6 +799,39 @@
 
             </LinearLayout>
 
+            <!-- 2.5. Filmes -->
+            <LinearLayout
+                android:id="@+id/btnNavFilmes"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/tv_nav_item_height"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/rail_item_focus_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp">
+
+                <ImageView
+                    android:id="@+id/ivNavFilmesIcon"
+                    android:layout_width="@dimen/tv_nav_icon_size"
+                    android:layout_height="@dimen/tv_nav_icon_size"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_movie_24"
+                    app:tint="@color/layout_literal_7fa3d6" />
+
+                <TextView
+                    android:id="@+id/tvNavFilmes"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:text="@string/movies"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Headline"
+                    android:textColor="@color/layout_literal_94a3b8" />
+
+            </LinearLayout>
+
             <!-- 3. Pastas (My Drive & Shared Drives) -->
             <LinearLayout
                 android:id="@+id/btnNavPastas"
@@ -999,6 +1032,36 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:text="Animes"
+                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                android:textColor="@color/layout_literal_64748b" />
+        </LinearLayout>
+
+        <!-- Filmes -->
+        <LinearLayout
+            android:id="@+id/bottomNavFilmes"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/ivBottomNavFilmes"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:contentDescription="Filmes"
+                android:src="@drawable/ic_movie_24"
+                app:tint="@color/layout_literal_64748b" />
+
+            <TextView
+                android:id="@+id/tvBottomNavFilmes"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Filmes"
                 android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
                 android:textColor="@color/layout_literal_64748b" />
         </LinearLayout>

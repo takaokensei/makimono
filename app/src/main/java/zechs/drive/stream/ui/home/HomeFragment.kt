@@ -384,6 +384,7 @@ class HomeFragment : BaseFragment() {
             binding.btnBrandLogo,
             binding.btnNavInicio,
             binding.btnNavAnimes,
+            binding.btnNavFilmes,
             binding.btnNavPastas,
             binding.btnNavFavoritos,
             binding.userProfilePill,
@@ -695,7 +696,18 @@ class HomeFragment : BaseFragment() {
             btnNavAnimes.setOnClickListener {
                 previousTabBeforeSearch = null
                 selectTab("Animes")
-                viewModel.filterStarred(false)
+                viewModel.filterMovies(false)
+                if (viewModel.animeLibrary.value.isEmpty()) {
+                    viewModel.loadAnimeLibrary(forceRefresh = true)
+                }
+                contentScrollView.scrollTo(0, 0)
+                if (hasOverlay) collapseSidebar()
+            }
+
+            btnNavFilmes?.setOnClickListener {
+                previousTabBeforeSearch = null
+                selectTab("Filmes")
+                viewModel.filterMovies(true)
                 if (viewModel.animeLibrary.value.isEmpty()) {
                     viewModel.loadAnimeLibrary(forceRefresh = true)
                 }
@@ -743,6 +755,7 @@ class HomeFragment : BaseFragment() {
             val navItems = listOfNotNull(
                 btnNavInicio,
                 btnNavAnimes,
+                btnNavFilmes,
                 btnNavPastas,
                 btnNavFavoritos,
                 btnNavConfig
@@ -769,6 +782,7 @@ class HomeFragment : BaseFragment() {
         // Wire up mobile bottom navigation bar
         binding.bottomNavInicio?.setOnClickListener { binding.btnNavInicio.performClick() }
         binding.bottomNavAnimes?.setOnClickListener { binding.btnNavAnimes.performClick() }
+        binding.bottomNavFilmes?.setOnClickListener { binding.btnNavFilmes?.performClick() }
         binding.bottomNavPastas?.setOnClickListener { binding.btnNavPastas.performClick() }
         binding.bottomNavFavoritos?.setOnClickListener { binding.btnNavFavoritos.performClick() }
         binding.bottomNavConfig?.setOnClickListener { binding.btnNavConfig.performClick() }
@@ -878,12 +892,13 @@ class HomeFragment : BaseFragment() {
     private fun focusCurrentNavItem() {
         val target = when (currentTab) {
             "Animes" -> binding.btnNavAnimes
+            "Filmes" -> binding.btnNavFilmes
             "Pastas" -> binding.btnNavPastas
             "Favoritos" -> binding.btnNavFavoritos
             "Configurações" -> binding.btnNavConfig
             else -> binding.btnNavInicio
         }
-        target.requestFocus()
+        target?.requestFocus()
     }
 
     private fun focusContent() {
@@ -911,6 +926,7 @@ class HomeFragment : BaseFragment() {
         val navItems = listOfNotNull(
             binding.btnNavInicio,
             binding.btnNavAnimes,
+            binding.btnNavFilmes,
             binding.btnNavPastas,
             binding.btnNavFavoritos,
             binding.btnNavConfig
@@ -948,11 +964,12 @@ class HomeFragment : BaseFragment() {
                 .withEndAction {
                     val targetBtn = when (currentTab) {
                         "Início" -> binding.btnNavInicio
+                        "Filmes" -> binding.btnNavFilmes
                         "Pastas" -> binding.btnNavPastas
                         "Favoritos" -> binding.btnNavFavoritos
                         else -> binding.btnNavAnimes
                     }
-                    targetBtn.requestFocus()
+                    targetBtn?.requestFocus()
                 }
                 .start()
         }
@@ -1078,7 +1095,7 @@ class HomeFragment : BaseFragment() {
     private fun selectTab(tab: String) {
         if (tab != "Início") featuredPreviewScheduler?.cancel()
         currentTab = tab
-        if (tab == "Início" || tab == "Animes" || tab == "Favoritos") {
+        if (tab == "Início" || tab == "Animes" || tab == "Filmes" || tab == "Favoritos") {
             binding.root.findViewById<View>(R.id.topHeaderBar)?.visibility = View.VISIBLE
         }
         binding.root.findViewById<View>(R.id.tvHomeCatalogTitle)?.visibility =
@@ -1116,8 +1133,30 @@ class HomeFragment : BaseFragment() {
                     containerViewToggle?.visibility = View.VISIBLE
                     containerItemCount.visibility = View.VISIBLE
                     val animesCount = viewModel.filteredAnimes.value.size
-                    tvItemCount.text = "$animesCount animes"
+                    tvItemCount.text = if (animesCount == 1) "1 anime" else "$animesCount animes"
                     val isEmpty = animesCount == 0 && !viewModel.isLoadingAnime.value
+                    layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
+                }
+                "Filmes" -> {
+                    featuredHeroContainer?.visibility = View.GONE
+                    shelfHeaderRow?.visibility = View.GONE
+                    rvContinueWatchingShelf.visibility = View.GONE
+                    rvWatchQueueShelf?.visibility = View.GONE
+                    tvNewEpisodesShelfLabel.visibility = View.GONE
+                    rvNewEpisodesShelf.visibility = View.GONE
+                    tvMyListShelfLabel?.visibility = View.GONE
+                    rvStarredShelf?.visibility = View.GONE
+                    tvRecentlyAddedShelfLabel.visibility = View.GONE
+                    rvRecentlyAddedShelf.visibility = View.GONE
+                    tvQueueShelfLabel?.visibility = View.GONE
+                    tvShelfViewQueue?.visibility = View.GONE
+                    layoutHomeEmpty?.visibility = View.GONE
+                    rvAnimeLibrary.visibility = View.VISIBLE
+                    containerViewToggle?.visibility = View.VISIBLE
+                    containerItemCount.visibility = View.VISIBLE
+                    val moviesCount = viewModel.filteredAnimes.value.size
+                    tvItemCount.text = if (moviesCount == 1) "1 filme" else "$moviesCount filmes"
+                    val isEmpty = moviesCount == 0 && !viewModel.isLoadingAnime.value
                     layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
                 }
                 "Favoritos" -> {
@@ -1176,6 +1215,11 @@ class HomeFragment : BaseFragment() {
             tvNavAnimes.setTextColor(if (tab == "Animes") activeTextColor else normalTextColor)
             ivNavAnimesIcon.imageTintList = android.content.res.ColorStateList.valueOf(if (tab == "Animes") activeIconColor else normalIconColor)
 
+            // Filmes
+            btnNavFilmes?.setBackgroundResource(if (tab == "Filmes") activeBg else normalBg)
+            tvNavFilmes?.setTextColor(if (tab == "Filmes") activeTextColor else normalTextColor)
+            ivNavFilmesIcon?.imageTintList = android.content.res.ColorStateList.valueOf(if (tab == "Filmes") activeIconColor else normalIconColor)
+
             // Pastas
             btnNavPastas.setBackgroundResource(if (tab == "Pastas") activeBg else normalBg)
             tvNavPastas.setTextColor(if (tab == "Pastas") activeTextColor else normalTextColor)
@@ -1194,6 +1238,9 @@ class HomeFragment : BaseFragment() {
 
             ivBottomNavAnimes?.imageTintList = android.content.res.ColorStateList.valueOf(if (tab == "Animes") bottomActiveColor else bottomInactiveColor)
             tvBottomNavAnimes?.setTextColor(if (tab == "Animes") bottomActiveColor else bottomInactiveColor)
+
+            ivBottomNavFilmes?.imageTintList = android.content.res.ColorStateList.valueOf(if (tab == "Filmes") bottomActiveColor else bottomInactiveColor)
+            tvBottomNavFilmes?.setTextColor(if (tab == "Filmes") bottomActiveColor else bottomInactiveColor)
 
             ivBottomNavPastas?.imageTintList = android.content.res.ColorStateList.valueOf(if (tab == "Pastas") bottomActiveColor else bottomInactiveColor)
             tvBottomNavPastas?.setTextColor(if (tab == "Pastas") bottomActiveColor else bottomInactiveColor)
@@ -1233,11 +1280,18 @@ class HomeFragment : BaseFragment() {
                     viewModel.filteredAnimes.collect { animes ->
                         submitCatalog()
                         if (currentTab == "Animes") {
-                            binding.tvItemCount.text = "${animes.size} animes"
+                            val count = animes.size
+                            binding.tvItemCount.text = if (count == 1) "1 anime" else "$count animes"
+                            val isEmpty = animes.isEmpty() && !viewModel.isLoadingAnime.value
+                            binding.layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
+                        } else if (currentTab == "Filmes") {
+                            val count = animes.size
+                            binding.tvItemCount.text = if (count == 1) "1 filme" else "$count filmes"
                             val isEmpty = animes.isEmpty() && !viewModel.isLoadingAnime.value
                             binding.layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
                         } else if (currentTab == "Favoritos") {
-                            binding.tvItemCount.text = "${animes.size} favoritos"
+                            val count = animes.size
+                            binding.tvItemCount.text = if (count == 1) "1 favorito" else "$count favoritos"
                             val isEmpty = animes.isEmpty() && !viewModel.isLoadingAnime.value
                             binding.layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
                         } else if (currentTab == "Início") {

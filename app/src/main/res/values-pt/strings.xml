@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Makimono</string>
+    <string name="movies">Filmes</string>
     <string name="profile_selection_title">Quem está assistindo?</string>
     <string name="profile_manage_action">Gerenciar perfis</string>
     <string name="profile_settings_action">Configurações</string>

@@ -565,8 +565,11 @@ class HomeViewModel @Inject constructor(
                                     file.shortcutDetails.targetId
                                 } else file.id
                                 val meta = allMeta[targetId] ?: allMeta[file.id]
-                                if (meta?.posterUrl != null) {
-                                    file.copy(posterUrl = meta.posterUrl)
+                                if (meta != null) {
+                                    file.copy(
+                                        posterUrl = meta.posterUrl ?: file.posterUrl,
+                                        isMovie = meta.isMovie
+                                    )
                                 } else file
                             }
 
@@ -604,19 +607,27 @@ class HomeViewModel @Inject constructor(
                             var pendingPublish = false
                             for (i in updatedList.indices.take(100)) {
                                 val file = updatedList[i]
-                                if (file.posterUrl.isNullOrBlank() && (file.isFolder || file.isShortcutFolder)) {
-                                    val poster = animePosterResolver.resolvePoster(file.name)
+                                if ((file.posterUrl.isNullOrBlank() || !file.isMovie) && (file.isFolder || file.isShortcutFolder)) {
+                                    val meta = animePosterResolver.resolveMetadata(file.name)
+                                    val poster = meta?.posterUrl
                                     if (!poster.isNullOrBlank()) {
                                         val targetId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
                                             file.shortcutDetails.targetId
                                         } else file.id
-                                        folderMetadataRepository.updatePosterUrl(targetId, file.name, poster)
-                                        updatedList[i] = file.copy(posterUrl = poster)
+                                        val isMovie = meta.isMovie
+                                        folderMetadataRepository.updateMetadataDetails(
+                                            folderId = targetId,
+                                            folderName = file.name,
+                                            posterUrl = poster,
+                                            isMovie = isMovie,
+                                            mediaType = meta.mediaType
+                                        )
+                                        updatedList[i] = file.copy(posterUrl = poster, isMovie = isMovie)
                                         pendingPublish = true
                                         // Batch updates every 16 items instead of 8 for better performance
                                         if (i % 16 == 15) {
                                             _animeLibrary.value = updatedList.toList()
-                                            _filteredAnimes.value = updatedList.toList()
+                                            applyCurrentFilter()
                                             pendingPublish = false
                                         }
                                     }
@@ -624,7 +635,7 @@ class HomeViewModel @Inject constructor(
                             }
                             if (pendingPublish) {
                                 _animeLibrary.value = updatedList.toList()
-                                _filteredAnimes.value = updatedList.toList()
+                                applyCurrentFilter()
                             }
                             _homeState.value = HomeState.Content
                             if (listingWarning != null) _libraryLoadError.value = listingWarning
@@ -921,19 +932,56 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    enum class LibraryFilter {
+        ALL,
+        ANIMES_ONLY,
+        MOVIES_ONLY,
+        STARRED_ONLY
+    }
+
+    private var currentFilter = LibraryFilter.ALL
+
     fun filterStarred(starredOnly: Boolean) = viewModelScope.launch(Dispatchers.IO) {
-        if (starredOnly) {
-            val localFavs = favoriteRepository.getFavoritesSync().map { it.folderId }.toSet()
-            val filtered = _animeLibrary.value.filter {
-                it.starred == zechs.drive.stream.data.model.Starred.STARRED || localFavs.contains(it.id)
+        currentFilter = if (starredOnly) LibraryFilter.STARRED_ONLY else LibraryFilter.ALL
+        applyCurrentFilter()
+    }
+
+    fun filterMovies(moviesOnly: Boolean) = viewModelScope.launch(Dispatchers.IO) {
+        currentFilter = if (moviesOnly) LibraryFilter.MOVIES_ONLY else LibraryFilter.ANIMES_ONLY
+        applyCurrentFilter()
+    }
+
+    fun isMovieFile(file: DriveFile): Boolean {
+        if (file.isMovie) return true
+        val lower = file.name.lowercase(java.util.Locale.ROOT)
+        return lower.contains("spider-man") ||
+                lower.contains("homem-aranha") ||
+                lower.contains("batman") ||
+                lower.contains("avengers") ||
+                lower.contains("vingadores") ||
+                lower.contains("[movie]") ||
+                lower.contains("(movie)") ||
+                lower.contains("filme") ||
+                lower.contains("oppenheimer") ||
+                lower.contains("deadpool") ||
+                lower.contains("star wars")
+    }
+
+    private suspend fun applyCurrentFilter() {
+        val all = _animeLibrary.value
+        val filtered = when (currentFilter) {
+            LibraryFilter.STARRED_ONLY -> {
+                val localFavs = favoriteRepository.getFavoritesSync().map { it.folderId }.toSet()
+                all.filter {
+                    it.starred == zechs.drive.stream.data.model.Starred.STARRED || localFavs.contains(it.id)
+                }
             }
-            kotlinx.coroutines.withContext(Dispatchers.Main) {
-                _filteredAnimes.value = filtered
-            }
-        } else {
-            kotlinx.coroutines.withContext(Dispatchers.Main) {
-                _filteredAnimes.value = _animeLibrary.value
-            }
+            LibraryFilter.MOVIES_ONLY -> all.filter { isMovieFile(it) }
+            LibraryFilter.ANIMES_ONLY -> all.filter { !isMovieFile(it) }
+            LibraryFilter.ALL -> all
+        }
+        withContext(Dispatchers.Main) {
+            _filteredAnimes.value = filtered
         }
     }
 
