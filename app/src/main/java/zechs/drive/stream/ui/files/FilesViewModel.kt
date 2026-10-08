@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
@@ -144,8 +145,8 @@ class FilesViewModel @Inject constructor(
 
         val requestGeneration = ++pageRequestGeneration
         shouldResumePageRequest = false
-        lateinit var requestJob: Job
-        requestJob = viewModelScope.launch(Dispatchers.IO) {
+        var requestJob: Job? = null
+        val newJob = viewModelScope.launch(Dispatchers.IO, start = CoroutineStart.LAZY) {
             _filesList.postValue(Resource.Loading())
             try {
                 ensureActive()
@@ -170,8 +171,10 @@ class FilesViewModel @Inject constructor(
                 if (pageRequestJob === requestJob) pageRequestJob = null
             }
         }
-        pageRequestJob = requestJob
-        return requestJob
+        requestJob = newJob
+        pageRequestJob = newJob
+        newJob.start()
+        return newJob
     }
 
     /** Cancel network work when this folder leaves the foreground; its last successful cursor is retained. */

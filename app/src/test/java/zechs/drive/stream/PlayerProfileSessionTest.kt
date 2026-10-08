@@ -61,9 +61,13 @@ class PlayerProfileSessionTest {
         viewModel.saveWatch("Episode 01", "episode-1", 12_000L, 24_000L)
         advanceUntilIdle()
 
-        coVerify(exactly = 2) { watchListRepository.getWatch("episode-1", originalProfile.id) }
+        // Player work intentionally runs on Dispatchers.IO, outside the test scheduler.
+        // Wait for the launched repository calls before asserting their profile scope.
+        coVerify(timeout = 3_000, exactly = 2) {
+            watchListRepository.getWatch("episode-1", originalProfile.id)
+        }
         coVerify(exactly = 0) { watchListRepository.getWatch("episode-1", otherProfile.id) }
-        coVerify(exactly = 1) {
+        coVerify(timeout = 3_000, exactly = 1) {
             watchListRepository.insertWatch(
                 match<WatchList> { it.profileId == originalProfile.id && it.watchedDuration == 12_000L },
                 originalProfile.id
