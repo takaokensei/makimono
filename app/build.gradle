@@ -69,23 +69,25 @@ android {
         applicationId "zechs.drive.stream"
         minSdk 21
         targetSdk 33
-        versionCode 56
-        versionName "1.6.4.4"
+        versionCode 57
+        versionName "1.6.4.5"
         archivesBaseName = "makimono-v${versionName}"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
-        def driveClientId = localProperties.getProperty("drive.clientId", "")
+        def driveClientId = localProperties.getProperty("drive.clientId", "") ?: (System.getenv("DRIVE_CLIENT_ID") ?: (System.getenv("GOOGLE_DRIVE_CLIENT_ID") ?: ""))
         def distributionBuild = project.hasProperty("distributionBuild")
-        def driveClientSecret = distributionBuild ? "" : localProperties.getProperty("drive.clientSecret", "")
-        def driveRefreshToken = distributionBuild ? "" : localProperties.getProperty("drive.refreshToken", "")
-        def malClientId = localProperties.getProperty("mal.clientId", "")
-        def malClientSecret = distributionBuild ? "" : localProperties.getProperty("mal.clientSecret", "")
-        def githubApiToken = localProperties.getProperty("github.releaseReadToken", "")
+        def driveClientSecret = distributionBuild ? "" : (localProperties.getProperty("drive.clientSecret", "") ?: (System.getenv("DRIVE_CLIENT_SECRET") ?: (System.getenv("GOOGLE_DRIVE_CLIENT_SECRET") ?: "")))
+        def driveRefreshToken = distributionBuild ? "" : (localProperties.getProperty("drive.refreshToken", "") ?: (System.getenv("DRIVE_REFRESH_TOKEN") ?: (System.getenv("GOOGLE_DRIVE_REFRESH_TOKEN") ?: "")))
+        def malClientId = localProperties.getProperty("mal.clientId", "") ?: (System.getenv("MAL_CLIENT_ID") ?: "")
+        def malClientSecret = distributionBuild ? "" : (localProperties.getProperty("mal.clientSecret", "") ?: (System.getenv("MAL_CLIENT_SECRET") ?: ""))
+        def rawGithubToken = localProperties.getProperty("github.releaseReadToken", "") ?: localProperties.getProperty("github.apiToken", "") ?: (System.getenv("API_TOKEN_GITHUB") ?: (System.getenv("GITHUB_API_TOKEN") ?: ""))
+        def githubApiToken = rawGithubToken
                 .replace("\\", "\\\\")
                 .replace("\"", "\\\"")
                 .replace("\r", "")
                 .replace("\n", "")
+        def tmdbApiKey = (localProperties.getProperty("tmdb.apiKey", "") ?: (System.getenv("TMDB_API_KEY") ?: "15d2ea6d0dc1d476efbca3eba2b9bbfb")).trim()
 
         buildConfigField "String", "DRIVE_CLIENT_ID", "\"${driveClientId}\""
         buildConfigField "String", "DRIVE_CLIENT_SECRET", "\"${driveClientSecret}\""
@@ -93,6 +95,7 @@ android {
         buildConfigField "String", "MAL_CLIENT_ID", "\"${malClientId}\""
         buildConfigField "String", "MAL_CLIENT_SECRET", "\"${malClientSecret}\""
         buildConfigField "String", "GITHUB_API_TOKEN", "\"${githubApiToken}\""
+        buildConfigField "String", "TMDB_API_KEY", "\"${tmdbApiKey}\""
     }
 
     signingConfigs {

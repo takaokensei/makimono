@@ -11,6 +11,17 @@ Estados: `NOT_STARTED` → `IN_PROGRESS` → `IMPLEMENTED` → `BUILT` → `RUNT
 - **Referências de verificação existentes:** `REAUDIT_2026-10-04.md` e `docs/ui-audit/2026-10-04-reaudit/README.md`. SDK/dependências e `Media3 1.4.1` conferidos no Gradle nesta execução; API min 21 / compile 34 / target 33 / quatro ABIs.
 - **Build nesta rodada:** `assembleDebug --no-daemon -PdistributionBuild --max-workers=1` concluiu. O primeiro intento no caminho acentuado falhou ao abrir loopback antes de compilar; o mesmo checkout via `X:\` e cache em `G:\` compilou sem esse bloqueio. O APK x86_64 `.visualreview` foi instalado no MuMu (`127.0.0.1:7555`); perfil e Home abriram. A variante de revisão não tem sessão Drive, portanto biblioteca, detalhes, OAuth real, player, update autenticado, TV física e migrações destrutivas continuam sem validação nesta rodada. Não usar baseline histórico como status atual de release.
 
+### Q00.1 — atualizar baseline do checkout e validar rail no Android TV AVD (08/10/2026)
+
+- **Status:** RUNTIME_VALIDATED apenas para build atual, shell Home/Settings e percurso D-pad da sidebar; Q00 documental fica atualizado, sem aceitar Q01–Q26.
+- **Checkout:** HEAD `0295a6a`; 20 arquivos rastreados modificados e 700 entradas não rastreadas já presentes antes deste registro. Diff agregado de código: 510 inserções / 108 remoções. Alterações de outros ciclos foram preservadas; nenhum reset, commit, push, branch ou operação de limpeza foi feito.
+- **Ambiente:** AVD `MakimonoAndroidTV1080p`, Android 16/API 36, 1920×1080, 320 dpi; package `.visualreview` isolado. O Moto G34 também aparecia no ADB, mas não foi usado nesta rodada.
+- **Build/testes atuais:** `cmd /c "cd /d X:\ & set TEMP=C:\Temp& set TMP=C:\Temp& set GRADLE_USER_HOME=C:\Temp\.gradle& gradlew.bat testDebugUnitTest assembleDebug --no-daemon --max-workers=1 --console=plain"` passou. 335 testes JVM, 75 suítes, 0 falhas/erros/skips. APK `makimono-v1.6.4.4-x86_64-debug.apk`, SHA-256 `B4D12747BF0B2BFACE7A284F98E80F2166CE3E11814E568EFA23661A7782EC8B`; instalado com `adb -s emulator-5556 install -r`.
+- **D-pad/runtime:** seleção do perfil principal abriu Home; RIGHT/LEFT percorreu ações do hero; LEFT chegou a `btnNavInicio`; DOWN atravessou `btnNavAnimes`, `btnNavPastas`, `btnNavFavoritos`, `userProfilePill` e `btnNavConfig`. Os rótulos dos cinco destinos apareceram uma linha em bounds próprios. CENTER abriu Settings na categoria `Perfil e biblioteca`; BACK voltou à Home, com foco recuperado em um card. Nenhuma fatal exception apareceu no log consultado.
+- **Configuração de raiz:** leitura de Settings do Perfil principal mostrou `oneblacki`; o usuário esclareceu que `1oneblacki` é outra pasta irmã. Não foi alterada a biblioteca, nem favorito, progresso ou arquivo remoto nesta validação.
+- **Evidência reproduzível:** passos, IDs de foco, bounds e limites em `docs/ui-audit/2026-10-08-android-tv-baseline/README.md`. Captura de tela foi omitida porque a Home contém nomes da biblioteca pessoal; dumps temporários foram removidos.
+- **Limites:** smoke de shell, não cobre TV física/overscan/TalkBack, integração de Drive, detalhes/ordenação real, player, codecs, pairing, OAuth ou atualização. Release não compilado; configuração local atual avisa que a keystore de release não está definida. Nenhuma publicação foi tentada.
+
 ## Q01 — metadados sem presunção (R01)
 
 - **Status:** IN_PROGRESS (detalhes e HUD técnica dos dois engines avançados; matriz completa de conteúdos e decoders pendente).
