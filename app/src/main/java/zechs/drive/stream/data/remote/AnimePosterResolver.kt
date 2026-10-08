@@ -48,27 +48,32 @@ class AnimePosterResolver @Inject constructor() {
 
         private const val ANILIST_GRAPHQL_QUERY = """
             query (${'$'}search: String) {
-              Media(search: ${'$'}search, type: ANIME) {
-                id
-                title {
-                  romaji
-                  english
-                  native
-                }
-                coverImage {
-                  extraLarge
-                  large
-                  color
-                }
-                bannerImage
-                description(asHtml: false)
-                genres
-                averageScore
-                seasonYear
-                episodes
-                trailer {
+              Page(page: 1, perPage: 8) {
+                media(search: ${'$'}search, type: ANIME, sort: [SEARCH_MATCH, POPULARITY_DESC]) {
                   id
-                  site
+                  title {
+                    romaji
+                    english
+                    native
+                  }
+                  coverImage {
+                    extraLarge
+                    large
+                    color
+                  }
+                  bannerImage
+                  description(asHtml: false)
+                  genres
+                  averageScore
+                  seasonYear
+                  episodes
+                  popularity
+                  format
+                  status
+                  trailer {
+                    id
+                    site
+                  }
                 }
               }
             }
@@ -88,10 +93,10 @@ class AnimePosterResolver @Inject constructor() {
             clean = clean.replace(Regex("(?i)hdr10\\+"), " ")
             // Remove technical keywords, codecs, HDR, audio channels, and release tags
             clean = clean.replace(
-                Regex("(?i)\\b(2160p|1080p|720p|480p|4k|uhd|hevc|avc|x264|x265|h264|h265|bluray|bdrip|brrip|web-dl|webdl|webrip|web|hdtv|remux|imax|dv|dovi|dolby\\s*vision|hdr10plus|hdr10|hdr|sdr|10bit|8bit|ddp?5\\.1|dd5\\.1|5\\.1|7\\.1|2\\.0|stereo|dual(?:[\\s_-]*audio)?|multi(?:[\\s_-]*audio)?|multisub|dublado|legendado|repack|proper|complete)\\b"),
+                Regex("(?i)\\b(2160p|1080p|720p|480p|4k|uhd|hevc|avc|x264|x265|h264|h265|bluray|bdrip|brrip|web-dl|webdl|webrip|web|hdtv|remux|imax|dv|dovi|dolby(?:\\s*vision|\\s*digital|\\s*audio)?|dolby|hdr10plus|hdr10|hdr|sdr|10bit|8bit|ddp?5\\.1|dd5\\.1|5\\.1|7\\.1|2\\.0|stereo|truehd|atmos|dts(?:-hd|-x)?|flac|aac|eac3|ac3|dual(?:[\\s_-]*audio)?|multi(?:[\\s_-]*audio)?|multisub|dublado|legendado|repack|proper|internal|complete)\\b"),
                 " "
             )
-            // Strip standalone 4-digit release years (e.g. 1980..2035) so search engines don't choke on them
+            // Strip standalone 4-digit release years (e.g. 1980..2035) so search engines and titles don't choke on them
             clean = clean.replace(Regex("\\b(19\\d\\d|20[0-3]\\d)\\b"), " ")
             // Clean up dots, underscores, hyphens and extra whitespace
             clean = clean.replace(Regex("[_.]+"), " ")
@@ -280,7 +285,55 @@ class AnimePosterResolver @Inject constructor() {
                 val body = response.body?.string() ?: return null
                 val json = JSONObject(body)
                 val data = json.optJSONObject("data") ?: return null
-                val media = data.optJSONObject("Media") ?: return null
+                val page = data.optJSONObject("Page")
+                val mediaList = page?.optJSONArray("media") ?: return null
+                if (mediaList.length() == 0) return null
+
+                var bestItem: JSONObject? = null
+                var bestScore = -1.0
+
+                for (i in 0 until mediaList.length()) {
+                    val candidate = mediaList.optJSONObject(i) ?: continue
+                    val tObj = candidate.optJSONObject("title")
+                    val romaji = tObj?.optString("romaji")?.takeIf { it.isNotBlank() && it != "null" }
+                    val english = tObj?.optString("english")?.takeIf { it.isNotBlank() && it != "null" }
+                    val native = tObj?.optString("native")?.takeIf { it.isNotBlank() && it != "null" }
+
+                    val sim = maxOf(
+                        calculateSimilarity(query, romaji ?: ""),
+                        calculateSimilarity(query, english ?: ""),
+                        calculateSimilarity(query, native ?: "")
+                    )
+
+                    // Skip candidates with very poor resemblance to the search query
+                    if (sim < 0.20) continue
+
+                    var score = sim
+
+                    val status = candidate.optString("status")
+                    if (status.equals("NOT_YET_RELEASED", ignoreCase = true) || status.equals("CANCELLED", ignoreCase = true)) {
+                        score -= 0.25 // Heavy penalty for unreleased promotional flyers/teasers
+                    } else if (status.equals("FINISHED", ignoreCase = true) || status.equals("RELEASING", ignoreCase = true)) {
+                        score += 0.15
+                    }
+
+                    val pop = candidate.optDouble("popularity", 0.0)
+                    score += (pop / 100000.0).coerceAtMost(0.20)
+
+                    val format = candidate.optString("format")
+                    if (format.equals("TV", ignoreCase = true) || format.equals("MOVIE", ignoreCase = true)) {
+                        score += 0.05
+                    } else if (format.equals("MUSIC", ignoreCase = true)) {
+                        score -= 0.35
+                    }
+
+                    if (score > bestScore) {
+                        bestScore = score
+                        bestItem = candidate
+                    }
+                }
+
+                val media = bestItem ?: mediaList.optJSONObject(0) ?: return null
 
                 val titleObj = media.optJSONObject("title")
                 val romaji = titleObj?.optString("romaji")?.takeIf { it.isNotBlank() && it != "null" }
