@@ -1,6 +1,5 @@
 package zechs.drive.stream.utils
 
-import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
@@ -40,20 +39,20 @@ object MatroskaChapterParser {
 
                 val parseResult = parseEbmlFromBytes(initialBytes)
                 if (parseResult.chapters.isNotEmpty()) {
-                    Log.d(TAG, "Successfully found ${parseResult.chapters.size} chapters in initial 1MB")
+                    AppLog.d(TAG, "Successfully found ${parseResult.chapters.size} chapters in initial 1MB")
                     return@withContext parseResult.chapters
                 }
 
                 // If chapters were not in the first 1MB but SeekHead identified the offset:
                 if (parseResult.seekHeadChaptersOffset != null && parseResult.segmentDataStartOffset != null) {
                     val targetOffset = parseResult.segmentDataStartOffset + parseResult.seekHeadChaptersOffset
-                    Log.d(TAG, "SeekHead pointed to chapters at absolute offset: $targetOffset")
+                    AppLog.d(TAG, "SeekHead pointed to chapters at absolute offset: $targetOffset")
 
                     val chapterBytes = fetchRange(streamUrl, accessToken, targetOffset, targetOffset + 131072L)
                     if (chapterBytes != null && chapterBytes.isNotEmpty()) {
                         val remoteChapters = parseChaptersDirect(chapterBytes)
                         if (remoteChapters.isNotEmpty()) {
-                            Log.d(TAG, "Parsed ${remoteChapters.size} chapters from remote offset $targetOffset")
+                            AppLog.d(TAG, "Parsed ${remoteChapters.size} chapters from remote offset $targetOffset")
                             return@withContext remoteChapters
                         }
                     }
@@ -61,7 +60,7 @@ object MatroskaChapterParser {
 
                 emptyList()
             } catch (e: Exception) {
-                Log.w(TAG, "Unable to extract MKV chapters: ${e.message}")
+                AppLog.w(TAG, "Unable to extract MKV chapters: ${e.message}")
                 emptyList()
             }
         }
@@ -82,13 +81,13 @@ object MatroskaChapterParser {
 
             val responseCode = conn.responseCode
             if (responseCode != HttpURLConnection.HTTP_OK && responseCode != HttpURLConnection.HTTP_PARTIAL) {
-                Log.w(TAG, "Failed to connect for chapters: HTTP $responseCode")
+                AppLog.w(TAG, "Failed to connect for chapters: HTTP $responseCode")
                 return null
             }
 
             conn.inputStream.use { it.readBytes() }
         } catch (e: Exception) {
-            Log.w(TAG, "fetchRange failed: ${e.message}")
+            AppLog.w(TAG, "fetchRange failed: ${e.message}")
             null
         } finally {
             conn?.disconnect()
@@ -141,7 +140,7 @@ object MatroskaChapterParser {
                 }
             }
         } catch (e: Exception) {
-            Log.d(TAG, "EBML scan ended: ${e.message}")
+            AppLog.d(TAG, "EBML scan ended: ${e.message}")
         }
 
         val chapters = buildParsedChapters(rawChapters)
@@ -158,7 +157,7 @@ object MatroskaChapterParser {
                 parseChaptersElement(stream, size.value, rawChapters)
             }
         } catch (e: Exception) {
-            Log.d(TAG, "Direct chapters parse error: ${e.message}")
+            AppLog.d(TAG, "Direct chapters parse error: ${e.message}")
         }
         return buildParsedChapters(rawChapters)
     }

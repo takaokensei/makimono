@@ -11,7 +11,6 @@ import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
@@ -178,7 +177,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.theme.collect { theme ->
-                    Log.d(TAG, "theme=${theme}")
+                    AppLog.d(TAG, "theme=${theme}")
                     changeTheme(theme)
                 }
             }
@@ -189,7 +188,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.hasLoggedIn.collect { hasLoggedIn ->
-                    Log.d(TAG, "hasLoggedIn=${hasLoggedIn}")
+                    AppLog.d(TAG, "hasLoggedIn=${hasLoggedIn}")
                     if (hasLoggedIn) handleLogin()
                 }
             }
@@ -213,16 +212,16 @@ class MainActivity : AppCompatActivity() {
                 is Resource.Success -> {
                     val release = it.data
                     if (release.isLatest()) {
-                        Log.d(TAG, "Already on latest version")
+                        AppLog.d(TAG, "Already on latest version")
                     } else {
-                        Log.d(TAG, "Newer version of app is available (latest=${release.tagName})")
+                        AppLog.d(TAG, "Newer version of app is available (latest=${release.tagName})")
                         if (viewModel.updateDownloadState.value is MainViewModel.UpdateDownloadState.Idle) {
                             showUpdateAvailableDialog(release)
                         }
                     }
                 }
 
-                is Resource.Error -> Log.d(TAG, it.message)
+                is Resource.Error -> AppLog.d(TAG, it.message)
                 else -> {}
             }
         }
@@ -510,7 +509,7 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     override fun onPlayerError(error: PlaybackException) {
-                        Log.e(TAG, "Vinheta playback error: ${error.message}", error)
+                        AppLog.e(TAG, "Vinheta playback error: ${error.message}", error)
                         isVideoFinished = true
                         checkDismissVinheta()
                     }
@@ -523,7 +522,7 @@ class MainActivity : AppCompatActivity() {
 
             startStartupPreloader()
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize vinheta player", e)
+            AppLog.e(TAG, "Failed to initialize vinheta player", e)
             isVideoFinished = true
             isPreloadFinished = true
             dismissVinheta()
@@ -540,7 +539,7 @@ class MainActivity : AppCompatActivity() {
                 delay(10000L)
                 withContext(Dispatchers.Main) {
                     if (!isPreloadFinished) {
-                        Log.d(TAG, "Preloader reached safety timeout, proceeding to app")
+                        AppLog.d(TAG, "Preloader reached safety timeout, proceeding to app")
                         isPreloadFinished = true
                         checkDismissVinheta()
                     }
@@ -570,7 +569,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 if (client == null) {
-                    Log.d(TAG, "User not signed in, skipping library catalog preload")
+                    AppLog.d(TAG, "User not signed in, skipping library catalog preload")
                     withContext(Dispatchers.Main) {
                         isPreloadFinished = true
                         timeoutJob.cancel()
@@ -693,7 +692,7 @@ class MainActivity : AppCompatActivity() {
                     binding.tvVinhetaPreloadStatus.text = "Biblioteca pronta!"
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Catalog preload error: ${e.message}")
+                AppLog.w(TAG, "Catalog preload error: ${e.message}")
             } finally {
                 timeoutJob.cancel()
                 withContext(Dispatchers.Main) {

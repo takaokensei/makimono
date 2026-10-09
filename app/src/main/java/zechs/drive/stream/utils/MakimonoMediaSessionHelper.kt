@@ -5,7 +5,6 @@ import android.graphics.Bitmap
 import android.media.MediaMetadata
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
-import android.util.Log
 
 /**
  * FEAT-08: MediaSession helper providing platform-native media controls
@@ -40,27 +39,27 @@ class MakimonoMediaSessionHelper(
             mediaSession = MediaSession(context, tag).apply {
                 setCallback(object : MediaSession.Callback() {
                     override fun onPlay() {
-                        Log.d(TAG, "MediaSession callback: onPlay")
+                        AppLog.d(TAG, "MediaSession callback: onPlay")
                         callback.onPlay()
                     }
 
                     override fun onPause() {
-                        Log.d(TAG, "MediaSession callback: onPause")
+                        AppLog.d(TAG, "MediaSession callback: onPause")
                         callback.onPause()
                     }
 
                     override fun onSkipToNext() {
-                        Log.d(TAG, "MediaSession callback: onSkipToNext")
+                        AppLog.d(TAG, "MediaSession callback: onSkipToNext")
                         callback.onSkipToNext()
                     }
 
                     override fun onSkipToPrevious() {
-                        Log.d(TAG, "MediaSession callback: onSkipToPrevious")
+                        AppLog.d(TAG, "MediaSession callback: onSkipToPrevious")
                         callback.onSkipToPrevious()
                     }
 
                     override fun onSeekTo(pos: Long) {
-                        Log.d(TAG, "MediaSession callback: onSeekTo $pos")
+                        AppLog.d(TAG, "MediaSession callback: onSeekTo $pos")
                         callback.onSeekTo(pos)
                     }
 
@@ -73,14 +72,14 @@ class MakimonoMediaSessionHelper(
                     }
 
                     override fun onStop() {
-                        Log.d(TAG, "MediaSession callback: onStop")
+                        AppLog.d(TAG, "MediaSession callback: onStop")
                         callback.onStop()
                     }
                 })
                 isActive = true
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize MediaSession", e)
+            AppLog.e(TAG, "Failed to initialize MediaSession", e)
         }
     }
 
@@ -117,7 +116,7 @@ class MakimonoMediaSessionHelper(
 
             session.setPlaybackState(playbackState)
         } catch (e: Exception) {
-            Log.e(TAG, "Error updating PlaybackState", e)
+            AppLog.e(TAG, "Error updating PlaybackState", e)
         }
     }
 
@@ -149,7 +148,7 @@ class MakimonoMediaSessionHelper(
 
             session.setMetadata(builder.build())
         } catch (e: Exception) {
-            Log.e(TAG, "Error updating MediaMetadata", e)
+            AppLog.e(TAG, "Error updating MediaMetadata", e)
         }
     }
 
@@ -161,7 +160,7 @@ class MakimonoMediaSessionHelper(
             }
             mediaSession = null
         } catch (e: Exception) {
-            Log.e(TAG, "Error releasing MediaSession", e)
+            AppLog.e(TAG, "Error releasing MediaSession", e)
         }
     }
 }

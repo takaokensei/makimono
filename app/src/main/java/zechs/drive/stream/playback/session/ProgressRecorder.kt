@@ -1,6 +1,6 @@
 package zechs.drive.stream.playback.session
 
-import android.util.Log
+import zechs.drive.stream.utils.AppLog
 import zechs.drive.stream.data.model.WatchList
 import zechs.drive.stream.data.repository.WatchListRepository
 import zechs.drive.stream.utils.PlaybackProgressPolicy
@@ -47,7 +47,7 @@ class ProgressRecorder(
         subtitleDelayMs: Long? = null
     ): Boolean {
         if (!shouldSave(watchedDuration, totalDuration)) {
-            Log.d(TAG, "Playback below minimum threshold or invalid ($watchedDuration / $totalDuration), skipping save")
+            AppLog.d(TAG, "Playback below minimum threshold or invalid ($watchedDuration / $totalDuration), skipping save")
             return false
         }
 
@@ -76,7 +76,7 @@ class ProgressRecorder(
             subtitleDelayMs = finalSubtitleDelay
         )
 
-        Log.d(TAG, "Saving progress: $title ($finalWatched/$totalDuration, finished=$finished)")
+        AppLog.d(TAG, "Saving progress: $title ($finalWatched/$totalDuration, finished=$finished)")
         watchListRepository.insertWatch(watch, playbackProfileId)
         return true
     }

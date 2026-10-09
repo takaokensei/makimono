@@ -6,7 +6,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import android.util.Log
 import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -49,7 +48,7 @@ class AppUpdateManager @Inject constructor(
             } else {
                 asset.browserDownloadUrl
             }
-            Log.d(TAG, "Downloading APK asset: ${asset.name} from $downloadUrl")
+            AppLog.d(TAG, "Downloading APK asset: ${asset.name} from $downloadUrl")
             val requestBuilder = Request.Builder()
                 .url(downloadUrl)
                 .header("Accept", "application/octet-stream")
@@ -104,10 +103,10 @@ class AppUpdateManager @Inject constructor(
                 }
             }
 
-            Log.d(TAG, "Download finished successfully: ${targetFile.absolutePath} (${targetFile.length()} bytes)")
+            AppLog.d(TAG, "Download finished successfully: ${targetFile.absolutePath} (${targetFile.length()} bytes)")
             Result.success(targetFile)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to download update APK", e)
+            AppLog.e(TAG, "Failed to download update APK", e)
             Result.failure(e)
         }
     }
@@ -143,7 +142,7 @@ class AppUpdateManager @Inject constructor(
                     ?.substringBefore(' ')
                     ?.takeIf { it.length == 64 }
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to fetch checksum asset, skipping verification", e)
+                AppLog.w(TAG, "Failed to fetch checksum asset, skipping verification", e)
                 null
             }
         }
@@ -158,7 +157,7 @@ class AppUpdateManager @Inject constructor(
         withContext(Dispatchers.IO) {
             try {
                 if (!apkFile.exists() || apkFile.length() == 0L) {
-                    Log.e(TAG, "Cannot verify checksum of non-existent or empty file: ${apkFile.absolutePath}")
+                    AppLog.e(TAG, "Cannot verify checksum of non-existent or empty file: ${apkFile.absolutePath}")
                     return@withContext false
                 }
                 val digest = MessageDigest.getInstance("SHA-256")
@@ -172,11 +171,11 @@ class AppUpdateManager @Inject constructor(
                 val actual = digest.digest().joinToString("") { "%02x".format(it) }
                 val matches = actual.equals(expectedSha256Hex.trim(), ignoreCase = true)
                 if (!matches) {
-                    Log.e(TAG, "APK checksum mismatch: expected=$expectedSha256Hex actual=$actual")
+                    AppLog.e(TAG, "APK checksum mismatch: expected=$expectedSha256Hex actual=$actual")
                 }
                 matches
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to compute APK checksum", e)
+                AppLog.e(TAG, "Failed to compute APK checksum", e)
                 false
             }
         }
@@ -189,14 +188,14 @@ class AppUpdateManager @Inject constructor(
     fun verifyApkSignature(apkFile: File): Boolean {
         return try {
             if (!apkFile.exists() || apkFile.length() == 0L) {
-                Log.e(TAG, "Cannot verify signature of non-existent or empty file: ${apkFile.absolutePath}")
+                AppLog.e(TAG, "Cannot verify signature of non-existent or empty file: ${apkFile.absolutePath}")
                 return false
             }
 
             val pm = context.packageManager
             val installedSignatures = getInstalledSignatures(pm)
             if (installedSignatures.isEmpty()) {
-                Log.w(TAG, "No signing certificates found for installed app")
+                AppLog.w(TAG, "No signing certificates found for installed app")
                 return false
             }
 
@@ -209,18 +208,18 @@ class AppUpdateManager @Inject constructor(
 
             val archivePackageInfo = pm.getPackageArchiveInfo(apkFile.absolutePath, archiveFlags)
             if (archivePackageInfo == null) {
-                Log.e(TAG, "Failed to parse APK archive info: ${apkFile.absolutePath}")
+                AppLog.e(TAG, "Failed to parse APK archive info: ${apkFile.absolutePath}")
                 return false
             }
 
             if (archivePackageInfo.packageName != context.packageName) {
-                Log.e(TAG, "Package name mismatch: expected ${context.packageName}, found ${archivePackageInfo.packageName}")
+                AppLog.e(TAG, "Package name mismatch: expected ${context.packageName}, found ${archivePackageInfo.packageName}")
                 return false
             }
 
             val archiveSignatures = getArchiveSignatures(archivePackageInfo)
             if (archiveSignatures.isEmpty()) {
-                Log.e(TAG, "No signing certificates found in update APK archive")
+                AppLog.e(TAG, "No signing certificates found in update APK archive")
                 return false
             }
 
@@ -229,13 +228,13 @@ class AppUpdateManager @Inject constructor(
             }
 
             if (!matches) {
-                Log.e(TAG, "APK signature fingerprint does not match installed application signature")
+                AppLog.e(TAG, "APK signature fingerprint does not match installed application signature")
             } else {
-                Log.d(TAG, "APK signature successfully verified against installed application")
+                AppLog.d(TAG, "APK signature successfully verified against installed application")
             }
             matches
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to verify APK signature", e)
+            AppLog.e(TAG, "Failed to verify APK signature", e)
             false
         }
     }
@@ -258,7 +257,7 @@ class AppUpdateManager @Inject constructor(
                 packageInfo.signatures?.map { getCertSha256(it.toByteArray()) }
             } ?: emptyList()
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to get installed package signatures", e)
+            AppLog.e(TAG, "Failed to get installed package signatures", e)
             emptyList()
         }
     }
@@ -287,14 +286,14 @@ class AppUpdateManager @Inject constructor(
     fun installApk(apkFile: File, activity: Activity? = null): Boolean {
         return try {
             if (!apkFile.exists() || apkFile.length() == 0L) {
-                Log.e(TAG, "APK file does not exist or is empty: ${apkFile.absolutePath}")
+                AppLog.e(TAG, "APK file does not exist or is empty: ${apkFile.absolutePath}")
                 return false
             }
 
             // On Android 8.0+ (Oreo), verify if app can request package installs
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 if (!context.packageManager.canRequestPackageInstalls()) {
-                    Log.w(TAG, "Permission to install unknown apps not granted, redirecting to Settings")
+                    AppLog.w(TAG, "Permission to install unknown apps not granted, redirecting to Settings")
                     val settingsIntent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
                         data = Uri.parse("package:${context.packageName}")
                         if (activity == null) {
@@ -312,7 +311,7 @@ class AppUpdateManager @Inject constructor(
 
             val authority = "${context.packageName}.provider"
             val apkUri: Uri = FileProvider.getUriForFile(context, authority, apkFile)
-            Log.d(TAG, "Generated FileProvider URI: $apkUri")
+            AppLog.d(TAG, "Generated FileProvider URI: $apkUri")
 
             val installIntent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(apkUri, "application/vnd.android.package-archive")
@@ -330,7 +329,7 @@ class AppUpdateManager @Inject constructor(
             }
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to launch package installer for ${apkFile.name}", e)
+            AppLog.e(TAG, "Failed to launch package installer for ${apkFile.name}", e)
             false
         }
     }

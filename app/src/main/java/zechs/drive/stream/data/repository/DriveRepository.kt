@@ -1,6 +1,6 @@
 package zechs.drive.stream.data.repository
 
-import android.util.Log
+import zechs.drive.stream.utils.AppLog
 import dagger.Lazy
 import zechs.drive.stream.data.model.*
 import zechs.drive.stream.data.remote.DriveApi
@@ -54,7 +54,7 @@ class DriveRepository @Inject constructor(
                     else -> false
                 }
                 if (!isTransient) throw e
-                Log.w(TAG, "Transient network error on attempt ${attempt + 1}, retrying in ${currentDelay}ms...", e)
+                AppLog.w(TAG, "Transient network error on attempt ${attempt + 1}, retrying in ${currentDelay}ms...", e)
                 delay(currentDelay)
                 currentDelay = (currentDelay * factor).toLong().coerceAtMost(maxDelayMs)
             }
@@ -316,14 +316,14 @@ class DriveRepository @Inject constructor(
             tokenResponse?.let {
                 val currentTimeInSeconds = System.currentTimeMillis() / 1000
                 if (currentTimeInSeconds >= it.expiresIn) {
-                    Log.d(TAG, "Access token has expired. Trying to refresh")
+                    AppLog.d(TAG, "Access token has expired. Trying to refresh")
                 } else {
-                    Log.d(TAG, "Access token is valid")
+                    AppLog.d(TAG, "Access token is valid")
                     return Resource.Success(data = it)
                 }
             }
         } else {
-            Log.d(TAG, "Force refreshing access token")
+            AppLog.d(TAG, "Force refreshing access token")
         }
 
         val refreshToken = sessionManager.fetchRefreshToken()
@@ -338,13 +338,13 @@ class DriveRepository @Inject constructor(
                 clientSecret = client.clientSecret,
                 refreshToken = refreshToken
             )
-            Log.d(TAG, "Received access token (len=${token.accessToken.length})")
+            AppLog.d(TAG, "Received access token (len=${token.accessToken.length})")
             sessionManager.saveAccessToken(token)
             Resource.Success(token)
         } catch (e: Exception) {
             if (e is HttpException && e.code() == 400) {
                 val errorBody = try { e.response()?.errorBody()?.string() } catch (_: Exception) { null }
-                Log.e(TAG, "Google OAuth 400 Bad Request: $errorBody", e)
+                AppLog.e(TAG, "Google OAuth 400 Bad Request: $errorBody", e)
                 Resource.Error(
                     "Sessão do Google Drive expirada ou revogada. Faça login novamente para continuar.",
                     errorKind = ResourceErrorKind.AUTHENTICATION
@@ -370,7 +370,7 @@ class DriveRepository @Inject constructor(
         authorizationCode: String
     ): Resource<AuthorizationResponse> {
         return try {
-            Log.d(TAG, "Requesting refresh token from authorization code")
+            AppLog.d(TAG, "Requesting refresh token from authorization code")
             val token = tokenApi.get().getRefreshToken(
                 clientId = client.clientId,
                 clientSecret = client.clientSecret,
@@ -378,7 +378,7 @@ class DriveRepository @Inject constructor(
                 authCode = authorizationCode
             )
 
-            Log.d(TAG, "Received refresh token (len=${token.refreshToken.length})")
+            AppLog.d(TAG, "Received refresh token (len=${token.refreshToken.length})")
 
             // saving in data store
             sessionManager.saveClient(client)
@@ -393,7 +393,7 @@ class DriveRepository @Inject constructor(
 
     private inline fun <reified T> doOnError(e: Exception): Resource<T> {
         if (e is CancellationException) throw e
-        Log.e(TAG, "Drive API call failed: ${e.message}", e)
+        AppLog.e(TAG, "Drive API call failed: ${e.message}", e)
         val error = when (e) {
             is HttpException -> {
                 when (e.code()) {
@@ -462,7 +462,7 @@ class DriveRepository @Inject constructor(
                         404 -> "Item não encontrado no Drive"
                         else -> "Falha ao atualizar ($code)"
                     }
-                    Log.e(TAG, "updateFile error ($code): ${update.errorBody()?.use { it.string() }}")
+                    AppLog.e(TAG, "updateFile error ($code): ${update.errorBody()?.use { it.string() }}")
                     Resource.Error(errorMsg)
                 }
             }
@@ -501,7 +501,7 @@ class DriveRepository @Inject constructor(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.w(TAG, "Failed to get sibling files for fileId=$fileId: ${e.message}")
+            AppLog.w(TAG, "Failed to get sibling files for fileId=$fileId: ${e.message}")
             DriveFolderListing(emptyList(), isComplete = false, message = "Não foi possível carregar a playlist do Drive.")
         }
     }
@@ -553,7 +553,7 @@ class DriveRepository @Inject constructor(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.w(TAG, "Failed to get subtitles for fileId=$fileId: ${e.message}")
+            AppLog.w(TAG, "Failed to get subtitles for fileId=$fileId: ${e.message}")
             DriveFolderListing(emptyList(), isComplete = false, message = "Não foi possível carregar as legendas do Drive.")
         }
     }
@@ -614,7 +614,7 @@ class DriveRepository @Inject constructor(
         val safeName = sub.name.replace("[^a-zA-Z0-9._-]".toRegex(), "_")
         val destFile = java.io.File(cacheDir, "subtitles/${sub.id}_$safeName")
         if (destFile.exists() && destFile.length() > 0) {
-            Log.d(TAG, "Subtitle already in cache: ${destFile.absolutePath}")
+            AppLog.d(TAG, "Subtitle already in cache: ${destFile.absolutePath}")
             return destFile
         }
         return try {
@@ -628,17 +628,17 @@ class DriveRepository @Inject constructor(
                             input.copyTo(output)
                         }
                     }
-                    Log.d(TAG, "Subtitle downloaded successfully (${destFile.length()} bytes): ${destFile.absolutePath}")
+                    AppLog.d(TAG, "Subtitle downloaded successfully (${destFile.length()} bytes): ${destFile.absolutePath}")
                     destFile
                 } else {
                     if (response.code() == 401) throw HttpException(response)
-                    Log.w(TAG, "Failed to download subtitle fileId=${sub.id}: code=${response.code()}")
+                    AppLog.w(TAG, "Failed to download subtitle fileId=${sub.id}: code=${response.code()}")
                     null
                 }
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Exception downloading subtitle ${sub.name}", e)
+            AppLog.e(TAG, "Exception downloading subtitle ${sub.name}", e)
             null
         }
     }

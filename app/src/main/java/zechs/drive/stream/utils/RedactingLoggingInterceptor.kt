@@ -1,6 +1,5 @@
 package zechs.drive.stream.utils
 
-import android.util.Log
 import okhttp3.logging.HttpLoggingInterceptor
 
 /**
@@ -35,7 +34,7 @@ object RedactingLoggingInterceptor {
 
     fun create(
         level: HttpLoggingInterceptor.Level = HttpLoggingInterceptor.Level.HEADERS,
-        logger: (String) -> Unit = { message -> Log.d(TAG, message) }
+        logger: (String) -> Unit = { message -> AppLog.d(TAG, message) }
     ): HttpLoggingInterceptor {
         return HttpLoggingInterceptor { message ->
             logger(redact(message))

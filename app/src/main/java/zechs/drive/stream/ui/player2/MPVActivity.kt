@@ -10,7 +10,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
+import zechs.drive.stream.utils.AppLog
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
@@ -361,7 +361,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                 val style = appSettings.get().fetchSubtitleStyle()
                 applyMpvSubtitleStyle(style)
             } catch (e: Exception) {
-                Log.w(TAG, "Failed loading MPV subtitle style", e)
+                AppLog.w(TAG, "Failed loading MPV subtitle style", e)
             }
         }
 
@@ -378,7 +378,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
             AUDIOFOCUS_GAIN
         ).also {
             if (it != AUDIOFOCUS_REQUEST_GRANTED) {
-                Log.w(TAG, "Audio focus not granted")
+                AppLog.w(TAG, "Audio focus not granted")
                 onLoadCommands.add(arrayOf("set", "pause", "yes"))
             }
         }
@@ -440,7 +440,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
 
             btnRotate.setOnClickListener {
                 orientation = getNextOrientation(orientation)
-                Log.d(TAG, "orientation=${orientation}")
+                AppLog.d(TAG, "orientation=${orientation}")
                 setOrientation(this@MPVActivity, orientation)
             }
 
@@ -675,7 +675,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
             canSkipNext = nextEpisode != null,
             canSkipPrevious = prevEpisode != null
         )
-        Log.d(TAG, "updateNextEpisode: prevEpisode=${prevEpisode?.title}, nextEpisode=${nextEpisode?.title}")
+        AppLog.d(TAG, "updateNextEpisode: prevEpisode=${prevEpisode?.title}, nextEpisode=${nextEpisode?.title}")
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
@@ -1096,7 +1096,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         if (aniSkipChapters.isEmpty()) return
         skipController.mergeAniSkipChapters(aniSkipChapters)
         parsedChapters = skipController.getChapters()
-        Log.d(TAG, "[MPV Chapters] Updated parsedChapters with AniSkip: ${parsedChapters.size} total")
+        AppLog.d(TAG, "[MPV Chapters] Updated parsedChapters with AniSkip: ${parsedChapters.size} total")
         val durationSec = player.duration ?: 0
         if (durationSec > 0) {
             val markers = parsedChapters.map { ch ->
@@ -1181,7 +1181,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         val targetMs = skipController.performSkip(currentMs)
         if (targetMs != null) {
             val targetSec = targetMs / 1000.0
-            Log.d(TAG, "[Chapters] Skipping to ${targetSec}s")
+            AppLog.d(TAG, "[Chapters] Skipping to ${targetSec}s")
             MPVLib.command(arrayOf("seek", targetSec.toString(), "absolute"))
             val chapter = skipController.getActiveChapter()
             val snackText = when (chapter?.type) {
@@ -1204,7 +1204,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         if (rawChapters.isEmpty()) {
             parsedChapters = emptyList()
             skipController.setChapters(emptyList())
-            Log.d(TAG, "[Chapters] No chapters found for this file.")
+            AppLog.d(TAG, "[Chapters] No chapters found for this file.")
             return
         }
 
@@ -1265,9 +1265,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
 
         skipController.setChapters(list)
         parsedChapters = skipController.getChapters()
-        Log.d(TAG, "[Chapters] Parsed ${parsedChapters.size} chapters successfully:")
+        AppLog.d(TAG, "[Chapters] Parsed ${parsedChapters.size} chapters successfully:")
         parsedChapters.forEach {
-            Log.d(TAG, "[Chapters] #${it.index} '${it.title}' (${it.startTimeMs}ms -> ${it.endTimeMs}ms, type=${it.type})")
+            AppLog.d(TAG, "[Chapters] #${it.index} '${it.title}' (${it.startTimeMs}ms -> ${it.endTimeMs}ms, type=${it.type})")
         }
         val durationSec = player.duration ?: 0
         if (durationSec > 0) {
@@ -1303,7 +1303,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         }
     }
     private val audioFocusChangeListener = OnAudioFocusChangeListener { type ->
-        Log.v(TAG, "Audio focus changed: $type")
+        AppLog.v(TAG, "Audio focus changed: $type")
         when (type) {
             AUDIOFOCUS_LOSS -> {
                 player.paused = true
@@ -1412,7 +1412,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         val prewarmed = bingeBufferManager.get().consumePrewarmedData(fileId)
         if (prewarmed != null && prewarmed.aniSkipChapters.isNotEmpty()) {
             mergeAniSkipChapters(prewarmed.aniSkipChapters)
-            Log.d(TAG, "Applied pre-warmed AniSkip chapters in MPV: ${prewarmed.aniSkipChapters.size} (0ms latency)")
+            AppLog.d(TAG, "Applied pre-warmed AniSkip chapters in MPV: ${prewarmed.aniSkipChapters.size} (0ms latency)")
         }
 
         val searchTitle = parsed.showTitle.ifBlank { title ?: "" }
@@ -1422,7 +1422,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                     val matched = malRepository.get().matchAnime(searchTitle)
                     if (matched != null) {
                         currentMalAnime = matched
-                        Log.d(TAG, "MAL matched anime: '${matched.title}' (ID: ${matched.id}, total eps: ${matched.numEpisodes})")
+                        AppLog.d(TAG, "MAL matched anime: '${matched.title}' (ID: ${matched.id}, total eps: ${matched.numEpisodes})")
 
                         // Query AniSkip
                         val aniSkipChapters = aniSkipRepository.get().getSkipChapters(
@@ -1437,12 +1437,12 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                         }
                     }
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed to match anime on MAL / AniSkip", e)
+                    AppLog.w(TAG, "Failed to match anime on MAL / AniSkip", e)
                 }
             }
         }
 
-        Log.d(TAG, "MPVActivity(fileId=$fileId, title=$title, accessToken=${accessToken?.let { "len=${it.length}" } ?: "null"})")
+        AppLog.d(TAG, "MPVActivity(fileId=$fileId, title=$title, accessToken=${accessToken?.let { "len=${it.length}" } ?: "null"})")
 
         viewModel.getWatch(fileId)
         lifecycleScope.launch {
@@ -1451,11 +1451,11 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
             currentSubtitleDelayMs = savedSubDelay
             if (savedAudioDelay != 0L) {
                 MPVLib.setPropertyDouble("audio-delay", savedAudioDelay / 1000.0)
-                Log.d(TAG, "Restored saved audio delay: ${savedAudioDelay}ms")
+                AppLog.d(TAG, "Restored saved audio delay: ${savedAudioDelay}ms")
             }
             if (savedSubDelay != 0L) {
                 MPVLib.setPropertyDouble("sub-delay", savedSubDelay / 1000.0)
-                Log.d(TAG, "Restored saved subtitle delay: ${savedSubDelay}ms")
+                AppLog.d(TAG, "Restored saved subtitle delay: ${savedSubDelay}ms")
             }
         }
 
@@ -1547,7 +1547,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         val isPortuguese = sub.languageCode == "por" || sub.name.lowercase().contains(".por.") || sub.name.lowercase().contains("pt")
         val selectMode = if (isPortuguese) "select" else "auto"
         val trackTitle = if (sub.id.startsWith("saved_")) sub.name else "★ [Drive] ${sub.languageLabel}"
-        Log.d(TAG, "Adding external subtitle to MPV: ${cached.absolutePath} (mode=$selectMode)")
+        AppLog.d(TAG, "Adding external subtitle to MPV: ${cached.absolutePath} (mode=$selectMode)")
         MPVLib.command(arrayOf("sub-add", cached.absolutePath, selectMode, trackTitle, sub.languageCode))
         if (isPortuguese) {
             configSnackbar("Legenda ativada: $trackTitle")
@@ -1556,7 +1556,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
 
     private fun resumeVideo(startPosition: Long) {
         val startPositionInSeconds = startPosition / 1000
-        Log.d(TAG, "MPV(resumeVideo=${Utils.prettyTime(startPositionInSeconds.toInt())})")
+        AppLog.d(TAG, "MPV(resumeVideo=${Utils.prettyTime(startPositionInSeconds.toInt())})")
         MPVLib.setOptionString("start", Utils.prettyTime(startPositionInSeconds.toInt()))
     }
 
@@ -1564,7 +1564,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         val uri = Uri.parse(
             "${DRIVE_API}/files/${fileId}?supportsAllDrives=True&alt=media"
         )
-        Log.d(TAG, "STREAM_URL=$uri")
+        AppLog.d(TAG, "STREAM_URL=$uri")
         return uri.toString()
     }
 
@@ -1862,7 +1862,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
             } else if (choice.savedSub != null) {
                 val saved = choice.savedSub
                 val trackTitle = "💾 [Salva] ${saved.langName}"
-                Log.d(TAG, "Manual add saved subtitle to MPV: ${saved.file.absolutePath}")
+                AppLog.d(TAG, "Manual add saved subtitle to MPV: ${saved.file.absolutePath}")
                 MPVLib.command(arrayOf("sub-add", saved.file.absolutePath, "select", trackTitle, saved.lang))
                 player.loadTracks()
                 configSnackbar("Legenda salva ativada: ${saved.langName}")
@@ -1874,7 +1874,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                     if (cached != null && cached.exists()) {
                         withContext(Dispatchers.Main) {
                             val trackTitle = "★ [Drive] ${sub.languageLabel}"
-                            Log.d(TAG, "Manual add external subtitle to MPV: ${cached.absolutePath}")
+                            AppLog.d(TAG, "Manual add external subtitle to MPV: ${cached.absolutePath}")
                             MPVLib.command(arrayOf("sub-add", cached.absolutePath, "select", trackTitle, sub.languageCode))
                             player.loadTracks()
                             configSnackbar("Legenda ativada: ${sub.languageLabel}")
@@ -1910,7 +1910,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                 val onlineResults = try {
                     onlineSubtitleManager.get().searchSubtitles(videoTitle)
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error searching online subtitles", e)
+                    AppLog.e(TAG, "Error searching online subtitles", e)
                     emptyList()
                 }
 
@@ -1963,7 +1963,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                     try {
                         appSettings.get().saveSubtitleStyle(updated)
                     } catch (e: Exception) {
-                        Log.w(TAG, "Error saving subtitle style", e)
+                        AppLog.w(TAG, "Error saving subtitle style", e)
                     }
                 }
                 configSnackbar("Estilo de legenda salvo", 1200)
@@ -2056,7 +2056,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                         appSettings.get().saveSubtitleStyle(style)
                         applyMpvSubtitleStyle(style)
                     } catch (e: Exception) {
-                        Log.w(TAG, "Error saving subtitle size", e)
+                        AppLog.w(TAG, "Error saving subtitle size", e)
                     }
                 }
                 configSnackbar("Tamanho definido: ${selected.title}", 1000)
@@ -2242,18 +2242,18 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
     private fun saveProgress() {
         val watchedDuration = player.timePos ?: return
         val totalDuration = player.duration ?: return
-        Log.d(TAG, "MPV(current=$watchedDuration, total=$totalDuration)")
+        AppLog.d(TAG, "MPV(current=$watchedDuration, total=$totalDuration)")
         // convert these two values from seconds to milliseconds
         val watchedDurationInMills = (watchedDuration * 1000).toLong()
         val totalDurationInMills = (totalDuration * 1000).toLong()
-        Log.d(TAG, "MPV(current=$watchedDurationInMills, total=$totalDurationInMills)")
-        Log.d(TAG, "MPV(saveProgress=${Utils.prettyTime(watchedDuration)})")
+        AppLog.d(TAG, "MPV(current=$watchedDurationInMills, total=$totalDurationInMills)")
+        AppLog.d(TAG, "MPV(saveProgress=${Utils.prettyTime(watchedDuration)})")
 
         if (PlaybackProgressPolicy.shouldSave(watchedDurationInMills, totalDurationInMills)) {
             val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") ?: "" }
             val title = currentTitle.ifBlank { intent.getStringExtra("title") ?: "" }
             if (fileId.isBlank()) {
-                Log.w(TAG, "saveProgress: no fileId available (neither state nor intent), skipping save")
+                AppLog.w(TAG, "saveProgress: no fileId available (neither state nor intent), skipping save")
                 return
             }
             val thumbnailLink = currentThumbnailLink ?: intent.getStringExtra("thumbnailLink")
@@ -2532,7 +2532,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                     if (res is zechs.drive.stream.utils.state.Resource.Success) {
                         Snackbar.make(binding.root, "MAL: Episódio $currentEpNumber sincronizado! (${anime.title})", 2500).show()
                     } else {
-                        Log.w(TAG, "MAL scrobble failed: ${res.message}")
+                        AppLog.w(TAG, "MAL scrobble failed: ${res.message}")
                     }
                 }
             }
@@ -2628,7 +2628,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
             zechs.drive.stream.utils.SubtitleSelectionPolicy.isJapanese(track.lang, track.title, track.name)
         }
         if (targetAudio != null && targetAudio.mpvId != currentAid) {
-            Log.d(TAG, "MPV auto-selected Japanese audio: ${targetAudio.name} (id=${targetAudio.mpvId})")
+            AppLog.d(TAG, "MPV auto-selected Japanese audio: ${targetAudio.name} (id=${targetAudio.mpvId})")
             player.aid = targetAudio.mpvId
         }
 
@@ -2646,7 +2646,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         }
 
         if (targetSub != null && targetSub.mpvId != currentSid) {
-            Log.d(TAG, "MPV auto-selected Portuguese subtitle: ${targetSub.name} (id=${targetSub.mpvId})")
+            AppLog.d(TAG, "MPV auto-selected Portuguese subtitle: ${targetSub.name} (id=${targetSub.mpvId})")
             player.sid = targetSub.mpvId
         }
 
@@ -2775,7 +2775,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
 
     override fun onDestroy() {
         countdownJob?.cancel()
-        Log.v(TAG, "Exiting.")
+        AppLog.v(TAG, "Exiting.")
 
         mediaSessionHelper?.release()
         mediaSessionHelper = null

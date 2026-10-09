@@ -6,7 +6,7 @@ import android.graphics.Rect
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
+import zechs.drive.stream.utils.AppLog
 import android.view.GestureDetector
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent

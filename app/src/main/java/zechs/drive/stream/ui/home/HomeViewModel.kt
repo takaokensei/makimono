@@ -1,6 +1,6 @@
 package zechs.drive.stream.ui.home
 
-import android.util.Log
+import zechs.drive.stream.utils.AppLog
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -314,7 +314,7 @@ class HomeViewModel @Inject constructor(
             _recentWatches.value = updated
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Error removing watch item", e)
+            AppLog.e(TAG, "Error removing watch item", e)
         }
     }
 
@@ -324,7 +324,7 @@ class HomeViewModel @Inject constructor(
             _recentWatches.value = watchListRepository.getRecentWatches()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Error restoring watch item", e)
+            AppLog.e(TAG, "Error restoring watch item", e)
         }
     }
 
@@ -340,7 +340,7 @@ class HomeViewModel @Inject constructor(
             _recentWatches.value = updated
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Error marking watch item finished", e)
+            AppLog.e(TAG, "Error marking watch item finished", e)
         }
     }
 
@@ -349,7 +349,7 @@ class HomeViewModel @Inject constructor(
             folderMetadataRepository.recordFolderOpened(folderId, folderName)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Error recording folder opened", e)
+            AppLog.e(TAG, "Error recording folder opened", e)
         }
     }
 
@@ -400,7 +400,7 @@ class HomeViewModel @Inject constructor(
                     return@launch
                 }
                 val error = (response as? Resource.Error)?.message
-                Log.w(TAG, error ?: "Configured library folder not found: $configuredName")
+                AppLog.w(TAG, error ?: "Configured library folder not found: $configuredName")
                 // An explicitly configured folder must never silently widen the library
                 // to the entire Drive when lookup fails or returns an incomplete page.
                 withContext(Dispatchers.Main) { onResult(null, configuredName) }
@@ -415,7 +415,7 @@ class HomeViewModel @Inject constructor(
             return@launch
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Error resolving configured library root", e)
+            AppLog.e(TAG, "Error resolving configured library root", e)
         }
 
         kotlinx.coroutines.withContext(Dispatchers.Main) {
@@ -486,7 +486,7 @@ class HomeViewModel @Inject constructor(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Error fetching starred files", e)
+            AppLog.e(TAG, "Error fetching starred files", e)
         }
     }
 
@@ -571,7 +571,7 @@ class HomeViewModel @Inject constructor(
             viewModelScope.launch(Dispatchers.IO) loadLibrary@{
                 try {
                     if (folderId != null) {
-                        Log.d(TAG, "Carregando catálogo de animes da pasta: $folderName ($folderId)")
+                        AppLog.d(TAG, "Carregando catálogo de animes da pasta: $folderName ($folderId)")
 
                         // Offline-first: if local catalog cache has children, present them immediately
                         val cachedChildren = catalogRepository.getChildren(folderId)
@@ -729,13 +729,13 @@ class HomeViewModel @Inject constructor(
                             _homeState.value = HomeState.Content
                             if (listingWarning != null) _libraryLoadError.value = listingWarning
                 } else {
-                    Log.w(TAG, "Pasta de biblioteca não encontrada no Google Drive.")
+                    AppLog.w(TAG, "Pasta de biblioteca não encontrada no Google Drive.")
                     _isLoadingAnime.value = false
                     _homeState.value = HomeState.Empty("Nenhum anime encontrado na biblioteca.")
                 }
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
-                    Log.e(TAG, "Error loading anime library", e)
+                    AppLog.e(TAG, "Error loading anime library", e)
                     _libraryLoadError.value = "Erro ao sincronizar com o Google Drive. Verifique a conexão e tente novamente."
                     _isLoadingAnime.value = false
                     val isOffline = e.message?.contains("network", ignoreCase = true) == true
@@ -853,7 +853,7 @@ class HomeViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.e(TAG, "Error resolving featured spotlight", e)
+                AppLog.e(TAG, "Error resolving featured spotlight", e)
                 if (requestId == featuredRequestId) {
                     _featuredAnime.value = FeaturedAnime(
                         title = chosenFolder.name,
@@ -948,7 +948,7 @@ class HomeViewModel @Inject constructor(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Error executing global search for: $query", e)
+            AppLog.e(TAG, "Error executing global search for: $query", e)
         } finally {
             if (currentCoroutineContext().isActive) {
                 _isSearching.value = false
@@ -978,7 +978,7 @@ class HomeViewModel @Inject constructor(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Error adding to watch queue", e)
+            AppLog.e(TAG, "Error adding to watch queue", e)
         }
     }
 
@@ -1009,7 +1009,7 @@ class HomeViewModel @Inject constructor(
             } else currentStarred
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Error updating Home favorite", e)
+            AppLog.e(TAG, "Error updating Home favorite", e)
         }
     }
 
@@ -1018,7 +1018,7 @@ class HomeViewModel @Inject constructor(
             watchQueueRepository.dequeue(fileId)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Error removing from watch queue", e)
+            AppLog.e(TAG, "Error removing from watch queue", e)
         }
     }
 
@@ -1032,7 +1032,7 @@ class HomeViewModel @Inject constructor(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Error reordering watch queue", e)
+            AppLog.e(TAG, "Error reordering watch queue", e)
         }
     }
 
@@ -1105,7 +1105,7 @@ class HomeViewModel @Inject constructor(
             }
 
             if (matchedWatch != null && !matchedWatch.hasFinished()) {
-                Log.d(TAG, "Resuming in-progress episode for ${folder.name}: ${matchedWatch.name} (id: ${matchedWatch.videoId}, pos: ${matchedWatch.watchedDuration})")
+                AppLog.d(TAG, "Resuming in-progress episode for ${folder.name}: ${matchedWatch.name} (id: ${matchedWatch.videoId}, pos: ${matchedWatch.watchedDuration})")
                 val resumeFile = DriveFile(
                     id = matchedWatch.videoId,
                     name = matchedWatch.name,
@@ -1200,7 +1200,7 @@ class HomeViewModel @Inject constructor(
                         is Resource.Loading -> null
                     }
                     if (subListing == null || !subListing.isComplete) {
-                        Log.w(TAG, "Episode folder listing incomplete; opening the series page instead: $subFolderId")
+                        AppLog.w(TAG, "Episode folder listing incomplete; opening the series page instead: $subFolderId")
                         withContext(Dispatchers.Main) { onResult(null, 0L) }
                         return@launch
                     }
@@ -1256,7 +1256,7 @@ class HomeViewModel @Inject constructor(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Error resolving episode to play", e)
+            AppLog.e(TAG, "Error resolving episode to play", e)
         }
         kotlinx.coroutines.withContext(Dispatchers.Main) {
             onResult(null, 0L)

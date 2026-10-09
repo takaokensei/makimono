@@ -1,6 +1,6 @@
 package zechs.drive.stream.data.remote
 
-import android.util.Log
+import zechs.drive.stream.utils.AppLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -189,7 +189,7 @@ class AnimePosterResolver @Inject constructor() {
 
         metadataCache[query]?.let { return@withContext it }
 
-        Log.d(TAG, "Resolving metadata for: '$query' (original: '$folderName')")
+        AppLog.d(TAG, "Resolving metadata for: '$query' (original: '$folderName')")
 
         // 1. Primary: AniList GraphQL (extraLarge ~460x650 poster + dominant color + banner)
         val aniListMeta = fetchFromAniList(query)
@@ -203,14 +203,14 @@ class AnimePosterResolver @Inject constructor() {
 
         // If AniList returned a high-confidence match (>= 0.45) with a valid poster, use it directly
         if (aniListMeta != null && !aniListMeta.posterUrl.isNullOrBlank() && aniSimilarity >= 0.45) {
-            Log.d(TAG, "Successfully matched anime on AniList (confidence $aniSimilarity): ${aniListMeta.titleRomaji}")
+            AppLog.d(TAG, "Successfully matched anime on AniList (confidence $aniSimilarity): ${aniListMeta.titleRomaji}")
             metadataCache[query] = aniListMeta
             return@withContext aniListMeta
         }
 
         // 2. Fallback to TMDB: If match confidence with anime is very low (< 0.45) or AniList returned null,
         // consider that it is a movie or live-action series and fetch from TMDB
-        Log.d(TAG, "AniList confidence low ($aniSimilarity) or not found for '$query'. Checking TMDB for movies/series...")
+        AppLog.d(TAG, "AniList confidence low ($aniSimilarity) or not found for '$query'. Checking TMDB for movies/series...")
         val tmdbMeta = fetchFromTmdb(query)
         if (tmdbMeta != null && !tmdbMeta.posterUrl.isNullOrBlank()) {
             val tmdbSimilarity = maxOf(
@@ -218,7 +218,7 @@ class AnimePosterResolver @Inject constructor() {
                 calculateSimilarity(query, tmdbMeta.titleEnglish ?: "")
             )
             if (tmdbSimilarity >= 0.35 && (aniListMeta == null || tmdbSimilarity > aniSimilarity)) {
-                Log.d(TAG, "Successfully resolved on TMDB (confidence $tmdbSimilarity, isMovie=${tmdbMeta.isMovie}): ${tmdbMeta.titleRomaji}")
+                AppLog.d(TAG, "Successfully resolved on TMDB (confidence $tmdbSimilarity, isMovie=${tmdbMeta.isMovie}): ${tmdbMeta.titleRomaji}")
                 metadataCache[query] = tmdbMeta
                 return@withContext tmdbMeta
             }
@@ -226,30 +226,30 @@ class AnimePosterResolver @Inject constructor() {
 
         // If TMDB didn't match and AniList had something, use AniList
         if (aniListMeta != null && !aniListMeta.posterUrl.isNullOrBlank()) {
-            Log.d(TAG, "Using AniList as best available: ${aniListMeta.titleRomaji}")
+            AppLog.d(TAG, "Using AniList as best available: ${aniListMeta.titleRomaji}")
             metadataCache[query] = aniListMeta
             return@withContext aniListMeta
         }
 
         // 3. Secondary fallback: Jikan (MAL)
-        Log.d(TAG, "AniList & TMDB unavailable or empty. Trying Jikan for '$query'...")
+        AppLog.d(TAG, "AniList & TMDB unavailable or empty. Trying Jikan for '$query'...")
         val jikanMeta = fetchFromJikan(query)
         if (jikanMeta != null && !jikanMeta.posterUrl.isNullOrBlank()) {
-            Log.d(TAG, "Successfully fetched metadata from Jikan: ${jikanMeta.posterUrl}")
+            AppLog.d(TAG, "Successfully fetched metadata from Jikan: ${jikanMeta.posterUrl}")
             metadataCache[query] = jikanMeta
             return@withContext jikanMeta
         }
 
         // 4. Tertiary fallback: Kitsu
-        Log.d(TAG, "Jikan unavailable or empty. Trying Kitsu for '$query'...")
+        AppLog.d(TAG, "Jikan unavailable or empty. Trying Kitsu for '$query'...")
         val kitsuMeta = fetchFromKitsu(query)
         if (kitsuMeta != null && !kitsuMeta.posterUrl.isNullOrBlank()) {
-            Log.d(TAG, "Successfully fetched metadata from Kitsu: ${kitsuMeta.posterUrl}")
+            AppLog.d(TAG, "Successfully fetched metadata from Kitsu: ${kitsuMeta.posterUrl}")
             metadataCache[query] = kitsuMeta
             return@withContext kitsuMeta
         }
 
-        Log.w(TAG, "No metadata found for '$query'")
+        AppLog.w(TAG, "No metadata found for '$query'")
         null
     }
 
@@ -279,7 +279,7 @@ class AnimePosterResolver @Inject constructor() {
 
             httpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    Log.w(TAG, "AniList API returned HTTP ${response.code}")
+                    AppLog.w(TAG, "AniList API returned HTTP ${response.code}")
                     return null
                 }
                 val body = response.body?.string() ?: return null
@@ -382,7 +382,7 @@ class AnimePosterResolver @Inject constructor() {
                 )
             }
         } catch (e: Exception) {
-            Log.w(TAG, "AniList GraphQL exception for '$query': ${e.message}")
+            AppLog.w(TAG, "AniList GraphQL exception for '$query': ${e.message}")
             null
         }
     }
@@ -398,7 +398,7 @@ class AnimePosterResolver @Inject constructor() {
 
             httpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    Log.w(TAG, "Jikan API returned HTTP ${response.code}")
+                    AppLog.w(TAG, "Jikan API returned HTTP ${response.code}")
                     return null
                 }
                 val body = response.body?.string() ?: return null
@@ -445,7 +445,7 @@ class AnimePosterResolver @Inject constructor() {
                 )
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Jikan API exception for '$query': ${e.message}")
+            AppLog.w(TAG, "Jikan API exception for '$query': ${e.message}")
             null
         }
     }
@@ -461,7 +461,7 @@ class AnimePosterResolver @Inject constructor() {
 
             httpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    Log.w(TAG, "Kitsu API returned HTTP ${response.code}")
+                    AppLog.w(TAG, "Kitsu API returned HTTP ${response.code}")
                     return null
                 }
                 val body = response.body?.string() ?: return null
@@ -502,7 +502,7 @@ class AnimePosterResolver @Inject constructor() {
                 )
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Kitsu API exception for '$query': ${e.message}")
+            AppLog.w(TAG, "Kitsu API exception for '$query': ${e.message}")
             null
         }
     }
@@ -520,7 +520,7 @@ class AnimePosterResolver @Inject constructor() {
 
             httpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    Log.w(TAG, "TMDB search returned HTTP ${response.code}")
+                    AppLog.w(TAG, "TMDB search returned HTTP ${response.code}")
                     return null
                 }
                 val body = response.body?.string() ?: return null
@@ -591,7 +591,7 @@ class AnimePosterResolver @Inject constructor() {
                 )
             }
         } catch (e: Exception) {
-            Log.w(TAG, "TMDB search exception for '$query': ${e.message}")
+            AppLog.w(TAG, "TMDB search exception for '$query': ${e.message}")
             null
         }
     }

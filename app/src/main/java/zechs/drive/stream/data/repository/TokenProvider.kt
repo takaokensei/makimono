@@ -1,6 +1,6 @@
 package zechs.drive.stream.data.repository
 
-import android.util.Log
+import zechs.drive.stream.utils.AppLog
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import zechs.drive.stream.utils.SessionManager
@@ -61,7 +61,7 @@ class DefaultTokenProvider @Inject constructor(
 
             val client = sessionManager.fetchClient()
             if (client == null) {
-                Log.w(TAG, "No DriveClient configured, cannot retrieve token")
+                AppLog.w(TAG, "No DriveClient configured, cannot retrieve token")
                 return@withLock null
             }
 
@@ -72,7 +72,7 @@ class DefaultTokenProvider @Inject constructor(
                 cachedTokenRef.set(CachedToken(token, expiry))
                 token
             } else {
-                Log.w(TAG, "Failed to retrieve valid token: ${response.message}")
+                AppLog.w(TAG, "Failed to retrieve valid token: ${response.message}")
                 null
             }
         }
@@ -82,11 +82,11 @@ class DefaultTokenProvider @Inject constructor(
         return refreshMutex.withLock {
             val client = sessionManager.fetchClient()
             if (client == null) {
-                Log.w(TAG, "No DriveClient configured, cannot refresh token")
+                AppLog.w(TAG, "No DriveClient configured, cannot refresh token")
                 return@withLock null
             }
 
-            Log.d(TAG, "Refreshing access token under lock")
+            AppLog.d(TAG, "Refreshing access token under lock")
             val response = driveRepository.get().fetchAccessToken(client, forceRefresh = true)
             if (response is Resource.Success && response.data != null) {
                 val token = response.data.accessToken
@@ -94,7 +94,7 @@ class DefaultTokenProvider @Inject constructor(
                 cachedTokenRef.set(CachedToken(token, expiry))
                 token
             } else {
-                Log.w(TAG, "Failed to force refresh token: ${response.message}")
+                AppLog.w(TAG, "Failed to force refresh token: ${response.message}")
                 null
             }
         }

@@ -1,6 +1,6 @@
 package zechs.drive.stream.data.remote
 
-import android.util.Log
+import zechs.drive.stream.utils.AppLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -89,7 +89,7 @@ class TenraiAnimeService @Inject constructor() {
 
             httpClient.newCall(request).execute().use { resp ->
                 if (!resp.isSuccessful) {
-                    Log.w(TAG, "Search returned HTTP ${resp.code} for '$clean'")
+                    AppLog.w(TAG, "Search returned HTTP ${resp.code} for '$clean'")
                     return@withContext emptyList()
                 }
                 val body = resp.body?.string() ?: return@withContext emptyList()
@@ -150,7 +150,7 @@ class TenraiAnimeService @Inject constructor() {
                 results
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Search error for '$clean': ${e.message}")
+            AppLog.w(TAG, "Search error for '$clean': ${e.message}")
             emptyList()
         }
     }
@@ -197,7 +197,7 @@ class TenraiAnimeService @Inject constructor() {
                 relations
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Relations error for ID $malId: ${e.message}")
+            AppLog.w(TAG, "Relations error for ID $malId: ${e.message}")
             emptyList()
         }
     }
@@ -234,7 +234,7 @@ class TenraiAnimeService @Inject constructor() {
                 epList
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Episodes error for ID $malId: ${e.message}")
+            AppLog.w(TAG, "Episodes error for ID $malId: ${e.message}")
             emptyList()
         }
     }
@@ -313,7 +313,7 @@ class TenraiAnimeService @Inject constructor() {
         }
 
         franchiseCache[clean] = arcs
-        Log.d(TAG, "Resolved franchise for '$clean': ${arcs.size} arcs: ${arcs.map { "${it.title} (${it.type})" }}")
+        AppLog.d(TAG, "Resolved franchise for '$clean': ${arcs.size} arcs: ${arcs.map { "${it.title} (${it.type})" }}")
         arcs
     }
 
@@ -376,7 +376,7 @@ class TenraiAnimeService @Inject constructor() {
                 entry
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Details error for ID $malId: ${e.message}")
+            AppLog.w(TAG, "Details error for ID $malId: ${e.message}")
             null
         }
     }

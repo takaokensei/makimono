@@ -3,7 +3,6 @@ package zechs.drive.stream.utils
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.os.Build
-import android.util.Log
 import android.view.Display
 import androidx.media3.common.C
 import androidx.media3.common.Format
@@ -121,9 +120,9 @@ object HdrModeManager {
                 } else {
                     ActivityInfo.COLOR_MODE_DEFAULT
                 }
-                Log.d(TAG, "Applied window colorMode: ${if (shouldActivate) "COLOR_MODE_HDR" else "COLOR_MODE_DEFAULT"} (range=${dynamicRange.label})")
+                AppLog.d(TAG, "Applied window colorMode: ${if (shouldActivate) "COLOR_MODE_HDR" else "COLOR_MODE_DEFAULT"} (range=${dynamicRange.label})")
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to apply window colorMode", e)
+                AppLog.w(TAG, "Failed to apply window colorMode", e)
             }
         }
 
@@ -150,9 +149,9 @@ object HdrModeManager {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
                 activity.window.colorMode = ActivityInfo.COLOR_MODE_DEFAULT
-                Log.d(TAG, "Reset window colorMode to COLOR_MODE_DEFAULT")
+                AppLog.d(TAG, "Reset window colorMode to COLOR_MODE_DEFAULT")
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to reset window colorMode", e)
+                AppLog.w(TAG, "Failed to reset window colorMode", e)
             }
         }
     }

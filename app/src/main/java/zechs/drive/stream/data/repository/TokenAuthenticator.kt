@@ -1,6 +1,6 @@
 package zechs.drive.stream.data.repository
 
-import android.util.Log
+import zechs.drive.stream.utils.AppLog
 import okhttp3.Authenticator
 import okhttp3.Request
 import okhttp3.Response
@@ -34,7 +34,7 @@ class TokenAuthenticator @Inject constructor(
     ): Request? {
 
         if (responseCount(response) > MAX_RETRIES) {
-            Log.w(TAG, "Giving up refreshing token after $MAX_RETRIES attempt")
+            AppLog.w(TAG, "Giving up refreshing token after $MAX_RETRIES attempt")
             return null
         }
 
@@ -43,7 +43,7 @@ class TokenAuthenticator @Inject constructor(
 
         // If another thread already refreshed the token concurrently, reuse it without another network roundtrip
         if (!currentCached.isNullOrEmpty() && currentCached != requestToken) {
-            Log.d(TAG, "Token already refreshed by concurrent thread, using new cached token")
+            AppLog.d(TAG, "Token already refreshed by concurrent thread, using new cached token")
             return response.request.newBuilder()
                 .removeHeader("Authorization")
                 .addHeader("Authorization", "Bearer $currentCached")
@@ -55,7 +55,7 @@ class TokenAuthenticator @Inject constructor(
         // dispatcher thread on a coroutine/network refresh here. DriveRepository
         // performs a bounded refresh-and-retry before making the request, while
         // streaming callers invalidate the provider and retry on the next open.
-        Log.w(TAG, "No refreshed cached token available; refusing a blocking refresh")
+        AppLog.w(TAG, "No refreshed cached token available; refusing a blocking refresh")
         return null
     }
 

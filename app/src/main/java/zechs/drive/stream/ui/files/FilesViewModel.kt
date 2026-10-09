@@ -1,6 +1,6 @@
 package zechs.drive.stream.ui.files
 
-import android.util.Log
+import zechs.drive.stream.utils.AppLog
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -53,7 +53,7 @@ class FilesViewModel @Inject constructor(
         try {
             folderMetadataRepository.recordFolderOpened(folderId, folderName)
         } catch (e: Exception) {
-            Log.e(TAG, "Error recording folder opened", e)
+            AppLog.e(TAG, "Error recording folder opened", e)
         }
     }
 
@@ -79,7 +79,7 @@ class FilesViewModel @Inject constructor(
                 return@launch
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error resolving first episode in folder $folderId", e)
+            AppLog.e(TAG, "Error resolving first episode in folder $folderId", e)
         }
         kotlinx.coroutines.withContext(Dispatchers.Main) {
             onResult(null)
@@ -178,17 +178,17 @@ class FilesViewModel @Inject constructor(
                     getTeamDrives(requestGeneration)
                 }
             } catch (cancel: CancellationException) {
-                Log.d(TAG, cancel.message ?: "CancellationException")
+                AppLog.d(TAG, cancel.message ?: "CancellationException")
             } catch (timeout: SocketTimeoutException) {
                 publishPageError("Server timed out", requestGeneration, ResourceErrorKind.NETWORK)
-                Log.d(TAG, timeout.message ?: "SocketTimeoutException")
+                AppLog.d(TAG, timeout.message ?: "SocketTimeoutException")
             } catch (e: Exception) {
                 publishPageError(
                     e.message ?: "Something went wrong",
                     requestGeneration,
                     DriveFailureClassifier.fromException(e)
                 )
-                Log.e(TAG, "Something went wrong", e)
+                AppLog.e(TAG, "Something went wrong", e)
             } finally {
                 if (pageRequestJob === requestJob) pageRequestJob = null
             }
@@ -230,7 +230,7 @@ class FilesViewModel @Inject constructor(
             is Resource.Success -> {
                 val files = filesResponse.data
 
-                Log.d(TAG, files.toString())
+                AppLog.d(TAG, files.toString())
 
                 val driveFiles = files.files.map { it.toDriveFile() }
                 val favoriteTargetsByFileId = driveFiles.associate { file ->
@@ -270,7 +270,7 @@ class FilesViewModel @Inject constructor(
             is Resource.Success -> {
                 val teamDrives = drivesResponse.data
 
-                Log.d(TAG, teamDrives.toString())
+                AppLog.d(TAG, teamDrives.toString())
 
                 nextPageToken = teamDrives.nextPageToken
                 isLastPage = nextPageToken == null
@@ -352,7 +352,7 @@ class FilesViewModel @Inject constructor(
             } catch (cancel: CancellationException) {
                 throw cancel
             } catch (e: Exception) {
-                Log.e(TAG, "Error enriching Drive folder posters", e)
+                AppLog.e(TAG, "Error enriching Drive folder posters", e)
                 if (generation == responseGeneration) {
                     response?.let { _filesList.postValue(Resource.Success(it.toList())) }
                 }
@@ -524,11 +524,11 @@ class FilesViewModel @Inject constructor(
         } catch (cancel: CancellationException) {
             updateFileState(if (starred) Starred.UNSTARRED else Starred.STARRED)
             _fileUpdate.emit("Unable to update favorite")
-            Log.d(TAG, cancel.message ?: "CancellationException")
+            AppLog.d(TAG, cancel.message ?: "CancellationException")
         } catch (e: Exception) {
             updateFileState(if (starred) Starred.UNSTARRED else Starred.STARRED)
             _fileUpdate.emit(e.message ?: "Something went wrong")
-            Log.e(TAG, "Something went wrong", e)
+            AppLog.e(TAG, "Something went wrong", e)
         }
     }
 

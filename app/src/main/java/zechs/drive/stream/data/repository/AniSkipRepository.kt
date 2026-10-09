@@ -1,6 +1,6 @@
 package zechs.drive.stream.data.repository
 
-import android.util.Log
+import zechs.drive.stream.utils.AppLog
 import dagger.Lazy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -23,7 +23,7 @@ class AniSkipRepository @Inject constructor(
         episodeLength: Double = 0.0
     ): List<MatroskaChapterParser.ParsedChapter> = withContext(Dispatchers.IO) {
         try {
-            Log.d(TAG, "Fetching AniSkip timestamps for MAL ID: $malId, ep: $episodeNumber")
+            AppLog.d(TAG, "Fetching AniSkip timestamps for MAL ID: $malId, ep: $episodeNumber")
             val response = aniSkipApi.get().getSkipTimes(
                 malId = malId,
                 episodeNumber = episodeNumber,
@@ -32,13 +32,13 @@ class AniSkipRepository @Inject constructor(
             )
 
             if (!response.isSuccessful) {
-                Log.d(TAG, "AniSkip returned code ${response.code()} for malId=$malId ep=$episodeNumber")
+                AppLog.d(TAG, "AniSkip returned code ${response.code()} for malId=$malId ep=$episodeNumber")
                 return@withContext emptyList()
             }
 
             val body = response.body()
             if (body == null || !body.found || body.results.isEmpty()) {
-                Log.d(TAG, "No AniSkip intervals found for malId=$malId ep=$episodeNumber")
+                AppLog.d(TAG, "No AniSkip intervals found for malId=$malId ep=$episodeNumber")
                 return@withContext emptyList()
             }
 
@@ -64,10 +64,10 @@ class AniSkipRepository @Inject constructor(
                 )
             }
 
-            Log.d(TAG, "AniSkip found ${chapters.size} skip intervals for malId=$malId ep=$episodeNumber")
+            AppLog.d(TAG, "AniSkip found ${chapters.size} skip intervals for malId=$malId ep=$episodeNumber")
             return@withContext chapters
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to get AniSkip skip times", e)
+            AppLog.w(TAG, "Failed to get AniSkip skip times", e)
             return@withContext emptyList()
         }
     }

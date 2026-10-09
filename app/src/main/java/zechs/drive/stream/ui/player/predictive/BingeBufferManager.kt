@@ -1,7 +1,6 @@
 package zechs.drive.stream.ui.player.predictive
 
 import android.content.Context
-import android.util.Log
 import androidx.annotation.VisibleForTesting
 import dagger.Lazy
 import dagger.hilt.android.qualifiers.ApplicationContext

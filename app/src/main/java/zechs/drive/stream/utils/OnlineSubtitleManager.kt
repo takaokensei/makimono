@@ -1,7 +1,6 @@
 package zechs.drive.stream.utils
 
 import android.content.Context
-import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -67,14 +66,14 @@ class OnlineSubtitleManager @Inject constructor(
                     val first = metas.getJSONObject(0)
                     val imdbId = first.optString("imdb_id").ifBlank { first.optString("id") }
                     if (imdbId.startsWith("tt")) {
-                        Log.d(TAG, "Resolved series IMDB ID for '$cleanTitle': $imdbId")
+                        AppLog.d(TAG, "Resolved series IMDB ID for '$cleanTitle': $imdbId")
                         return@withContext Pair(imdbId, true)
                     }
                 }
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.w(TAG, "Cinemeta series search error: ${e.message}")
+            AppLog.w(TAG, "Cinemeta series search error: ${e.message}")
         }
 
         // 2. Fallback to movie catalog (movies, OVAs)
@@ -93,14 +92,14 @@ class OnlineSubtitleManager @Inject constructor(
                     val first = metas.getJSONObject(0)
                     val imdbId = first.optString("imdb_id").ifBlank { first.optString("id") }
                     if (imdbId.startsWith("tt")) {
-                        Log.d(TAG, "Resolved movie IMDB ID for '$cleanTitle': $imdbId")
+                        AppLog.d(TAG, "Resolved movie IMDB ID for '$cleanTitle': $imdbId")
                         return@withContext Pair(imdbId, false)
                     }
                 }
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.w(TAG, "Cinemeta movie search error: ${e.message}")
+            AppLog.w(TAG, "Cinemeta movie search error: ${e.message}")
         }
 
         null
@@ -119,11 +118,11 @@ class OnlineSubtitleManager @Inject constructor(
         val s = season ?: parsed.season ?: 1
         val ep = (episode ?: parsed.episode ?: 1.0).toInt().coerceAtLeast(1)
 
-        Log.d(TAG, "Searching subtitles for '$showTitle' S${s}E${ep}...")
+        AppLog.d(TAG, "Searching subtitles for '$showTitle' S${s}E${ep}...")
 
         val resolved = resolveImdbId(showTitle)
         if (resolved == null) {
-            Log.w(TAG, "Could not resolve IMDB ID for '$showTitle'")
+            AppLog.w(TAG, "Could not resolve IMDB ID for '$showTitle'")
             return@withContext emptyList()
         }
 
@@ -134,7 +133,7 @@ class OnlineSubtitleManager @Inject constructor(
             "$OPENSUBTITLES_BASE/subtitles/movie/$imdbId.json"
         }
 
-        Log.d(TAG, "Fetching subtitles from $subUrl")
+        AppLog.d(TAG, "Fetching subtitles from $subUrl")
         try {
             val req = Request.Builder()
                 .url(subUrl)
@@ -143,7 +142,7 @@ class OnlineSubtitleManager @Inject constructor(
 
             val resp = okHttpClient.newCall(req).execute()
             if (!resp.isSuccessful) {
-                Log.w(TAG, "Failed to fetch subtitles: HTTP ${resp.code}")
+                AppLog.w(TAG, "Failed to fetch subtitles: HTTP ${resp.code}")
                 return@withContext emptyList()
             }
 
@@ -188,7 +187,7 @@ class OnlineSubtitleManager @Inject constructor(
             )
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Error fetching subtitles from OpenSubtitles", e)
+            AppLog.e(TAG, "Error fetching subtitles from OpenSubtitles", e)
             emptyList()
         }
     }
@@ -252,7 +251,7 @@ class OnlineSubtitleManager @Inject constructor(
                     isPortuguese = isPt
                 )
             } catch (e: Exception) {
-                Log.w(TAG, "Error parsing saved subtitle file: ${file.name}", e)
+                AppLog.w(TAG, "Error parsing saved subtitle file: ${file.name}", e)
                 null
             }
         }
@@ -266,7 +265,7 @@ class OnlineSubtitleManager @Inject constructor(
         filenamePrefix: String
     ): Result<File> = withContext(Dispatchers.IO) {
         try {
-            Log.d(TAG, "Downloading subtitle: ${sub.langName} from ${sub.downloadUrl}")
+            AppLog.d(TAG, "Downloading subtitle: ${sub.langName} from ${sub.downloadUrl}")
             val req = Request.Builder()
                 .url(sub.downloadUrl)
                 .header("User-Agent", "Mozilla/5.0")
@@ -294,11 +293,11 @@ class OnlineSubtitleManager @Inject constructor(
                 }
             }
 
-            Log.d(TAG, "Subtitle downloaded and permanently saved: ${targetFile.absolutePath} (${targetFile.length()} bytes)")
+            AppLog.d(TAG, "Subtitle downloaded and permanently saved: ${targetFile.absolutePath} (${targetFile.length()} bytes)")
             Result.success(targetFile)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Failed to download online subtitle", e)
+            AppLog.e(TAG, "Failed to download online subtitle", e)
             Result.failure(e)
         }
     }

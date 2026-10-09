@@ -2,7 +2,7 @@ package zechs.drive.stream.data.repository
 
 import android.net.Uri
 import android.util.Base64
-import android.util.Log
+import zechs.drive.stream.utils.AppLog
 import dagger.Lazy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -66,7 +66,7 @@ class MalRepository @Inject constructor(
 
     suspend fun exchangeToken(code: String, codeVerifier: String): Resource<MalTokenResponse> = withContext(Dispatchers.IO) {
         try {
-            Log.d(TAG, "Exchanging code for MAL token with verifier")
+            AppLog.d(TAG, "Exchanging code for MAL token with verifier")
             val response = malApi.get().exchangeToken(
                 clientId = sessionManager.getClientId(),
                 clientSecret = sessionManager.getClientSecret(),
@@ -83,12 +83,12 @@ class MalRepository @Inject constructor(
                 Resource.Success(body)
             } else {
                 val err = response.errorBody()?.string() ?: "Erro desconhecido HTTP ${response.code()}"
-                Log.e(TAG, "Token exchange failed: $err")
+                AppLog.e(TAG, "Token exchange failed: $err")
                 Resource.Error("Falha na autenticação do MAL: $err")
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Token exchange exception", e)
+            AppLog.e(TAG, "Token exchange exception", e)
             Resource.Error(mapError(e, "Erro de conexão ao autenticar no MAL"))
         }
     }
@@ -101,7 +101,7 @@ class MalRepository @Inject constructor(
 
         val refreshToken = sessionManager.getRefreshToken() ?: return@withContext null
         try {
-            Log.d(TAG, "Refreshing expired MAL token...")
+            AppLog.d(TAG, "Refreshing expired MAL token...")
             val response = malApi.get().refreshToken(
                 clientId = sessionManager.getClientId(),
                 clientSecret = sessionManager.getClientSecret(),
@@ -110,17 +110,17 @@ class MalRepository @Inject constructor(
             val body = response.body()
             if (response.isSuccessful && body != null) {
                 sessionManager.saveTokens(body)
-                Log.d(TAG, "MAL token refreshed successfully")
+                AppLog.d(TAG, "MAL token refreshed successfully")
                 return@withContext body.accessToken
             } else {
                 // P0-02: refresh falhou — devolver null (chamadores já orientam
                 // re-login), nunca o token expirado: o retorno anterior mascarava
                 // a falha e causava 401s silenciosos em todos os chamadores.
-                Log.w(TAG, "Failed to refresh MAL token: ${response.code()}")
+                AppLog.w(TAG, "Failed to refresh MAL token: ${response.code()}")
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Error refreshing MAL token", e)
+            AppLog.e(TAG, "Error refreshing MAL token", e)
         }
         return@withContext null
     }
@@ -136,7 +136,7 @@ class MalRepository @Inject constructor(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Error fetching user profile", e)
+            AppLog.e(TAG, "Error fetching user profile", e)
         }
         null
     }
@@ -150,7 +150,7 @@ class MalRepository @Inject constructor(
             val authHeader = if (token != null) "Bearer $token" else null
             val clientIdHeader = if (authHeader == null) sessionManager.getClientId() else null
 
-            Log.d(TAG, "Searching MAL for: '$clean' (auth=${authHeader != null})")
+            AppLog.d(TAG, "Searching MAL for: '$clean' (auth=${authHeader != null})")
             val response = malApi.get().searchAnime(
                 query = clean,
                 limit = 5,
@@ -166,7 +166,7 @@ class MalRepository @Inject constructor(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Error searching MAL", e)
+            AppLog.e(TAG, "Error searching MAL", e)
             Resource.Error(mapError(e, "Erro ao buscar anime no MAL"))
         }
     }
@@ -185,7 +185,7 @@ class MalRepository @Inject constructor(
     ): Resource<MalUserListStatus> = withContext(Dispatchers.IO) {
         val token = ensureValidToken() ?: return@withContext Resource.Error("Não autenticado no MAL")
         try {
-            Log.d(TAG, "Scrobbling MAL: animeId=$animeId, episode=$episodeNumber")
+            AppLog.d(TAG, "Scrobbling MAL: animeId=$animeId, episode=$episodeNumber")
             val response = malApi.get().updateListStatus(
                 animeId = animeId,
                 authHeader = "Bearer $token",
@@ -194,16 +194,16 @@ class MalRepository @Inject constructor(
             )
             val body = response.body()
             if (response.isSuccessful && body != null) {
-                Log.d(TAG, "Successfully scrobbled episode $episodeNumber to MAL!")
+                AppLog.d(TAG, "Successfully scrobbled episode $episodeNumber to MAL!")
                 Resource.Success(body)
             } else {
                 val err = response.errorBody()?.string() ?: "HTTP ${response.code()}"
-                Log.w(TAG, "Failed to scrobble: $err")
+                AppLog.w(TAG, "Failed to scrobble: $err")
                 Resource.Error("Falha ao atualizar MAL: $err")
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Exception scrobbling episode", e)
+            AppLog.e(TAG, "Exception scrobbling episode", e)
             Resource.Error(mapError(e, "Erro ao sincronizar com MAL"))
         }
     }
@@ -215,7 +215,7 @@ class MalRepository @Inject constructor(
     ): Resource<MalUserListStatus> = withContext(Dispatchers.IO) {
         val token = ensureValidToken() ?: return@withContext Resource.Error("Não autenticado no MAL")
         try {
-            Log.d(TAG, "Completing anime on MAL: animeId=$animeId, score=$score, episodes=$totalEpisodes")
+            AppLog.d(TAG, "Completing anime on MAL: animeId=$animeId, score=$score, episodes=$totalEpisodes")
             val response = malApi.get().updateListStatus(
                 animeId = animeId,
                 authHeader = "Bearer $token",
@@ -225,7 +225,7 @@ class MalRepository @Inject constructor(
             )
             val body = response.body()
             if (response.isSuccessful && body != null) {
-                Log.d(TAG, "Successfully completed anime with score $score on MAL!")
+                AppLog.d(TAG, "Successfully completed anime with score $score on MAL!")
                 Resource.Success(body)
             } else {
                 val err = response.errorBody()?.string() ?: "HTTP ${response.code()}"
@@ -233,7 +233,7 @@ class MalRepository @Inject constructor(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Exception completing anime", e)
+            AppLog.e(TAG, "Exception completing anime", e)
             Resource.Error(mapError(e, "Erro ao salvar avaliação no MAL"))
         }
     }

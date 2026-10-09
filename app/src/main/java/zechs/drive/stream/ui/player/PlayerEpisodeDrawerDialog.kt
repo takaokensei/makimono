@@ -24,6 +24,7 @@ import zechs.drive.stream.domain.library.EpisodeParser
 import zechs.drive.stream.utils.SeasonEpisodeGrouper
 import zechs.drive.stream.utils.SeasonGroup
 import zechs.drive.stream.utils.FocusEngine
+import zechs.drive.stream.utils.AppLog
 
 class PlayerEpisodeDrawerDialog(
     private val activity: Activity,
@@ -129,7 +130,7 @@ class PlayerEpisodeDrawerDialog(
                         applyTenraiArcs(arcs)
                     }
                 } catch (e: Exception) {
-                    android.util.Log.d("PlayerEpisodeDrawer", "Tenrai resolution error: ${e.message}")
+                    AppLog.d("PlayerEpisodeDrawer", "Tenrai resolution error: ${e.message}")
                 }
             }
         }

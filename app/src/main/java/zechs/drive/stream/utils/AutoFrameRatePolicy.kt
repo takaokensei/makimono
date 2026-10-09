@@ -1,7 +1,6 @@
 package zechs.drive.stream.utils
 
 import android.os.Build
-import android.util.Log
 import android.view.Display
 import android.view.Surface
 import android.view.Window
@@ -122,10 +121,10 @@ object AutoFrameRatePolicy {
                 Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE,
                 Surface.CHANGE_FRAME_RATE_ALWAYS
             )
-            Log.d(TAG, "Applied Surface.setFrameRate: ${targetFps}fps")
+            AppLog.d(TAG, "Applied Surface.setFrameRate: ${targetFps}fps")
             true
         } catch (e: Exception) {
-            Log.w(TAG, "Failed Surface.setFrameRate", e)
+            AppLog.w(TAG, "Failed Surface.setFrameRate", e)
             false
         }
     }
@@ -142,10 +141,10 @@ object AutoFrameRatePolicy {
 
         return try {
             surface.clearFrameRate()
-            Log.d(TAG, "Cleared Surface frame rate")
+            AppLog.d(TAG, "Cleared Surface frame rate")
             true
         } catch (e: Exception) {
-            Log.w(TAG, "Failed Surface.clearFrameRate", e)
+            AppLog.w(TAG, "Failed Surface.clearFrameRate", e)
             false
         }
     }
@@ -166,13 +165,13 @@ object AutoFrameRatePolicy {
             if (params.preferredDisplayModeId != modeMatch.modeId) {
                 params.preferredDisplayModeId = modeMatch.modeId
                 window.attributes = params
-                Log.d(TAG, "Applied display mode ${modeMatch.modeId} (${modeMatch.refreshRate}Hz)")
+                AppLog.d(TAG, "Applied display mode ${modeMatch.modeId} (${modeMatch.refreshRate}Hz)")
                 true
             } else {
                 false
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to set preferredDisplayModeId", e)
+            AppLog.w(TAG, "Failed to set preferredDisplayModeId", e)
             false
         }
     }
@@ -204,7 +203,7 @@ object AutoFrameRatePolicy {
             appliedSurface = appliedSurface,
             appliedDisplayMode = appliedDisplay
         )
-        Log.d(TAG, "Auto Frame Rate applied: ${state.technicalSummary} (surface=$appliedSurface, displayMode=$appliedDisplay)")
+        AppLog.d(TAG, "Auto Frame Rate applied: ${state.technicalSummary} (surface=$appliedSurface, displayMode=$appliedDisplay)")
         return state
     }
 
@@ -223,13 +222,13 @@ object AutoFrameRatePolicy {
             if (params.preferredDisplayModeId != 0) {
                 params.preferredDisplayModeId = 0
                 window.attributes = params
-                Log.d(TAG, "Reset display mode to default")
+                AppLog.d(TAG, "Reset display mode to default")
                 true
             } else {
                 false
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to reset preferredDisplayModeId", e)
+            AppLog.w(TAG, "Failed to reset preferredDisplayModeId", e)
             false
         }
     }

@@ -1,7 +1,6 @@
 package zechs.drive.stream.utils
 
 import android.content.Context
-import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -50,7 +49,7 @@ class AppSettings @Inject constructor(
         sessionStore.edit { settings ->
             settings[dataStoreKey] = theme.text
         }
-        Log.d(TAG, "saveTheme [profile=$profileId]: ${theme.text}")
+        AppLog.d(TAG, "saveTheme [profile=$profileId]: ${theme.text}")
     }
 
     suspend fun fetchTheme(profileId: String = currentProfileId()): AppTheme {
@@ -59,10 +58,10 @@ class AppSettings @Inject constructor(
             val preferences = sessionStore.data.first()
             val themeText = preferences[profileKey] ?: preferences[stringPreferencesKey(APP_THEME)]
             val appTheme = themeText?.let(AppTheme::fromText) ?: AppTheme.OBSIDIAN
-            Log.d(TAG, "fetchTheme [profile=$profileId]: $appTheme")
+            AppLog.d(TAG, "fetchTheme [profile=$profileId]: $appTheme")
             appTheme
         } catch (e: Exception) {
-            Log.e(TAG, "fetchTheme error, fallback to Obsidian", e)
+            AppLog.e(TAG, "fetchTheme error, fallback to Obsidian", e)
             AppTheme.OBSIDIAN
         }
     }
@@ -72,7 +71,7 @@ class AppSettings @Inject constructor(
         sessionStore.edit { settings ->
             settings[dataStoreKey] = player.text
         }
-        Log.d(TAG, "savePlayer [profile=$profileId]: ${player.text}")
+        AppLog.d(TAG, "savePlayer [profile=$profileId]: ${player.text}")
     }
 
     suspend fun fetchPlayer(profileId: String = currentProfileId()): VideoPlayer {
@@ -83,7 +82,7 @@ class AppSettings @Inject constructor(
             VideoPlayer.MPV.text -> VideoPlayer.MPV
             else -> VideoPlayer.EXO_PLAYER
         }
-        Log.d(TAG, "fetchPlayer [profile=$profileId]: $videoPlayer")
+        AppLog.d(TAG, "fetchPlayer [profile=$profileId]: $videoPlayer")
         return videoPlayer
     }
 
@@ -101,7 +100,7 @@ class AppSettings @Inject constructor(
             settings[key] = gson.toJson(style)
             settings[profileSubtitleKey(profileId)] = style.sizeSp
         }
-        Log.d(TAG, "saveSubtitleStyle [profile=$profileId]: ${style.summaryLabel()}")
+        AppLog.d(TAG, "saveSubtitleStyle [profile=$profileId]: ${style.summaryLabel()}")
     }
 
     suspend fun fetchSubtitleStyle(profileId: String = currentProfileId()): SubtitleStyle {
@@ -118,7 +117,7 @@ class AppSettings @Inject constructor(
                 SubtitleStyle(sizeSp = legacySize)
             }
         } catch (e: Exception) {
-            Log.w(TAG, "fetchSubtitleStyle fallback", e)
+            AppLog.w(TAG, "fetchSubtitleStyle fallback", e)
             SubtitleStyle()
         }
     }
@@ -128,7 +127,7 @@ class AppSettings @Inject constructor(
         if (profileId == currentProfileId()) {
             MotionPolicy.updateActiveProfilePreference(preference)
         }
-        Log.d(TAG, "saveMotionPreference [profile=$profileId]: ${preference.name}")
+        AppLog.d(TAG, "saveMotionPreference [profile=$profileId]: ${preference.name}")
     }
 
     suspend fun fetchMotionPreference(profileId: String = currentProfileId()): MotionPreference {
@@ -145,7 +144,7 @@ class AppSettings @Inject constructor(
         sessionStore.edit { settings ->
             settings[dataStoreKey] = enabled
         }
-        Log.d(TAG, "saveAutoFrameRate [profile=$profileId]: $enabled")
+        AppLog.d(TAG, "saveAutoFrameRate [profile=$profileId]: $enabled")
     }
 
     suspend fun fetchAutoFrameRate(profileId: String = currentProfileId()): Boolean {
@@ -154,7 +153,7 @@ class AppSettings @Inject constructor(
             val preferences = sessionStore.data.first()
             preferences[profileKey] ?: true
         } catch (e: Exception) {
-            Log.w(TAG, "fetchAutoFrameRate error, fallback to true", e)
+            AppLog.w(TAG, "fetchAutoFrameRate error, fallback to true", e)
             true
         }
     }
@@ -164,7 +163,7 @@ class AppSettings @Inject constructor(
         sessionStore.edit { settings ->
             settings[dataStoreKey] = enabled
         }
-        Log.d(TAG, "saveMatchDynamicRange [profile=$profileId]: $enabled")
+        AppLog.d(TAG, "saveMatchDynamicRange [profile=$profileId]: $enabled")
     }
 
     suspend fun fetchMatchDynamicRange(profileId: String = currentProfileId()): Boolean {
@@ -173,7 +172,7 @@ class AppSettings @Inject constructor(
             val preferences = sessionStore.data.first()
             preferences[profileKey] ?: true
         } catch (e: Exception) {
-            Log.w(TAG, "fetchMatchDynamicRange error, fallback to true", e)
+            AppLog.w(TAG, "fetchMatchDynamicRange error, fallback to true", e)
             true
         }
     }
@@ -183,7 +182,7 @@ class AppSettings @Inject constructor(
         sessionStore.edit { settings ->
             settings[dataStoreKey] = enabled
         }
-        Log.d(TAG, "savePredictiveBuffering [profile=$profileId]: $enabled")
+        AppLog.d(TAG, "savePredictiveBuffering [profile=$profileId]: $enabled")
     }
 
     suspend fun fetchPredictiveBuffering(profileId: String = currentProfileId()): Boolean {
@@ -192,7 +191,7 @@ class AppSettings @Inject constructor(
             val preferences = sessionStore.data.first()
             preferences[profileKey] ?: true
         } catch (e: Exception) {
-            Log.w(TAG, "fetchPredictiveBuffering error, fallback to true", e)
+            AppLog.w(TAG, "fetchPredictiveBuffering error, fallback to true", e)
             true
         }
     }
@@ -203,7 +202,7 @@ class AppSettings @Inject constructor(
         sessionStore.edit { settings ->
             settings[dataStoreKey] = lastUpdated.toString()
         }
-        Log.d(TAG, "saveLastUpdated: ${Converter.fromTimeInMills(lastUpdated)}")
+        AppLog.d(TAG, "saveLastUpdated: ${Converter.fromTimeInMills(lastUpdated)}")
     }
 
     suspend fun fetchLastUpdated(): String? {
@@ -211,7 +210,7 @@ class AppSettings @Inject constructor(
         val preferences = sessionStore.data.first()
         val lastUpdated = preferences[dataStoreKey] ?: return null
         val parsed = Converter.fromTimeInMills(lastUpdated.toLong())
-        Log.d(TAG, "fetchLastUpdated: $parsed")
+        AppLog.d(TAG, "fetchLastUpdated: $parsed")
         return parsed
     }
 

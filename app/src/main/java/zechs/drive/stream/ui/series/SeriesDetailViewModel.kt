@@ -1,6 +1,6 @@
 package zechs.drive.stream.ui.series
 
-import android.util.Log
+import zechs.drive.stream.utils.AppLog
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -141,7 +141,7 @@ class SeriesDetailViewModel @Inject constructor(
                         details to arcs
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
-                        Log.w(TAG, "Tenrai fetch error: ${e.message}")
+                        AppLog.w(TAG, "Tenrai fetch error: ${e.message}")
                         null to emptyList()
                     }
                 }
@@ -151,7 +151,7 @@ class SeriesDetailViewModel @Inject constructor(
                         animePosterResolver.resolveMetadata(seriesTitle)
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
-                        Log.w(TAG, "AniList metadata fetch error: ${e.message}")
+                        AppLog.w(TAG, "AniList metadata fetch error: ${e.message}")
                         null
                     }
                 }
@@ -271,7 +271,7 @@ class SeriesDetailViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.e(TAG, "Error loading series details", e)
+                AppLog.e(TAG, "Error loading series details", e)
                 withContext(Dispatchers.Main) {
                     val errorKind = DriveFailureClassifier.fromException(e)
                     val appError = when (errorKind) {
@@ -554,7 +554,7 @@ class SeriesDetailViewModel @Inject constructor(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Error toggling local favorite", e)
+            AppLog.e(TAG, "Error toggling local favorite", e)
         }
     }
 
@@ -574,7 +574,7 @@ class SeriesDetailViewModel @Inject constructor(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             isFolderFollowed = !newFollowed
-            Log.e(TAG, "Error toggling followed folder", e)
+            AppLog.e(TAG, "Error toggling followed folder", e)
         }
     }
 
@@ -589,7 +589,7 @@ class SeriesDetailViewModel @Inject constructor(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Error adding episode to queue", e)
+            AppLog.e(TAG, "Error adding episode to queue", e)
         }
     }
 
@@ -669,7 +669,7 @@ class SeriesDetailViewModel @Inject constructor(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Error setting episode watched state", e)
+            AppLog.e(TAG, "Error setting episode watched state", e)
         }
     }
 

@@ -3,7 +3,7 @@ package zechs.drive.stream.ui.player.utils
 import android.net.Uri
 import androidx.media3.datasource.*
 import androidx.media3.common.util.Assertions
-import androidx.media3.common.util.Log
+import zechs.drive.stream.utils.AppLog
 import zechs.drive.stream.data.repository.TokenProvider
 import zechs.drive.stream.ui.player.PlayerActivity.Companion.TAG
 import java.io.IOException
@@ -49,10 +49,10 @@ class AuthenticatingDataSource(
                 401 -> {
                     // Token expired or invalid; invalidate cached token asynchronously without blocking
                     tokenProvider.invalidateToken()
-                    Log.w(TAG, "HTTP 401 in AuthenticatingDataSource.open: token invalidated asynchronously")
+                    AppLog.w(TAG, "HTTP 401 in AuthenticatingDataSource.open: token invalidated asynchronously")
                 }
                 403 -> {
-                    Log.w(TAG, "HTTP 403 Forbidden in AuthenticatingDataSource.open: request denied")
+                    AppLog.w(TAG, "HTTP 403 Forbidden in AuthenticatingDataSource.open: request denied")
                 }
             }
             throw e

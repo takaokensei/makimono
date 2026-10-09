@@ -1,6 +1,6 @@
 package zechs.drive.stream.ui.files
 
-import android.util.Log
+import zechs.drive.stream.utils.AppLog
 import android.widget.AbsListView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -36,7 +36,7 @@ class FilesPaginationHandler(
             val isLastPage = viewModel.isLastPage
 
             if (isAtLastItem && !isLoading && !isLastPage && !viewModel.hasFailed) {
-                Log.d("FilesPagination", "Paginating on scroll...")
+                AppLog.d("FilesPagination", "Paginating on scroll...")
                 onPageRequested(folderQuery)
                 isScrolling = false
             }
@@ -57,7 +57,7 @@ class FilesPaginationHandler(
             !viewModel.hasFailed &&
             filesAdapter.currentList.getOrNull(position) is FilesDataModel.File
         ) {
-            Log.d("FilesPagination", "Paginating via D-pad focus near end (pos=$position)")
+            AppLog.d("FilesPagination", "Paginating via D-pad focus near end (pos=$position)")
             onPageRequested(folderQuery)
         }
     }

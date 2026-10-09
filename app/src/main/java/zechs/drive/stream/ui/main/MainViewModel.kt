@@ -1,6 +1,6 @@
 package zechs.drive.stream.ui.main
 
-import android.util.Log
+import zechs.drive.stream.utils.AppLog
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -69,7 +69,7 @@ class MainViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.e("MainViewModel", "Login init error", e)
+                AppLog.e("MainViewModel", "Login init error", e)
             } finally {
                 delay(150L)
                 _isLoading.value = false
@@ -106,7 +106,7 @@ class MainViewModel @Inject constructor(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e("MainViewModel", "getTheme error", e)
+            AppLog.e("MainViewModel", "getTheme error", e)
         }
     }
 
@@ -117,7 +117,7 @@ class MainViewModel @Inject constructor(
             _theme.emit(theme)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e("MainViewModel", "setTheme error", e)
+            AppLog.e("MainViewModel", "setTheme error", e)
         }
     }
 
@@ -130,10 +130,10 @@ class MainViewModel @Inject constructor(
                 appSettings.fetchPlayer()
             } ?: VideoPlayer.EXO_PLAYER
             currentPlayerIndex = player
-            Log.d("MainViewModel", "Loaded default player: $player")
+            AppLog.d("MainViewModel", "Loaded default player: $player")
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e("MainViewModel", "getPlayer error", e)
+            AppLog.e("MainViewModel", "getPlayer error", e)
         }
     }
 
@@ -144,7 +144,7 @@ class MainViewModel @Inject constructor(
                 appSettings.savePlayer(player)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.e("MainViewModel", "savePlayer error", e)
+                AppLog.e("MainViewModel", "savePlayer error", e)
             }
         }
     }

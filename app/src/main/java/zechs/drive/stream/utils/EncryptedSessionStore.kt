@@ -2,7 +2,6 @@
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -46,7 +45,7 @@ class EncryptedSessionStore private constructor(
                     EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
                 )
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to create encrypted Drive session store", e)
+                AppLog.e(TAG, "Failed to create encrypted Drive session store", e)
                 throw IllegalStateException(
                     "Secure credential storage is unavailable; refusing to store Drive credentials in plain text",
                     e

@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
-import android.util.Log
 import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.util.Collections
@@ -57,11 +56,11 @@ object NetworkUtils {
             candidates.sortByDescending { it.second }
             val best = candidates.firstOrNull()?.first
             if (best != null) {
-                Log.d(TAG, "Selected local IPv4 address: $best (candidates: $candidates)")
+                AppLog.d(TAG, "Selected local IPv4 address: $best (candidates: $candidates)")
                 return best
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error resolving local IP address", e)
+            AppLog.e(TAG, "Error resolving local IP address", e)
         }
         return null
     }

@@ -2,7 +2,6 @@ package zechs.drive.stream.utils
 
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.util.Log
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
@@ -52,7 +51,7 @@ object QRCodeGenerator {
             bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
             bitmap
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to generate QR code bitmap", e)
+            AppLog.e(TAG, "Failed to generate QR code bitmap", e)
             null
         }
     }

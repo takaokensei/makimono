@@ -69,12 +69,16 @@ object AppLog {
         }
     }
 
-    fun d(tag: String, message: String) {
-        log(DEBUG, tag, message)
+    fun v(tag: String, message: String, throwable: Throwable? = null) {
+        log(VERBOSE, tag, message, throwable)
     }
 
-    fun i(tag: String, message: String) {
-        log(INFO, tag, message)
+    fun d(tag: String, message: String, throwable: Throwable? = null) {
+        log(DEBUG, tag, message, throwable)
+    }
+
+    fun i(tag: String, message: String, throwable: Throwable? = null) {
+        log(INFO, tag, message, throwable)
     }
 
     fun w(tag: String, message: String, throwable: Throwable? = null) {

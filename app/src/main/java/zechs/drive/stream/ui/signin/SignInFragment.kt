@@ -7,7 +7,7 @@ import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
+import zechs.drive.stream.utils.AppLog
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -65,7 +65,7 @@ class SignInFragment : BaseFragment() {
             }
             val client = viewModel.client
             if (client == null) {
-                Log.e(TAG, "signInText click: client is null after updateClient() returned true")
+                AppLog.e(TAG, "signInText click: client is null after updateClient() returned true")
                 return@setOnClickListener
             }
             val authUri = client.authUrl()

@@ -1,7 +1,6 @@
 package zechs.drive.stream.utils
 
 import android.content.Context
-import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -51,7 +50,7 @@ class SessionManager @Inject constructor(
         // Clean legacy plaintext
         val dataStoreKey = stringPreferencesKey(DRIVE_CLIENT)
         sessionStore.edit { it.remove(dataStoreKey) }
-        Log.d(TAG, "saveClient: id=${client.clientId.take(6)}..., scopes=${client.scopes.joinToString()}")
+        AppLog.d(TAG, "saveClient: id=${client.clientId.take(6)}..., scopes=${client.scopes.joinToString()}")
     }
 
     suspend fun fetchClient(): DriveClient? {
@@ -61,7 +60,7 @@ class SessionManager @Inject constructor(
         if (!encryptedValue.isNullOrEmpty()) {
             val client: DriveClient? = gson.fromJson(encryptedValue, type)
             if (client != null) {
-                Log.d(TAG, "fetchClient: found in encrypted store")
+                AppLog.d(TAG, "fetchClient: found in encrypted store")
                 return client
             }
         }
@@ -75,7 +74,7 @@ class SessionManager @Inject constructor(
         }
 
         if (client != null) {
-            Log.d(TAG, "fetchClient: migrating legacy DataStore client to encrypted store")
+            AppLog.d(TAG, "fetchClient: migrating legacy DataStore client to encrypted store")
             saveClient(client)
             return client
         }
@@ -93,7 +92,7 @@ class SessionManager @Inject constructor(
         // Clean legacy plaintext
         val dataStoreKey = stringPreferencesKey(ACCESS_TOKEN)
         sessionStore.edit { it.remove(dataStoreKey) }
-        Log.d(TAG, "saveAccessToken: expiresIn=${newData.expiresIn}")
+        AppLog.d(TAG, "saveAccessToken: expiresIn=${newData.expiresIn}")
     }
 
     suspend fun fetchAccessToken(): TokenResponse? {
@@ -114,7 +113,7 @@ class SessionManager @Inject constructor(
         }
 
         if (token != null) {
-            Log.d(TAG, "fetchAccessToken: migrating legacy DataStore access token to encrypted store")
+            AppLog.d(TAG, "fetchAccessToken: migrating legacy DataStore access token to encrypted store")
             activeSecretStore.put(ACCESS_TOKEN, legacyValue)
             sessionStore.edit { it.remove(dataStoreKey) }
             return token
@@ -128,7 +127,7 @@ class SessionManager @Inject constructor(
         // Clean legacy plaintext
         val dataStoreKey = stringPreferencesKey(REFRESH_TOKEN)
         sessionStore.edit { it.remove(dataStoreKey) }
-        Log.d(TAG, "saveRefreshToken: stored securely")
+        AppLog.d(TAG, "saveRefreshToken: stored securely")
     }
 
     suspend fun fetchRefreshToken(): String? {
@@ -143,7 +142,7 @@ class SessionManager @Inject constructor(
         val preferences = sessionStore.data.first()
         val legacyValue = preferences[dataStoreKey]
         if (!legacyValue.isNullOrEmpty()) {
-            Log.d(TAG, "fetchRefreshToken: migrating legacy DataStore refresh token to encrypted store")
+            AppLog.d(TAG, "fetchRefreshToken: migrating legacy DataStore refresh token to encrypted store")
             saveRefreshToken(legacyValue)
             return legacyValue
         }

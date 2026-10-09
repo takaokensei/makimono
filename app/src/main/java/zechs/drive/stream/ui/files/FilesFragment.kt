@@ -1,7 +1,7 @@
 package zechs.drive.stream.ui.files
 
 import android.os.Bundle
-import android.util.Log
+import zechs.drive.stream.utils.AppLog
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -125,7 +125,7 @@ class FilesFragment : BaseFragment() {
             }
         }
 
-        Log.d(TAG, "FilesFragment(name=${args.name}, query=${args.query})")
+        AppLog.d(TAG, "FilesFragment(name=${args.name}, query=${args.query})")
 
         val folderMatch = Regex("'([^']+)' in parents").find(args.query ?: "")
         if (folderMatch != null) {
@@ -276,7 +276,7 @@ class FilesFragment : BaseFragment() {
     }
 
     private fun handleFileOnLongPress(file: DriveFile) {
-        Log.d(TAG, "handleFileOnLongPress: $file")
+        AppLog.d(TAG, "handleFileOnLongPress: $file")
         val targetFile = if (file.isShortcut && file.shortcutDetails.targetId != null) {
             file.copy(id = file.shortcutDetails.targetId)
         } else file
@@ -285,7 +285,7 @@ class FilesFragment : BaseFragment() {
     }
 
     private fun handleFileOnClick(file: DriveFile) {
-        Log.d(TAG, file.toString())
+        AppLog.d(TAG, file.toString())
         if (file.isFolder && !file.isShortcut) {
             openFolder(file, file.id)
         } else if (file.isVideoFile) {

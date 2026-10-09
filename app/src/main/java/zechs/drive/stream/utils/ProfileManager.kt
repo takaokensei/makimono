@@ -192,7 +192,7 @@ class ProfileManager @Inject constructor(
     suspend fun setLibraryRoot(id: String?, name: String?) {
         awaitReady()
         val activeId = getActiveProfile().id
-        android.util.Log.d("ProfileManager", "setLibraryRoot: profileId=$activeId, rootId=$id, rootName=$name")
+        AppLog.d("ProfileManager", "setLibraryRoot: profileId=$activeId, rootId=$id, rootName=$name")
         mutate { list -> list.map {
             if (it.id == activeId) it.copy(libraryRootId = id?.takeIf(String::isNotBlank),
                 libraryRootName = name?.takeIf(String::isNotBlank)) else it

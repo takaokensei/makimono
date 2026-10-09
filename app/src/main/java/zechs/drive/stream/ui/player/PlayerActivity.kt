@@ -9,7 +9,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.graphics.Color
 import android.graphics.Typeface
 import android.util.TypedValue
@@ -530,7 +529,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
 
         btnRotate.setOnClickListener {
             orientation = getNextOrientation(orientation)
-            Log.d(TAG, "orientation=${orientation}")
+            AppLog.d(TAG, "orientation=${orientation}")
             setOrientation(this@PlayerActivity, orientation)
         }
 
@@ -765,7 +764,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             canSkipPrevious = prevEpisode != null
         )
         val currentIndex = playlist.indexOfFirst { it.fileId == currentFileId }
-        Log.d(TAG, "updateNextEpisode: currentIndex=$currentIndex, prevEpisode=${prevEpisode?.title}, nextEpisode=${nextEpisode?.title}")
+        AppLog.d(TAG, "updateNextEpisode: currentIndex=$currentIndex, prevEpisode=${prevEpisode?.title}, nextEpisode=${nextEpisode?.title}")
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -944,7 +943,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                 /* drawableId */ if (isPlaying) R.drawable.ic_pause_24
                 else R.drawable.ic_play_24
             )
-            Log.d(TAG, "isPlaying=${isPlaying}")
+            AppLog.d(TAG, "isPlaying=${isPlaying}")
 
             mediaSessionHelper?.updatePlaybackState(
                 isPlaying = isPlaying,
@@ -960,7 +959,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
 
         override fun onPlayerError(error: PlaybackException) {
             super.onPlayerError(error)
-            Log.e(TAG, "ExoPlayer onPlayerError: errorCodeName=${error.errorCodeName}, errorCode=${error.errorCode}", error)
+            AppLog.e(TAG, "ExoPlayer onPlayerError: errorCodeName=${error.errorCodeName}, errorCode=${error.errorCode}", error)
             showError(error)
         }
 
@@ -1120,7 +1119,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             try {
                 applySubtitleStyleToPlayer(appSettings.get().fetchSubtitleStyle())
             } catch (e: Exception) {
-                Log.w(TAG, "Failed loading subtitle style", e)
+                AppLog.w(TAG, "Failed loading subtitle style", e)
             }
         }
 
@@ -1609,7 +1608,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                     val matched = malRepository.get().matchAnime(searchTitle)
                     if (matched != null) {
                         currentMalAnime = matched
-                        Log.d(TAG, "MAL matched anime: '${matched.title}' (ID: ${matched.id}, total eps: ${matched.numEpisodes})")
+                        AppLog.d(TAG, "MAL matched anime: '${matched.title}' (ID: ${matched.id}, total eps: ${matched.numEpisodes})")
 
                         // Query AniSkip
                         val aniSkipChapters = aniSkipRepository.get().getSkipChapters(
@@ -1624,7 +1623,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                         }
                     }
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed to match anime on MAL / AniSkip", e)
+                    AppLog.w(TAG, "Failed to match anime on MAL / AniSkip", e)
                 }
             }
         }
@@ -1692,7 +1691,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                 val (_, savedSubDelay) = viewModel.getDelays(fileId)
                 if (savedSubDelay != 0L) {
                     currentSubtitleOffsetMs = savedSubDelay
-                    Log.d(TAG, "Restored saved subtitle offset: ${savedSubDelay}ms")
+                    AppLog.d(TAG, "Restored saved subtitle offset: ${savedSubDelay}ms")
                 }
             }
             val streamUri = getStreamUrl(fileId)
@@ -1733,7 +1732,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             if (prewarmed != null && prewarmed.chapters.isNotEmpty()) {
                 skipController.setChapters(prewarmed.chapters)
                 parsedChapters = skipController.getChapters()
-                Log.d(TAG, "Applied pre-warmed MKV chapters for '$fileId': ${parsedChapters.size} (0ms latency)")
+                AppLog.d(TAG, "Applied pre-warmed MKV chapters for '$fileId': ${parsedChapters.size} (0ms latency)")
                 if (::player.isInitialized) {
                     updateIntroButtonVisibility(player.currentPosition)
                 }
@@ -1750,19 +1749,19 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                         } ?: emptyList()
                         skipController.setChapters(chapters)
                         parsedChapters = skipController.getChapters()
-                        Log.d(TAG, "Extracted ${chapters.size} chapters from MKV")
+                        AppLog.d(TAG, "Extracted ${chapters.size} chapters from MKV")
                         if (::player.isInitialized) {
                             updateIntroButtonVisibility(player.currentPosition)
                         }
                     } catch (e: Exception) {
-                        Log.w(TAG, "Chapter extraction failed", e)
+                        AppLog.w(TAG, "Chapter extraction failed", e)
                     }
                 }
             }
 
             if (prewarmed != null && prewarmed.aniSkipChapters.isNotEmpty()) {
                 mergeAniSkipChapters(prewarmed.aniSkipChapters)
-                Log.d(TAG, "Applied pre-warmed AniSkip chapters for '$fileId': ${prewarmed.aniSkipChapters.size} (0ms latency)")
+                AppLog.d(TAG, "Applied pre-warmed AniSkip chapters for '$fileId': ${prewarmed.aniSkipChapters.size} (0ms latency)")
             }
 
             val passedStartMs = intent.getLongExtra("startPosition", -1L)
@@ -1954,7 +1953,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                             anchorView = progressViewGroup
                         }.show()
                     } else {
-                        Log.w(TAG, "MAL scrobble failed: ${res.message}")
+                        AppLog.w(TAG, "MAL scrobble failed: ${res.message}")
                     }
                 }
             }
@@ -2206,7 +2205,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         if (aniSkipChapters.isEmpty()) return
         skipController.mergeAniSkipChapters(aniSkipChapters)
         parsedChapters = skipController.getChapters()
-        Log.d(TAG, "Updated parsedChapters with AniSkip: ${parsedChapters.size} total")
+        AppLog.d(TAG, "Updated parsedChapters with AniSkip: ${parsedChapters.size} total")
         if (::player.isInitialized) {
             val markers = parsedChapters.map { ch ->
                 ChapterMarker(
@@ -2306,7 +2305,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         runOnUiThread {
             try {
                 player.seekTo(startPosition)
-                Log.d(TAG, "Seeking immediately to resume position: $startPosition ms")
+                AppLog.d(TAG, "Seeking immediately to resume position: $startPosition ms")
                 Snackbar.make(
                     playerView,
                     "Retomando de onde você parou",
@@ -2315,7 +2314,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                     anchorView = progressViewGroup
                 }.show()
             } catch (e: Exception) {
-                Log.w(TAG, "Error seeking to resume position", e)
+                AppLog.w(TAG, "Error seeking to resume position", e)
             }
         }
     }
@@ -2342,7 +2341,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             duration != C.TIME_UNSET && target > duration -> duration
             else -> target
         }
-        Log.d(TAG, "seekRelative(${deltaMs}ms) -> ${clamped}ms")
+        AppLog.d(TAG, "seekRelative(${deltaMs}ms) -> ${clamped}ms")
         player.seekTo(clamped)
     }
 
@@ -2357,7 +2356,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             duration != C.TIME_UNSET && positionMs > duration -> duration
             else -> positionMs
         }
-        Log.d(TAG, "seekTo(${positionMs}ms) -> ${clamped}ms")
+        AppLog.d(TAG, "seekTo(${positionMs}ms) -> ${clamped}ms")
         player.seekTo(clamped)
     }
 
@@ -2365,7 +2364,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         val uri = Uri.parse(
             "$DRIVE_API/files/${fileId}?supportsAllDrives=True&alt=media"
         )
-        Log.d(TAG, "STREAM_URL=$uri")
+        AppLog.d(TAG, "STREAM_URL=$uri")
         return uri
     }
 
@@ -2466,7 +2465,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                     loudnessEnhancer?.enabled = true
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "LoudnessEnhancer could not be attached: ${e.message}")
+                AppLog.w(TAG, "LoudnessEnhancer could not be attached: ${e.message}")
             }
             player.volume = 1.0f
             Snackbar.make(playerView, "Modo Noturno ativado: Vozes realçadas e picos balanceados", 2500).apply {
@@ -2476,7 +2475,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             try {
                 loudnessEnhancer?.enabled = false
             } catch (e: Exception) {
-                Log.w(TAG, "Error disabling LoudnessEnhancer: ${e.message}")
+                AppLog.w(TAG, "Error disabling LoudnessEnhancer: ${e.message}")
             }
             Snackbar.make(playerView, "Modo Noturno desativado: Áudio original", 2000).apply {
                 anchorView = progressViewGroup
@@ -2660,7 +2659,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                 val onlineResults = try {
                     onlineSubtitleManager.get().searchSubtitles(videoTitle, currentEpNumber.takeIf { it > 0 })
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error searching online subtitles", e)
+                    AppLog.e(TAG, "Error searching online subtitles", e)
                     emptyList()
                 }
 
@@ -2717,7 +2716,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                     try {
                         appSettings.get().saveSubtitleStyle(updated)
                     } catch (e: Exception) {
-                        Log.w(TAG, "Error saving subtitle style", e)
+                        AppLog.w(TAG, "Error saving subtitle style", e)
                     }
                 }
                 Snackbar.make(playerView, "Estilo de legenda salvo", 1200).apply {
@@ -2764,7 +2763,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                     try {
                         appSettings.get().saveSubtitleSize(chosenSp)
                     } catch (e: Exception) {
-                        Log.w(TAG, "Error saving subtitle size", e)
+                        AppLog.w(TAG, "Error saving subtitle size", e)
                     }
                 }
                 Snackbar.make(playerView, "Tamanho definido: ${selected.title}", 1000).apply {
@@ -2997,7 +2996,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                         label.contains("jap") || label.contains("jpn")
 
                 if (isJapanese) {
-                    Log.d(TAG, "Exo auto-selected Japanese audio: lang=$lang, label=$label, index=$i")
+                    AppLog.d(TAG, "Exo auto-selected Japanese audio: lang=$lang, label=$label, index=$i")
                     preferredAudioOverride = TrackSelectionOverride(group.mediaTrackGroup, listOf(i))
                     break@audioLoop
                 }
@@ -3051,7 +3050,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
 
         if (bestSubGroup != null && bestSubIndex >= 0) {
             val format = bestSubGroup.getTrackFormat(bestSubIndex)
-            Log.d(TAG, "Exo auto-selected Portuguese subtitle: lang=${format.language}, label=${format.label}, index=$bestSubIndex")
+            AppLog.d(TAG, "Exo auto-selected Portuguese subtitle: lang=${format.language}, label=${format.label}, index=$bestSubIndex")
             preferredTextOverride = TrackSelectionOverride(bestSubGroup.mediaTrackGroup, listOf(bestSubIndex))
         }
 
@@ -3120,7 +3119,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                     return@launch
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error launching MPV fallback", e)
+                AppLog.e(TAG, "Error launching MPV fallback", e)
                 if (!isFinishing) {
                     Snackbar.make(
                         playerView,
@@ -3135,7 +3134,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     }
 
     private fun showError(error: PlaybackException) {
-        Log.e(TAG, "ExoPlayer onPlayerError: errorCodeName=${error.errorCodeName}, errorCode=${error.errorCode}", error)
+        AppLog.e(TAG, "ExoPlayer onPlayerError: errorCodeName=${error.errorCodeName}, errorCode=${error.errorCode}", error)
 
         val errorGeneral = error.localizedMessage ?: getString(R.string.something_went_wrong)
         val exoException = error as? ExoPlaybackException
@@ -3159,19 +3158,19 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                         errorDetailed?.contains("401") == true)
 
         if (isHttp401 && ::player.isInitialized) {
-            Log.w(TAG, "HTTP 401 mid-stream error encountered. Invalidating token and attempting transparent resume...")
+            AppLog.w(TAG, "HTTP 401 mid-stream error encountered. Invalidating token and attempting transparent resume...")
             val resumePos = player.currentPosition
             lifecycleScope.launch {
                 try {
                     tokenProvider.get().invalidateToken()
                     val newToken = tokenProvider.get().validToken()
                     if (!newToken.isNullOrEmpty()) {
-                        Log.i(TAG, "Token successfully refreshed after 401 mid-stream. Resuming playback at ${resumePos}ms")
+                        AppLog.i(TAG, "Token successfully refreshed after 401 mid-stream. Resuming playback at ${resumePos}ms")
                         playMedia(startAtPositionMs = resumePos)
                         return@launch
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to recover from 401 mid-stream", e)
+                    AppLog.e(TAG, "Failed to recover from 401 mid-stream", e)
                 }
                 errorSnackbar(errorGeneral, errorDetailed, canOpenMpv = true)
             }
@@ -3188,7 +3187,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         )
 
         if (isSubtitleError && ::player.isInitialized) {
-            Log.w(TAG, "Subtitle rendering failed ($mimeType: ${rendererException?.message}). Disabling subtitle and resuming playback.")
+            AppLog.w(TAG, "Subtitle rendering failed ($mimeType: ${rendererException?.message}). Disabling subtitle and resuming playback.")
             val resumePosition = player.currentPosition
             player.trackSelectionParameters = player.trackSelectionParameters
                 .buildUpon()
@@ -3232,7 +3231,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
 
         if (isVideoError || isCodecError) {
             val reason = if (isVideoError) "vídeo" else if (isAudioError) "áudio" else "decodificação"
-            Log.w(TAG, "Hardware decoder failed for $reason ($errorDetailed). Switching to MPV...")
+            AppLog.w(TAG, "Hardware decoder failed for $reason ($errorDetailed). Switching to MPV...")
             Toast.makeText(
                 this,
                 "Incompatibilidade no decodificador de $reason do dispositivo. Alternando para o MPV...",
@@ -3281,7 +3280,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") ?: "" }
             val title = currentTitle.ifBlank { intent.getStringExtra("title") ?: "" }
             if (fileId.isBlank()) {
-                Log.w(TAG, "saveProgress: no fileId available (neither state nor intent), skipping save")
+                AppLog.w(TAG, "saveProgress: no fileId available (neither state nor intent), skipping save")
                 return
             }
             val thumbnailLink = currentThumbnailLink ?: intent.getStringExtra("thumbnailLink")

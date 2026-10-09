@@ -5,7 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
+import zechs.drive.stream.utils.AppLog
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -319,7 +319,7 @@ class SeriesDetailFragment : BaseFragment() {
                 )
                 binding.viewDynamicColorTint.background = gradient
             } catch (e: Exception) {
-                Log.w("SeriesDetail", "Could not parse dominant color: $dominantHex")
+                AppLog.w("SeriesDetail", "Could not parse dominant color: $dominantHex")
             }
         }
 
@@ -463,7 +463,7 @@ class SeriesDetailFragment : BaseFragment() {
                         val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(trailerUrl))
                         startActivity(intent)
                     } catch (e: Exception) {
-                        Log.w("SeriesDetail", "Could not open trailer url: $trailerUrl", e)
+                        AppLog.w("SeriesDetail", "Could not open trailer url: $trailerUrl", e)
                         Toast.makeText(requireContext(), getString(R.string.trailer_not_opened), Toast.LENGTH_SHORT).show()
                     }
                 } else {

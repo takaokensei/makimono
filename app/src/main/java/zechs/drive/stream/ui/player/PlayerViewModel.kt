@@ -1,6 +1,6 @@
 package zechs.drive.stream.ui.player
 
-import android.util.Log
+import zechs.drive.stream.utils.AppLog
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
@@ -113,10 +113,10 @@ class PlayerViewModel @Inject constructor(
     fun getWatch(videoId: String) = viewModelScope.launch(Dispatchers.IO) {
         val resumePos = progressRecorder.getResumePosition(videoId)
         if (resumePos > 0L) {
-            Log.d(TAG, "Starting at $resumePos")
+            AppLog.d(TAG, "Starting at $resumePos")
             _startDuration.send(resumePos)
         } else {
-            Log.d(TAG, "Video not found or already finished in database")
+            AppLog.d(TAG, "Video not found or already finished in database")
         }
     }
 

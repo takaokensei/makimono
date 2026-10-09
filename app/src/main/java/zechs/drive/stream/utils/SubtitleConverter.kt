@@ -1,7 +1,6 @@
 package zechs.drive.stream.utils
 
 import android.net.Uri
-import android.util.Log
 import androidx.media3.common.MimeTypes
 import zechs.drive.stream.data.model.SubtitleItem
 import java.io.File
@@ -43,10 +42,10 @@ object SubtitleConverter {
 
             val success = convertAssToSrt(sourceFile, srtFile, bridgeGapMs, delayMs)
             if (success && srtFile.exists() && srtFile.length() > 0) {
-                Log.d(TAG, "Successfully converted ${sub.name} to SRT for ExoPlayer: ${srtFile.absolutePath}")
+                AppLog.d(TAG, "Successfully converted ${sub.name} to SRT for ExoPlayer: ${srtFile.absolutePath}")
                 return Pair(Uri.fromFile(srtFile), MimeTypes.APPLICATION_SUBRIP)
             }
-            Log.w(TAG, "Failed converting ASS to SRT, falling back to original file with TEXT_SSA")
+            AppLog.w(TAG, "Failed converting ASS to SRT, falling back to original file with TEXT_SSA")
             return Pair(Uri.fromFile(sourceFile), MimeTypes.TEXT_SSA)
         }
 
@@ -60,7 +59,7 @@ object SubtitleConverter {
             
             val success = shiftSrtTimestamps(sourceFile, delayedFile, delayMs)
             if (success && delayedFile.exists() && delayedFile.length() > 0) {
-                Log.d(TAG, "Successfully applied ${delayMs}ms delay to ${sub.name}")
+                AppLog.d(TAG, "Successfully applied ${delayMs}ms delay to ${sub.name}")
                 return Pair(Uri.fromFile(delayedFile), MimeTypes.APPLICATION_SUBRIP)
             }
         }
@@ -148,7 +147,7 @@ object SubtitleConverter {
             outputFile.writeText(srtBuilder.toString(), Charsets.UTF_8)
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Error parsing ASS file: ${assFile.name}", e)
+            AppLog.e(TAG, "Error parsing ASS file: ${assFile.name}", e)
             false
         }
     }
@@ -310,7 +309,7 @@ object SubtitleConverter {
             outputFile.writeText(result.toString(), Charsets.UTF_8)
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed shifting SRT timestamps", e)
+            AppLog.e(TAG, "Failed shifting SRT timestamps", e)
             false
         }
     }

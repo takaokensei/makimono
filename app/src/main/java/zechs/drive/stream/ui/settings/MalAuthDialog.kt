@@ -10,7 +10,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.util.Base64
-import android.util.Log
+import zechs.drive.stream.utils.AppLog
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
@@ -252,7 +252,7 @@ class MalAuthDialog(
             val code = uri.getQueryParameter("code")
             if (!code.isNullOrBlank() && !isAuthCompleted) {
                 isAuthCompleted = true
-                Log.d(TAG, "Authorization code intercepted from WebView!")
+                AppLog.d(TAG, "Authorization code intercepted from WebView!")
                 handleCode(code)
                 return true
             }
@@ -272,7 +272,7 @@ class MalAuthDialog(
         serverJob = CoroutineScope(Dispatchers.IO).launch {
             try {
                 serverSocket = ServerSocket(Constants.MAL_REDIRECT_PORT)
-                Log.i(TAG, "MAL TV Server listening on port ${Constants.MAL_REDIRECT_PORT}")
+                AppLog.i(TAG, "MAL TV Server listening on port ${Constants.MAL_REDIRECT_PORT}")
 
                 while (isActive && !isAuthCompleted) {
                     val clientSocket = serverSocket?.accept() ?: break
@@ -281,7 +281,7 @@ class MalAuthDialog(
                     }
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "MAL server stopped or port busy: ${e.message}")
+                AppLog.w(TAG, "MAL server stopped or port busy: ${e.message}")
             }
         }
     }
@@ -391,7 +391,7 @@ class MalAuthDialog(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error handling client request", e)
+            AppLog.e(TAG, "Error handling client request", e)
         }
     }
 

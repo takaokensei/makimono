@@ -2,7 +2,7 @@ package zechs.drive.stream.ui.settings.delegates
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
+import zechs.drive.stream.utils.AppLog
 import androidx.activity.result.ActivityResultLauncher
 import androidx.core.view.isInvisible
 import androidx.lifecycle.Lifecycle
@@ -89,7 +89,7 @@ class DataSessionSettingsDelegate(
                                 showSnackBar("Cache limpo com sucesso! Espaço liberado.")
                             }
                         } catch (e: Exception) {
-                            Log.e(TAG, "Error clearing cache", e)
+                            AppLog.e(TAG, "Error clearing cache", e)
                             withContext(Dispatchers.Main) {
                                 showSnackBar("Erro ao limpar cache: ${e.message}")
                             }
@@ -123,7 +123,7 @@ class DataSessionSettingsDelegate(
             addDir(context.externalCacheDir)
             addDir(File(context.filesDir, "subtitles"))
         } catch (e: Exception) {
-            Log.w(TAG, "Error calculating cache size", e)
+            AppLog.w(TAG, "Error calculating cache size", e)
         }
         return total
     }
@@ -193,7 +193,7 @@ class DataSessionSettingsDelegate(
                 }
                 showSnackBar("Backup exportado com sucesso!")
             } catch (e: Exception) {
-                Log.e(TAG, "Error exporting backup", e)
+                AppLog.e(TAG, "Error exporting backup", e)
                 showSnackBar("Erro ao exportar backup: ${e.message}")
             }
         }
@@ -243,7 +243,7 @@ class DataSessionSettingsDelegate(
                     showSnackBar(errorMsg)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error importing backup", e)
+                AppLog.e(TAG, "Error importing backup", e)
                 showSnackBar("Falha na restauração: ${e.message}")
             }
         }
