@@ -1,0 +1,6 @@
+# Series details runtime audit — 2026-10-07
+
+- Package: `zechs.drive.stream.visualreview`, Android 15, Moto G34. All media and metadata were fixture data; no Drive session or mutation was used.
+- Temporarily configured the QA device to 1920×1080 px at 320 dpi (960×540 dp), captured the real production detail layout with fixture data, then reset both `wm size` and `wm density` to physical defaults. The first viewport includes the episode heading and visible episode artwork/selection row; screenshot/XML: `details-960x540dp.*`.
+- At physical 1600×720 px / 280 dpi, the episodes are below the initial fold. D-pad DOWN from the primary action reached the season tab and then the first episode card, which scrolled into view with a visible focus ring. RIGHT moved to the next card; LEFT returned; UP returned to season tabs and then the primary action. Evidence: `details-episode-focus-handset.*`, `details-episode-right.xml`, `details-up-to-season.xml`, `details-up-to-primary.xml`.
+- No UI code change was warranted by this retest. It verifies a synthetic route and does not prove remote metadata, episode ordering from a real Drive folder, touch playback, TV remote hardware, or large-font behavior.
