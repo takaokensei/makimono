@@ -5,7 +5,7 @@
     android:id="@+id/scrollView"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/layout_literal_0b0e14"
+    android:background="@color/obsidian_bg_base"
     android:clipChildren="true"
     android:clipToPadding="true"
     android:fillViewport="true">
@@ -40,7 +40,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- 2. Bottom Scrim Gradient (Transparent -> @color/layout_literal_0b0e14) -->
+        <!-- 2. Bottom Scrim Gradient (Transparent -> @color/obsidian_bg_base) -->
         <View
             android:id="@+id/viewHeroScrim"
             android:layout_width="0dp"
@@ -50,7 +50,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
 
-        <!-- 3. Left Vignette Gradient (@color/layout_literal_f20b0e14 -> Transparent) -->
+        <!-- 3. Left Vignette Gradient (@color/obsidian_bg_surface -> Transparent) -->
         <View
             android:id="@+id/viewHeroVignette"
             android:layout_width="0dp"
@@ -68,7 +68,7 @@
             android:id="@+id/viewSeriesBodySurface"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:background="@color/layout_literal_0b0e14"
+            android:background="@color/obsidian_bg_base"
             android:clickable="false"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -106,7 +106,7 @@
                     android:layout_gravity="center"
                     android:contentDescription="@string/back"
                     android:src="@drawable/ic_back_24"
-                    app:tint="@color/layout_literal_f8fafc" />
+                    app:tint="@color/obsidian_text_primary" />
             </FrameLayout>
 
             <View
@@ -127,7 +127,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/series_breadcrumb_library"
                     android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
-                    android:textColor="@color/layout_literal_94a3b8" />
+                    android:textColor="@color/obsidian_text_secondary" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -136,7 +136,7 @@
                     android:layout_marginEnd="8dp"
                     android:text="›"
                     android:textAppearance="@style/TextAppearance.Makimono.TV.Body"
-                    android:textColor="@color/layout_literal_64748b" />
+                    android:textColor="@color/obsidian_text_tertiary" />
 
                 <TextView
                     android:id="@+id/tvBreadcrumbCurrent"
@@ -144,7 +144,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/series_breadcrumb_titles"
                     android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
-                    android:textColor="@color/layout_literal_cbd5e1" />
+                    android:textColor="@color/obsidian_text_secondary" />
             </LinearLayout>
 
             <View
@@ -167,7 +167,7 @@
                     android:layout_gravity="center"
                     android:contentDescription="@string/search"
                     android:src="@drawable/ic_search_24"
-                    app:tint="@color/layout_literal_f8fafc" />
+                    app:tint="@color/obsidian_text_primary" />
             </FrameLayout>
 
         </LinearLayout>
@@ -193,10 +193,10 @@
                 android:layout_height="285dp"
                 android:clickable="false"
                 android:focusable="false"
-                app:cardBackgroundColor="@color/layout_literal_1e293b"
+                app:cardBackgroundColor="@color/obsidian_bg_surface"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="10dp"
-                app:strokeColor="@color/layout_literal_3338bdf8"
+                app:strokeColor="@color/obsidian_focus_fill"
                 app:strokeWidth="1.5dp">
 
                 <ImageView
@@ -223,12 +223,12 @@
                 android:layout_height="wrap_content"
                 android:includeFontPadding="false"
                 android:letterSpacing="0.04"
-                android:shadowColor="@color/layout_literal_80000000"
+                android:shadowColor="@color/obsidian_scrim"
                 android:shadowDx="0"
                 android:shadowDy="2"
                 android:shadowRadius="6"
                 android:textAppearance="@style/TextAppearance.Makimono.TV.Title2"
-                android:textColor="@color/layout_literal_99ffffff"
+                android:textColor="@color/surface_specular"
                 android:visibility="gone"
                 tools:text="グリザイアの楽園"
                 tools:visibility="visible" />
@@ -240,12 +240,12 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:includeFontPadding="false"
-                android:shadowColor="@color/layout_literal_cc000000"
+                android:shadowColor="@color/obsidian_media_scrim"
                 android:shadowDx="0"
                 android:shadowDy="3"
                 android:shadowRadius="10"
                 android:textAppearance="@style/TextAppearance.Makimono.TV.Display"
-                android:textColor="@color/layout_literal_ffffff"
+                android:textColor="@color/obsidian_text_primary"
                 tools:text="Grisaia no Rakuen" />
 
             <!-- Subtitle / English Title -->
@@ -259,7 +259,7 @@
                 android:letterSpacing="0.08"
                 android:textAllCaps="true"
                 android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                android:textColor="@color/layout_literal_38bdf8"
+                android:textColor="@color/obsidian_accent_primary"
                 tools:text="THE EDEN OF GRISAIA" />
 
             <!-- Meta Row 1: Age Rating | Year | Status | MAL Rating -->
@@ -281,7 +281,7 @@
                     android:paddingTop="2dp"
                     android:paddingEnd="7dp"
                     android:paddingBottom="2dp"
-                    android:textColor="@color/layout_literal_ffffff"
+                    android:textColor="@color/obsidian_text_primary"
                     android:textStyle="bold"
                     tools:text="16+" />
 
@@ -296,7 +296,7 @@
                     android:paddingTop="2dp"
                     android:paddingEnd="8dp"
                     android:paddingBottom="2dp"
-                    android:textColor="@color/layout_literal_cbd5e1"
+                    android:textColor="@color/obsidian_text_secondary"
                     tools:text="2015" />
 
                 <TextView
@@ -311,7 +311,7 @@
                     android:paddingTop="2dp"
                     android:paddingEnd="8dp"
                     android:paddingBottom="2dp"
-                    android:textColor="@color/layout_literal_cbd5e1"
+                    android:textColor="@color/obsidian_text_secondary"
                     tools:text="Completo" />
 
                 <!-- Rating pill -->
@@ -329,7 +329,7 @@
                         android:layout_height="14dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_star_filled_24"
-                        app:tint="@color/layout_literal_fbbf24" />
+                        app:tint="@color/obsidian_warning" />
 
                     <TextView
                         android:id="@+id/tvMalScore"
@@ -338,7 +338,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="5dp"
                         android:fontFamily="sans-serif-bold"
-                        android:textColor="@color/layout_literal_ffffff"
+                        android:textColor="@color/obsidian_text_primary"
                         tools:text="8.2" />
 
                     <TextView
@@ -347,7 +347,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="4dp"
-                        android:textColor="@color/layout_literal_94a3b8"
+                        android:textColor="@color/obsidian_text_secondary"
                         android:text="@string/series_source_mal" />
                 </LinearLayout>
 
@@ -379,7 +379,7 @@
                         android:layout_height="14dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_player_24"
-                        app:tint="@color/layout_literal_94a3b8" />
+                        app:tint="@color/obsidian_text_secondary" />
 
                     <TextView
                         android:id="@+id/tvQualityBadge"
@@ -388,7 +388,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="5dp"
                         android:text=""
-                        android:textColor="@color/layout_literal_e2e8f0" />
+                        android:textColor="@color/obsidian_text_primary" />
                 </LinearLayout>
 
                 <!-- Dual Áudio -->
@@ -409,7 +409,7 @@
                         android:layout_height="14dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_audio_24"
-                        app:tint="@color/layout_literal_94a3b8" />
+                        app:tint="@color/obsidian_text_secondary" />
 
                     <TextView
                         android:id="@+id/tvAudioTrackBadge"
@@ -418,7 +418,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="5dp"
                         android:text=""
-                        android:textColor="@color/layout_literal_e2e8f0" />
+                        android:textColor="@color/obsidian_text_primary" />
                 </LinearLayout>
 
                 <!-- Multi Subs -->
@@ -439,7 +439,7 @@
                         android:layout_height="14dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_subtitles_24"
-                        app:tint="@color/layout_literal_94a3b8" />
+                        app:tint="@color/obsidian_text_secondary" />
 
                     <TextView
                         android:id="@+id/tvSubtitleBadge"
@@ -448,7 +448,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="5dp"
                         android:text=""
-                        android:textColor="@color/layout_literal_e2e8f0" />
+                        android:textColor="@color/obsidian_text_primary" />
                 </LinearLayout>
 
             </LinearLayout>
@@ -459,7 +459,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:textColor="@color/layout_literal_94a3b8"
+                android:textColor="@color/obsidian_text_secondary"
                 android:visibility="gone"
                 tools:text="Ação • Aventura • Ficção Científica"
                 tools:visibility="visible" />
@@ -475,7 +475,7 @@
                 android:fontFamily="sans-serif"
                 android:lineSpacingExtra="3dp"
                 android:maxLines="3"
-                android:textColor="@color/layout_literal_94a3b8"
+                android:textColor="@color/obsidian_text_secondary"
                 tools:text="Após ser atacada por um vampiro e sobreviver, Koyomi Araragi se vê envolvido com diversas garotas ligadas a excentricidades sobrenaturais..." />
 
             <TextView
@@ -492,7 +492,7 @@
                 android:paddingStart="12dp"
                 android:paddingEnd="12dp"
                 android:text="@string/series_synopsis_expand"
-                android:textColor="@color/layout_literal_38bdf8"
+                android:textColor="@color/obsidian_accent_primary"
                 android:textStyle="bold"
                 android:visibility="gone" />
 
@@ -584,7 +584,7 @@
                         android:layout_height="18dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_trailer_24"
-                        app:tint="@color/layout_literal_e2e8f0" />
+                        app:tint="@color/obsidian_text_primary" />
 
                     <TextView
                         style="@style/TextAppearance.Makimono.TV.Callout"
@@ -593,7 +593,7 @@
                         android:layout_marginStart="8dp"
                         android:fontFamily="sans-serif-medium"
                         android:text="@string/series_action_trailer"
-                        android:textColor="@color/layout_literal_f8fafc" />
+                        android:textColor="@color/obsidian_text_primary" />
                 </LinearLayout>
 
                 <!-- Favoritar -->
@@ -617,7 +617,7 @@
                         android:layout_height="18dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_star_outline_24"
-                        app:tint="@color/layout_literal_e2e8f0" />
+                        app:tint="@color/obsidian_text_primary" />
 
                     <TextView
                         android:id="@+id/tvFavoriteText"
@@ -627,7 +627,7 @@
                         android:layout_marginStart="8dp"
                         android:fontFamily="sans-serif-medium"
                         android:text="@string/series_action_favorite"
-                        android:textColor="@color/layout_literal_f8fafc" />
+                        android:textColor="@color/obsidian_text_primary" />
                 </LinearLayout>
 
                 <ImageButton
@@ -639,7 +639,7 @@
                     android:contentDescription="@string/series_more_actions"
                     android:padding="13dp"
                     android:src="@drawable/ic_more_vert_24"
-                    android:tint="@color/layout_literal_e2e8f0"
+                    android:tint="@color/obsidian_text_primary"
                     android:clickable="true"
                     android:focusable="true"
                     android:focusableInTouchMode="true" />
@@ -666,7 +666,7 @@
                         android:layout_height="18dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_notification_24"
-                        app:tint="@color/layout_literal_e2e8f0" />
+                        app:tint="@color/obsidian_text_primary" />
 
                     <TextView
                         android:id="@+id/tvFollowText"
@@ -676,7 +676,7 @@
                         android:layout_marginStart="8dp"
                         android:fontFamily="sans-serif-medium"
                         android:text="@string/series_action_follow"
-                        android:textColor="@color/layout_literal_f8fafc" />
+                        android:textColor="@color/obsidian_text_primary" />
                 </LinearLayout>
 
                 <!-- Marcar como Assistido -->
@@ -710,7 +710,7 @@
                         android:layout_marginStart="8dp"
                         android:fontFamily="sans-serif-medium"
                         android:text="@string/series_action_mark_watched"
-                        android:textColor="@color/layout_literal_f8fafc" />
+                        android:textColor="@color/obsidian_text_primary" />
                 </LinearLayout>
 
             </LinearLayout>
@@ -745,7 +745,7 @@
             android:layout_marginStart="40dp"
             android:layout_marginTop="8dp"
             android:text="@string/series_partial_listing_notice"
-            android:textColor="@color/layout_literal_94a3b8"
+            android:textColor="@color/obsidian_text_secondary"
             android:visibility="gone"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/rvSeasonTabs" />
@@ -774,7 +774,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:indeterminate="true"
-            android:indeterminateTint="@color/layout_literal_22d3ee"
+            android:indeterminateTint="@color/obsidian_accent_primary"
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -810,7 +810,7 @@
             android:layout_marginTop="24dp"
             android:fontFamily="sans-serif-medium"
             android:text="@string/series_empty_category"
-            android:textColor="@color/layout_literal_94a3b8"
+            android:textColor="@color/obsidian_text_secondary"
             android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"

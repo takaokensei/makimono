@@ -42,7 +42,7 @@ internal class FeaturedHeroBinder(
                         text = genreName
                         setTextAppearance(R.style.TextAppearance_Makimono_TV_Caption)
                         setBackgroundResource(R.drawable.glass_meta_pill_bg)
-                        setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.layout_literal_cbd5e1))
+                        setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.obsidian_text_secondary))
                         val padH = (8 * density).toInt()
                         val padV = (2 * density).toInt()
                         setPadding(padH, padV, padH, padV)

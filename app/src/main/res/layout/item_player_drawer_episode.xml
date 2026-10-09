@@ -56,7 +56,7 @@
                 android:ellipsize="end"
                 android:fontFamily="@font/inter"
                 android:maxLines="1"
-                android:textColor="@color/layout_literal_ffffff"
+                android:textColor="@color/obsidian_text_primary"
                 style="@style/TextAppearance.Makimono.TV.Callout"
                 android:textStyle="bold"
                 tools:text="Episódio 1089" />
@@ -69,7 +69,7 @@
                 android:ellipsize="end"
                 android:fontFamily="@font/inter"
                 android:maxLines="1"
-                android:textColor="@color/layout_literal_94a3b8"
+                android:textColor="@color/obsidian_text_secondary"
                 style="@style/TextAppearance.Makimono.TV.Caption"
                 tools:text="One Piece 1089 1080p.mkv" />
 

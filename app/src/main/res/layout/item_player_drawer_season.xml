@@ -42,7 +42,7 @@
                 android:ellipsize="end"
                 android:fontFamily="@font/inter"
                 android:maxLines="1"
-                android:textColor="@color/layout_literal_ffffff"
+                android:textColor="@color/obsidian_text_primary"
                 style="@style/TextAppearance.Makimono.TV.Subheadline"
                 android:textStyle="bold"
                 tools:text="Egghead Arc" />
@@ -53,7 +53,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:fontFamily="@font/inter"
-                android:textColor="@color/layout_literal_94a3b8"
+                android:textColor="@color/obsidian_text_secondary"
                 style="@style/TextAppearance.Makimono.TV.Body"
                 tools:text="Ep. 1086 - 1122 • 37 eps" />
 
@@ -66,7 +66,7 @@
             android:layout_marginStart="12dp"
             android:contentDescription="@null"
             android:src="@drawable/ic_arrow_forward_24"
-            app:tint="@color/layout_literal_64748b" />
+            app:tint="@color/obsidian_text_tertiary" />
 
     </LinearLayout>
 

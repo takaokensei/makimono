@@ -38,7 +38,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:fontFamily="@font/inter"
-            android:textColor="@color/layout_literal_f1f5f9"
+            android:textColor="@color/obsidian_text_primary"
             style="@style/TextAppearance.Makimono.TV.Subheadline"
             tools:text="Português (Brasil)" />
 
@@ -48,7 +48,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:fontFamily="@font/inter"
-            android:textColor="@color/layout_literal_94a3b8"
+            android:textColor="@color/obsidian_text_secondary"
             style="@style/TextAppearance.Makimono.TV.Caption"
             android:visibility="gone"
             tools:text="Online • OpenSubtitles"

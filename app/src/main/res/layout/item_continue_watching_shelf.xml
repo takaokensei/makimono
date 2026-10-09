@@ -60,7 +60,7 @@
                 android:contentDescription="@null"
                 android:padding="7dp"
                 android:src="@drawable/ic_play_24"
-                app:tint="@color/layout_literal_22d3ee" />
+                app:tint="@color/obsidian_accent_primary" />
 
             <View
                 android:layout_width="0dp"
@@ -77,7 +77,7 @@
                 android:paddingTop="2dp"
                 android:paddingEnd="6dp"
                 android:paddingBottom="2dp"
-                android:textColor="@color/layout_literal_e2e8f0"
+                android:textColor="@color/obsidian_text_primary"
                 style="@style/TextAppearance.Makimono.TV.Body"
                 android:textStyle="bold"
                 tools:text="T2: Ep. 03" />
@@ -102,7 +102,7 @@
                 android:ellipsize="end"
                 android:fontFamily="@font/inter"
                 android:maxLines="1"
-                android:textColor="@color/layout_literal_ffffff"
+                android:textColor="@color/obsidian_text_primary"
                 style="@style/TextAppearance.Makimono.TV.Subheadline"
                 android:textStyle="bold"
                 tools:text="Attack on Titan - Ep. 04" />
@@ -120,7 +120,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/inter"
-                    android:textColor="@color/layout_literal_cbd5e1"
+                    android:textColor="@color/obsidian_text_secondary"
                     style="@style/TextAppearance.Makimono.TV.Body"
                     tools:text="Ep. 04" />
 
@@ -130,7 +130,7 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/inter"
                     android:text=" • "
-                    android:textColor="@color/layout_literal_64748b"
+                    android:textColor="@color/obsidian_text_tertiary"
                     style="@style/TextAppearance.Makimono.TV.Body" />
 
                 <TextView
@@ -157,7 +157,7 @@
             android:max="100"
             android:progress="60"
             android:progressTint="?attr/colorAccentPrimary"
-            android:progressBackgroundTint="@color/layout_literal_33ffffff"
+            android:progressBackgroundTint="@color/obsidian_border_glass"
             tools:progress="40" />
 
     </FrameLayout>

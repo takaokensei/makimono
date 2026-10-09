@@ -131,7 +131,7 @@ class ProfileEditorDialog(
                 }
                 if (art.isWallpaper) {
                     cardBinding.cardArtRoot.setCardBackgroundColor(
-                        ContextCompat.getColor(context, R.color.layout_literal_1f2335)
+                        ContextCompat.getColor(context, R.color.obsidian_bg_surface)
                     )
                     cardBinding.cardArtRoot.strokeWidth = (1 * density).toInt()
                 } else {

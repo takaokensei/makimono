@@ -9,7 +9,7 @@
     android:elevation="24dp"
     android:focusable="false"
     android:translationZ="24dp"
-    app:cardBackgroundColor="@color/layout_literal_f20e131e"
+    app:cardBackgroundColor="@color/obsidian_bg_surface"
     app:cardCornerRadius="16dp"
     app:cardElevation="20dp"
     app:strokeColor="?attr/colorBorderGlass"
@@ -34,7 +34,7 @@
                 app:cardBackgroundColor="@android:color/transparent"
                 app:cardCornerRadius="10dp"
                 app:cardElevation="0dp"
-                app:strokeColor="@color/layout_literal_2fffffff"
+                app:strokeColor="@color/obsidian_border_glass"
                 app:strokeWidth="0.8dp">
 
                 <FrameLayout
@@ -53,7 +53,7 @@
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:background="@color/layout_literal_33000000" />
+                        android:background="@color/obsidian_scrim" />
 
                     <!-- Play Glyph Badge -->
                     <ImageView
@@ -64,7 +64,7 @@
                         android:contentDescription="@null"
                         android:padding="6dp"
                         android:src="@drawable/ic_play_24"
-                        app:tint="@color/layout_literal_ffffffff" />
+                        app:tint="@color/obsidian_text_primary" />
                 </FrameLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -110,7 +110,7 @@
                         android:nextFocusDown="@+id/btnPlayNextEpisodeNow"
                         android:padding="8dp"
                         android:src="@drawable/ic_close_24"
-                        app:tint="@color/layout_literal_ffffffff" />
+                        app:tint="@color/obsidian_text_primary" />
                 </LinearLayout>
 
                 <!-- Clean Episode Title -->
@@ -123,7 +123,7 @@
                     android:ellipsize="end"
                     android:fontFamily="@font/inter"
                     android:maxLines="2"
-                    android:textColor="@color/layout_literal_ffffffff"
+                    android:textColor="@color/obsidian_text_primary"
                     style="@style/TextAppearance.Makimono.TV.Caption"
                     android:textStyle="bold"
                     tools:text="Tensei Shitara Slime Datta Ken • Ep. 04" />
@@ -145,7 +145,7 @@
                     android:paddingEnd="16dp"
                     android:paddingBottom="0dp"
                     android:text="Assistir Agora"
-                    android:textColor="@color/layout_literal_ffffffff"
+                    android:textColor="@color/obsidian_text_primary"
                     style="@style/TextAppearance.Makimono.TV.Caption"
                     android:textStyle="bold"
                     app:backgroundTint="@null"
@@ -153,7 +153,7 @@
                     app:iconGravity="textStart"
                     app:iconPadding="6dp"
                     app:iconSize="14dp"
-                    app:iconTint="@color/layout_literal_ffffffff" />
+                    app:iconTint="@color/obsidian_text_primary" />
 
             </LinearLayout>
         </LinearLayout>
@@ -164,7 +164,7 @@
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
             android:layout_height="3.5dp"
-            android:background="@color/layout_literal_20ffffff"
+            android:background="@color/obsidian_border_glass"
             android:max="100"
             android:progress="100"
             android:progressTint="?attr/colorAccentPrimary" />

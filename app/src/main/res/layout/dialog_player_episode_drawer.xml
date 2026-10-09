@@ -5,10 +5,10 @@
     android:layout_width="380dp"
     android:layout_height="match_parent"
     android:layout_gravity="end"
-    app:cardBackgroundColor="@color/layout_literal_e60a0f1d"
+    app:cardBackgroundColor="@color/obsidian_bg_surface"
     app:cardCornerRadius="0dp"
     app:cardElevation="24dp"
-    app:strokeColor="@color/layout_literal_26ffffff"
+    app:strokeColor="@color/obsidian_border_glass"
     app:strokeWidth="1dp">
 
     <LinearLayout
@@ -37,7 +37,7 @@
                 android:padding="8dp"
                 android:src="@drawable/ic_back_24"
                 android:visibility="gone"
-                app:tint="@color/layout_literal_f1f5f9"
+                app:tint="@color/obsidian_text_primary"
                 tools:visibility="visible" />
 
             <LinearLayout
@@ -53,7 +53,7 @@
                     android:ellipsize="end"
                     android:fontFamily="@font/inter"
                     android:maxLines="1"
-                    android:textColor="@color/layout_literal_ffffff"
+                    android:textColor="@color/obsidian_text_primary"
                     style="@style/TextAppearance.Makimono.TV.Headline"
                     android:textStyle="bold"
                     tools:text="One Piece" />
@@ -83,14 +83,14 @@
                 android:focusable="true"
                 android:padding="8dp"
                 android:src="@drawable/ic_close_24"
-                app:tint="@color/layout_literal_94a3b8" />
+                app:tint="@color/obsidian_text_secondary" />
 
         </LinearLayout>
 
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:background="@color/layout_literal_1affffff" />
+            android:background="@color/obsidian_border_glass" />
 
         <!-- Seasons / Arcs List -->
         <androidx.recyclerview.widget.RecyclerView

@@ -488,7 +488,7 @@
                 android:letterSpacing="0.16"
                 android:text="INTEGRAÇÕES"
                 android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                android:textColor="@color/layout_literal_8fa3ba"
+                android:textColor="@color/obsidian_text_secondary"
                 android:textStyle="bold" />
 
             <LinearLayout
@@ -612,7 +612,7 @@
                 android:letterSpacing="0.16"
                 android:text="REPRODUÇÃO E GESTOS"
                 android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                android:textColor="@color/layout_literal_8fa3ba"
+                android:textColor="@color/obsidian_text_secondary"
                 android:textStyle="bold" />
 
             <LinearLayout
@@ -769,7 +769,7 @@
                 android:letterSpacing="0.16"
                 android:text="BACKUP &amp; DADOS"
                 android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                android:textColor="@color/layout_literal_8fa3ba"
+                android:textColor="@color/obsidian_text_secondary"
                 android:textStyle="bold" />
 
             <!-- Exportar Backup -->

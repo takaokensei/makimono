@@ -30,7 +30,7 @@
         android:layout_height="wrap_content"
         android:fontFamily="sans-serif-medium"
         android:includeFontPadding="false"
-        android:textColor="@color/layout_literal_f1f5f9"
+        android:textColor="@color/obsidian_text_primary"
         style="@style/TextAppearance.Makimono.TV.Caption"
         tools:text="Temporada 2: Rakuen" />
 
