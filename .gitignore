@@ -26,7 +26,4 @@ captures/
 *.class
 scratch/
 __pycache__/
-docs/ui-audit/*.png
-docs/ui-audit/*.xml
-docs/ui-audit/after-v2/
-docs/ui-audit/fixtures/
+docs/ui-audit/
