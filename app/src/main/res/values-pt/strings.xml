@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">Makimono</string>
     <string name="movies">Filmes</string>
@@ -142,8 +142,8 @@
     <string name="client_id">Client ID</string>
     <string name="client_secret">Client Secret</string>
     <string name="redirect_uri">URI de redirecionamento</string>
-    <string name="default_client_id" translatable="false"></string>
-    <string name="default_client_secret" translatable="false"></string>
+    <string name="default_client_id" translatable="false" />
+    <string name="default_client_secret" translatable="false" />
     <string name="default_redirect_uri" translatable="false">http://127.0.0.1:53682/</string>
     <string name="need_help">Precisa de ajuda?</string>
     <string name="drive_scope">https://www.googleapis.com/auth/drive.readonly</string>
@@ -186,7 +186,6 @@
     <string name="episode_action_copy_filename">Copiar nome do arquivo</string>
     <string name="mal_anime_completed">MAL: Anime marcado como Completo! (Nota: %1$d/10)</string>
     <string name="mal_save_score_error">MAL: Erro ao salvar avaliação: %1$s</string>
-    <!-- FEAT-05: Notificações de novos episódios -->
     <string name="notif_channel_new_episodes_name">Novos Episódios</string>
     <string name="notif_channel_new_episodes_desc">Notificações quando novas pastas/episódios aparecem nas suas séries seguidas</string>
     <string name="notif_new_episodes_title">Novidade em %1$s</string>
@@ -233,8 +232,6 @@
     <string name="library_root_retry">Tentar novamente</string>
     <string name="library_root_selected">Pasta da biblioteca atualizada.</string>
     <string name="subtitles_settings">Legendas</string>
-
-    <!-- A11Y-01: Acessibilidade e leitor de tela TalkBack -->
     <string name="play_button">Reproduzir</string>
     <string name="pause_button">Pausar</string>
     <string name="favorite_button">Adicionar aos favoritos</string>
@@ -246,8 +243,6 @@
     <string name="voice_search_button">Busca por voz</string>
     <string name="menu_button">Abrir menu</string>
     <string name="close_button">Fechar</string>
-
-    <!-- Descrições de conteúdo para ícones -->
     <string name="content_description_play">Reproduzir</string>
     <string name="content_description_pause">Pausar</string>
     <string name="content_description_favorite">Adicionar aos favoritos</string>
@@ -318,4 +313,89 @@
     <string name="player_more_label">Mais</string>
     <string name="player_rotate_label">Girar</string>
     <string name="player_info_label">Info</string>
+    <string name="files_switch_to_list">Alternar para lista</string>
+    <string name="files_switch_to_grid">Alternar para grade</string>
+    <string name="series_partial_listing_notice">A lista do Drive está incompleta. Alguns episódios podem não aparecer.</string>
+    <string name="player_back_again_to_exit">Pressione Voltar novamente para sair do vídeo.</string>
+    <string name="reduce_motion">Reduzir movimento</string>
+    <string name="motion_follows_device">Seguir dispositivo</string>
+    <string name="motion_reduced">Reduzido</string>
+    <string name="motion_preference_description">Reduz animações e movimentos decorativos; o foco e as mudanças de estado continuam visíveis.</string>
+    <string name="no_search_results">Nenhum arquivo corresponde à sua busca.</string>
+    <string name="connect_google_drive">Conectar Google Drive</string>
+    <string name="settings_category_profile">Perfil e biblioteca</string>
+    <string name="settings_category_appearance">Aparência</string>
+    <string name="settings_category_playback">Reprodução</string>
+    <string name="settings_category_integrations">Integrações</string>
+    <string name="settings_category_data">Dados e sessão</string>
+    <string name="settings_categories_heading">CATEGORIAS</string>
+    <string name="settings_category_accessibility">%1$s%2$s</string>
+    <string name="settings_category_selected_suffix">, selecionada</string>
+    <string name="settings_section_appearance">APARÊNCIA E ACESSIBILIDADE</string>
+    <string name="settings_section_profile">PERFIL E BIBLIOTECA</string>
+    <string name="player_engine_fallback_missing_media">Não foi possível trocar de player: os dados deste vídeo não estão disponíveis.</string>
+    <string name="player_engine_fallback_failed">Não foi possível abrir o MPV. O player atual continua aberto.</string>
+    <string name="series_more_actions">Mais opções</string>
+    <string name="series_action_cancel">Cancelar</string>
+    <string name="profile_last_admin_required">Mantenha pelo menos um perfil administrador.</string>
+    <string name="profile_last_required">O aplicativo precisa manter pelo menos um perfil.</string>
+    <string name="profile_not_found">Este perfil não está mais disponível. Atualize a tela e tente novamente.</string>
+    <string name="home_featured_overline">EM DESTAQUE</string>
+    <string name="home_featured_play">Assistir agora</string>
+    <string name="home_featured_open">Abrir</string>
+    <string name="home_featured_info">Detalhes</string>
+    <string name="home_featured_episode_count">%1$d episódios</string>
+    <string name="home_featured_score">★ %1$.1f</string>
+    <string name="home_featured_separator"> · </string>
+    <string name="home_continue_at">Continuar de %1$s</string>
+    <string name="home_restart_at_zero">Recomeçar do início (0:00)</string>
+    <string name="home_open_series">Ir para a série</string>
+    <string name="home_mark_finished">Marcar episódio como concluído</string>
+    <string name="home_remove_continue">Remover de Continuar assistindo</string>
+    <string name="home_marked_finished">Episódio marcado como concluído</string>
+    <string name="home_continue_removed">Removido de Continuar assistindo</string>
+    <string name="home_series_not_found">Não encontrei a série na biblioteca.</string>
+    <string name="home_playback_position">%1$d:%2$02d</string>
+    <string name="undo">Desfazer</string>
+    <string name="state_empty_home_title">Sua biblioteca está vazia</string>
+    <string name="state_empty_home_message">Escolha uma pasta do Google Drive para começar.</string>
+    <string name="state_empty_home_action">Escolher pasta</string>
+    <string name="state_empty_folder_title">Nada por aqui</string>
+    <string name="state_empty_folder_message">Esta pasta está vazia.</string>
+    <string name="state_error_network_title">Sem conexão</string>
+    <string name="state_error_network_message">Verifique a internet e tente de novo.</string>
+    <string name="state_error_network_action">Tentar novamente</string>
+    <string name="state_error_auth_title">Reconecte sua conta</string>
+    <string name="state_error_auth_message">Sua conexão com o Google Drive expirou.</string>
+    <string name="state_error_auth_action">Conectar</string>
+    <string name="state_error_access_denied_title">Sem acesso a esta pasta</string>
+    <string name="state_error_access_denied_message">Sua conta não tem permissão para abrir este conteúdo. Volte e escolha outra pasta ou confira o acesso no Google Drive.</string>
+    <string name="state_error_rate_limited_title">Muitas solicitações</string>
+    <string name="state_error_rate_limited_message">O Google Drive está recebendo muitas solicitações. Aguarde um pouco e tente novamente.</string>
+    <string name="state_error_not_found_title">Pasta indisponível</string>
+    <string name="state_error_not_found_message">Esta pasta pode ter sido movida ou removida. Volte e atualize a biblioteca.</string>
+    <string name="state_error_server_title">Instabilidade no Google Drive</string>
+    <string name="state_error_server_message">O Google Drive está temporariamente indisponível. Tente novamente em instantes.</string>
+    <string name="state_error_generic_title">Não foi possível carregar</string>
+    <string name="state_error_generic_message">Ocorreu um problema ao carregar esta pasta. Tente novamente.</string>
+    <string name="state_error_go_back_action">Voltar</string>
+    <string name="files_folder_cycle_error">Este atalho leva a uma pasta que já está aberta.</string>
+    <string name="state_partial_folder_notice">Mostrando parte da pasta.</string>
+    <string name="state_partial_folder_action">Carregar mais</string>
+    <string name="home_my_list">Minha lista</string>
+    <string name="home_recently_added">Adicionados recentemente</string>
+    <string name="home_recently_added_type_series">SÉRIE</string>
+    <string name="home_recently_added_subtitle">Atualizado recentemente · Abrir</string>
+    <string name="home_new_episodes">Novos episódios</string>
+    <string name="home_followed_type">SEGUINDO</string>
+    <string name="home_followed_subtitle">Ver episódios da série</string>
+    <string name="home_continue_watching">Continuar assistindo</string>
+    <string name="home_starred_type_folder">PASTA</string>
+    <string name="home_starred_type_video">VÍDEO</string>
+    <string name="home_starred_type_subtitle">LEGENDA</string>
+    <string name="home_starred_type_file">ARQUIVO</string>
+    <string name="home_starred_folder_subtitle">Pasta favorita · Abrir</string>
+    <string name="home_starred_video_subtitle">Vídeo favorito</string>
+    <string name="home_starred_size_and_play">%1$s · Reproduzir</string>
+    <string name="home_starred_favorite">Favoritado</string>
 </resources>

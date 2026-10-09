@@ -6,7 +6,7 @@ import re
 import sys
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 LAYOUT_ROOT = ROOT / "app/src/main/res"
 HEX_COLOR = re.compile(r"#[0-9A-Fa-f]{6,8}")
 

@@ -7,7 +7,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 COLORS = ROOT / "app/src/main/res/values/colors.xml"
 PALETTES = ("obsidian", "tn", "dracula", "nord", "mocha", "estuary")
 

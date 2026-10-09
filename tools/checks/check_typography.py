@@ -16,7 +16,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-RES = Path(__file__).resolve().parent.parent / "app" / "src" / "main" / "res"
+RES = Path(__file__).resolve().parent.parent.parent / "app" / "src" / "main" / "res"
 LITERAL = re.compile(r'android:textSize="(\d+(?:\.\d+)?)sp"')
 TOKEN = re.compile(r"TextAppearance\.Makimono\.")
 
