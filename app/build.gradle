@@ -234,7 +234,7 @@ dependencies {
     kapt "androidx.hilt:hilt-compiler:1.2.0"
 
     // Splash
-    implementation "androidx.core:core-splashscreen:1.0.1"
+    implementation "androidx.core:core-splashscreen:1.2.0"
 
     // Navigational Components
     implementation "androidx.navigation:navigation-fragment-ktx:2.8.7"
