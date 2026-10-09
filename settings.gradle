@@ -15,3 +15,4 @@ dependencyResolutionManagement {
 rootProject.name = "Makimono"
 include ':app'
 include ':mpv'
+include ':benchmark'
