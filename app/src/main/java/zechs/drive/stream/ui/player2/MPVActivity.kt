@@ -156,7 +156,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
     private var activeSkipChapter: ParsedChapter? = null
     private lateinit var gestureHelper: PlayerGestureHelper
     private var hasAutoSkippedCurrentInterval = false
-    private var currentAfrState: zechs.drive.stream.utils.AutoFrameRatePolicy.AfrState? = null
+    private val displayModeController = zechs.drive.stream.playback.display.DisplayModeController()
+    private val currentAfrState get() = displayModeController.currentState
     private var currentHdrStatus: zechs.drive.stream.utils.HdrModeManager.HdrStatus? = null
 
     // MediaSession
@@ -2697,14 +2698,13 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                             val hdrEnabled = appSettings.get().fetchMatchDynamicRange()
 
                             if (containerFps != null && containerFps > 0.0) {
-                                val afrState = zechs.drive.stream.utils.AutoFrameRatePolicy.applyAutoFrameRate(
+                                val afrState = displayModeController.apply(
                                     window = window,
                                     surface = player.holder.surface,
                                     display = display,
                                     targetFps = containerFps,
                                     enabled = afrEnabled
                                 )
-                                currentAfrState = afrState
                                 controller.tvPlayerAfrBadge.apply {
                                     if (afrState != null && afrEnabled) {
                                         text = afrState.label
@@ -2787,7 +2787,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         val surface = player.holder.surface
         player.destroy()
 
-        zechs.drive.stream.utils.AutoFrameRatePolicy.resetAutoFrameRate(window, surface)
+        displayModeController.reset(window, surface)
         zechs.drive.stream.utils.HdrModeManager.resetHdrMode(this)
         bingeBufferManager.get().clear()
 

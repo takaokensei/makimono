@@ -189,7 +189,8 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     private lateinit var tvPlayerMeta: TextView
     private var tvPlayerHdrBadge: TextView? = null
     private var tvPlayerAfrBadge: TextView? = null
-    private var currentAfrState: zechs.drive.stream.utils.AutoFrameRatePolicy.AfrState? = null
+    private val displayModeController = zechs.drive.stream.playback.display.DisplayModeController()
+    private val currentAfrState get() = displayModeController.currentState
     private var currentHdrStatus: zechs.drive.stream.utils.HdrModeManager.HdrStatus? = null
     private lateinit var btnPlayPause: MaterialButton
     private lateinit var btnPrevEp: ImageButton
@@ -843,14 +844,13 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                         // 1. Auto Frame Rate (AFR) matching
                         if (it.frameRate > 0) {
                             val surface = (playerView.videoSurfaceView as? android.view.SurfaceView)?.holder?.surface
-                            val afrState = zechs.drive.stream.utils.AutoFrameRatePolicy.applyAutoFrameRate(
+                            val afrState = displayModeController.apply(
                                 window = window,
                                 surface = surface,
                                 display = display,
                                 targetFps = it.frameRate.toDouble(),
                                 enabled = afrEnabled
                             )
-                            currentAfrState = afrState
                             tvPlayerAfrBadge?.apply {
                                 if (afrState != null && afrEnabled) {
                                     text = afrState.label
@@ -3339,7 +3339,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         mediaSessionHelper = null
         val surface = (playerView.videoSurfaceView as? android.view.SurfaceView)?.holder?.surface
         releasePlayer()
-        zechs.drive.stream.utils.AutoFrameRatePolicy.resetAutoFrameRate(window, surface)
+        displayModeController.reset(window, surface)
         zechs.drive.stream.utils.HdrModeManager.resetHdrMode(this)
         bingeBufferManager.get().clear()
         super.onDestroy()
