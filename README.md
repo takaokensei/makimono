@@ -5,12 +5,12 @@
   Makimono (巻物)
 </h1>
 <p align="center">
-  <b>Sacred Anime &amp; Media Archive Client for Android &amp; Android TV</b><br>
-  High-performance direct cloud streaming from Google Drive with native fansub subtitle styling, encrypted credentials, and fail-closed verified updates.
+  <b>Cliente de Streaming de Mídia do Google Drive para Android e Android TV</b><br>
+  Reprodução de alta performance direto da nuvem com suporte nativo a estilos de legendas fansub (ASS/SSA), controle por D-pad em telas de TV de 3 metros, isolamento por perfis e integração com MediaSession.
 </p>
 
 <p align="center">
-  Powered by <a href="https://developers.google.com/drive/api">Google Drive API</a>, <a href="https://developer.android.com/media/media3">AndroidX Media3</a>, and <a href="docs/NATIVE_MPV_BUILD.md">libmpv</a>.
+  Desenvolvido com <a href="https://developers.google.com/drive/api">Google Drive API</a>, <a href="https://developer.android.com/media/media3">AndroidX Media3</a> e <a href="docs/architecture/native-mpv.md">libmpv</a>.
 </p>
 
 <div align="center">
@@ -24,32 +24,82 @@
 
 <br>
 
-## ✨ Highlights
+---
 
-- **Dual Playback Engines**: Common `PlayerEngine` contract and `PlaybackCoordinator` orchestrating AndroidX Media3 (hardware-accelerated decoders, AFR, HDR) and native MPV (`libmpv`) for complex anime subtitle scripts. See [MPV Architecture](docs/NATIVE_MPV_BUILD.md).
-- **Native Fansub Subtitle Rendering**: Preserves custom SSA/ASS font styles, colors, and dialogue formatting while automatically normalizing vertical placement right above the bezel across TV and mobile displays.
-- **Hardened Security & Keystore Encryption**: Drive session tokens and credentials encrypted via Android Keystore (AES-256-GCM); zero raw tokens in logs with `AppLog` automated credential redaction.
-- **Fail-Closed Secure In-App Updater**: Automatic detection of GitHub releases with mandatory SHA-256 checksum verification and cryptographic signing certificate fingerprint matching before installation.
-- **Multi-Profile System**: Isolated watchlists, watch queues, play progress, and preferences per user profile.
-- **Global Search & Offline-First Catalog**: Debounced global search across Drive files and local Room catalog caching for instant startup and offline browsing.
-- **Background Playback & PiP**: Full `MediaSession` integration for remote controls/lockscreen and Picture-in-Picture (Android 8.0+) with dynamic aspect ratio.
-- **Android TV & Leanback Support**: Native D-pad navigation, compact 80dp rail layout, 3dp neon focus rings, overscan safe-insets, and WCAG AA contrast compliance.
-- **Quality Assurance**: 350 automated unit tests passing (100% success rate), clean lint checks, and reproducible release builds. Track ongoing corrections in [Correction Tracker](docs/CORRECTION_PLAN_TRACKER.md).
+## 📋 Requisitos de Ambiente
+
+- **JDK:** OpenJDK 17 ou superior (`JAVA_HOME` configurado)
+- **Android SDK:** `compileSdk 34`, `targetSdk 34`, `minSdk 26`
+- **Build Tools:** Android SDK Build-Tools 34.0.0
+- **Dispositivo:** Android 8.0+ (celular/tablet) ou Android TV 11+ (1080p / 4K UHD)
 
 ---
 
-## 📥 Download
+## 🛠️ Como Compilar do Zero
 
-Get the latest APK directly from [GitHub Releases](https://github.com/takaokensei/makimono/releases/latest).
+1. **Clonar o repositório:**
+   ```bash
+   git clone https://github.com/takaokensei/makimono.git
+   cd makimono
+   ```
+
+2. **Configurar propriedades locais:**
+   Copie o modelo de propriedades para criar o seu `local.properties`:
+   ```bash
+   cp local.properties.example local.properties
+   ```
+   Defina o caminho do Android SDK (`sdk.dir`) e as credenciais necessárias conforme descrito no arquivo de exemplo.
+
+3. **Compilar o APK de desenvolvimento:**
+   ```bash
+   ./gradlew assembleDebug
+   ```
+   O binário gerado estará em `app/build/outputs/apk/debug/app-debug.apk`.
 
 ---
 
-## 🔑 Drive OAuth Setup
+## 🧪 Como Rodar os Testes e o Lint
 
-Makimono connects directly to your private Google Drive using standard OAuth 2.0 with least-privilege `drive.readonly` scope. To set up your credentials, create a Google Cloud Project with the Google Drive API enabled, and configure your client ID and client secret.
+Execute as tarefas de validação e verificação de integridade:
+
+```bash
+# Executar todos os testes unitários
+./gradlew testDebugUnitTest
+
+# Executar verificação de qualidade de código (Lint com baseline ativa)
+./gradlew lintDebug
+
+# Executar verificação completa em um único comando
+./gradlew testDebugUnitTest lintDebug assembleDebug
+```
 
 ---
 
-## 📜 License
+## 🏛️ Arquitetura
 
-This project is licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
+O projeto adota uma arquitetura em camadas focada em separação de preocupações e local-first:
+
+- **`domain`:** Modelos, regras de negócio puras (sem dependências de framework Android).
+- **`data`:** Repositórios, cliente Google Drive, Room local e cache de metadados.
+- **`playback`:** Motores de reprodução desacoplados sob contrato único (`PlayerEngine`), gerenciando Media3 e MPV nativo.
+- **`platform`:** Integrações de plataforma Android TV (`MediaSession`, Watch Next).
+- **`ui`:** Apresentação para Android TV (D-pad 10-foot experience, rail de 80dp) e mobile.
+
+Para detalhes completos e decisões de design:
+- [Documento Canônico de Arquitetura](docs/architecture/ARCHITECTURE.md)
+- [Decisões Arquiteturais (ADRs)](docs/architecture/adr/)
+- [Guia do MPV Nativo](docs/architecture/native-mpv.md)
+
+---
+
+## 📚 Documentação do Projeto
+
+- **Design System & TV UX:** [Design System Obsidian](docs/design/DESIGN.md) e [Referências HIG](docs/design/hig-references.md)
+- **Garantia de Qualidade:** [Matriz de Dispositivos](docs/qa/device-matrix.md), [Checklist de Foco TV](docs/qa/focus-checklist.md) e [Baseline Diagnóstica](docs/qa/baseline-0.md)
+- **Histórico e Releases:** [Diretrizes de Release](docs/releases/README.md) e [Changelog Completo](CHANGELOG.md)
+
+---
+
+## 📜 Licença
+
+Distribuído sob a licença Apache 2.0. Consulte [LICENSE](LICENSE) para mais informações.
