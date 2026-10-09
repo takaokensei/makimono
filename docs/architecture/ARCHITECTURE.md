@@ -51,6 +51,6 @@ Estas regras são validadas por testes automatizados de arquitetura.
 ## 3. Decisões Arquiteturais (ADRs)
 
 - [ADR-001: Pareamento de TV e Login Remoto](adr/ADR-001-tv-pairing.md)
-- [ADR-002: Motor de Reprodução (Media3 + MPV)](adr/ADR-002-motor-de-reproducao.md) *(a formalizar na Fase 4)*
+- [ADR-002: Motor de Reprodução (Media3 + MPV)](adr/ADR-002-motor-de-reproducao.md) *(Rascunho — Fase 2)*
 - [ADR-003: Aceite de Risco de Segredos em Build](adr/ADR-003-segredos-no-build.md) *(Fase 0)*
 - [Guia do MPV Nativo](native-mpv.md)
