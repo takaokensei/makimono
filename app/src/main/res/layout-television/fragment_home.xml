@@ -104,6 +104,12 @@
                         </LinearLayout>
                     </androidx.core.widget.NestedScrollView>
                     <ProgressBar android:id="@+id/progressBar" android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" android:indeterminateTint="@color/layout_literal_12a0c7" android:visibility="gone" tools:visibility="visible" />
+                    <zechs.drive.stream.ui.common.StateView
+                        android:id="@+id/stateView"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:visibility="gone" />
                     <LinearLayout android:id="@+id/layoutEmpty" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:gravity="center" android:orientation="vertical" android:visibility="gone" tools:visibility="visible">
                         <ImageView android:layout_width="56dp" android:layout_height="56dp" android:contentDescription="@null" android:src="@drawable/ic_search_24" app:tint="?attr/colorAccentPrimary" />
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:fontFamily="@font/inter" android:text="Nenhum título encontrado" android:textColor="?attr/colorTextPrimary" style="@style/TextAppearance.Makimono.TV.Headline" android:textStyle="bold" />

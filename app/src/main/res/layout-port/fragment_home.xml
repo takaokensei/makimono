@@ -504,7 +504,6 @@
 
         </androidx.core.widget.NestedScrollView>
 
-        <!-- Loading Indicator -->
         <ProgressBar
             android:id="@+id/progressBar"
             android:layout_width="44dp"
@@ -513,6 +512,13 @@
             android:indeterminateTint="?attr/colorAccentPrimary"
             android:visibility="gone"
             tools:visibility="visible" />
+
+        <zechs.drive.stream.ui.common.StateView
+            android:id="@+id/stateView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone" />
 
         <!-- Empty State -->
         <LinearLayout

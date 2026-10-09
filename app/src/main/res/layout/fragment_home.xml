@@ -642,6 +642,14 @@
 
             </LinearLayout>
 
+            <zechs.drive.stream.ui.common.StateView
+                android:id="@+id/stateView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="24dp"
+                android:visibility="gone" />
+
             <!-- Empty State when Home has no continue watching items -->
             <LinearLayout
                 android:id="@+id/layoutHomeEmpty"

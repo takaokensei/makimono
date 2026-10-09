@@ -195,6 +195,13 @@ class HomeFragment : BaseFragment() {
         continueWatchingAdapter.onDpadVerticalListener = { focused, keyCode ->
             focusAdjacentHomeShelf(binding.rvContinueWatchingShelf, focused, keyCode)
         }
+        continueWatchingAdapter.onFocusItemListener = { v ->
+            lastFocusedAnimeView = v
+            val position = binding.rvContinueWatchingShelf.getChildAdapterPosition(v)
+            if (position != androidx.recyclerview.widget.RecyclerView.NO_POSITION) {
+                viewModel.onEvent(HomeEvent.SaveFocus(0, position))
+            }
+        }
 
         binding.rvWatchQueueShelf.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(
             requireContext(), androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false
@@ -211,6 +218,9 @@ class HomeFragment : BaseFragment() {
             lastFocusedAnimeView = v
             HomeShelfScroll.alignHeading(binding.contentScrollView, binding.tvQueueShelfLabel, v)
             val position = binding.rvWatchQueueShelf.getChildAdapterPosition(v)
+            if (position != androidx.recyclerview.widget.RecyclerView.NO_POSITION) {
+                viewModel.onEvent(HomeEvent.SaveFocus(1, position))
+            }
             watchQueueAdapter.currentList.getOrNull(position)?.let { item ->
                 findLibraryFolderForTitle(item.name)?.let { folder ->
                     scheduleFeaturedPreview(folder, v)
@@ -236,6 +246,9 @@ class HomeFragment : BaseFragment() {
             }
             val position = binding.rvStarredShelf?.getChildAdapterPosition(v)
                 ?: androidx.recyclerview.widget.RecyclerView.NO_POSITION
+            if (position != androidx.recyclerview.widget.RecyclerView.NO_POSITION) {
+                viewModel.onEvent(HomeEvent.SaveFocus(3, position))
+            }
             starredShelfAdapter.currentList.getOrNull(position)?.let { folder ->
                 scheduleFeaturedPreview(folder, v)
             }
@@ -256,6 +269,9 @@ class HomeFragment : BaseFragment() {
             lastFocusedAnimeView = v
             HomeShelfScroll.alignHeading(binding.contentScrollView, binding.tvRecentlyAddedShelfLabel, v)
             val position = binding.rvRecentlyAddedShelf.getChildAdapterPosition(v)
+            if (position != androidx.recyclerview.widget.RecyclerView.NO_POSITION) {
+                viewModel.onEvent(HomeEvent.SaveFocus(4, position))
+            }
             recentlyAddedAdapter.currentList.getOrNull(position)?.let { folder ->
                 scheduleFeaturedPreview(folder, v)
             }
@@ -276,6 +292,9 @@ class HomeFragment : BaseFragment() {
             lastFocusedAnimeView = v
             HomeShelfScroll.alignHeading(binding.contentScrollView, binding.tvNewEpisodesShelfLabel, v)
             val position = binding.rvNewEpisodesShelf.getChildAdapterPosition(v)
+            if (position != androidx.recyclerview.widget.RecyclerView.NO_POSITION) {
+                viewModel.onEvent(HomeEvent.SaveFocus(2, position))
+            }
             followedEpisodesAdapter.currentList.getOrNull(position)?.let { folder ->
                 scheduleFeaturedPreview(folder, v)
             }
@@ -484,6 +503,13 @@ class HomeFragment : BaseFragment() {
         animeAdapter.isGridMode = isGridMode
         binding.rvAnimeLibrary.layoutManager = GridLayoutManager(context, spanCount)
         binding.rvAnimeLibrary.adapter = animeAdapter
+        animeAdapter.onFocusItemListener = { v ->
+            lastFocusedAnimeView = v
+            val position = binding.rvAnimeLibrary.getChildAdapterPosition(v)
+            if (position != androidx.recyclerview.widget.RecyclerView.NO_POSITION) {
+                viewModel.onEvent(HomeEvent.SaveFocus(5, position))
+            }
+        }
     }
 
     /** Poster cards are taller than landscape video cards; keep their rails at their measured content height. */
@@ -554,7 +580,7 @@ class HomeFragment : BaseFragment() {
                     selectTab(prevTab)
                 }
             }
-            viewModel.filterAnimes(query)
+            viewModel.onEvent(HomeEvent.Search(query))
         }
 
         binding.btnClearSearch.setOnClickListener {
@@ -1357,7 +1383,7 @@ class HomeFragment : BaseFragment() {
                 launch {
                     viewModel.libraryLoadError.collect { message ->
                         if (!message.isNullOrBlank()) {
-                            val isFullScreenErrorActive = viewModel.homeState.value is HomeViewModel.HomeState.Error
+                            val isFullScreenErrorActive = viewModel.uiState.value is HomeUiState.Error
                             if (!isFullScreenErrorActive) {
                                 com.google.android.material.snackbar.Snackbar
                                     .make(binding.root, message, com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
@@ -1374,56 +1400,61 @@ class HomeFragment : BaseFragment() {
                     viewModel.searchNotice.collect { message ->
                         if (!message.isNullOrBlank() && viewModel.searchQuery.value.isNotBlank()) {
                             com.google.android.material.snackbar.Snackbar
-                                .make(binding.root, message, com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
-                                .show()
+                                 .make(binding.root, message, com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
+                                 .show()
                         }
                     }
                 }
 
                 launch {
-                    viewModel.homeState.collect { state ->
+                    viewModel.uiState.collect { state ->
                         when (state) {
-                            is HomeViewModel.HomeState.Loading -> {
+                            is HomeUiState.Loading -> {
                                 binding.progressBar.visibility = View.VISIBLE
+                                binding.stateView.visibility = View.GONE
                                 binding.layoutHomeEmpty?.visibility = View.GONE
                                 binding.layoutEmpty.visibility = View.GONE
                             }
-                            is HomeViewModel.HomeState.Content -> {
+                            is HomeUiState.Content -> {
                                 binding.progressBar.visibility = View.GONE
+                                binding.stateView.visibility = View.GONE
                                 binding.layoutHomeEmpty?.visibility = View.GONE
                                 binding.layoutEmpty.visibility = View.GONE
-                            }
-                            is HomeViewModel.HomeState.Empty -> {
-                                binding.progressBar.visibility = View.GONE
-                                binding.layoutHomeEmpty?.visibility = View.VISIBLE
-                                binding.layoutEmpty.visibility = View.GONE
-                                binding.layoutHomeEmpty?.findViewById<TextView>(R.id.tvEmptyMessage)?.text = state.message
-                                binding.layoutHomeEmpty?.findViewById<TextView>(R.id.tvEmptySubMessage)?.text = getString(R.string.home_empty_submessage)
-                                binding.layoutHomeEmpty?.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnExploreAnimes)?.visibility = View.VISIBLE
-                                binding.layoutHomeEmpty?.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnEmptyRetry)?.visibility = View.GONE
-                            }
-                            is HomeViewModel.HomeState.Error -> {
-                                binding.progressBar.visibility = View.GONE
-                                binding.layoutHomeEmpty?.visibility = View.VISIBLE
-                                binding.layoutEmpty.visibility = View.GONE
-                                val emptyMessage = when {
-                                    state.isOffline -> getString(R.string.home_error_offline)
-                                    state.isAuthError -> getString(R.string.home_error_auth)
-                                    else -> getString(R.string.home_error_library)
-                                }
-                                val emptySubMessage = when {
-                                    state.isOffline -> getString(R.string.home_error_offline_submessage)
-                                    state.isAuthError -> getString(R.string.home_error_auth_submessage)
-                                    else -> zechs.drive.stream.ui.common.StateView.sanitizeErrorMessage(state.message)
-                                }
-                                binding.layoutHomeEmpty?.findViewById<TextView>(R.id.tvEmptyMessage)?.text = emptyMessage
-                                binding.layoutHomeEmpty?.findViewById<TextView>(R.id.tvEmptySubMessage)?.text = emptySubMessage
-                                binding.layoutHomeEmpty?.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnExploreAnimes)?.visibility = View.GONE
-                                binding.layoutHomeEmpty?.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnEmptyRetry)?.apply {
-                                    visibility = View.VISIBLE
-                                    setOnClickListener {
-                                        viewModel.loadAnimeLibrary(forceRefresh = true)
+
+                                if (state.lastFocusedShelfIndex != null && state.lastFocusedItemIndex != null) {
+                                    val rootFocus = binding.root.findFocus()
+                                    val rail = binding.root.findViewById<View>(R.id.navRail)
+                                    val isRailFocused = rootFocus == null || (rail != null && rootFocus.parent === rail)
+                                    if (isRailFocused) {
+                                        restoreShelfFocus(state.lastFocusedShelfIndex, state.lastFocusedItemIndex)
                                     }
+                                }
+                            }
+                            is HomeUiState.Empty -> {
+                                binding.progressBar.visibility = View.GONE
+                                binding.layoutHomeEmpty?.visibility = View.GONE
+                                binding.layoutEmpty.visibility = View.GONE
+                                binding.stateView.visibility = View.VISIBLE
+                                binding.stateView.setState(zechs.drive.stream.ui.common.StateView.StateType.EMPTY_HOME) {
+                                    selectTab("Animes")
+                                }
+                            }
+                            is HomeUiState.Error -> {
+                                binding.progressBar.visibility = View.GONE
+                                binding.layoutHomeEmpty?.visibility = View.GONE
+                                binding.layoutEmpty.visibility = View.GONE
+                                binding.stateView.visibility = View.VISIBLE
+                                val stateType = when (state.error) {
+                                    is zechs.drive.stream.domain.common.AppError.Network -> zechs.drive.stream.ui.common.StateView.StateType.ERROR_NETWORK
+                                    is zechs.drive.stream.domain.common.AppError.Authentication -> zechs.drive.stream.ui.common.StateView.StateType.ERROR_AUTH
+                                    is zechs.drive.stream.domain.common.AppError.AccessDenied -> zechs.drive.stream.ui.common.StateView.StateType.ERROR_ACCESS_DENIED
+                                    is zechs.drive.stream.domain.common.AppError.RateLimited -> zechs.drive.stream.ui.common.StateView.StateType.ERROR_RATE_LIMITED
+                                    is zechs.drive.stream.domain.common.AppError.NotFound -> zechs.drive.stream.ui.common.StateView.StateType.ERROR_NOT_FOUND
+                                    is zechs.drive.stream.domain.common.AppError.Server -> zechs.drive.stream.ui.common.StateView.StateType.ERROR_SERVER
+                                    else -> zechs.drive.stream.ui.common.StateView.StateType.ERROR_GENERIC
+                                }
+                                binding.stateView.setState(stateType) {
+                                    viewModel.onEvent(HomeEvent.Refresh)
                                 }
                             }
                         }
@@ -1431,6 +1462,24 @@ class HomeFragment : BaseFragment() {
                 }
             }
         }
+    }
+
+    private fun restoreShelfFocus(shelfIndex: Int, itemIndex: Int) {
+        val shelf = when (shelfIndex) {
+            0 -> binding.rvContinueWatchingShelf
+            1 -> binding.rvWatchQueueShelf
+            2 -> binding.rvNewEpisodesShelf
+            3 -> binding.rvStarredShelf
+            4 -> binding.rvRecentlyAddedShelf
+            5 -> binding.rvAnimeLibrary
+            else -> null
+        } ?: return
+
+        if (!shelf.isShown || (shelf.adapter?.itemCount ?: 0) <= itemIndex) return
+        shelf.scrollToPosition(itemIndex)
+        shelf.postDelayed({
+            shelf.findViewHolderForAdapterPosition(itemIndex)?.itemView?.requestFocus()
+        }, 100)
     }
 
     private fun observeRecentWatches() {

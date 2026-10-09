@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.Lazy
 import dagger.hilt.android.lifecycle.HiltViewModel
+import zechs.drive.stream.domain.common.AppError
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -163,8 +164,27 @@ class HomeViewModel @Inject constructor(
                 emptyList()
             )
 
-    init {
+    private val _animeLibrary = MutableStateFlow<List<DriveFile>>(emptyList())
+    val animeLibrary = _animeLibrary.asStateFlow()
+
+    private val _filteredAnimes = MutableStateFlow<List<DriveFile>>(emptyList())
+    val filteredAnimes = _filteredAnimes.asStateFlow()
+
+    private val _isLoadingAnime = MutableStateFlow(false)
+    val isLoadingAnime = _isLoadingAnime.asStateFlow()
+
+    sealed class HomeState {
+        object Loading : HomeState()
+        object Content : HomeState()
+        data class Empty(val message: String) : HomeState()
+        data class Error(val message: String, val isOffline: Boolean = false, val isAuthError: Boolean = false) : HomeState()
     }
+
+    private val _homeState = MutableStateFlow<HomeState>(HomeState.Loading)
+    val homeState = _homeState.asStateFlow()
+
+    private val _libraryLoadError = MutableStateFlow<String?>(null)
+    val libraryLoadError = _libraryLoadError.asStateFlow()
 
     data class FeaturedAnime(
         val title: String,
@@ -188,6 +208,145 @@ class HomeViewModel @Inject constructor(
     private var featuredRequestId = 0L
     private var focusedFeaturedFolderId: String? = null
     @Volatile private var cachedFolderMetaMap: Map<String, zechs.drive.stream.data.local.FolderMetadata> = emptyMap()
+
+    var lastFocusedShelfIndex: Int? = null
+        private set
+    var lastFocusedItemIndex: Int? = null
+        private set
+
+    private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading(isFirstLoad = true))
+    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    private fun updateUnifiedUiState() {
+        val currentHomeState = _homeState.value
+        val currentLibrary = _animeLibrary.value
+        val currentFiltered = _filteredAnimes.value
+        val currentRecent = _recentWatches.value
+        val currentHistory = _watchHistory.value
+        val currentStarred = _starredFiles.value
+        val currentQueue = watchQueue.value
+        val currentFeatured = _featuredAnime.value
+
+        _uiState.value = when (currentHomeState) {
+            is HomeState.Loading -> {
+                if (currentLibrary.isNotEmpty() || currentRecent.isNotEmpty() || currentQueue.isNotEmpty()) {
+                    HomeUiState.Content(
+                        featuredAnime = currentFeatured,
+                        continueWatching = currentRecent,
+                        watchHistory = currentHistory,
+                        starredFiles = currentStarred,
+                        libraryFiles = currentLibrary,
+                        filteredAnimes = currentFiltered,
+                        watchQueue = currentQueue,
+                        lastFocusedShelfIndex = lastFocusedShelfIndex,
+                        lastFocusedItemIndex = lastFocusedItemIndex
+                    )
+                } else {
+                    HomeUiState.Loading(isFirstLoad = currentLibrary.isEmpty())
+                }
+            }
+            is HomeState.Empty -> {
+                HomeUiState.Empty(currentHomeState.message)
+            }
+            is HomeState.Error -> {
+                val appError = when {
+                    currentHomeState.isOffline -> AppError.Network(currentHomeState.message)
+                    currentHomeState.isAuthError -> AppError.Authentication(currentHomeState.message)
+                    else -> AppError.Server(currentHomeState.message)
+                }
+                HomeUiState.Error(
+                    error = appError,
+                    message = currentHomeState.message
+                )
+            }
+            is HomeState.Content -> {
+                if (currentLibrary.isEmpty() && currentRecent.isEmpty() && currentQueue.isEmpty() && currentStarred.isEmpty()) {
+                    HomeUiState.Empty("Nenhum anime ou pasta encontrado na sua biblioteca.")
+                } else {
+                    HomeUiState.Content(
+                        featuredAnime = currentFeatured,
+                        continueWatching = currentRecent,
+                        watchHistory = currentHistory,
+                        starredFiles = currentStarred,
+                        libraryFiles = currentLibrary,
+                        filteredAnimes = currentFiltered,
+                        watchQueue = currentQueue,
+                        lastFocusedShelfIndex = lastFocusedShelfIndex,
+                        lastFocusedItemIndex = lastFocusedItemIndex
+                    )
+                }
+            }
+        }
+    }
+
+    init {
+        viewModelScope.launch {
+            _homeState.collect { updateUnifiedUiState() }
+        }
+        viewModelScope.launch {
+            _animeLibrary.collect { updateUnifiedUiState() }
+        }
+        viewModelScope.launch {
+            _filteredAnimes.collect { updateUnifiedUiState() }
+        }
+        viewModelScope.launch {
+            _recentWatches.collect { updateUnifiedUiState() }
+        }
+        viewModelScope.launch {
+            _watchHistory.collect { updateUnifiedUiState() }
+        }
+        viewModelScope.launch {
+            _starredFiles.collect { updateUnifiedUiState() }
+        }
+        viewModelScope.launch {
+            _featuredAnime.collect { updateUnifiedUiState() }
+        }
+        viewModelScope.launch {
+            watchQueue.collect { updateUnifiedUiState() }
+        }
+    }
+
+    fun onEvent(event: HomeEvent) {
+        when (event) {
+            is HomeEvent.SaveFocus -> {
+                lastFocusedShelfIndex = event.shelfIndex
+                lastFocusedItemIndex = event.itemIndex
+                val current = _uiState.value
+                if (current is HomeUiState.Content) {
+                    _uiState.value = current.copy(
+                        lastFocusedShelfIndex = event.shelfIndex,
+                        lastFocusedItemIndex = event.itemIndex
+                    )
+                }
+            }
+            is HomeEvent.Search -> {
+                filterAnimes(event.query)
+            }
+            is HomeEvent.Refresh -> {
+                loadAnimeLibrary(forceRefresh = true)
+                getStarredFiles()
+                getRecentWatches()
+                getWatchHistory()
+            }
+            is HomeEvent.RemoveWatchItem -> {
+                removeWatchItem(event.item)
+            }
+            is HomeEvent.RestoreWatchItem -> {
+                restoreWatchItem(event.item)
+            }
+            is HomeEvent.MarkWatchItemFinished -> {
+                markWatchItemFinished(event.item)
+            }
+            is HomeEvent.FocusFeatured -> {
+                val file = _animeLibrary.value.firstOrNull {
+                    it.id == event.folderId || it.shortcutDetails.targetId == event.folderId
+                }
+                if (file != null) {
+                    previewFeatured(file)
+                }
+            }
+        }
+    }
 
     data class FileToken(
         val fileId: String,
@@ -463,27 +622,7 @@ class HomeViewModel @Inject constructor(
         _hasLoggedOut.value = true
     }
 
-    private val _animeLibrary = MutableStateFlow<List<DriveFile>>(emptyList())
-    val animeLibrary = _animeLibrary.asStateFlow()
 
-    private val _filteredAnimes = MutableStateFlow<List<DriveFile>>(emptyList())
-    val filteredAnimes = _filteredAnimes.asStateFlow()
-
-    private val _isLoadingAnime = MutableStateFlow(false)
-    val isLoadingAnime = _isLoadingAnime.asStateFlow()
-
-    sealed class HomeState {
-        object Loading : HomeState()
-        object Content : HomeState()
-        data class Empty(val message: String) : HomeState()
-        data class Error(val message: String, val isOffline: Boolean = false, val isAuthError: Boolean = false) : HomeState()
-    }
-
-    private val _homeState = MutableStateFlow<HomeState>(HomeState.Loading)
-    val homeState = _homeState.asStateFlow()
-
-    private val _libraryLoadError = MutableStateFlow<String?>(null)
-    val libraryLoadError = _libraryLoadError.asStateFlow()
 
     fun loadAnimeLibrary(forceRefresh: Boolean = false) = viewModelScope.launch(Dispatchers.IO) {
         if (forceRefresh) {
