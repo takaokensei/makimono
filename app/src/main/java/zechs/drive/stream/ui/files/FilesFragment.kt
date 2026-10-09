@@ -1,17 +1,12 @@
 package zechs.drive.stream.ui.files
 
-import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.AbsListView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.view.isGone
-import androidx.core.view.isInvisible
-import androidx.core.view.isVisible
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
@@ -19,14 +14,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
-import androidx.recyclerview.widget.DividerItemDecoration
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.transition.Transition
-import androidx.transition.TransitionManager
 import com.google.android.material.color.MaterialColors
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
-import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import zechs.drive.stream.R
@@ -35,26 +26,18 @@ import zechs.drive.stream.data.model.PlaylistItem
 import zechs.drive.stream.data.model.Starred
 import zechs.drive.stream.data.model.SubtitleItem
 import zechs.drive.stream.databinding.FragmentFilesBinding
-import zechs.drive.stream.domain.common.AppError
+import zechs.drive.stream.domain.library.EpisodeParser
 import zechs.drive.stream.ui.BaseFragment
 import zechs.drive.stream.ui.files.adapter.FilesAdapter
 import zechs.drive.stream.ui.files.adapter.FilesDataModel
 import zechs.drive.stream.ui.main.MainViewModel
-import zechs.drive.stream.ui.player.PlayerActivity
 import zechs.drive.stream.ui.player.PlayerLauncher
-import zechs.drive.stream.ui.player2.MPVActivity
-import zechs.drive.stream.ui.player.GlassMenuItem
-import zechs.drive.stream.ui.player.PlayerGlassMenuDialog
-import zechs.drive.stream.domain.library.EpisodeParser
-import zechs.drive.stream.utils.SeasonEpisodeGrouper
-import zechs.drive.stream.utils.SeasonGroup
-import zechs.drive.stream.utils.VideoPlayer
-import zechs.drive.stream.utils.TvAccessibilityLayout
 import zechs.drive.stream.utils.FocusMemory
-import zechs.drive.stream.utils.AppLog
+import zechs.drive.stream.utils.SeasonEpisodeGrouper
+import zechs.drive.stream.utils.TvAccessibilityLayout
+import zechs.drive.stream.utils.VideoPlayer
 import zechs.drive.stream.utils.state.Resource
 import zechs.drive.stream.utils.state.ResourceErrorKind
-
 
 @AndroidEntryPoint
 class FilesFragment : BaseFragment() {
@@ -76,12 +59,31 @@ class FilesFragment : BaseFragment() {
     @javax.inject.Inject
     lateinit var tenraiService: dagger.Lazy<zechs.drive.stream.data.remote.TenraiAnimeService>
 
-    private var isLoading = false
-    private var isScrolling = false
-    private var isGridMode = false
-    private var allFilesList = listOf<FilesDataModel>()
-    private var availableSeasons: List<SeasonGroup> = emptyList()
-    private var selectedSeason: SeasonGroup? = null
+    private lateinit var stateHandler: FilesStateHandler
+    private lateinit var paginationHandler: FilesPaginationHandler
+    private lateinit var searchFilterHandler: FilesSearchFilterHandler
+
+    private val filesAdapter by lazy {
+        FilesAdapter(
+            onClickListener = { handleFileOnClick(it) },
+            onLongClickListener = { handleFileOnLongPress(it) },
+            onStarClickListener = { file, isStarred ->
+                viewModel.starFile(file, isStarred)
+            },
+            onPlayClickListener = { file ->
+                handleFileOnPlayClick(file)
+            },
+            onPageErrorAction = { errorKind ->
+                when (errorKind) {
+                    ResourceErrorKind.AUTHENTICATION ->
+                        findNavController().navigate(R.id.action_filesFragment_to_signInFragment)
+                    ResourceErrorKind.ACCESS_DENIED,
+                    ResourceErrorKind.NOT_FOUND -> findNavController().popBackStack()
+                    else -> viewModel.queryFiles(args.query)
+                }
+            }
+        )
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -113,8 +115,6 @@ class FilesFragment : BaseFragment() {
             listOf(binding.btnClearSearch, binding.btnToggleGrid)
         )
 
-        // Workaround for transition animation
-        // https://github.com/material-components/material-components-android/issues/1984
         val colorBackground = MaterialColors.getColor(view, android.R.attr.colorBackground)
         view.setBackgroundColor(colorBackground)
 
@@ -135,19 +135,10 @@ class FilesFragment : BaseFragment() {
             }
         }
 
+        initHandlers()
+        setupNavRail()
         setupRecyclerView()
-        fun returnHome(tab: String) {
-            val nav = findNavController()
-            nav.getBackStackEntry(R.id.homeFragment).savedStateHandle["homeTab"] = tab
-            nav.popBackStack(R.id.homeFragment, false)
-        }
-        binding.root.findViewById<View>(R.id.filesHome)?.setOnClickListener { returnHome("Início") }
-        binding.root.findViewById<View>(R.id.filesBrand)?.setOnClickListener { returnHome("Início") }
-        binding.root.findViewById<View>(R.id.filesCatalog)?.setOnClickListener { returnHome("Animes") }
-        binding.root.findViewById<View>(R.id.filesFavorites)?.setOnClickListener { returnHome("Favoritos") }
-        binding.root.findViewById<View>(R.id.filesFolders)?.setOnClickListener { binding.etSearch.requestFocus() }
-        binding.root.findViewById<View>(R.id.filesSettings)?.setOnClickListener { findNavController().navigate(R.id.settingsFragment) }
-        setupSearchAndLayoutToggle()
+        searchFilterHandler.setup()
         setupFilesFocusNavigation()
         setupFilesObserver()
         mpvObserver()
@@ -159,19 +150,62 @@ class FilesFragment : BaseFragment() {
                 }
             }
         }
+    }
 
+    private fun initHandlers() {
+        paginationHandler = FilesPaginationHandler(
+            recyclerView = binding.rvList,
+            filesAdapter = filesAdapter,
+            viewModel = viewModel,
+            folderQuery = args.query,
+            onPageRequested = { query -> viewModel.queryFiles(query) }
+        )
+
+        searchFilterHandler = FilesSearchFilterHandler(
+            context = requireContext(),
+            binding = binding,
+            filesAdapter = filesAdapter,
+            folderName = args.name,
+            tenraiService = tenraiService,
+            lifecycleScope = viewLifecycleOwner.lifecycleScope,
+            isFragmentAdded = { isAdded },
+            isLoadingProvider = { paginationHandler.isLoading }
+        )
+
+        stateHandler = FilesStateHandler(
+            binding = binding,
+            viewModel = viewModel,
+            onContentReady = { files ->
+                paginationHandler.isLoading = false
+                searchFilterHandler.onFilesLoaded(files)
+            }
+        )
+    }
+
+    private fun setupNavRail() {
+        fun returnHome(tab: String) {
+            val nav = findNavController()
+            nav.getBackStackEntry(R.id.homeFragment).savedStateHandle["homeTab"] = tab
+            nav.popBackStack(R.id.homeFragment, false)
+        }
+        binding.root.findViewById<View>(R.id.filesHome)?.setOnClickListener { returnHome("Início") }
+        binding.root.findViewById<View>(R.id.filesBrand)?.setOnClickListener { returnHome("Início") }
+        binding.root.findViewById<View>(R.id.filesCatalog)?.setOnClickListener { returnHome("Animes") }
+        binding.root.findViewById<View>(R.id.filesFavorites)?.setOnClickListener { returnHome("Favoritos") }
+        binding.root.findViewById<View>(R.id.filesFolders)?.setOnClickListener { binding.etSearch.requestFocus() }
+        binding.root.findViewById<View>(R.id.filesSettings)?.setOnClickListener {
+            findNavController().navigate(R.id.settingsFragment)
+        }
     }
 
     override fun onStart() {
         super.onStart()
-        // If the first page was interrupted while Files was backgrounded, resume that query.
         if (!viewModel.hasLoaded || viewModel.shouldResumePageRequest) {
             viewModel.queryFiles(args.query)
         }
     }
 
     override fun onStop() {
-        // A folder/player destination must not leave this back-stack entry paging in the background.
         viewModel.cancelPendingPageRequest()
         super.onStop()
     }
@@ -184,191 +218,10 @@ class FilesFragment : BaseFragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
-                    renderFilesState(state)
+                    paginationHandler.isLoading = (state is FilesUiState.Loading)
+                    stateHandler.render(state)
                 }
             }
-        }
-    }
-
-    private fun renderFilesState(state: FilesUiState) {
-        when (state) {
-            is FilesUiState.Loading -> {
-                isLoading = true
-                if (!viewModel.hasLoaded) {
-                    isLoading(true)
-                }
-                binding.error.root.isGone = true
-                binding.stateView.isGone = true
-            }
-            is FilesUiState.Empty -> {
-                isLoading(false)
-                isLoading = false
-                viewModel.hasLoaded = true
-                binding.error.root.isGone = true
-                binding.stateView.isVisible = true
-                binding.stateView.setState(zechs.drive.stream.ui.common.StateView.StateType.EMPTY_FOLDER)
-            }
-            is FilesUiState.Content -> {
-                binding.stateView.isGone = true
-                binding.error.root.isGone = true
-                onSuccess(state.files)
-                viewModel.lastFocusedPosition?.let { pos ->
-                    binding.rvList.post {
-                        binding.rvList.scrollToPosition(pos)
-                    }
-                }
-            }
-            is FilesUiState.Error -> {
-                if (state.partialFiles.any { it is FilesDataModel.File }) {
-                    binding.stateView.isGone = true
-                    onSuccess(state.partialFiles)
-                } else {
-                    isLoading(false)
-                    isLoading = false
-                    binding.error.root.isGone = true
-                    binding.stateView.isVisible = true
-                    val stateType = when (state.error) {
-                        is AppError.Network -> zechs.drive.stream.ui.common.StateView.StateType.ERROR_NETWORK
-                        is AppError.Authentication -> zechs.drive.stream.ui.common.StateView.StateType.ERROR_AUTH
-                        is AppError.NotFound -> zechs.drive.stream.ui.common.StateView.StateType.ERROR_NOT_FOUND
-                        else -> zechs.drive.stream.ui.common.StateView.StateType.ERROR_GENERIC
-                    }
-                    binding.stateView.setState(stateType) {
-                        viewModel.onEvent(FilesEvent.Retry)
-                    }
-                }
-            }
-        }
-    }
-
-    private fun onSuccess(files: List<FilesDataModel>) {
-        Log.d(TAG, "onSuccess(files=${files.size})")
-        val fileCount = files.count { it is FilesDataModel.File }
-        binding.containerItemCount.isVisible = fileCount > 0
-        binding.tvItemCount.text = if (fileCount == 1) "1 item" else "$fileCount itens"
-
-        if (!viewModel.hasLoaded) {
-            doTransition(MaterialFadeThrough())
-        }
-
-        isLoading(false)
-        isLoading = false
-        viewModel.hasLoaded = true
-
-        if (files.isEmpty()) {
-            binding.error.root.isGone = true
-            binding.stateView.isVisible = true
-            binding.stateView.setState(zechs.drive.stream.ui.common.StateView.StateType.EMPTY_FOLDER)
-        } else {
-            binding.stateView.isGone = true
-            binding.error.root.apply {
-                if (isVisible) {
-                    isGone = true
-                }
-            }
-        }
-
-        allFilesList = files
-        availableSeasons = SeasonEpisodeGrouper.groupFiles(args.name, files)
-        if (availableSeasons.size > 1) {
-            binding.seasonSelectorRow.isVisible = true
-            selectedSeason = availableSeasons.firstOrNull()
-            binding.tvSelectedSeason.text = selectedSeason?.name ?: "Temporadas"
-            binding.btnSeasonSelector.setOnClickListener {
-                showSeasonSelectionDialog()
-            }
-
-            viewLifecycleOwner.lifecycleScope.launch {
-                try {
-                    val arcs = tenraiService.get().resolveFranchiseArcs(args.name)
-                    if (arcs.isNotEmpty() && isAdded) {
-                        val updated = availableSeasons.map { group ->
-                            when {
-                                group.id == "season_1" -> {
-                                    val arc = arcs.firstOrNull { it.seasonNumber == 1 }
-                                    if (arc != null) group.copy(name = "${arc.title} (Temporada 1)") else group
-                                }
-                                group.id == "season_2" -> {
-                                    val arc = arcs.firstOrNull { it.seasonNumber == 2 }
-                                    if (arc != null) group.copy(name = "${arc.title} (Temporada 2)") else group
-                                }
-                                group.id == "season_prologue" -> {
-                                    val arc = arcs.firstOrNull { it.type.contains("Special", ignoreCase = true) || it.type.contains("OVA", ignoreCase = true) }
-                                    if (arc != null) group.copy(name = arc.title) else group
-                                }
-                                else -> group
-                            }
-                        }
-                        availableSeasons = updated
-                        if (selectedSeason != null) {
-                            selectedSeason = updated.firstOrNull { it.id == selectedSeason?.id } ?: selectedSeason
-                            binding.tvSelectedSeason.text = selectedSeason?.name ?: "Temporadas"
-                        }
-                    }
-                } catch (e: Exception) {
-                    AppLog.logSwallowed(TAG, "updating season selector options", e)
-                }
-            }
-        } else {
-            binding.seasonSelectorRow.isGone = true
-            selectedSeason = null
-        }
-
-        val currentQuery = binding.etSearch.text?.toString()?.trim() ?: ""
-        filterFiles(currentQuery)
-    }
-
-    private fun showSeasonSelectionDialog() {
-        if (availableSeasons.isEmpty()) return
-
-        val currentSelectedId = selectedSeason?.id ?: "season_all"
-        val items = availableSeasons.map { season ->
-            GlassMenuItem(
-                id = season.id,
-                title = season.name,
-                subtitle = season.subtitle,
-                isSelected = season.id == currentSelectedId,
-                tag = season
-            )
-        }
-
-        PlayerGlassMenuDialog(
-            context = requireContext(),
-            title = "Temporadas e Arcos",
-            items = items
-        ) { selected ->
-            val season = selected.tag as? SeasonGroup ?: return@PlayerGlassMenuDialog
-            selectedSeason = season
-            binding.tvSelectedSeason.text = season.name
-            filterFiles(binding.etSearch.text?.toString()?.trim() ?: "")
-        }.show()
-    }
-
-    private fun setupSearchAndLayoutToggle() {
-        val prefs = requireContext().getSharedPreferences("FILES_PREFS", android.content.Context.MODE_PRIVATE)
-        isGridMode = prefs.getBoolean("IS_GRID_MODE", resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE)
-        updateLayoutMode()
-
-        binding.btnToggleGrid.setOnClickListener {
-            isGridMode = !isGridMode
-            prefs.edit().putBoolean("IS_GRID_MODE", isGridMode).apply()
-            updateLayoutMode()
-        }
-
-        binding.etSearch.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                val query = s?.toString()?.trim() ?: ""
-                binding.btnClearSearch.isVisible = query.isNotEmpty()
-                filterFiles(query)
-            }
-            override fun afterTextChanged(s: android.text.Editable?) {}
-        })
-
-        binding.btnClearSearch.setOnClickListener {
-            binding.etSearch.text?.clear()
-            binding.etSearch.requestFocus()
-            binding.etSearch.setSelection(binding.etSearch.text?.length ?: 0)
         }
     }
 
@@ -399,200 +252,6 @@ class FilesFragment : BaseFragment() {
         })
     }
 
-    private fun updateLayoutMode() {
-        val hasVideoFiles = allFilesList.any {
-            it is FilesDataModel.File && (it.driveFile.isVideoFile || it.driveFile.isShortcutVideo)
-        }
-        val screenWidthDp = resources.configuration.screenWidthDp
-        val baseSpanCount = if (hasVideoFiles) {
-            when {
-                screenWidthDp >= 1200 -> 4
-                screenWidthDp >= 840 -> 4
-                screenWidthDp >= 600 -> 3
-                screenWidthDp >= 400 -> 2
-                else -> 1
-            }
-        } else {
-            when {
-                screenWidthDp >= 1200 -> 6
-                screenWidthDp >= 900 -> 5
-                screenWidthDp >= 650 -> 4
-                screenWidthDp >= 420 -> 3
-                else -> 2
-            }
-        }
-        val spanCount = TvAccessibilityLayout.gridColumnsForFontScale(
-            baseSpanCount,
-            resources.configuration.fontScale
-        )
-
-        if (isGridMode) {
-            binding.btnToggleGrid.setImageResource(R.drawable.ic_list_view_24)
-            binding.btnToggleGrid.contentDescription = getString(R.string.files_switch_to_list)
-            val gridLayoutManager = androidx.recyclerview.widget.GridLayoutManager(requireContext(), spanCount)
-            gridLayoutManager.spanSizeLookup = object : androidx.recyclerview.widget.GridLayoutManager.SpanSizeLookup() {
-                override fun getSpanSize(position: Int): Int {
-                    val viewType = filesAdapter.getItemViewType(position)
-                    return if (viewType == R.layout.item_loading || viewType == R.layout.item_page_error) {
-                        spanCount
-                    } else {
-                        1
-                    }
-                }
-            }
-            binding.rvList.layoutManager = gridLayoutManager
-            filesAdapter.isGridMode = true
-        } else {
-            binding.btnToggleGrid.setImageResource(R.drawable.ic_grid_view_24)
-            binding.btnToggleGrid.contentDescription = getString(R.string.files_switch_to_grid)
-            binding.rvList.layoutManager = LinearLayoutManager(requireContext())
-            filesAdapter.isGridMode = false
-        }
-    }
-
-    private fun filterFiles(query: String) {
-        val season = selectedSeason
-        val baseList = if (season != null && season.id != "season_all" && season.fileItems.isNotEmpty()) {
-            season.fileItems
-        } else {
-            allFilesList
-        }
-
-        val listToSubmit = if (query.isEmpty()) {
-            baseList.toMutableList()
-        } else {
-            baseList.filter { item ->
-                when (item) {
-                    is FilesDataModel.File -> item.driveFile.name.contains(query, ignoreCase = true)
-                    else -> true
-                }
-            }.toMutableList()
-        }
-        val count = listToSubmit.count { it is FilesDataModel.File }
-        binding.containerItemCount.isVisible = count > 0
-        binding.tvItemCount.text = if (count == 1) "1 item" else "$count itens"
-        if (listToSubmit.isEmpty() && !isLoading) {
-            binding.rvList.isInvisible = true
-            binding.error.root.isGone = true
-            binding.stateView.isVisible = true
-            when (FilesStatePolicy.emptyMessage(allFilesList.isNotEmpty(), query)) {
-                FilesStatePolicy.EmptyFilesMessage.NO_FILES -> {
-                    binding.stateView.setState(zechs.drive.stream.ui.common.StateView.StateType.EMPTY_FOLDER)
-                    binding.etSearch.nextFocusDownId = binding.rvList.id
-                    binding.btnClearSearch.nextFocusDownId = binding.rvList.id
-                }
-                FilesStatePolicy.EmptyFilesMessage.NO_SEARCH_RESULTS -> {
-                    binding.stateView.showState(
-                        iconRes = R.drawable.ic_search_24,
-                        title = getString(R.string.files_search_empty_title),
-                        message = getString(R.string.files_search_empty_message),
-                        actionText = getString(R.string.files_search_clear_action),
-                        onActionClick = {
-                            binding.etSearch.text?.clear()
-                            binding.etSearch.requestFocus()
-                            binding.etSearch.setSelection(binding.etSearch.text?.length ?: 0)
-                        }
-                    )
-                    binding.etSearch.nextFocusDownId = R.id.btnStateAction
-                    binding.btnClearSearch.nextFocusDownId = R.id.btnStateAction
-                    binding.stateView.findViewById<View>(R.id.btnStateAction).nextFocusUpId = binding.etSearch.id
-                }
-            }
-        } else if (listToSubmit.isNotEmpty()) {
-            binding.stateView.isGone = true
-            binding.error.root.isGone = true
-            binding.rvList.isVisible = true
-            binding.etSearch.nextFocusDownId = binding.rvList.id
-            binding.btnClearSearch.nextFocusDownId = binding.rvList.id
-        }
-        filesAdapter.submitList(listToSubmit)
-    }
-
-    private fun doTransition(transition: Transition) {
-        TransitionManager.beginDelayedTransition(
-            binding.root, transition
-        )
-    }
-
-    private var shimmerAnimator: android.animation.ValueAnimator? = null
-
-    private fun isLoading(hide: Boolean) {
-        binding.apply {
-            loading.isInvisible = !hide
-            rvList.isInvisible = hide
-            if (!hide) {
-                filesSkeleton.root.isVisible = true
-                shimmerAnimator?.cancel()
-                shimmerAnimator = zechs.drive.stream.utils.ShimmerController.start(filesSkeleton.root)
-            } else {
-                filesSkeleton.root.isGone = true
-                shimmerAnimator?.cancel()
-                shimmerAnimator = null
-            }
-        }
-    }
-
-    private fun showError(msg: String?, errorKind: ResourceErrorKind?) {
-        val presentation = FilesStatePolicy.errorPresentation(errorKind, msg)
-        binding.apply {
-            rvList.isInvisible = true
-            loading.isInvisible = true
-            error.root.isGone = true
-            filesSkeleton.root.isGone = true
-            shimmerAnimator?.cancel()
-            shimmerAnimator = null
-            stateView.isVisible = true
-            val stateType = when (presentation) {
-                FilesStatePolicy.ErrorPresentation.AUTHENTICATION ->
-                    zechs.drive.stream.ui.common.StateView.StateType.ERROR_AUTH
-                FilesStatePolicy.ErrorPresentation.ACCESS_DENIED ->
-                    zechs.drive.stream.ui.common.StateView.StateType.ERROR_ACCESS_DENIED
-                FilesStatePolicy.ErrorPresentation.RATE_LIMITED ->
-                    zechs.drive.stream.ui.common.StateView.StateType.ERROR_RATE_LIMITED
-                FilesStatePolicy.ErrorPresentation.NOT_FOUND ->
-                    zechs.drive.stream.ui.common.StateView.StateType.ERROR_NOT_FOUND
-                FilesStatePolicy.ErrorPresentation.NETWORK ->
-                    zechs.drive.stream.ui.common.StateView.StateType.ERROR_NETWORK
-                FilesStatePolicy.ErrorPresentation.SERVER ->
-                    zechs.drive.stream.ui.common.StateView.StateType.ERROR_SERVER
-                FilesStatePolicy.ErrorPresentation.UNKNOWN ->
-                    zechs.drive.stream.ui.common.StateView.StateType.ERROR_GENERIC
-            }
-            stateView.setState(stateType) {
-                when (presentation) {
-                    FilesStatePolicy.ErrorPresentation.AUTHENTICATION ->
-                        findNavController().navigate(R.id.action_filesFragment_to_signInFragment)
-                    FilesStatePolicy.ErrorPresentation.ACCESS_DENIED,
-                    FilesStatePolicy.ErrorPresentation.NOT_FOUND -> findNavController().popBackStack()
-                    else -> viewModel.queryFiles(args.query)
-                }
-            }
-        }
-        isLoading = false
-    }
-
-    private val filesAdapter by lazy {
-        FilesAdapter(
-            onClickListener = { handleFileOnClick(it) },
-            onLongClickListener = { handleFileOnLongPress(it) },
-            onStarClickListener = { file, isStarred ->
-                viewModel.starFile(file, isStarred)
-            },
-            onPlayClickListener = { file ->
-                handleFileOnPlayClick(file)
-            },
-            onPageErrorAction = { errorKind ->
-                when (errorKind) {
-                    ResourceErrorKind.AUTHENTICATION ->
-                        findNavController().navigate(R.id.action_filesFragment_to_signInFragment)
-                    ResourceErrorKind.ACCESS_DENIED,
-                    ResourceErrorKind.NOT_FOUND -> findNavController().popBackStack()
-                    else -> viewModel.queryFiles(args.query)
-                }
-            }
-        )
-    }
-
     private fun handleFileOnPlayClick(file: DriveFile) {
         if (file.isVideoFile || file.isShortcutVideo) {
             val targetVideo = if (file.isShortcut && file.shortcutDetails.targetId != null) {
@@ -603,7 +262,7 @@ class FilesFragment : BaseFragment() {
             val folderId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
                 file.shortcutDetails.targetId
             } else file.id
-            android.widget.Toast.makeText(context, getString(R.string.searching_episode), android.widget.Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, getString(R.string.searching_episode), Toast.LENGTH_SHORT).show()
             viewModel.getFirstEpisodeInFolder(folderId) { firstEp ->
                 if (firstEp != null) {
                     launchVideoPlayer(firstEp)
@@ -659,7 +318,6 @@ class FilesFragment : BaseFragment() {
                 launchVideoPlayer(videoShortcutFile)
             }
         }
-
     }
 
     private fun openFolder(file: DriveFile, targetFolderId: String) {
@@ -713,10 +371,7 @@ class FilesFragment : BaseFragment() {
         } ?: videoFiles.firstOrNull()
 
         if (matchingVideo != null) {
-            com.google.android.material.dialog.MaterialAlertDialogBuilder(
-                requireContext(),
-                R.style.ThemeOverlay_DriveStream_Dialog
-            )
+            MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
                 .setTitle("Legenda Externa")
                 .setMessage("Deseja reproduzir o vídeo correspondente '${matchingVideo.name}' com esta legenda?")
                 .setPositiveButton("Reproduzir") { _, _ ->
@@ -725,10 +380,7 @@ class FilesFragment : BaseFragment() {
                 .setNegativeButton(android.R.string.cancel, null)
                 .show()
         } else {
-            com.google.android.material.dialog.MaterialAlertDialogBuilder(
-                requireContext(),
-                R.style.ThemeOverlay_DriveStream_Dialog
-            )
+            MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
                 .setTitle("Legenda Externa")
                 .setMessage("Arquivo de legenda (${subFile.name}). Coloque um arquivo de vídeo na mesma pasta para vinculação automática.")
                 .setPositiveButton(android.R.string.ok, null)
@@ -740,7 +392,7 @@ class FilesFragment : BaseFragment() {
         when (mainViewModel.currentPlayerIndex) {
             VideoPlayer.EXO_PLAYER -> launchExo(file)
             VideoPlayer.MPV -> {
-                android.widget.Toast.makeText(context, getString(R.string.starting_mpv), android.widget.Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, getString(R.string.starting_mpv), Toast.LENGTH_SHORT).show()
                 viewModel.fetchToken(file)
             }
         }
@@ -750,14 +402,8 @@ class FilesFragment : BaseFragment() {
         viewModel.mpvFile.observe(viewLifecycleOwner) { event ->
             event.getContentIfNotHandled()?.let { res ->
                 when (res) {
-                    is Resource.Success -> {
-                        launchMpv(res.data)
-                    }
-
-                    is Resource.Error -> {
-                        showSnackBar(res.message)
-                    }
-
+                    is Resource.Success -> launchMpv(res.data)
+                    is Resource.Error -> showSnackBar(res.message)
                     else -> {}
                 }
             }
@@ -769,9 +415,7 @@ class FilesFragment : BaseFragment() {
         val subItems = models.mapNotNull { item ->
             if (item is FilesDataModel.File) {
                 val f = item.driveFile
-                if (f.isSubtitleFile) {
-                    SubtitleItem(f.id, f.name)
-                } else null
+                if (f.isSubtitleFile) SubtitleItem(f.id, f.name) else null
             } else null
         }
         return ArrayList(subItems)
@@ -832,37 +476,10 @@ class FilesFragment : BaseFragment() {
         )
     }
 
-    private val scrollListener = object : RecyclerView.OnScrollListener() {
-        override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-            super.onScrolled(recyclerView, dx, dy)
-
-            val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-            val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
-            val visibleItemCount = layoutManager.childCount
-            val totalItemCount = layoutManager.itemCount
-
-            val isAtLastItem = firstVisibleItemPosition + visibleItemCount >= totalItemCount
-            val isLastPage = viewModel.isLastPage
-
-            if (isAtLastItem && !isLoading && !isLastPage && !viewModel.hasFailed) {
-                Log.d(TAG, "Paginating...")
-                viewModel.queryFiles(args.query)
-                isScrolling = false
-            }
-        }
-
-        override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-            super.onScrollStateChanged(recyclerView, newState)
-            if (newState != AbsListView.OnScrollListener.SCROLL_STATE_IDLE) {
-                isScrolling = true
-            }
-        }
-    }
-
     private fun setupRecyclerView() {
         binding.rvList.apply {
             adapter = filesAdapter
-            addOnScrollListener(this@FilesFragment.scrollListener)
+            addOnScrollListener(paginationHandler.scrollListener)
         }
         filesAdapter.onFocusItemListener = { focusedView ->
             val position = binding.rvList.getChildAdapterPosition(focusedView)
@@ -870,18 +487,10 @@ class FilesFragment : BaseFragment() {
                 (filesAdapter.currentList.getOrNull(position) as? FilesDataModel.File)?.let { fileModel ->
                     FocusMemory.remember("files.folder.${args.name}", fileModel.driveFile.id)
                 }
-                if (position >= filesAdapter.itemCount - 2 &&
-                    !isLoading &&
-                    !viewModel.isLastPage &&
-                    !viewModel.hasFailed &&
-                    filesAdapter.currentList.getOrNull(position) is FilesDataModel.File
-                ) {
-                    Log.d(TAG, "Paginating via D-pad focus near end (pos=$position)")
-                    viewModel.queryFiles(args.query)
-                }
+                paginationHandler.handleDpadFocusNearEnd(position)
             }
         }
-        updateLayoutMode()
+        searchFilterHandler.updateLayoutMode()
     }
 
     private fun showSnackBar(message: String?) {
@@ -909,10 +518,8 @@ class FilesFragment : BaseFragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        shimmerAnimator?.cancel()
-        shimmerAnimator = null
+        stateHandler.destroy()
         binding.rvList.adapter = null
         _binding = null
     }
-
 }
