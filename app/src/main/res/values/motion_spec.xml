@@ -7,13 +7,13 @@
     <item name="motion_spec_gentle" type="integer">300</item>
     <item name="motion_spec_slow" type="integer">450</item>
     <item name="motion_spec_linear" type="integer">220</item>
-    <item name="motion_easing_linear" type="string">linear</item>
+    <item name="motion_easing_linear" type="string" translatable="false">linear</item>
 
     <!-- Cubic motion spec for standard transitions -->
     <item name="motion_spec_cubic" type="integer">220</item>
-    <item name="motion_easing_cubic" type="string">cubic</item>
+    <item name="motion_easing_cubic" type="string" translatable="false">cubic</item>
 
     <!-- Emphasized motion spec for important transitions -->
     <item name="motion_spec_emphasized" type="integer">300</item>
-    <item name="motion_easing_emphasized" type="string">emphasized</item>
+    <item name="motion_easing_emphasized" type="string" translatable="false">emphasized</item>
 </resources>
