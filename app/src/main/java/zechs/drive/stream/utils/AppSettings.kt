@@ -34,6 +34,9 @@ class AppSettings @Inject constructor(
         fun profileSubtitleKey(profileId: String) = androidx.datastore.preferences.core.floatPreferencesKey("profile_${profileId}_sub_size")
         fun profileSubtitleStyleKey(profileId: String) = stringPreferencesKey("profile_${profileId}_sub_style")
         fun profileMotionPreferenceKey(profileId: String) = stringPreferencesKey("profile_${profileId}_motion_preference")
+        fun profileAutoFrameRateKey(profileId: String) = androidx.datastore.preferences.core.booleanPreferencesKey("profile_${profileId}_afr")
+        fun profileMatchDynamicRangeKey(profileId: String) = androidx.datastore.preferences.core.booleanPreferencesKey("profile_${profileId}_hdr")
+        fun profilePredictiveBufferingKey(profileId: String) = androidx.datastore.preferences.core.booleanPreferencesKey("profile_${profileId}_binge_buffer")
     }
 
     private val gson = Gson()
@@ -135,6 +138,63 @@ class AppSettings @Inject constructor(
             MotionPolicy.updateActiveProfilePreference(preference)
         }
         return preference
+    }
+
+    suspend fun saveAutoFrameRate(enabled: Boolean, profileId: String = currentProfileId()) {
+        val dataStoreKey = profileAutoFrameRateKey(profileId)
+        sessionStore.edit { settings ->
+            settings[dataStoreKey] = enabled
+        }
+        Log.d(TAG, "saveAutoFrameRate [profile=$profileId]: $enabled")
+    }
+
+    suspend fun fetchAutoFrameRate(profileId: String = currentProfileId()): Boolean {
+        return try {
+            val profileKey = profileAutoFrameRateKey(profileId)
+            val preferences = sessionStore.data.first()
+            preferences[profileKey] ?: true
+        } catch (e: Exception) {
+            Log.w(TAG, "fetchAutoFrameRate error, fallback to true", e)
+            true
+        }
+    }
+
+    suspend fun saveMatchDynamicRange(enabled: Boolean, profileId: String = currentProfileId()) {
+        val dataStoreKey = profileMatchDynamicRangeKey(profileId)
+        sessionStore.edit { settings ->
+            settings[dataStoreKey] = enabled
+        }
+        Log.d(TAG, "saveMatchDynamicRange [profile=$profileId]: $enabled")
+    }
+
+    suspend fun fetchMatchDynamicRange(profileId: String = currentProfileId()): Boolean {
+        return try {
+            val profileKey = profileMatchDynamicRangeKey(profileId)
+            val preferences = sessionStore.data.first()
+            preferences[profileKey] ?: true
+        } catch (e: Exception) {
+            Log.w(TAG, "fetchMatchDynamicRange error, fallback to true", e)
+            true
+        }
+    }
+
+    suspend fun savePredictiveBuffering(enabled: Boolean, profileId: String = currentProfileId()) {
+        val dataStoreKey = profilePredictiveBufferingKey(profileId)
+        sessionStore.edit { settings ->
+            settings[dataStoreKey] = enabled
+        }
+        Log.d(TAG, "savePredictiveBuffering [profile=$profileId]: $enabled")
+    }
+
+    suspend fun fetchPredictiveBuffering(profileId: String = currentProfileId()): Boolean {
+        return try {
+            val profileKey = profilePredictiveBufferingKey(profileId)
+            val preferences = sessionStore.data.first()
+            preferences[profileKey] ?: true
+        } catch (e: Exception) {
+            Log.w(TAG, "fetchPredictiveBuffering error, fallback to true", e)
+            true
+        }
     }
 
     suspend fun saveLastUpdated() {

@@ -154,6 +154,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
     @Inject
     lateinit var tenraiService: dagger.Lazy<zechs.drive.stream.data.remote.TenraiAnimeService>
 
+    @Inject
+    lateinit var bingeBufferManager: dagger.Lazy<zechs.drive.stream.ui.player.predictive.BingeBufferManager>
+
     // States
     private var activityIsForeground = true
     private var userIsOperatingSeekbar = false
@@ -165,6 +168,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
     private var activeSkipChapter: ParsedChapter? = null
     private lateinit var gestureHelper: PlayerGestureHelper
     private var hasAutoSkippedCurrentInterval = false
+    private var currentAfrState: zechs.drive.stream.utils.AutoFrameRatePolicy.AfrState? = null
+    private var currentHdrStatus: zechs.drive.stream.utils.HdrModeManager.HdrStatus? = null
 
     // MediaSession
     private var mediaSessionHelper: MakimonoMediaSessionHelper? = null
@@ -463,7 +468,16 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                     sampleRateHz = MPVLib.getPropertyInt("audio-params/samplerate"),
                     subtitleTrack = MpvTechnicalInfoDisplay.subtitleSelection(subtitleId, subtitleTrack),
                     cacheDurationSeconds = MPVLib.getPropertyDouble("demuxer-cache-duration")
-                )
+                ).toMutableList().apply {
+                    currentHdrStatus?.let { hdr ->
+                        if (hdr.isHdrActive) {
+                            add(MpvTechnicalInfoDisplay.Row("hdr", "Alcance Dinâmico", hdr.colorSpaceDesc))
+                        }
+                    }
+                    currentAfrState?.let { afr ->
+                        add(MpvTechnicalInfoDisplay.Row("afr", "Taxa de Quadros (AFR)", afr.technicalSummary))
+                    }
+                }
                 zechs.drive.stream.ui.player.PlayerGlassMenuDialog(this@MPVActivity, "Informações técnicas",
                     properties.map { row -> zechs.drive.stream.ui.player.GlassMenuItem(
                         id = row.id,
@@ -1437,6 +1451,12 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         isMovie = isMovieExtra || (parsed.episode == null && (parsed.episodeBadge == "FILME" || parsed.isSpecial || playlist.size <= 1))
         currentEpNumber = parsed.episode?.toInt() ?: 0
 
+        val prewarmed = bingeBufferManager.get().consumePrewarmedData(fileId)
+        if (prewarmed != null && prewarmed.aniSkipChapters.isNotEmpty()) {
+            mergeAniSkipChapters(prewarmed.aniSkipChapters)
+            Log.d(TAG, "Applied pre-warmed AniSkip chapters in MPV: ${prewarmed.aniSkipChapters.size} (0ms latency)")
+        }
+
         val searchTitle = parsed.showTitle.ifBlank { title ?: "" }
         if (searchTitle.isNotBlank() && !isMovie && currentEpNumber > 0) {
             lifecycleScope.launch(Dispatchers.IO) {
@@ -2292,6 +2312,22 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
     }
 
     private fun checkAutoPlayNextEpisode(timePosSeconds: Long, durationSeconds: Long) {
+        if (durationSeconds > 60 && timePosSeconds >= (durationSeconds * 0.75).toLong()) {
+            val next = nextEpisode
+            if (next != null && !nextEpisodeCanceled) {
+                lifecycleScope.launch {
+                    if (appSettings.get().fetchPredictiveBuffering()) {
+                        bingeBufferManager.get().prewarmNextEpisode(
+                            scope = lifecycleScope,
+                            nextItem = next,
+                            currentMalAnime = currentMalAnime,
+                            folderSubtitles = folderSubtitles
+                        )
+                    }
+                }
+            }
+        }
+
         val isEndingActive = activeSkipChapter?.type == ChapterType.ENDING
         val decision = PlaybackProgressPolicy.evaluateAutoplay(
             positionMs = timePosSeconds * 1000L,
@@ -2325,6 +2361,18 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
     private fun showNextEpisodeCard(next: PlaylistItem) {
         if (isNextEpisodeCardShowing) return
         isNextEpisodeCardShowing = true
+
+        // Pre-warm next episode predictive buffer immediately when countdown appears
+        lifecycleScope.launch {
+            if (appSettings.get().fetchPredictiveBuffering()) {
+                bingeBufferManager.get().prewarmNextEpisode(
+                    scope = lifecycleScope,
+                    nextItem = next,
+                    currentMalAnime = currentMalAnime,
+                    folderSubtitles = folderSubtitles
+                )
+            }
+        }
 
         binding.netflixSkipRow.animate().cancel()
         binding.netflixSkipRow.visibility = View.GONE
@@ -2678,18 +2726,57 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                         }
                         pendingSubtitles.clear()
 
-                        // Kodi CRenderManager AFR: Match display refresh rate to container framerate
+                        // Apple TV / Netflix Grade AFR (Auto Frame Rate) & HDR (Match Dynamic Range)
                         val containerFps = MPVLib.getPropertyDouble("container-fps")
-                        if (containerFps != null && containerFps > 0.0) {
-                            val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                display
-                            } else {
-                                @Suppress("DEPRECATION")
-                                windowManager.defaultDisplay
+                        val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            display
+                        } else {
+                            @Suppress("DEPRECATION")
+                            windowManager.defaultDisplay
+                        }
+
+                        lifecycleScope.launch {
+                            val afrEnabled = appSettings.get().fetchAutoFrameRate()
+                            val hdrEnabled = appSettings.get().fetchMatchDynamicRange()
+
+                            if (containerFps != null && containerFps > 0.0) {
+                                val afrState = zechs.drive.stream.utils.AutoFrameRatePolicy.applyAutoFrameRate(
+                                    window = window,
+                                    surface = player.holder.surface,
+                                    display = display,
+                                    targetFps = containerFps,
+                                    enabled = afrEnabled
+                                )
+                                currentAfrState = afrState
+                                controller.tvPlayerAfrBadge.apply {
+                                    if (afrState != null && afrEnabled) {
+                                        text = afrState.label
+                                        visibility = View.VISIBLE
+                                    } else {
+                                        visibility = View.GONE
+                                    }
+                                }
                             }
-                            val match = zechs.drive.stream.utils.AutoFrameRatePolicy.findBestDisplayMode(display, containerFps)
-                            if (match != null) {
-                                zechs.drive.stream.utils.AutoFrameRatePolicy.applyRefreshRate(window, match)
+
+                            // Match Dynamic Range / HDR
+                            val gamma = MPVLib.getPropertyString("video-params/gamma")
+                            val matrix = MPVLib.getPropertyString("video-params/colormatrix")
+                            val codec = MPVLib.getPropertyString("video-codec")
+                            val dynRange = zechs.drive.stream.utils.HdrModeManager.detectMpvHdr(gamma, matrix, codec)
+                            val hdrStatus = zechs.drive.stream.utils.HdrModeManager.applyHdrMode(
+                                activity = this@MPVActivity,
+                                dynamicRange = dynRange,
+                                enabled = hdrEnabled,
+                                display = display
+                            )
+                            currentHdrStatus = hdrStatus
+                            controller.tvPlayerHdrBadge.apply {
+                                if (hdrStatus.isHdrActive && dynRange.badgeText.isNotEmpty()) {
+                                    text = dynRange.badgeText
+                                    visibility = View.VISIBLE
+                                } else {
+                                    visibility = View.GONE
+                                }
                             }
                         }
                     }
@@ -2740,9 +2827,12 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         audioManager.abandonAudioFocus(audioFocusChangeListener)
 
         player.removeObserver(this)
+        val surface = player.holder.surface
         player.destroy()
 
-        zechs.drive.stream.utils.AutoFrameRatePolicy.resetRefreshRate(window)
+        zechs.drive.stream.utils.AutoFrameRatePolicy.resetAutoFrameRate(window, surface)
+        zechs.drive.stream.utils.HdrModeManager.resetHdrMode(this)
+        bingeBufferManager.get().clear()
 
         super.onDestroy()
     }

@@ -171,7 +171,10 @@ class SettingsFragment : BaseFragment() {
                     R.id.settingDefaultPlayer,
                     R.id.settingSubtitleSize,
                     R.id.settingAutoSkipToggle,
-                    R.id.settingGesturesToggle
+                    R.id.settingGesturesToggle,
+                    R.id.settingAutoFrameRateToggle,
+                    R.id.settingMatchDynamicRangeToggle,
+                    R.id.settingPredictiveBufferingToggle
                 )
             ),
             SettingsCategory(
@@ -334,12 +337,15 @@ class SettingsFragment : BaseFragment() {
         binding.switchMalSync.isFocusable = false
         binding.switchAutoSkip.isFocusable = false
         binding.switchGestures.isFocusable = false
+        binding.switchAutoFrameRate?.isFocusable = false
+        binding.switchMatchDynamicRange?.isFocusable = false
+        binding.switchPredictiveBuffering?.isFocusable = false
         binding.settingSelectProfile.apply { if (isTv) isFocusableInTouchMode = true }
         categoryButtons.forEach { it.isFocusableInTouchMode = true }
         categoryButtons.firstOrNull()?.let { button -> button.post { button.requestFocus() } }
     }
 
-    private fun allSettingsRows(): List<View> = listOf(
+    private fun allSettingsRows(): List<View> = listOfNotNull(
         binding.settingSelectProfile,
         binding.settingLibraryRoot,
         binding.settingSelectTheme,
@@ -353,6 +359,9 @@ class SettingsFragment : BaseFragment() {
         binding.settingMalSyncToggle,
         binding.settingAutoSkipToggle,
         binding.settingGesturesToggle,
+        binding.settingAutoFrameRateToggle,
+        binding.settingMatchDynamicRangeToggle,
+        binding.settingPredictiveBufferingToggle,
         binding.settingExportBackup,
         binding.settingImportBackup,
         binding.settingLogOut
@@ -933,6 +942,42 @@ class SettingsFragment : BaseFragment() {
         binding.switchGestures.setOnCheckedChangeListener { _, isChecked ->
             malSessionManager.setGesturesEnabled(isChecked)
             showSnackBar(if (isChecked) "Gestos touch ativados" else "Gestos touch desativados")
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            binding.switchAutoFrameRate?.isChecked = appSettings.fetchAutoFrameRate()
+            binding.switchMatchDynamicRange?.isChecked = appSettings.fetchMatchDynamicRange()
+            binding.switchPredictiveBuffering?.isChecked = appSettings.fetchPredictiveBuffering()
+        }
+
+        binding.settingAutoFrameRateToggle?.setOnClickListener {
+            binding.switchAutoFrameRate?.toggle()
+        }
+        binding.switchAutoFrameRate?.setOnCheckedChangeListener { _, isChecked ->
+            viewLifecycleOwner.lifecycleScope.launch {
+                appSettings.saveAutoFrameRate(isChecked)
+                showSnackBar(if (isChecked) "Taxa de quadros automática (AFR) ativada" else "Taxa de quadros automática (AFR) desativada")
+            }
+        }
+
+        binding.settingMatchDynamicRangeToggle?.setOnClickListener {
+            binding.switchMatchDynamicRange?.toggle()
+        }
+        binding.switchMatchDynamicRange?.setOnCheckedChangeListener { _, isChecked ->
+            viewLifecycleOwner.lifecycleScope.launch {
+                appSettings.saveMatchDynamicRange(isChecked)
+                showSnackBar(if (isChecked) "Alcance dinâmico HDR automático ativado" else "Alcance dinâmico HDR desativado")
+            }
+        }
+
+        binding.settingPredictiveBufferingToggle?.setOnClickListener {
+            binding.switchPredictiveBuffering?.toggle()
+        }
+        binding.switchPredictiveBuffering?.setOnCheckedChangeListener { _, isChecked ->
+            viewLifecycleOwner.lifecycleScope.launch {
+                appSettings.savePredictiveBuffering(isChecked)
+                showSnackBar(if (isChecked) "Buffer preditivo de próximo episódio ativado" else "Buffer preditivo desativado")
+            }
         }
     }
 

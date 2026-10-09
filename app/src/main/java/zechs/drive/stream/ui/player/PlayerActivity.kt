@@ -160,6 +160,9 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     @Inject
     lateinit var tenraiService: Lazy<zechs.drive.stream.data.remote.TenraiAnimeService>
 
+    @Inject
+    lateinit var bingeBufferManager: Lazy<zechs.drive.stream.ui.player.predictive.BingeBufferManager>
+
     // View binding
     private lateinit var binding: ActivityPlayerBinding
 
@@ -183,6 +186,10 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     private lateinit var btnBack: ImageButton
     private lateinit var tvPlayerTitle: TextView
     private lateinit var tvPlayerMeta: TextView
+    private var tvPlayerHdrBadge: TextView? = null
+    private var tvPlayerAfrBadge: TextView? = null
+    private var currentAfrState: zechs.drive.stream.utils.AutoFrameRatePolicy.AfrState? = null
+    private var currentHdrStatus: zechs.drive.stream.utils.HdrModeManager.HdrStatus? = null
     private lateinit var btnPlayPause: MaterialButton
     private lateinit var btnPrevEp: ImageButton
     private lateinit var btnNextEp: ImageButton
@@ -325,6 +332,8 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         btnBack = playerView.findViewById(R.id.btnBack)
         tvPlayerTitle = playerView.findViewById(R.id.tvPlayerTitle)
         tvPlayerMeta = playerView.findViewById(R.id.tvPlayerMeta)
+        tvPlayerHdrBadge = playerView.findViewById(R.id.tvPlayerHdrBadge)
+        tvPlayerAfrBadge = playerView.findViewById(R.id.tvPlayerAfrBadge)
         btnPlayPause = playerView.findViewById(R.id.btnPlayPause)
         btnPrevEp = playerView.findViewById(R.id.btnPrevEp)
         btnNextEp = playerView.findViewById(R.id.btnNextEp)
@@ -811,17 +820,55 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                         subtitleText += codec
                     }
 
-                    // Kodi CRenderManager AFR: Match display refresh rate to video fps
-                    if (it.frameRate > 0) {
-                        val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                            display
-                        } else {
-                            @Suppress("DEPRECATION")
-                            windowManager.defaultDisplay
+                    // Apple TV / Netflix Grade AFR (Auto Frame Rate) & HDR (Match Dynamic Range)
+                    val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        display
+                    } else {
+                        @Suppress("DEPRECATION")
+                        windowManager.defaultDisplay
+                    }
+
+                    lifecycleScope.launch {
+                        val afrEnabled = appSettings.get().fetchAutoFrameRate()
+                        val hdrEnabled = appSettings.get().fetchMatchDynamicRange()
+
+                        // 1. Auto Frame Rate (AFR) matching
+                        if (it.frameRate > 0) {
+                            val surface = (playerView.videoSurfaceView as? android.view.SurfaceView)?.holder?.surface
+                            val afrState = zechs.drive.stream.utils.AutoFrameRatePolicy.applyAutoFrameRate(
+                                window = window,
+                                surface = surface,
+                                display = display,
+                                targetFps = it.frameRate.toDouble(),
+                                enabled = afrEnabled
+                            )
+                            currentAfrState = afrState
+                            tvPlayerAfrBadge?.apply {
+                                if (afrState != null && afrEnabled) {
+                                    text = afrState.label
+                                    visibility = View.VISIBLE
+                                } else {
+                                    visibility = View.GONE
+                                }
+                            }
                         }
-                        val match = zechs.drive.stream.utils.AutoFrameRatePolicy.findBestDisplayMode(display, it.frameRate.toDouble())
-                        if (match != null) {
-                            zechs.drive.stream.utils.AutoFrameRatePolicy.applyRefreshRate(window, match)
+
+                        // 2. HDR mode matching
+                        val dynRange = zechs.drive.stream.utils.HdrModeManager.detectExoPlayerHdr(it)
+                        val hdrStatus = zechs.drive.stream.utils.HdrModeManager.applyHdrMode(
+                            activity = this@PlayerActivity,
+                            dynamicRange = dynRange,
+                            enabled = hdrEnabled,
+                            display = display
+                        )
+                        currentHdrStatus = hdrStatus
+                        tvPlayerHdrBadge?.apply {
+                            if (hdrStatus.isHdrActive && dynRange.badgeText.isNotEmpty()) {
+                                text = dynRange.badgeText
+                                visibility = View.VISIBLE
+                            } else {
+                                visibility = View.GONE
+                            }
                         }
                     }
                 }
@@ -1670,24 +1717,38 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                 }
                 .build()
 
-            lifecycleScope.launch {
-                try {
-                    val token = withContext(Dispatchers.IO) { tokenProvider.get().validToken() }
-                    // P2-04: extração de capítulos MKV não pode travar o
-                    // startup do episódio — IO explícito + timeout de 5s.
-                    val chapters = kotlinx.coroutines.withTimeoutOrNull(5_000L) {
-                        withContext(Dispatchers.IO) {
-                            MatroskaChapterParser.extractChapters(streamUri.toString(), token)
-                        }
-                    } ?: emptyList()
-                    parsedChapters = chapters
-                    Log.d(TAG, "Extracted ${chapters.size} chapters from MKV")
-                    if (::player.isInitialized) {
-                        updateIntroButtonVisibility(player.currentPosition)
-                    }
-                } catch (e: Exception) {
-                    Log.w(TAG, "Chapter extraction failed", e)
+            val prewarmed = bingeBufferManager.get().consumePrewarmedData(fileId)
+            if (prewarmed != null && prewarmed.chapters.isNotEmpty()) {
+                parsedChapters = prewarmed.chapters
+                Log.d(TAG, "Applied pre-warmed MKV chapters for '$fileId': ${parsedChapters.size} (0ms latency)")
+                if (::player.isInitialized) {
+                    updateIntroButtonVisibility(player.currentPosition)
                 }
+            } else {
+                lifecycleScope.launch {
+                    try {
+                        val token = withContext(Dispatchers.IO) { tokenProvider.get().validToken() }
+                        // P2-04: extração de capítulos MKV não pode travar o
+                        // startup do episódio — IO explícito + timeout de 5s.
+                        val chapters = kotlinx.coroutines.withTimeoutOrNull(5_000L) {
+                            withContext(Dispatchers.IO) {
+                                MatroskaChapterParser.extractChapters(streamUri.toString(), token)
+                            }
+                        } ?: emptyList()
+                        parsedChapters = chapters
+                        Log.d(TAG, "Extracted ${chapters.size} chapters from MKV")
+                        if (::player.isInitialized) {
+                            updateIntroButtonVisibility(player.currentPosition)
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Chapter extraction failed", e)
+                    }
+                }
+            }
+
+            if (prewarmed != null && prewarmed.aniSkipChapters.isNotEmpty()) {
+                mergeAniSkipChapters(prewarmed.aniSkipChapters)
+                Log.d(TAG, "Applied pre-warmed AniSkip chapters for '$fileId': ${prewarmed.aniSkipChapters.size} (0ms latency)")
             }
 
             val passedStartMs = intent.getLongExtra("startPosition", -1L)
@@ -1826,10 +1887,31 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                     val duration = player.duration
                     updateIntroButtonVisibility(pos)
                     checkAutoPlayNextEpisode(pos, duration)
+                    checkPredictiveBingeBuffer(pos, duration)
                     checkMalScrobble(pos, duration)
                     checkMalCompletionPrompt(pos, duration)
                 }
                 delay(1000L)
+            }
+        }
+    }
+
+    private fun checkPredictiveBingeBuffer(posMs: Long, durationMs: Long) {
+        if (durationMs <= 60_000L) return
+        val progress = posMs.toDouble() / durationMs.toDouble()
+        if (progress >= 0.75) {
+            val next = nextEpisode
+            if (next != null && !nextEpisodeCanceled) {
+                lifecycleScope.launch {
+                    if (appSettings.get().fetchPredictiveBuffering()) {
+                        bingeBufferManager.get().prewarmNextEpisode(
+                            scope = lifecycleScope,
+                            nextItem = next,
+                            currentMalAnime = currentMalAnime,
+                            folderSubtitles = folderSubtitles
+                        )
+                    }
+                }
             }
         }
     }
@@ -1935,8 +2017,17 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         // Suppress skip intro/credits buttons to prevent overlap with next episode card
         binding.netflixSkipRow.animate().cancel()
         binding.netflixSkipRow.visibility = View.GONE
-        skipIntroRow.animate().cancel()
-        skipIntroRow.visibility = View.GONE
+        // Pre-warm next episode predictive buffer immediately when countdown appears
+        lifecycleScope.launch {
+            if (appSettings.get().fetchPredictiveBuffering()) {
+                bingeBufferManager.get().prewarmNextEpisode(
+                    scope = lifecycleScope,
+                    nextItem = next,
+                    currentMalAnime = currentMalAnime,
+                    folderSubtitles = folderSubtitles
+                )
+            }
+        }
 
         val card = binding.nextEpisodeCard
         card.root.translationY = if (controllerVisible) -resources.getDimensionPixelOffset(R.dimen.next_episode_card_offset).toFloat() else 0f
@@ -2790,14 +2881,27 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         val vFormat = player.videoFormat
         val aFormat = player.audioFormat
 
-        binding.kodiInfoHud.tvHudVideoCodec.text = MediaInfoDisplay.videoCodec(vFormat?.sampleMimeType)
+        val codecLabel = buildString {
+            append(MediaInfoDisplay.videoCodec(vFormat?.sampleMimeType))
+            currentHdrStatus?.let { hdr ->
+                if (hdr.isHdrActive) {
+                    append(" • ${hdr.colorSpaceDesc}")
+                }
+            }
+        }
+        binding.kodiInfoHud.tvHudVideoCodec.text = codecLabel
         binding.kodiInfoHud.tvHudVideoDecoder.text = activeVideoDecoderName
             ?.let { "Decoder: $it" }
             ?: "Decoder não reportado"
-        binding.kodiInfoHud.tvHudVideoResolution.text = listOf(
-            MediaInfoDisplay.videoDimensions(vFormat?.width, vFormat?.height),
-            MediaInfoDisplay.frameRate(vFormat?.frameRate)
-        ).joinToString(" • ")
+
+        val resolutionParts = mutableListOf<String>()
+        resolutionParts.add(MediaInfoDisplay.videoDimensions(vFormat?.width, vFormat?.height))
+        currentAfrState?.let { afr ->
+            resolutionParts.add("${afr.label} (AFR)")
+        } ?: run {
+            resolutionParts.add(MediaInfoDisplay.frameRate(vFormat?.frameRate))
+        }
+        binding.kodiInfoHud.tvHudVideoResolution.text = resolutionParts.joinToString(" • ")
 
         binding.kodiInfoHud.tvHudAudioInfo.text = MediaInfoDisplay.audioSummary(
             mimeType = aFormat?.sampleMimeType,
@@ -3261,8 +3365,11 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         countdownJob?.cancel()
         mediaSessionHelper?.release()
         mediaSessionHelper = null
+        val surface = (playerView.videoSurfaceView as? android.view.SurfaceView)?.holder?.surface
         releasePlayer()
-        zechs.drive.stream.utils.AutoFrameRatePolicy.resetRefreshRate(window)
+        zechs.drive.stream.utils.AutoFrameRatePolicy.resetAutoFrameRate(window, surface)
+        zechs.drive.stream.utils.HdrModeManager.resetHdrMode(this)
+        bingeBufferManager.get().clear()
         super.onDestroy()
     }
 
