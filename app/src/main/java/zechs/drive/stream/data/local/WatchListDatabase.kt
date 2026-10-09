@@ -17,7 +17,7 @@ import zechs.drive.stream.data.model.WatchQueueItem
         FollowedFolder::class,
         ProfileEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = true
 )
 abstract class WatchListDatabase : RoomDatabase() {
@@ -33,6 +33,22 @@ abstract class WatchListDatabase : RoomDatabase() {
     abstract fun getProfileCleanupDao(): ProfileCleanupDao
 
     companion object {
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `bannerUrl` TEXT")
+                db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `dominantColor` TEXT")
+                db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `titleRomaji` TEXT")
+                db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `titleEnglish` TEXT")
+                db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `titleJapanese` TEXT")
+                db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `synopsis` TEXT")
+                db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `score` REAL")
+                db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `year` INTEGER")
+                db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `episodeCount` INTEGER")
+                db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `genres` TEXT")
+                db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `ageRating` TEXT")
+                db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `clearLogoUrl` TEXT")
+            }
+        }
         val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `isMovie` INTEGER NOT NULL DEFAULT 0")

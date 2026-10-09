@@ -11,6 +11,9 @@ interface FolderMetadataDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(metadata: FolderMetadata): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(metadataList: List<FolderMetadata>): List<Long>
+
     @Query("SELECT * FROM folder_metadata WHERE folderId = :folderId LIMIT 1")
     suspend fun getMetadata(folderId: String): FolderMetadata?
 

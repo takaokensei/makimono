@@ -187,6 +187,7 @@ class HomeViewModel @Inject constructor(
     private var featuredSpotlightJob: Job? = null
     private var featuredRequestId = 0L
     private var focusedFeaturedFolderId: String? = null
+    @Volatile private var cachedFolderMetaMap: Map<String, zechs.drive.stream.data.local.FolderMetadata> = emptyMap()
 
     data class FileToken(
         val fileId: String,
@@ -571,6 +572,7 @@ class HomeViewModel @Inject constructor(
                                         !nameLower.startsWith(".")
                             }
                             val allMeta = folderMetadataRepository.getAllMetadata().associateBy { it.folderId }
+                            cachedFolderMetaMap = allMeta
 
                             val mappedFiles = animeFiles.map { file ->
                                 val targetId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
@@ -618,7 +620,11 @@ class HomeViewModel @Inject constructor(
                             val updatedList = displayFiles.toMutableList()
                             val unresolvedIndices = updatedList.indices.take(120).filter { i ->
                                 val file = updatedList[i]
-                                (file.posterUrl.isNullOrBlank() || !file.isMovie) && (file.isFolder || file.isShortcutFolder)
+                                val targetId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
+                                    file.shortcutDetails.targetId
+                                } else file.id
+                                val meta = allMeta[targetId] ?: allMeta[file.id]
+                                (file.isFolder || file.isShortcutFolder) && (meta?.posterUrl.isNullOrBlank() || meta?.bannerUrl.isNullOrBlank())
                             }
 
                             unresolvedIndices.chunked(6).forEach { chunk ->
@@ -628,19 +634,16 @@ class HomeViewModel @Inject constructor(
                                             val file = updatedList[index]
                                             val meta = animePosterResolver.resolveMetadata(file.name)
                                             val poster = meta?.posterUrl
-                                            if (!poster.isNullOrBlank()) {
+                                            if (meta != null && !poster.isNullOrBlank()) {
                                                 val targetId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
                                                     file.shortcutDetails.targetId
                                                 } else file.id
-                                                val isMovie = meta.isMovie
-                                                folderMetadataRepository.updateMetadataDetails(
+                                                folderMetadataRepository.saveAnimeMetadata(
                                                     folderId = targetId,
                                                     folderName = file.name,
-                                                    posterUrl = poster,
-                                                    isMovie = isMovie,
-                                                    mediaType = meta.mediaType
+                                                    metadata = meta
                                                 )
-                                                Triple(index, poster, isMovie)
+                                                Triple(index, poster, meta.isMovie)
                                             } else null
                                         }
                                     }.awaitAll()
@@ -702,26 +705,41 @@ class HomeViewModel @Inject constructor(
         val requestId = ++featuredRequestId
         featuredSpotlightJob?.cancel()
 
-        // Show a local hero immediately so a slow AniList/Tenrai lookup does not blank the Home.
+        // Show cached hero metadata immediately so that high-res backdrop, synopsis, and Japanese title render with zero pop-in
+        val cachedHero = cachedFolderMetaMap[targetId]
+        val initialBackdrop = cachedHero?.bannerUrl ?: fallbackArtUrl
+        val initialPoster = cachedHero?.posterUrl ?: fallbackArtUrl
+        val initialTitle = cachedHero?.titleEnglish ?: cachedHero?.titleRomaji ?: chosenFolder.name
+
         _featuredAnime.value = FeaturedAnime(
-            title = chosenFolder.name,
-            titleJapanese = null,
-            synopsis = null,
-            genres = emptyList(),
-            backdropUrl = fallbackArtUrl,
+            title = initialTitle,
+            titleJapanese = cachedHero?.titleJapanese,
+            synopsis = cachedHero?.synopsis,
+            genres = cachedHero?.genres?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList(),
+            backdropUrl = initialBackdrop,
             folderId = targetId,
-            posterUrl = fallbackArtUrl,
-            isFocusedPreview = isFocusedPreview
+            posterUrl = initialPoster,
+            year = cachedHero?.year,
+            episodeCount = cachedHero?.episodeCount,
+            score = cachedHero?.score,
+            isFocusedPreview = isFocusedPreview,
+            clearLogoUrl = cachedHero?.clearLogoUrl
         )
 
         featuredSpotlightJob = viewModelScope.launch(Dispatchers.IO) {
             try {
-                val aniListMeta = animePosterResolver.resolveMetadata(cleanTitle)
-                val results = if (aniListMeta == null) tenraiAnimeService.searchAnime(cleanTitle) else emptyList()
+                val dbMeta = cachedHero ?: folderMetadataRepository.getMetadata(targetId)
+                val aniListMeta = if (dbMeta != null && !dbMeta.bannerUrl.isNullOrBlank() && !dbMeta.synopsis.isNullOrBlank()) {
+                    null
+                } else {
+                    animePosterResolver.resolveMetadata(cleanTitle)
+                }
+                val results = if (aniListMeta == null && dbMeta?.synopsis.isNullOrBlank()) tenraiAnimeService.searchAnime(cleanTitle) else emptyList()
                 val entry = results.firstOrNull()
                 if (requestId != featuredRequestId) return@launch
 
                 if (aniListMeta != null) {
+                    folderMetadataRepository.saveAnimeMetadata(targetId, chosenFolder.name, aniListMeta)
                     _featuredAnime.value = FeaturedAnime(
                         title = aniListMeta.titleEnglish ?: aniListMeta.titleRomaji ?: cleanTitle,
                         titleJapanese = aniListMeta.titleNative,
@@ -736,7 +754,7 @@ class HomeViewModel @Inject constructor(
                         isFocusedPreview = isFocusedPreview,
                         clearLogoUrl = aniListMeta.clearLogoUrl
                     )
-                } else if (entry != null) {
+                } else if (entry != null && dbMeta?.synopsis.isNullOrBlank()) {
                     _featuredAnime.value = FeaturedAnime(
                         title = entry.titleEnglish ?: entry.title,
                         titleJapanese = entry.titleJapanese,

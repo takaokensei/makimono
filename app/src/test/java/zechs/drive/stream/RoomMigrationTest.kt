@@ -82,4 +82,33 @@ class RoomMigrationTest {
             db.execSQL("ALTER TABLE `watch_list` ADD COLUMN `subtitleDelayMs` INTEGER NOT NULL DEFAULT 0")
         }
     }
+
+    @Test
+    fun migration_8_9_addsIsMovieAndMediaTypeColumns() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+        WatchListDatabase.MIGRATION_8_9.migrate(db)
+
+        verify(exactly = 1) {
+            db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `isMovie` INTEGER NOT NULL DEFAULT 0")
+        }
+        verify(exactly = 1) {
+            db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `mediaType` TEXT")
+        }
+    }
+
+    @Test
+    fun migration_9_10_addsFolderMetadataExtendedColumns() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+        WatchListDatabase.MIGRATION_9_10.migrate(db)
+
+        verify(exactly = 1) {
+            db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `bannerUrl` TEXT")
+        }
+        verify(exactly = 1) {
+            db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `synopsis` TEXT")
+        }
+        verify(exactly = 1) {
+            db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `genres` TEXT")
+        }
+    }
 }

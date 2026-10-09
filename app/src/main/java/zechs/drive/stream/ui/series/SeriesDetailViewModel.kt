@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zechs.drive.stream.R
+import zechs.drive.stream.data.local.toAnimeMetadata
 import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.data.model.WatchList
 import zechs.drive.stream.data.remote.AnimeMetadata
@@ -144,10 +145,12 @@ class SeriesDetailViewModel @Inject constructor(
                     return@launch
                 }
 
-                // Publish the Drive-backed shell immediately. Metadata enrichment can
-                // arrive later without keeping the detail screen blank.
+                // Publish the Drive-backed state with cached Room metadata immediately so
+                // that the banner, synopsis, titles and badges appear without delay.
+                val cachedFolder = folderMetadataRepository.getMetadata(folderId)
+                val cachedAniListMeta = cachedFolder?.toAnimeMetadata()
                 val cachedPoster = initialPoster
-                    ?: folderMetadataRepository.getMetadata(folderId)?.posterUrl
+                    ?: cachedFolder?.posterUrl
                 val videoIds = driveFiles.map { it.id }
                 val watchList = watchListRepository.getWatches(videoIds)
                 val watchMap = watchList.associateBy { it.videoId }
@@ -165,7 +168,7 @@ class SeriesDetailViewModel @Inject constructor(
                     driveFiles = driveFiles,
                     watchMap = watchMap,
                     fetchedAnime = null,
-                    aniListMeta = null,
+                    aniListMeta = cachedAniListMeta,
                     arcs = emptyList(),
                     fallbackPosterUrl = cachedPoster,
                     hasIncompleteDriveListing = driveResult.isIncomplete
@@ -175,7 +178,8 @@ class SeriesDetailViewModel @Inject constructor(
                 }
 
                 val (fetchedAnime, fetchedArcs) = tenraiDeferred.await()
-                val aniListMeta = aniListDeferred.await()
+                val freshAniListMeta = aniListDeferred.await()
+                val aniListMeta = freshAniListMeta ?: cachedAniListMeta
 
                 val isMovie = aniListMeta?.isMovie == true
                 val isNonAnime = aniListMeta?.isAnime == false
@@ -195,7 +199,14 @@ class SeriesDetailViewModel @Inject constructor(
                     ?: validAnime?.imageUrl
                     ?: initialPoster
                     ?: cachedPoster
-                if (!finalPoster.isNullOrBlank() || isMovie) {
+
+                if (freshAniListMeta != null) {
+                    folderMetadataRepository.saveAnimeMetadata(
+                        folderId = folderId,
+                        folderName = seriesTitle,
+                        metadata = freshAniListMeta
+                    )
+                } else if (!finalPoster.isNullOrBlank() || isMovie) {
                     folderMetadataRepository.updateMetadataDetails(
                         folderId = folderId,
                         folderName = seriesTitle,

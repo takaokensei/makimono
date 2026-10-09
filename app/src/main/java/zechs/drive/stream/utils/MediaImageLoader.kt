@@ -1,5 +1,6 @@
 package zechs.drive.stream.utils
 
+import android.content.Context
 import android.widget.ImageView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -18,6 +19,28 @@ object MediaImageLoader {
 
     fun backdrop(view: ImageView, url: String?) {
         load(view, url, 1440, 810, R.drawable.kodi_primary_bg)
+    }
+
+    fun preloadPoster(context: Context, url: String?) {
+        if (url.isNullOrBlank()) return
+        try {
+            Glide.with(context.applicationContext)
+                .load(url)
+                .override(640, 960)
+                .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
+                .preload(640, 960)
+        } catch (_: Exception) {}
+    }
+
+    fun preloadBackdrop(context: Context, url: String?) {
+        if (url.isNullOrBlank()) return
+        try {
+            Glide.with(context.applicationContext)
+                .load(url)
+                .override(1440, 810)
+                .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
+                .preload(1440, 810)
+        } catch (_: Exception) {}
     }
 
     private fun load(

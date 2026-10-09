@@ -37,16 +37,29 @@ import androidx.media3.common.Player
 import androidx.media3.ui.AspectRatioFrameLayout
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
+import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zechs.drive.stream.R
+import zechs.drive.stream.data.local.CatalogEntry
 import zechs.drive.stream.data.model.LatestRelease
+import zechs.drive.stream.data.remote.AnimePosterResolver
+import zechs.drive.stream.data.repository.CatalogRepository
+import zechs.drive.stream.data.repository.DriveRepository
+import zechs.drive.stream.data.repository.FolderMetadataRepository
 import zechs.drive.stream.databinding.ActivityMainBinding
 import zechs.drive.stream.databinding.DialogUpdateProgressBinding
 import zechs.drive.stream.utils.AppTheme
 import zechs.drive.stream.utils.AppUpdateManager
+import zechs.drive.stream.utils.MediaImageLoader
+import zechs.drive.stream.utils.ProfileManager
+import zechs.drive.stream.utils.SessionManager
 import zechs.drive.stream.utils.ext.navigateSafe
 import zechs.drive.stream.utils.state.Resource
 import zechs.drive.stream.utils.util.Converter
@@ -67,9 +80,29 @@ class MainActivity : AppCompatActivity() {
 
     private var vinhetaPlayer: ExoPlayer? = null
     private var isVinhetaDismissed = false
+    private var isVideoFinished = false
+    private var isPreloadFinished = false
 
     @Inject
     lateinit var appUpdateManager: AppUpdateManager
+
+    @Inject
+    lateinit var driveRepository: Lazy<DriveRepository>
+
+    @Inject
+    lateinit var folderMetadataRepository: FolderMetadataRepository
+
+    @Inject
+    lateinit var animePosterResolver: AnimePosterResolver
+
+    @Inject
+    lateinit var profileManager: ProfileManager
+
+    @Inject
+    lateinit var catalogRepository: CatalogRepository
+
+    @Inject
+    lateinit var sessionManager: Lazy<SessionManager>
 
     private val viewModel by viewModels<MainViewModel>()
     private lateinit var binding: ActivityMainBinding
@@ -437,6 +470,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun checkDismissVinheta() {
+        if (isVideoFinished && isPreloadFinished) {
+            dismissVinheta()
+        }
+    }
+
     private fun setupVinheta(savedInstanceState: Bundle?) {
         if (savedInstanceState != null || hasPlayedVinheta) {
             binding.vinhetaContainer.visibility = View.GONE
@@ -447,6 +486,8 @@ class MainActivity : AppCompatActivity() {
         binding.vinhetaContainer.visibility = View.VISIBLE
         binding.vinhetaContainer.alpha = 1f
         isVinhetaDismissed = false
+        isVideoFinished = false
+        isPreloadFinished = false
 
         try {
             val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -462,13 +503,15 @@ class MainActivity : AppCompatActivity() {
                 addListener(object : Player.Listener {
                     override fun onPlaybackStateChanged(playbackState: Int) {
                         if (playbackState == Player.STATE_ENDED) {
-                            dismissVinheta()
+                            isVideoFinished = true
+                            checkDismissVinheta()
                         }
                     }
 
                     override fun onPlayerError(error: PlaybackException) {
                         Log.e(TAG, "Vinheta playback error: ${error.message}", error)
-                        dismissVinheta()
+                        isVideoFinished = true
+                        checkDismissVinheta()
                     }
                 })
                 prepare()
@@ -477,22 +520,182 @@ class MainActivity : AppCompatActivity() {
             vinhetaPlayer = player
             binding.pvVinheta.player = player
 
-            // Parallel background preloader: load Drive metadata and warm poster cache while vinheta plays
-            lifecycleScope.launch(Dispatchers.IO) {
-                try {
-                    // Signal preloading status
-                    withContext(Dispatchers.Main) {
-                        binding.tvVinhetaPreloadStatus.text = "Sincronizando catálogo e capas…"
-                    }
-                } catch (_: Exception) {}
-            }
+            startStartupPreloader()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize vinheta player", e)
+            isVideoFinished = true
+            isPreloadFinished = true
             dismissVinheta()
         }
 
         // Unskippable intro: consume touch/click events without dismissing
         binding.vinhetaContainer.setOnClickListener { /* unskippable intro */ }
+    }
+
+    private fun startStartupPreloader() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val timeoutJob = launch {
+                // Safety maximum timeout of 10s so user is never stuck indefinitely
+                delay(10000L)
+                withContext(Dispatchers.Main) {
+                    if (!isPreloadFinished) {
+                        Log.d(TAG, "Preloader reached safety timeout, proceeding to app")
+                        isPreloadFinished = true
+                        checkDismissVinheta()
+                    }
+                }
+            }
+
+            try {
+                // Warm up profiles first so profile selection screen has zero delay
+                try {
+                    profileManager.awaitReady()
+                    val profiles = profileManager.getProfiles()
+                    profiles.forEach { profile ->
+                        if (!profile.backgroundUrl.isNullOrBlank()) {
+                            MediaImageLoader.preloadBackdrop(applicationContext, profile.backgroundUrl)
+                        }
+                    }
+                } catch (_: Exception) {}
+
+                // Check if user is logged into Google Drive
+                val client = try {
+                    sessionManager.get().fetchClient()
+                } catch (_: Exception) { null }
+
+                if (client == null) {
+                    Log.d(TAG, "User not signed in, skipping library catalog preload")
+                    withContext(Dispatchers.Main) {
+                        isPreloadFinished = true
+                        timeoutJob.cancel()
+                        checkDismissVinheta()
+                    }
+                    return@launch
+                }
+
+                withContext(Dispatchers.Main) {
+                    binding.tvVinhetaPreloadStatus.text = "Sincronizando biblioteca…"
+                }
+
+                val (configuredId, configuredName) = profileManager.getLibraryRoot()
+                var resolvedFolderId = configuredId
+
+                if (resolvedFolderId.isNullOrBlank()) {
+                    val searchName = configuredName?.trimEnd('/')?.trim() ?: "oneblacki"
+                    val escapedName = searchName.replace("'", "\\'")
+                    val resp = driveRepository.get().getAllFilesDetailed(
+                        query = "name = '$escapedName' and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut') and trashed=false",
+                        pageSize = 25
+                    )
+                    val folder = when (resp) {
+                        is Resource.Success -> resp.data?.files?.firstOrNull()
+                        is Resource.Error -> resp.data?.files?.firstOrNull()
+                        is Resource.Loading -> null
+                    }
+                    if (folder != null) {
+                        resolvedFolderId = folder.shortcutDetails.targetId ?: folder.id
+                    } else if (configuredName.isNullOrBlank()) {
+                        resolvedFolderId = "root"
+                    }
+                }
+
+                if (resolvedFolderId.isNullOrBlank()) {
+                    resolvedFolderId = "root"
+                }
+
+                // Query files in library root folder
+                val filesResponse = driveRepository.get().getAllFilesDetailed(
+                    query = "'$resolvedFolderId' in parents and trashed=false",
+                    pageSize = 100
+                )
+                val fileListing = when (filesResponse) {
+                    is Resource.Success -> filesResponse.data
+                    is Resource.Error -> filesResponse.data
+                    is Resource.Loading -> null
+                }
+
+                val driveFiles = fileListing?.files?.map { it.toDriveFile() }.orEmpty()
+                val validMedia = driveFiles.filter { file ->
+                    val isMedia = file.isFolder || file.isShortcutFolder || file.isVideoFile || file.isShortcutVideo
+                    val lower = file.name.lowercase()
+                    isMedia &&
+                        !lower.endsWith(".ico") &&
+                        !lower.endsWith(".apk") &&
+                        !lower.endsWith(".exe") &&
+                        !lower.endsWith(".ini") &&
+                        !lower.endsWith(".txt") &&
+                        !lower.startsWith(".")
+                }
+
+                if (validMedia.isNotEmpty()) {
+                    // Cache in catalogRepository for instant offline availability
+                    catalogRepository.cacheFolderContents(
+                        parentId = resolvedFolderId,
+                        entries = validMedia.map {
+                            CatalogEntry(
+                                id = it.id,
+                                name = it.name,
+                                mimeType = it.mimeType,
+                                parentId = resolvedFolderId,
+                                posterUrl = it.posterUrl
+                            )
+                        }
+                    )
+
+                    val existingMeta = folderMetadataRepository.getAllMetadata().associateBy { it.folderId }
+                    val total = validMedia.size
+                    var processed = 0
+
+                    withContext(Dispatchers.Main) {
+                        binding.tvVinhetaPreloadStatus.text = "Sincronizando capas e banners (0/$total)…"
+                    }
+
+                    // Process concurrently in chunks of 6
+                    validMedia.chunked(6).forEach { chunk ->
+                        coroutineScope {
+                            chunk.map { file ->
+                                async {
+                                    val targetId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
+                                        file.shortcutDetails.targetId
+                                    } else file.id
+
+                                    val cached = existingMeta[targetId] ?: existingMeta[file.id]
+                                    if (cached != null && !cached.posterUrl.isNullOrBlank() && !cached.bannerUrl.isNullOrBlank()) {
+                                        // Already cached in Room: ensure Glide memory and disk cache are warm
+                                        MediaImageLoader.preloadPoster(applicationContext, cached.posterUrl)
+                                        MediaImageLoader.preloadBackdrop(applicationContext, cached.bannerUrl)
+                                    } else {
+                                        // Missing poster or banner: resolve from AniList/TMDB
+                                        val meta = animePosterResolver.resolveMetadata(file.name)
+                                        if (meta != null) {
+                                            folderMetadataRepository.saveAnimeMetadata(targetId, file.name, meta)
+                                            MediaImageLoader.preloadPoster(applicationContext, meta.posterUrl)
+                                            MediaImageLoader.preloadBackdrop(applicationContext, meta.bannerUrl)
+                                        }
+                                    }
+                                }
+                            }.awaitAll()
+                        }
+                        processed += chunk.size
+                        withContext(Dispatchers.Main) {
+                            binding.tvVinhetaPreloadStatus.text = "Sincronizando capas e banners ($processed/$total)…"
+                        }
+                    }
+                }
+
+                withContext(Dispatchers.Main) {
+                    binding.tvVinhetaPreloadStatus.text = "Biblioteca pronta!"
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Catalog preload error: ${e.message}")
+            } finally {
+                timeoutJob.cancel()
+                withContext(Dispatchers.Main) {
+                    isPreloadFinished = true
+                    checkDismissVinheta()
+                }
+            }
+        }
     }
 
     private fun dismissVinheta() {
