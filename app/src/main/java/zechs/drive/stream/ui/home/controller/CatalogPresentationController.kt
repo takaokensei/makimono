@@ -142,9 +142,12 @@ class CatalogPresentationController(
         val titles = compareBy<DriveFile> {
             AnimePosterResolver.cleanAnimeTitle(it.name).lowercase(Locale.ROOT)
         }
+        val titlesDesc = compareByDescending<DriveFile> {
+            AnimePosterResolver.cleanAnimeTitle(it.name).lowercase(Locale.ROOT)
+        }
         val sorted = when (catalogSort) {
             1 -> source.sortedWith(titles)
-            2 -> source.sortedWith(titles.reversed())
+            2 -> source.sortedWith(titlesDesc)
             else -> source
         }
         val focusedItems = (0 until animeAdapter.itemCount).mapNotNull { position ->
