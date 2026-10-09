@@ -4,6 +4,7 @@ plugins {
     id "androidx.navigation.safeargs.kotlin"
     id "kotlin-kapt"
     id "dagger.hilt.android.plugin"
+    id "jacoco"
 }
 
 // Local release-signing settings are read from local.properties, which is
@@ -114,6 +115,7 @@ android {
         // This avoids uninstalling the user's build and losing its Drive session.
         debug {
             applicationIdSuffix ".visualreview"
+            enableUnitTestCoverage true
         }
         release {
             minifyEnabled true
@@ -258,4 +260,50 @@ dependencies {
     testImplementation "androidx.arch.core:core-testing:2.2.0"
     androidTestImplementation "androidx.test.ext:junit:1.1.5"
     androidTestImplementation "androidx.test.espresso:espresso-core:3.5.1"
+}
+
+jacoco {
+    toolVersion = "0.8.11"
+}
+
+tasks.register("jacocoTestReport", JacocoReport) {
+    dependsOn "testDebugUnitTest"
+
+    reports {
+        xml.required = true
+        html.required = true
+    }
+
+    def fileFilter = [
+        '**/R.class',
+        '**/R$*.class',
+        '**/BuildConfig.*',
+        '**/Manifest*.*',
+        '**/*Test*.*',
+        'android/**/*.*',
+        '**/*_MembersInjector.class',
+        '**/Dagger*Component.class',
+        '**/Dagger*Component$Builder.class',
+        '**/*_Factory.class',
+        '**/*_Provide*Factory.class',
+        '**/*Extensions*.*',
+        '**/*$Result.*',
+        '**/*$Result$*.*',
+        '**/*Binding.*',
+        '**/*BindingImpl.*',
+        '**/*Directions$*.*',
+        '**/*Directions.*',
+        '**/*Args$*.*',
+        '**/*Args.*'
+    ]
+
+    def javaClasses = fileTree(dir: "${project.layout.buildDirectory.asFile.get()}/intermediates/javac/debug/classes", excludes: fileFilter)
+    def kotlinClasses = fileTree(dir: "${project.layout.buildDirectory.asFile.get()}/tmp/kotlin-classes/debug", excludes: fileFilter)
+
+    classDirectories.setFrom(files([javaClasses, kotlinClasses]))
+    sourceDirectories.setFrom(files(["${project.projectDir}/src/main/java"]))
+    executionData.setFrom(fileTree(dir: project.layout.buildDirectory.asFile.get(), includes: [
+        "jacoco/testDebugUnitTest.exec",
+        "outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec"
+    ]))
 }
