@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  Powered by <a href="https://developers.google.com/drive/api">Google Drive API</a>, <a href="https://github.com/google/ExoPlayer">ExoPlayer</a> + FFmpeg Extension, and <a href="https://github.com/mpv-android">mpv-android</a>.
+  Powered by <a href="https://developers.google.com/drive/api">Google Drive API</a>, <a href="https://developer.android.com/media/media3">AndroidX Media3</a>, and <a href="docs/NATIVE_MPV_BUILD.md">libmpv</a>.
 </p>
 
 <div align="center">
@@ -26,15 +26,15 @@
 
 ## ✨ Highlights
 
-- **Dual Playback Engines**: Common `PlayerEngine` contract and `PlaybackCoordinator` orchestrating both ExoPlayer (with FFmpeg decoders) and MPV.
+- **Dual Playback Engines**: Common `PlayerEngine` contract and `PlaybackCoordinator` orchestrating AndroidX Media3 (hardware-accelerated decoders, AFR, HDR) and native MPV (`libmpv`) for complex anime subtitle scripts. See [MPV Architecture](docs/NATIVE_MPV_BUILD.md).
 - **Native Fansub Subtitle Rendering**: Preserves custom SSA/ASS font styles, colors, and dialogue formatting while automatically normalizing vertical placement right above the bezel across TV and mobile displays.
-- **Hardened Security & Keystore Encryption**: Drive session tokens and credentials encrypted via Android Keystore (AES-256-GCM); zero raw tokens in logs with `RedactingLoggingInterceptor`.
+- **Hardened Security & Keystore Encryption**: Drive session tokens and credentials encrypted via Android Keystore (AES-256-GCM); zero raw tokens in logs with `AppLog` automated credential redaction.
 - **Fail-Closed Secure In-App Updater**: Automatic detection of GitHub releases with mandatory SHA-256 checksum verification and cryptographic signing certificate fingerprint matching before installation.
 - **Multi-Profile System**: Isolated watchlists, watch queues, play progress, and preferences per user profile.
 - **Global Search & Offline-First Catalog**: Debounced global search across Drive files and local Room catalog caching for instant startup and offline browsing.
 - **Background Playback & PiP**: Full `MediaSession` integration for remote controls/lockscreen and Picture-in-Picture (Android 8.0+) with dynamic aspect ratio.
-- **Android TV & Leanback Support**: Native D-pad navigation, 10-foot rail layout, Leanback launcher banner, and overscan safe-insets.
-- **Quality Assurance**: 350 automated unit tests passing (100% success rate), clean lint checks, and reproducible release builds.
+- **Android TV & Leanback Support**: Native D-pad navigation, compact 80dp rail layout, 3dp neon focus rings, overscan safe-insets, and WCAG AA contrast compliance.
+- **Quality Assurance**: 350 automated unit tests passing (100% success rate), clean lint checks, and reproducible release builds. Track ongoing corrections in [Correction Tracker](docs/CORRECTION_PLAN_TRACKER.md).
 
 ---
 

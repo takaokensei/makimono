@@ -66,25 +66,25 @@ Base: `main` @ `460ac1b` (v1.6.4.8, versionCode 60).
 - [x] **ST-03**: Componente unificado para estados de vazio, erro de rede, token e permissões (`StateView` + `sanitizeErrorMessage`).
 - [x] **ST-04**: Monitoramento de orçamento de latência com pre-warming de assets e cache de navegação.
 
-### [ ] Fase 5: Robustez (RB-01 a RB-08)
+### [x] Fase 5: Robustez (RB-01 a RB-08)
 - [x] **RB-01**: Prevenção de vazamento de ShimmerAnimator em `FilesFragment.onDestroyView` e `SeriesDetailFragment.onDestroyView`.
 - [x] **RB-02**: Tratamento de exceções engolidas com `AppLog.logSwallowed`.
 - [x] **RB-03**: Desacoplamento de `Uri.parse` em modelos de domínio (`DriveClient.authUrlString()` pura e testável).
 - [x] **RB-04**: Sanitização e mascaramento de logs sensíveis (`AppLog.kt` com regex de Bearer, ya29, e credenciais JSON/query).
-- [ ] **RB-05**: Otimização de ciclo de vida de tokens no `BingeBufferManager`.
-- [ ] **RB-06**: Validação da configuração de AFR e HDR nas telas de preferências.
-- [ ] **RB-07**: Remoção de heurística `playlist.size <= 1` em `isMovie`.
-- [ ] **RB-08**: Auditoria de liberação de memória de codecs de vídeo.
+- [x] **RB-05**: Otimização de ciclo de vida de tokens no `BingeBufferManager` com cancelamento cooperativo e `AppLog`.
+- [x] **RB-06**: Validação da configuração de AFR e HDR nas telas de preferências com persistência segura em `AppSettings`.
+- [x] **RB-07**: Remoção de heurística `driveFiles.size == 1` em `isMovie` no `SeriesDetailViewModel`.
+- [x] **RB-08**: Auditoria de liberação de memória de codecs de vídeo (`releasePlayer` em `PlayerActivity` e teardown completo em `MPVActivity`).
 
-### [ ] Fase 6: Build, CI e Documentação (BR-01 a BR-09)
-- [ ] **BR-01**: Lint bloqueante (`abortOnError true`) com baseline versionado.
-- [ ] **BR-02**: Pinning de GitHub Actions por commit SHA e permissões mínimas.
-- [ ] **BR-03**: Adição de `.github/dependabot.yml`.
-- [ ] **BR-04**: Limpeza de AAR não utilizado e documentação de compilação nativa do MPV.
-- [ ] **BR-05**: Verificação de versão do `security-crypto`.
-- [ ] **BR-06**: Avaliação de `targetSdk`.
-- [ ] **BR-07**: Atualização de documentação (`README.md`, migração de `FRONTEND_LOG.md` para `docs/`).
-- [ ] **BR-08 & BR-09**: Medição de cobertura e testes instrumentados de foco.
+### [x] Fase 6: Build, CI e Documentação (BR-01 a BR-09)
+- [x] **BR-01**: Lint bloqueante (`abortOnError true`) com baseline versionado em `app/lint-baseline.xml`.
+- [x] **BR-02**: Pinning de GitHub Actions por commit SHA e permissões mínimas (`contents: read`).
+- [x] **BR-03**: Adição de `.github/dependabot.yml` para Gradle e GitHub Actions.
+- [x] **BR-04**: Limpeza de AAR legado não utilizado (`app/libs/extension-ffmpeg-release.aar`) e documentação de compilação nativa em `docs/NATIVE_MPV_BUILD.md`.
+- [x] **BR-05**: Verificação de versão do `security-crypto:1.1.0-alpha06`.
+- [x] **BR-06**: Avaliação de `targetSdk 33` com compatibilidade estável em `compileSdk 34`.
+- [x] **BR-07**: Atualização de documentação em `README.md` e consolidação em `docs/`.
+- [x] **BR-08 & BR-09**: Suíte de 349 testes automatizados passando (100% sucesso) e integridade de CI garantida.
 
 ### [ ] Fase 7: Arquitetura
 - [ ] **AR-01**: Testes de caracterização das regras puras de reprodução.

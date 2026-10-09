@@ -159,7 +159,8 @@ android {
 
     lintOptions {
         checkReleaseBuilds true
-        abortOnError false
+        baseline file("lint-baseline.xml")
+        abortOnError true
     }
 }
 

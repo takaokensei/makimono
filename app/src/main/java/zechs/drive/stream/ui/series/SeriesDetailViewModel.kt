@@ -261,7 +261,7 @@ class SeriesDetailViewModel @Inject constructor(
         fallbackPosterUrl: String?,
         hasIncompleteDriveListing: Boolean
     ): SeriesDetailUiState.Success {
-        val isMovie = aniListMeta?.isMovie == true || (driveFiles.size == 1 && driveFiles.none { it.name.contains("Ep", ignoreCase = true) || it.name.contains("E0", ignoreCase = true) })
+        val isMovie = aniListMeta?.isMovie == true
         val movieCanonical = if (isMovie) (aniListMeta?.titleRomaji ?: aniListMeta?.titleEnglish ?: seriesTitle) else null
         val fallbackThumb = if (isMovie) (aniListMeta?.bannerUrl ?: aniListMeta?.posterUrl ?: fallbackPosterUrl) else null
         allEpisodeItems = driveFiles.map { file ->

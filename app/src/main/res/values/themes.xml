@@ -18,7 +18,6 @@
         <item name="colorTextTertiary">@color/obsidian_text_tertiary</item>
         <item name="colorAccentPrimary">@color/obsidian_accent_primary</item>
         <item name="colorAccentSecondary">@color/obsidian_accent_secondary</item>
-        <item name="colorOnPrimary">@color/obsidian_on_primary</item>
         <item name="colorFocusFill">@color/obsidian_focus_fill</item>
         <item name="colorStatusSuccess">@color/obsidian_success</item>
         <item name="colorStatusWarning">@color/obsidian_warning</item>

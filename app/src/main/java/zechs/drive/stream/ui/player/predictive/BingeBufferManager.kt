@@ -17,6 +17,7 @@ import zechs.drive.stream.data.model.SubtitleItem
 import zechs.drive.stream.data.model.MalAnimeNode
 import zechs.drive.stream.data.repository.AniSkipRepository
 import zechs.drive.stream.data.repository.TokenProvider
+import zechs.drive.stream.utils.AppLog
 import zechs.drive.stream.utils.EpisodeParser
 import zechs.drive.stream.utils.MatroskaChapterParser
 import zechs.drive.stream.utils.util.Constants.Companion.DRIVE_API
@@ -85,14 +86,14 @@ class BingeBufferManager @Inject constructor(
 
         val existing = prewarmedEpisode
         if (existing != null && existing.fileId == targetFileId && (System.currentTimeMillis() - existing.createdAt < EXPIRY_MS)) {
-            Log.d(TAG, "Next episode '${nextItem.title}' is already pre-warmed and warm in cache.")
+            AppLog.d(TAG, "Next episode '${nextItem.title}' is already pre-warmed and warm in cache.")
             return null
         }
 
         activePrewarmJob?.cancel()
         val job = scope.launch(dispatcher) {
             try {
-                Log.d(TAG, "Starting predictive binge buffer pre-warm for: ${nextItem.title} ($targetFileId)")
+                AppLog.d(TAG, "Starting predictive binge buffer pre-warm for: ${nextItem.title} ($targetFileId)")
                 val token = tokenProvider.get().validToken()
                 val streamUri = "$DRIVE_API/files/${targetFileId}?supportsAllDrives=True&alt=media"
 
@@ -102,7 +103,7 @@ class BingeBufferManager @Inject constructor(
                         chapterExtractor(streamUri, token)
                     } ?: emptyList()
                 } catch (e: Exception) {
-                    Log.w(TAG, "Predictive MKV chapter extraction error", e)
+                    AppLog.logSwallowed(TAG, "predictive MKV chapter extraction", e)
                     emptyList()
                 }
 
@@ -119,7 +120,7 @@ class BingeBufferManager @Inject constructor(
                             )
                         } ?: emptyList()
                     } catch (e: Exception) {
-                        Log.w(TAG, "Predictive AniSkip pre-fetch error", e)
+                        AppLog.logSwallowed(TAG, "predictive AniSkip pre-fetch", e)
                         emptyList()
                     }
                 } else {
@@ -139,11 +140,12 @@ class BingeBufferManager @Inject constructor(
                     matchingSubtitles = matchingSubs,
                     isHeadBuffered = chapters.isNotEmpty()
                 )
-                Log.d(TAG, "Predictive binge pre-warm SUCCESS for '${nextItem.title}' (${chapters.size} mkv chapters, ${aniSkipChapters.size} aniskip chapters, ${matchingSubs.size} subtitles)")
+                AppLog.d(TAG, "Predictive binge pre-warm SUCCESS for '${nextItem.title}' (${chapters.size} mkv chapters, ${aniSkipChapters.size} aniskip chapters, ${matchingSubs.size} subtitles)")
             } catch (e: CancellationException) {
-                Log.d(TAG, "Predictive pre-warming cancelled")
+                AppLog.d(TAG, "Predictive pre-warming cancelled")
+                throw e
             } catch (e: Exception) {
-                Log.w(TAG, "Predictive pre-warming failed", e)
+                AppLog.logSwallowed(TAG, "predictive binge buffer pre-warm", e)
             }
         }
         activePrewarmJob = job
@@ -158,7 +160,7 @@ class BingeBufferManager @Inject constructor(
         val existing = prewarmedEpisode
         if (existing != null && existing.fileId == fileId && (System.currentTimeMillis() - existing.createdAt < EXPIRY_MS)) {
             prewarmedEpisode = null
-            Log.d(TAG, "Consumed pre-warmed data for '$fileId' (instant startup achieved!)")
+            AppLog.d(TAG, "Consumed pre-warmed data for '$fileId' (instant startup achieved!)")
             return existing
         }
         return null
