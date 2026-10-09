@@ -64,6 +64,7 @@ import zechs.drive.stream.data.repository.AniSkipRepository
 import zechs.drive.stream.data.repository.MalRepository
 import zechs.drive.stream.ui.player.PlayerViewModel
 import zechs.drive.stream.ui.player.PlaybackPlaylistPolicy
+import zechs.drive.stream.ui.player.PlaybackLabel
 import zechs.drive.stream.ui.player.PlayerLauncher
 import zechs.drive.stream.ui.player.MalRatingDialog
 import zechs.drive.stream.ui.player.PlayerGestureHelper
@@ -309,7 +310,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         val isMovieExtra = intent.getBooleanExtra(PlayerLauncher.EXTRA_IS_MOVIE, false)
         val initialParsed = EpisodeParser.parse(currentTitle)
         isMovie = isMovieExtra || (initialParsed.episode == null && (initialParsed.episodeBadge == "FILME" || initialParsed.isSpecial))
-        currentEpNumber = initialParsed.episode?.toInt() ?: 0
+        currentEpNumber = if (isMovie) 0 else (initialParsed.episode?.toInt() ?: 0)
         val siblingFolderId = intent.getStringExtra(PlayerLauncher.EXTRA_SIBLING_FOLDER_ID)
 
         @Suppress("DEPRECATION")
@@ -667,7 +668,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         prevEpisode = coordinatorState.prevEpisode
 
         if (::controller.isInitialized) {
-            controller.btnEpisodes.visibility = if (isMovie || currentEpNumber == 0 || playlist.size <= 1) View.GONE else View.VISIBLE
+            controller.btnEpisodes.visibility = if (isMovie || playlist.size <= 1) View.GONE else View.VISIBLE
             controller.btnPrevEp.isEnabled = prevEpisode != null
             controller.btnPrevEp.alpha = if (prevEpisode != null) 1.0f else 0.35f
             controller.btnNextEp.isEnabled = nextEpisode != null
@@ -1448,8 +1449,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         val seriesTitleExtra = intent.getStringExtra(PlayerLauncher.EXTRA_SERIES_TITLE)
         val isMovieExtra = intent.getBooleanExtra(PlayerLauncher.EXTRA_IS_MOVIE, false)
         val parsed = EpisodeParser.parse(title ?: "")
-        isMovie = isMovieExtra || (parsed.episode == null && (parsed.episodeBadge == "FILME" || parsed.isSpecial || playlist.size <= 1))
-        currentEpNumber = parsed.episode?.toInt() ?: 0
+        isMovie = isMovieExtra || (parsed.episode == null && (parsed.episodeBadge == "FILME" || parsed.isSpecial))
+        currentEpNumber = if (isMovie) 0 else (parsed.episode?.toInt() ?: 0)
 
         val prewarmed = bingeBufferManager.get().consumePrewarmedData(fileId)
         if (prewarmed != null && prewarmed.aniSkipChapters.isNotEmpty()) {
@@ -1509,10 +1510,10 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
 
         controller.playerToolbar.title = displayTitle
         controller.tvPlayerTitle.text = displayTitle
-        val epText = if (isMovie || currentEpNumber == 0) "Filme Completo" else "Episódio ${currentEpNumber.toString().padStart(2, '0')}"
+        val epText = PlaybackLabel.renderSubtitle(this, isMovie, currentEpNumber)
         controller.tvPlayerMeta.text = epText
         if (::controller.isInitialized) {
-            controller.btnEpisodes.visibility = if (isMovie || currentEpNumber == 0 || playlist.size <= 1) View.GONE else View.VISIBLE
+            controller.btnEpisodes.visibility = if (isMovie || playlist.size <= 1) View.GONE else View.VISIBLE
         }
 
         mediaSessionHelper?.updateMetadata(

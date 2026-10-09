@@ -150,6 +150,11 @@ android {
 
     testOptions {
         unitTests.returnDefaultValues = true
+        unitTests.all {
+            if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
+                jvmArgs '-Djava.io.tmpdir=C:/temp', '-Dfile.encoding=UTF-8'
+            }
+        }
     }
 
     lintOptions {

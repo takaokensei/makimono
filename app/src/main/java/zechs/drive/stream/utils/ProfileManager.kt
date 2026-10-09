@@ -69,11 +69,28 @@ class ProfileManager @Inject constructor(
 
     suspend fun awaitReady() { initialized.await() }
 
+    private fun getDefaultProfiles(): List<UserProfile> = listOf(
+        UserProfile(
+            id = "profile-1",
+            name = runCatching { context.getString(R.string.profile_default_main_name) }.getOrDefault("Perfil principal"),
+            avatarResName = "avatar_anime",
+            isDefault = true,
+            isAdmin = true
+        ),
+        UserProfile(
+            id = "profile-2",
+            name = runCatching { context.getString(R.string.profile_default_secondary_name) }.getOrDefault("Perfil secundário"),
+            avatarResName = "avatar_anime",
+            isDefault = false
+        )
+    )
+
     private fun loadProfiles(): List<UserProfile> {
         val raw = prefs.getString(KEY_PROFILES, null)
         if (raw.isNullOrBlank()) {
-            saveProfilesInternal(DEFAULT_PROFILES)
-            return DEFAULT_PROFILES
+            val defaults = getDefaultProfiles()
+            saveProfilesInternal(defaults)
+            return defaults
         }
         return try {
             val jsonArray = JSONArray(raw)
@@ -175,6 +192,7 @@ class ProfileManager @Inject constructor(
     suspend fun setLibraryRoot(id: String?, name: String?) {
         awaitReady()
         val activeId = getActiveProfile().id
+        android.util.Log.d("ProfileManager", "setLibraryRoot: profileId=$activeId, rootId=$id, rootName=$name")
         mutate { list -> list.map {
             if (it.id == activeId) it.copy(libraryRootId = id?.takeIf(String::isNotBlank),
                 libraryRootName = name?.takeIf(String::isNotBlank)) else it

@@ -150,6 +150,11 @@ sealed class FilesViewHolder(
                 FocusEngine.attach(root, FocusEngine.FocusKind.LIST_ROW) { v, hasFocus ->
                     if (hasFocus) {
                         filesAdapter.onFocusItemListener?.invoke(v)
+                        tvFileName.ellipsize = android.text.TextUtils.TruncateAt.MARQUEE
+                        tvFileName.isSelected = true
+                    } else {
+                        tvFileName.ellipsize = android.text.TextUtils.TruncateAt.END
+                        tvFileName.isSelected = false
                     }
                 }
 
@@ -378,6 +383,11 @@ sealed class FilesViewHolder(
                 FocusEngine.attach(root, FocusEngine.FocusKind.CARD) { v, hasFocus ->
                     if (hasFocus) {
                         filesAdapter.onFocusItemListener?.invoke(v)
+                        tvGridFileName.ellipsize = android.text.TextUtils.TruncateAt.MARQUEE
+                        tvGridFileName.isSelected = true
+                    } else {
+                        tvGridFileName.ellipsize = android.text.TextUtils.TruncateAt.END
+                        tvGridFileName.isSelected = false
                     }
                 }
 

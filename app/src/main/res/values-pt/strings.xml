@@ -2,6 +2,12 @@
 <resources>
     <string name="app_name">Makimono</string>
     <string name="movies">Filmes</string>
+    <string name="profile_role_admin_accessibility">administrador</string>
+    <string name="profile_role_kids_accessibility">perfil infantil</string>
+    <string name="profile_active_accessibility">perfil ativo</string>
+    <string name="profile_add_accessibility">Adicionar perfil</string>
+    <string name="profile_default_main_name">Perfil principal</string>
+    <string name="profile_default_secondary_name">Perfil secundário</string>
     <string name="profile_selection_title">Quem está assistindo?</string>
     <string name="profile_manage_action">Gerenciar perfis</string>
     <string name="profile_settings_action">Configurações</string>
@@ -283,4 +289,22 @@
     <string name="series_episode_card_accessibility_play">Reproduzir %1$s</string>
     <string name="series_episode_accessibility_in_progress">Em andamento, %1$d%% assistido</string>
     <string name="series_episode_accessibility_watched">Assistido</string>
+    <string name="search_files_hint">Buscar nesta pasta…</string>
+    <string name="search_files_hint_large">Buscar nesta pasta…</string>
+    <string name="media_quality_partial">%1$s (parcial)</string>
+    <string name="media_quality_mixed">Variada</string>
+    <string name="media_audio_mixed">Variado</string>
+    <string name="media_partial">Parcial</string>
+    <string name="media_subtitles">Legendas</string>
+    <string name="media_subtitles_partial">Legendas (parcial)</string>
+    <string name="playback_movie_full">Filme Completo</string>
+    <string name="playback_episode_number">Episódio %1$02d</string>
+    <string name="series_action_play_movie">Assistir filme</string>
+    <string name="series_action_continue_movie">Continuar filme</string>
+    <string name="nav_home">Início</string>
+    <string name="nav_catalog">Catálogo</string>
+    <string name="nav_folders">Pastas</string>
+    <string name="nav_favorites">Favoritos</string>
+    <string name="nav_settings">Configurações</string>
+    <string name="nav_movies">Filmes</string>
 </resources>

@@ -759,7 +759,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
-                    android:text="Início"
+                    android:text="@string/nav_home"
                     android:textAppearance="@style/TextAppearance.Makimono.TV.Headline"
                     android:textColor="@color/layout_literal_ffffff"
                     android:textStyle="bold" />
@@ -793,7 +793,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
-                    android:text="@string/animes"
+                    android:text="@string/nav_catalog"
                     android:textAppearance="@style/TextAppearance.Makimono.TV.Headline"
                     android:textColor="@color/layout_literal_94a3b8" />
 
@@ -826,7 +826,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
-                    android:text="@string/movies"
+                    android:text="@string/nav_movies"
                     android:textAppearance="@style/TextAppearance.Makimono.TV.Headline"
                     android:textColor="@color/layout_literal_94a3b8" />
 
@@ -858,7 +858,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
-                    android:text="Pastas"
+                    android:text="@string/nav_folders"
                     android:textAppearance="@style/TextAppearance.Makimono.TV.Headline"
                     android:textColor="@color/layout_literal_94a3b8" />
 
@@ -891,7 +891,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
-                    android:text="Favoritos"
+                    android:text="@string/nav_favorites"
                     android:textAppearance="@style/TextAppearance.Makimono.TV.Headline"
                     android:textColor="@color/layout_literal_94a3b8" />
 
@@ -923,7 +923,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
-                    android:text="Configurações"
+                    android:text="@string/nav_settings"
                     android:textAppearance="@style/TextAppearance.Makimono.TV.Headline"
                     android:textColor="@color/layout_literal_94a3b8" />
 
@@ -991,7 +991,7 @@
                 android:id="@+id/ivBottomNavInicio"
                 android:layout_width="22dp"
                 android:layout_height="22dp"
-                android:contentDescription="Início"
+                android:contentDescription="@string/nav_home"
                 android:src="@drawable/ic_home_24"
                 app:tint="@color/layout_literal_22d3ee" />
 
@@ -1000,7 +1000,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="Início"
+                android:text="@string/nav_home"
                 android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
                 android:textColor="@color/layout_literal_22d3ee"
                 android:textStyle="bold" />
@@ -1022,7 +1022,7 @@
                 android:id="@+id/ivBottomNavAnimes"
                 android:layout_width="22dp"
                 android:layout_height="22dp"
-                android:contentDescription="Animes"
+                android:contentDescription="@string/nav_catalog"
                 android:src="@drawable/ic_play_24"
                 app:tint="@color/layout_literal_64748b" />
 
@@ -1031,7 +1031,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="Animes"
+                android:text="@string/nav_catalog"
                 android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
                 android:textColor="@color/layout_literal_64748b" />
         </LinearLayout>
@@ -1052,7 +1052,7 @@
                 android:id="@+id/ivBottomNavFilmes"
                 android:layout_width="22dp"
                 android:layout_height="22dp"
-                android:contentDescription="Filmes"
+                android:contentDescription="@string/nav_movies"
                 android:src="@drawable/ic_movie_24"
                 app:tint="@color/layout_literal_64748b" />
 
@@ -1061,7 +1061,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="Filmes"
+                android:text="@string/nav_movies"
                 android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
                 android:textColor="@color/layout_literal_64748b" />
         </LinearLayout>
@@ -1082,7 +1082,7 @@
                 android:id="@+id/ivBottomNavPastas"
                 android:layout_width="22dp"
                 android:layout_height="22dp"
-                android:contentDescription="Pastas"
+                android:contentDescription="@string/nav_folders"
                 android:src="@drawable/ic_folder_24"
                 app:tint="@color/layout_literal_64748b" />
 
@@ -1091,7 +1091,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="Pastas"
+                android:text="@string/nav_folders"
                 android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
                 android:textColor="@color/layout_literal_64748b" />
         </LinearLayout>
@@ -1112,7 +1112,7 @@
                 android:id="@+id/ivBottomNavFavoritos"
                 android:layout_width="22dp"
                 android:layout_height="22dp"
-                android:contentDescription="Favoritos"
+                android:contentDescription="@string/nav_favorites"
                 android:src="@drawable/ic_star_filled_24"
                 app:tint="@color/layout_literal_64748b" />
 
@@ -1121,7 +1121,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="Favoritos"
+                android:text="@string/nav_favorites"
                 android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
                 android:textColor="@color/layout_literal_64748b" />
         </LinearLayout>
@@ -1142,7 +1142,7 @@
                 android:id="@+id/ivBottomNavConfig"
                 android:layout_width="22dp"
                 android:layout_height="22dp"
-                android:contentDescription="Configurações"
+                android:contentDescription="@string/nav_settings"
                 android:src="@drawable/ic_settings_24"
                 app:tint="@color/layout_literal_64748b" />
 
@@ -1151,7 +1151,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="Ajustes"
+                android:text="@string/nav_settings"
                 android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
                 android:textColor="@color/layout_literal_64748b" />
         </LinearLayout>

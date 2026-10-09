@@ -442,11 +442,12 @@ class SettingsFragment : BaseFragment() {
 
         refreshValue()
         binding.settingLibraryRoot.setOnClickListener {
-            val (_, currentName) = profileManager.getLibraryRoot()
+            val (currentId, currentName) = profileManager.getLibraryRoot()
+            val effectiveName = currentName ?: if (currentId.isNullOrBlank()) getString(R.string.my_drive) else currentId
             DriveFolderPickerDialog(
                 context = requireContext(),
                 lifecycleScope = viewLifecycleOwner.lifecycleScope,
-                initialSelectionName = currentName,
+                initialSelectionName = effectiveName,
                 loadPage = { parentId, pageToken ->
                     driveRepository.getFiles(
                         query = LibraryRootFolderQuery.forParent(parentId),

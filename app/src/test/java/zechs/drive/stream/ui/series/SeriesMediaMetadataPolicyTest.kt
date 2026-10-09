@@ -9,30 +9,48 @@ class SeriesMediaMetadataPolicyTest {
     fun completeUniformFileNameHintsAreIdentifiedAsInferred() {
         val files = listOf("Show - 01 1080p Dual Audio Multi Subs.mkv", "Show - 02 1080p Dual Audio Multi Subs.mkv")
 
-        assertEquals("1080p · nome", SeriesMediaMetadataPolicy.quality(files, listingComplete = true))
-        assertEquals("Dual · nome", SeriesMediaMetadataPolicy.audio(files, listingComplete = true))
-        assertEquals("Legendas · nome", SeriesMediaMetadataPolicy.subtitles(files, listingComplete = true))
+        val qualityFact = SeriesMediaMetadataPolicy.quality(files, listingComplete = true)
+        val audioFact = SeriesMediaMetadataPolicy.audio(files, listingComplete = true)
+        val subtitleFact = SeriesMediaMetadataPolicy.subtitles(files, listingComplete = true)
+
+        assertEquals(MediaFact("1080p", Coverage.COMPLETE), qualityFact)
+        assertEquals("1080p", qualityFact?.formatQuality())
+
+        assertEquals(MediaFact("Dual Áudio", Coverage.COMPLETE), audioFact)
+        assertEquals("Dual Áudio", audioFact?.formatAudio())
+
+        assertEquals(MediaFact("Legendas", Coverage.COMPLETE), subtitleFact)
+        assertEquals("Legendas", subtitleFact?.formatSubtitles())
     }
 
     @Test
     fun incompleteListingNeverClaimsObservedUniformityForTheWholeSeries() {
         val files = listOf("Show - 01 1080p Dual Audio Multi Subs.mkv", "Show - 02 1080p Dual Audio Multi Subs.mkv")
 
-        assertEquals("Parcial · nome", SeriesMediaMetadataPolicy.quality(files, listingComplete = false))
-        assertEquals("Parcial · nome", SeriesMediaMetadataPolicy.audio(files, listingComplete = false))
-        assertEquals("Parcial · nome", SeriesMediaMetadataPolicy.subtitles(files, listingComplete = false))
+        val qualityFact = SeriesMediaMetadataPolicy.quality(files, listingComplete = false)
+        val audioFact = SeriesMediaMetadataPolicy.audio(files, listingComplete = false)
+        val subtitleFact = SeriesMediaMetadataPolicy.subtitles(files, listingComplete = false)
+
+        assertEquals(MediaFact("1080p", Coverage.PARTIAL), qualityFact)
+        assertEquals("1080p (parcial)", qualityFact?.formatQuality())
+
+        assertEquals(MediaFact("Dual Áudio", Coverage.PARTIAL), audioFact)
+        assertEquals("Dual Áudio (parcial)", audioFact?.formatAudio())
+
+        assertEquals(MediaFact("Legendas", Coverage.PARTIAL), subtitleFact)
+        assertEquals("Legendas (parcial)", subtitleFact?.formatSubtitles())
     }
 
     @Test
     fun observedDifferencesRemainVisibleEvenIfTheListingIsIncomplete() {
-        assertEquals(
-            "Variada · nome",
-            SeriesMediaMetadataPolicy.quality(listOf("01 1080p.mkv", "02 720p.mkv"), listingComplete = false)
-        )
-        assertEquals(
-            "Variado · nome",
-            SeriesMediaMetadataPolicy.audio(listOf("01 Dual Audio.mkv", "02 PT-BR.mkv"), listingComplete = false)
-        )
+        val qualityFact = SeriesMediaMetadataPolicy.quality(listOf("01 1080p.mkv", "02 720p.mkv"), listingComplete = false)
+        val audioFact = SeriesMediaMetadataPolicy.audio(listOf("01 Dual Audio.mkv", "02 PT-BR.mkv"), listingComplete = false)
+
+        assertEquals(MediaFact(null, Coverage.MIXED), qualityFact)
+        assertEquals("Variada", qualityFact?.formatQuality())
+
+        assertEquals(MediaFact(null, Coverage.MIXED), audioFact)
+        assertEquals("Variado", audioFact?.formatAudio())
     }
 
     @Test
@@ -42,18 +60,18 @@ class SeriesMediaMetadataPolicyTest {
         assertNull(SeriesMediaMetadataPolicy.audio(noHints, listingComplete = true))
         assertNull(SeriesMediaMetadataPolicy.subtitles(noHints, listingComplete = true))
 
-        assertEquals(
-            "Parcial · nome",
-            SeriesMediaMetadataPolicy.quality(listOf("01 1080p.mkv", "02.mkv"), listingComplete = true)
-        )
-        assertEquals(
-            "Parcial · nome",
-            SeriesMediaMetadataPolicy.audio(listOf("01 Dual Audio.mkv", "02.mkv"), listingComplete = true)
-        )
-        assertEquals(
-            "Parcial · nome",
-            SeriesMediaMetadataPolicy.subtitles(listOf("01 Multi Subs.mkv", "02.mkv"), listingComplete = true)
-        )
+        val qualityPartial = SeriesMediaMetadataPolicy.quality(listOf("01 1080p.mkv", "02.mkv"), listingComplete = true)
+        val audioPartial = SeriesMediaMetadataPolicy.audio(listOf("01 Dual Audio.mkv", "02.mkv"), listingComplete = true)
+        val subPartial = SeriesMediaMetadataPolicy.subtitles(listOf("01 Multi Subs.mkv", "02.mkv"), listingComplete = true)
+
+        assertEquals(MediaFact("1080p", Coverage.PARTIAL), qualityPartial)
+        assertEquals("1080p (parcial)", qualityPartial?.formatQuality())
+
+        assertEquals(MediaFact("Dual Áudio", Coverage.PARTIAL), audioPartial)
+        assertEquals("Dual Áudio (parcial)", audioPartial?.formatAudio())
+
+        assertEquals(MediaFact("Legendas", Coverage.PARTIAL), subPartial)
+        assertEquals("Legendas (parcial)", subPartial?.formatSubtitles())
     }
 
     @Test
@@ -63,8 +81,9 @@ class SeriesMediaMetadataPolicyTest {
                 "Dual! Parallel Trouble Adventure - 01.mkv"
             )
         )
-        assertEquals("Dual · nome", SeriesMediaMetadataPolicy.audioLabelForFile("Show - 01 Dual Audio.mkv"))
-        assertEquals("Dual · nome", SeriesMediaMetadataPolicy.audioLabelForFile("Show - 02 Dual-Audio.mkv"))
-        assertEquals("Dual · nome", SeriesMediaMetadataPolicy.audioLabelForFile("Show - 03 Dual Áudio.mkv"))
+        assertEquals("Dual Áudio", SeriesMediaMetadataPolicy.audioLabelForFile("Show - 01 Dual Audio.mkv"))
+        assertEquals("Dual Áudio", SeriesMediaMetadataPolicy.audioLabelForFile("Show - 02 Dual-Audio.mkv"))
+        assertEquals("Dual Áudio", SeriesMediaMetadataPolicy.audioLabelForFile("Show - 03 Dual Áudio.mkv"))
+        assertEquals("PT-BR", SeriesMediaMetadataPolicy.audioLabelForFile("Show - 04 PT-BR.mkv"))
     }
 }

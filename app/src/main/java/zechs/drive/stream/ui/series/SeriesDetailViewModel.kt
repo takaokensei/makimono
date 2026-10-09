@@ -336,13 +336,13 @@ class SeriesDetailViewModel @Inject constructor(
             fallbackPosterUrl = fallbackPosterUrl,
             qualityBadge = SeriesMediaMetadataPolicy.quality(
                 driveFiles.map { it.name }, listingComplete = !hasIncompleteDriveListing
-            ),
+            )?.formatQuality(),
             audioBadge = SeriesMediaMetadataPolicy.audio(
                 driveFiles.map { it.name }, listingComplete = !hasIncompleteDriveListing
-            ),
+            )?.formatAudio(),
             subtitleBadge = SeriesMediaMetadataPolicy.subtitles(
                 driveFiles.map { it.name }, listingComplete = !hasIncompleteDriveListing
-            ),
+            )?.formatSubtitles(),
             hasIncompleteDriveListing = hasIncompleteDriveListing,
             isMovie = isMovie
         )

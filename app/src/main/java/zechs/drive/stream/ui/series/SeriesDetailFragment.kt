@@ -186,14 +186,20 @@ class SeriesDetailFragment : BaseFragment() {
 
     private fun updateFocusChain(isMovie: Boolean, hasSeasonTabs: Boolean) {
         if (!DeviceUi.isTenFootExperience(requireContext())) return
-        val downTarget = if (hasSeasonTabs) binding.rvSeasonTabs.id else binding.rvEpisodes.id
+        val downTarget = when {
+            isMovie -> View.NO_ID
+            hasSeasonTabs -> binding.rvSeasonTabs.id
+            else -> binding.rvEpisodes.id
+        }
         listOf(binding.btnPrimaryAction, binding.btnFavorite, binding.btnMoreActions).forEach {
             it.nextFocusDownId = downTarget
             it.nextFocusUpId = binding.btnBack.id
         }
-        binding.rvSeasonTabs.nextFocusUpId = binding.btnMoreActions.id
-        binding.rvSeasonTabs.nextFocusDownId = binding.rvEpisodes.id
-        binding.rvEpisodes.nextFocusUpId = downTarget
+        if (!isMovie) {
+            binding.rvSeasonTabs.nextFocusUpId = binding.btnMoreActions.id
+            binding.rvSeasonTabs.nextFocusDownId = binding.rvEpisodes.id
+            binding.rvEpisodes.nextFocusUpId = downTarget
+        }
     }
 
     private fun updateSynopsisFocusChain(hasDisclosure: Boolean) {
@@ -353,28 +359,28 @@ class SeriesDetailFragment : BaseFragment() {
         }
 
         // 4. Meta Row 2 (Tech Specs)
-        val cleanQuality = state.qualityBadge?.replace(" · nome", "")?.replace("Parcial", "HD")
-        binding.tvQualityBadge.text = cleanQuality.orEmpty()
-        binding.qualityBadgeContainer.visibility = if (cleanQuality.isNullOrBlank()) View.GONE else View.VISIBLE
-        binding.tvQualityBadge.contentDescription = cleanQuality?.let {
+        val quality = state.qualityBadge
+        binding.tvQualityBadge.text = quality.orEmpty()
+        binding.qualityBadgeContainer.visibility = if (quality.isNullOrBlank()) View.GONE else View.VISIBLE
+        binding.tvQualityBadge.contentDescription = quality?.let {
             getString(R.string.series_inferred_resolution_from_filename, it)
         }
 
-        val cleanAudio = state.audioBadge?.replace(" · nome", "")?.replace("Dual", "Dual Áudio")
-        binding.tvAudioTrackBadge.text = cleanAudio.orEmpty()
-        binding.audioBadgeContainer.visibility = if (cleanAudio.isNullOrBlank()) View.GONE else View.VISIBLE
-        binding.tvAudioTrackBadge.contentDescription = cleanAudio?.let {
+        val audio = state.audioBadge
+        binding.tvAudioTrackBadge.text = audio.orEmpty()
+        binding.audioBadgeContainer.visibility = if (audio.isNullOrBlank()) View.GONE else View.VISIBLE
+        binding.tvAudioTrackBadge.contentDescription = audio?.let {
             getString(R.string.series_inferred_audio_from_filename, it)
         }
 
-        val cleanSubtitle = state.subtitleBadge?.replace(" · nome", "")
-        binding.tvSubtitleBadge.text = cleanSubtitle.orEmpty()
-        binding.subtitleBadgeContainer.visibility = if (cleanSubtitle.isNullOrBlank()) View.GONE else View.VISIBLE
-        binding.tvSubtitleBadge.contentDescription = cleanSubtitle?.let {
+        val subtitle = state.subtitleBadge
+        binding.tvSubtitleBadge.text = subtitle.orEmpty()
+        binding.subtitleBadgeContainer.visibility = if (subtitle.isNullOrBlank()) View.GONE else View.VISIBLE
+        binding.tvSubtitleBadge.contentDescription = subtitle?.let {
             getString(R.string.series_inferred_subtitles_from_filename, it)
         }
         binding.metaRow2.visibility = if (
-            !cleanQuality.isNullOrBlank() || !cleanAudio.isNullOrBlank() || !cleanSubtitle.isNullOrBlank()
+            !quality.isNullOrBlank() || !audio.isNullOrBlank() || !subtitle.isNullOrBlank()
         ) View.VISIBLE else View.GONE
 
         // Genres Row
@@ -398,9 +404,12 @@ class SeriesDetailFragment : BaseFragment() {
 
         // 5. Action Buttons
         val canResume = state.continueWatchingItem?.progressPercent in 1..94
-        binding.tvPrimaryActionTitle.setText(
+        val actionRes = if (isMovie) {
+            if (canResume) R.string.series_action_continue_movie else R.string.series_action_play_movie
+        } else {
             if (canResume) R.string.series_action_continue else R.string.series_action_play
-        )
+        }
+        binding.tvPrimaryActionTitle.setText(actionRes)
         binding.tvPrimaryActionSubtitle.text = state.continueWatchingSubtitle
         binding.tvPrimaryActionSubtitle.visibility = if (state.continueWatchingSubtitle.isBlank()) View.GONE else View.VISIBLE
         binding.btnPrimaryAction.setOnClickListener {
@@ -440,28 +449,32 @@ class SeriesDetailFragment : BaseFragment() {
         }
 
         // Mark Watched button
+        binding.btnMarkWatched.visibility = if (isMovie) View.GONE else View.VISIBLE
         binding.btnMarkWatched.setOnClickListener {
             viewModel.markSeasonWatched()
             Toast.makeText(requireContext(), getString(R.string.season_marked_watched), Toast.LENGTH_SHORT).show()
         }
 
-        // 6. Season Tabs
+        // 6. Season Tabs & Episodes Rail
         if (isMovie) {
             binding.rvSeasonTabs.visibility = View.GONE
             binding.tvEpisodesHeading?.visibility = View.GONE
+            binding.rvEpisodes.visibility = View.GONE
+            binding.tvEmptyEpisodes.visibility = View.GONE
+            binding.tvPartialListingNotice?.visibility = View.GONE
         } else {
             binding.rvSeasonTabs.visibility = if (state.seasonTabs.isEmpty()) View.GONE else View.VISIBLE
             binding.tvEpisodesHeading?.visibility = View.VISIBLE
             binding.tvEpisodesHeading?.text = getString(R.string.series_heading_episodes)
             seasonAdapter.submitList(state.seasonTabs)
-        }
 
-        // 7. Episodes Rail
-        episodeAdapter.submitList(state.currentEpisodes)
-        if (state.currentEpisodes.isEmpty()) {
-            binding.tvEmptyEpisodes.visibility = View.VISIBLE
-        } else {
-            binding.tvEmptyEpisodes.visibility = View.GONE
+            binding.rvEpisodes.visibility = View.VISIBLE
+            episodeAdapter.submitList(state.currentEpisodes)
+            if (state.currentEpisodes.isEmpty()) {
+                binding.tvEmptyEpisodes.visibility = View.VISIBLE
+            } else {
+                binding.tvEmptyEpisodes.visibility = View.GONE
+            }
         }
 
         updateFocusChain(isMovie, hasSeasonTabs = !isMovie && state.seasonTabs.isNotEmpty())

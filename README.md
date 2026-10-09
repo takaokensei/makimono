@@ -1,4 +1,4 @@
-﻿<p align="center">
+<p align="center">
   <img src="docs/logo.png" align="center" width="160" alt="Makimono Emblem" />
 </p>
 <h1 align="center">
@@ -34,7 +34,7 @@
 - **Global Search & Offline-First Catalog**: Debounced global search across Drive files and local Room catalog caching for instant startup and offline browsing.
 - **Background Playback & PiP**: Full `MediaSession` integration for remote controls/lockscreen and Picture-in-Picture (Android 8.0+) with dynamic aspect ratio.
 - **Android TV & Leanback Support**: Native D-pad navigation, 10-foot rail layout, Leanback launcher banner, and overscan safe-insets.
-- **Quality Assurance**: 122 automated unit tests passing (100% success rate), clean lint checks, and reproducible release builds.
+- **Quality Assurance**: 350 automated unit tests passing (100% success rate), clean lint checks, and reproducible release builds.
 
 ---
 

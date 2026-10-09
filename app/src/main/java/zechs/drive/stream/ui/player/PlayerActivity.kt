@@ -718,7 +718,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
 
     private fun updateNextEpisode() {
         if (::btnEpisodes.isInitialized) {
-            btnEpisodes.visibility = if (isMovie || currentEpNumber == 0 || playlist.size <= 1) View.GONE else View.VISIBLE
+            btnEpisodes.visibility = if (isMovie || playlist.size <= 1) View.GONE else View.VISIBLE
         }
         playbackCoordinator.setPlaylist(playlist, currentFileId, currentTitle)
         if (playlist.isEmpty()) {
@@ -1587,8 +1587,8 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         val isMovieExtra = intent.getBooleanExtra(PlayerLauncher.EXTRA_IS_MOVIE, false)
 
         val parsed = EpisodeParser.parse(title ?: "")
-        isMovie = isMovieExtra || (parsed.episode == null && (parsed.episodeBadge == "FILME" || parsed.isSpecial || playlist.size <= 1))
-        currentEpNumber = parsed.episode?.toInt() ?: 0
+        isMovie = isMovieExtra || (parsed.episode == null && (parsed.episodeBadge == "FILME" || parsed.isSpecial))
+        currentEpNumber = if (isMovie) 0 else (parsed.episode?.toInt() ?: 0)
 
         val searchTitle = parsed.showTitle.ifBlank { title ?: "" }
         if (reviewMediaUri == null && searchTitle.isNotBlank() && !isMovie && currentEpNumber > 0) {
@@ -1625,10 +1625,10 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
 
         toolbar.title = displayTitle
         tvPlayerTitle.text = displayTitle
-        val epText = if (isMovie || currentEpNumber == 0) "Filme Completo" else "Episódio ${currentEpNumber.toString().padStart(2, '0')}"
+        val epText = PlaybackLabel.renderSubtitle(this, isMovie, currentEpNumber)
         tvPlayerMeta.text = epText
         if (::btnEpisodes.isInitialized) {
-            btnEpisodes.visibility = if (isMovie || currentEpNumber == 0 || playlist.size <= 1) View.GONE else View.VISIBLE
+            btnEpisodes.visibility = if (isMovie || playlist.size <= 1) View.GONE else View.VISIBLE
         }
 
         mediaSessionHelper?.updateMetadata(
