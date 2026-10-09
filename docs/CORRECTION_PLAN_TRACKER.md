@@ -51,26 +51,26 @@ Base: `main` @ `460ac1b` (v1.6.4.8, versionCode 60).
 - [x] **FOC-06**: Espaçamentos estruturados em múltiplos de 8dp.
 - [x] **FOC-07**: Rail compacto de TV (Opção A: largura 80dp, ícones 24dp centralizados a 48dp da borda, indicador ativo `#22D3EE`, sem painel opaco).
 
-### [ ] Fase 3: Tipografia, Contraste e Acessibilidade (TYP-01..04, A11Y-01..03)
-- [ ] **TYP-01**: Piso tipográfico mínimo de 12sp (Body 16sp, Callout 14sp, Badges 12sp).
-- [ ] **TYP-02**: Contraste WCAG AA (trocar `#64748B` onde for texto por `obsidian_text_tertiary` `#7C8696` ou superior).
-- [ ] **TYP-03**: Limpeza e unificação de paletas e atributos de tema.
-- [ ] **TYP-04**: Consistência do torii e acento de marca `#22D3EE`.
-- [ ] **A11Y-01**: Auditoria de `contentDescription` (manter `@null` apenas em puramente decorativos; nomear ações interativas).
-- [ ] **A11Y-02**: Alvos de toque >= 48dp em mobile e generosos em TV.
-- [ ] **A11Y-03**: Eliminação de hardcoded texts nos layouts XML.
+### [x] Fase 3: Tipografia, Contraste e Acessibilidade (TYP-01..04, A11Y-01..03)
+- [x] **TYP-01**: Piso tipográfico mínimo de 12sp (elevado `TextAppearance.Makimono.TV.Badge` de 11sp para 12sp em `typography.xml`).
+- [x] **TYP-02**: Contraste WCAG AA (elevado `layout_literal_64748b` de `#64748B` para `#7C8696` em `colors.xml`).
+- [x] **TYP-03**: Limpeza e unificação de paletas e atributos de tema Obsidian/Amethyst.
+- [x] **TYP-04**: Consistência do torii (`ic_makimono_torii`) e acento de marca `#22D3EE`.
+- [x] **A11Y-01**: Auditoria de `contentDescription` (ações nomeadas nos controles do player e card de próximo episódio).
+- [x] **A11Y-02**: Alvos de toque >= 48dp em mobile e generosos em TV nos botões e actions.
+- [x] **A11Y-03**: Eliminação de hardcoded texts nos layouts XML (extração para `values/strings.xml` e `values-pt/strings.xml`).
 
-### [ ] Fase 4: Carregamento, Vazio e Erro (ST-01 a ST-04)
-- [ ] **ST-01**: Skeleton shimmer na tela de detalhes da série em vez de spinner centralizado.
-- [ ] **ST-02**: Validação da transição de abertura / pré-carregamento com cold start.
-- [ ] **ST-03**: Componente unificado para estados de vazio, erro de rede, token e permissões.
-- [ ] **ST-04**: Monitoramento de orçamento de latência.
+### [x] Fase 4: Carregamento, Vazio e Erro (ST-01 a ST-04)
+- [x] **ST-01**: Skeleton shimmer na tela de detalhes da série (`@layout/component_skeleton_row` com `ShimmerController`).
+- [x] **ST-02**: Validação da transição de abertura / pré-carregamento com cold start e preloader seguro.
+- [x] **ST-03**: Componente unificado para estados de vazio, erro de rede, token e permissões (`StateView` + `sanitizeErrorMessage`).
+- [x] **ST-04**: Monitoramento de orçamento de latência com pre-warming de assets e cache de navegação.
 
 ### [ ] Fase 5: Robustez (RB-01 a RB-08)
-- [ ] **RB-01**: Prevenção de vazamento de ShimmerAnimator em `FilesFragment.onDestroyView`.
-- [ ] **RB-02**: Tratamento de exceções engolidas com `logSwallowed`.
-- [ ] **RB-03**: Desacoplamento de `Uri.parse` em modelos de domínio (uso de `String` pura).
-- [ ] **RB-04**: Sanitização e mascaramento de logs sensíveis (`AppLog`).
+- [x] **RB-01**: Prevenção de vazamento de ShimmerAnimator em `FilesFragment.onDestroyView` e `SeriesDetailFragment.onDestroyView`.
+- [x] **RB-02**: Tratamento de exceções engolidas com `AppLog.logSwallowed`.
+- [x] **RB-03**: Desacoplamento de `Uri.parse` em modelos de domínio (`DriveClient.authUrlString()` pura e testável).
+- [x] **RB-04**: Sanitização e mascaramento de logs sensíveis (`AppLog.kt` com regex de Bearer, ya29, e credenciais JSON/query).
 - [ ] **RB-05**: Otimização de ciclo de vida de tokens no `BingeBufferManager`.
 - [ ] **RB-06**: Validação da configuração de AFR e HDR nas telas de preferências.
 - [ ] **RB-07**: Remoção de heurística `playlist.size <= 1` em `isMovie`.

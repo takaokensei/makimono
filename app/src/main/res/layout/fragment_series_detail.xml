@@ -768,7 +768,7 @@
             tools:itemCount="6"
             tools:listitem="@layout/item_series_episode_card" />
 
-        <!-- Empty state or Loading spinner -->
+        <!-- Empty state or Loading spinner / Shimmer skeleton -->
         <ProgressBar
             android:id="@+id/pbLoading"
             android:layout_width="48dp"
@@ -780,7 +780,17 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            tools:visibility="visible" />
+            tools:visibility="gone" />
+
+        <include
+            android:id="@+id/seriesSkeleton"
+            layout="@layout/component_skeleton_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/rvSeasonTabs" />
 
         <TextView
             android:id="@+id/tvEmptyEpisodes"

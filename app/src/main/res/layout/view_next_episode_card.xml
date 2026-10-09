@@ -105,7 +105,7 @@
                         android:layout_height="32dp"
                         android:background="@drawable/glass_circle_button_bg"
                         android:clickable="true"
-                        android:contentDescription="Cancelar"
+                        android:contentDescription="@string/content_description_close"
                         android:focusable="true"
                         android:nextFocusDown="@+id/btnPlayNextEpisodeNow"
                         android:padding="8dp"

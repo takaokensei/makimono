@@ -52,7 +52,9 @@ object MakimonoPiPHelper {
             if (params != null) {
                 try {
                     activity.setPictureInPictureParams(params)
-                } catch (_: Exception) {}
+                } catch (e: Exception) {
+                    AppLog.logSwallowed("MakimonoPiPHelper", "setting picture-in-picture params", e)
+                }
             }
         }
     }

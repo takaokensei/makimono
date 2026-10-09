@@ -29,7 +29,9 @@ object MediaImageLoader {
                 .override(640, 960)
                 .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
                 .preload(640, 960)
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            AppLog.logSwallowed("MediaImageLoader", "preloading poster", e)
+        }
     }
 
     fun preloadBackdrop(context: Context, url: String?) {
@@ -40,7 +42,9 @@ object MediaImageLoader {
                 .override(1440, 810)
                 .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
                 .preload(1440, 810)
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            AppLog.logSwallowed("MediaImageLoader", "preloading backdrop", e)
+        }
     }
 
     private fun load(

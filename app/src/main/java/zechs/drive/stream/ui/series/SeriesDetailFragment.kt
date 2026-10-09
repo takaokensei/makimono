@@ -41,6 +41,8 @@ import zechs.drive.stream.utils.VideoPlayer
 import zechs.drive.stream.utils.TvAccessibilityLayout
 import zechs.drive.stream.utils.FocusEngine
 import zechs.drive.stream.utils.FocusMemory
+import zechs.drive.stream.utils.ShimmerController
+import zechs.drive.stream.ui.common.StateView
 import java.util.Locale
 
 @AndroidEntryPoint
@@ -57,6 +59,7 @@ class SeriesDetailFragment : BaseFragment() {
     private lateinit var episodeAdapter: SeriesDetailEpisodeAdapter
     private lateinit var synopsisDisclosure: SeriesSynopsisDisclosure
     private var hasRestoredInitialFocus = false
+    private var shimmerAnimator: android.animation.ValueAnimator? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -219,7 +222,10 @@ class SeriesDetailFragment : BaseFragment() {
                 viewModel.uiState.collectLatest { state ->
                     when (state) {
                         is SeriesDetailUiState.Loading -> {
-                            binding.pbLoading.visibility = View.VISIBLE
+                            binding.pbLoading.visibility = View.GONE
+                            binding.seriesSkeleton.root.visibility = View.VISIBLE
+                            shimmerAnimator?.cancel()
+                            shimmerAnimator = ShimmerController.start(binding.seriesSkeleton.root)
                             binding.tvEmptyEpisodes.visibility = View.GONE
                             binding.tvPartialListingNotice.visibility = View.GONE
                             binding.btnRetry.visibility = View.GONE
@@ -232,14 +238,20 @@ class SeriesDetailFragment : BaseFragment() {
                         }
 
                         is SeriesDetailUiState.Error -> {
+                            shimmerAnimator?.cancel()
+                            shimmerAnimator = null
+                            binding.seriesSkeleton.root.visibility = View.GONE
                             binding.pbLoading.visibility = View.GONE
                             binding.tvPartialListingNotice.visibility = View.GONE
                             binding.tvEmptyEpisodes.visibility = View.VISIBLE
-                            binding.tvEmptyEpisodes.text = state.message
+                            binding.tvEmptyEpisodes.text = StateView.sanitizeErrorMessage(state.message)
                             binding.btnRetry.visibility = View.VISIBLE
                         }
 
                         is SeriesDetailUiState.Success -> {
+                            shimmerAnimator?.cancel()
+                            shimmerAnimator = null
+                            binding.seriesSkeleton.root.visibility = View.GONE
                             binding.pbLoading.visibility = View.GONE
                             binding.tvEmptyEpisodes.visibility = View.GONE
                             binding.btnRetry.visibility = View.GONE
@@ -680,6 +692,8 @@ class SeriesDetailFragment : BaseFragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        shimmerAnimator?.cancel()
+        shimmerAnimator = null
         _binding = null
     }
 }

@@ -29,6 +29,7 @@ import zechs.drive.stream.BuildConfig
 import zechs.drive.stream.utils.MakimonoMediaSessionHelper
 import zechs.drive.stream.utils.MakimonoPiPHelper
 import zechs.drive.stream.utils.PlaybackProgressPolicy
+import zechs.drive.stream.utils.AppLog
 import androidx.core.content.ContextCompat
 import androidx.core.view.*
 import androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -1481,7 +1482,9 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         try {
             val timeFormat = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
             tvPlayerClock?.text = timeFormat.format(java.util.Date())
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            AppLog.logSwallowed(TAG, "updating player clock", e)
+        }
 
         // T4.6: Elevate subtitles above bottom capsule HUD
         playerView.subtitleView?.setBottomPaddingFraction(
@@ -1561,7 +1564,9 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     private fun releasePlayer() {
         try {
             loudnessEnhancer?.release()
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            AppLog.logSwallowed(TAG, "releasing loudnessEnhancer", e)
+        }
         loudnessEnhancer = null
         if (::player.isInitialized) {
             player.removeListener(playerListener)

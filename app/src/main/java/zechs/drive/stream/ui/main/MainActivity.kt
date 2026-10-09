@@ -55,6 +55,7 @@ import zechs.drive.stream.data.repository.DriveRepository
 import zechs.drive.stream.data.repository.FolderMetadataRepository
 import zechs.drive.stream.databinding.ActivityMainBinding
 import zechs.drive.stream.databinding.DialogUpdateProgressBinding
+import zechs.drive.stream.utils.AppLog
 import zechs.drive.stream.utils.AppTheme
 import zechs.drive.stream.utils.AppUpdateManager
 import zechs.drive.stream.utils.MediaImageLoader
@@ -556,12 +557,17 @@ class MainActivity : AppCompatActivity() {
                             MediaImageLoader.preloadBackdrop(applicationContext, profile.backgroundUrl)
                         }
                     }
-                } catch (_: Exception) {}
+                } catch (e: Exception) {
+                    AppLog.logSwallowed(TAG, "warming up profiles during startup", e)
+                }
 
                 // Check if user is logged into Google Drive
                 val client = try {
                     sessionManager.get().fetchClient()
-                } catch (_: Exception) { null }
+                } catch (e: Exception) {
+                    AppLog.logSwallowed(TAG, "fetching client credentials during startup", e)
+                    null
+                }
 
                 if (client == null) {
                     Log.d(TAG, "User not signed in, skipping library catalog preload")
@@ -704,7 +710,9 @@ class MainActivity : AppCompatActivity() {
 
         try {
             vinhetaPlayer?.pause()
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            AppLog.logSwallowed(TAG, "pausing vinheta player on dismiss", e)
+        }
 
         binding.vinhetaContainer.animate()
             .alpha(0f)

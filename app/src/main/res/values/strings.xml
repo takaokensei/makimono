@@ -398,4 +398,15 @@
     <string name="nav_favorites">Favorites</string>
     <string name="nav_settings">Settings</string>
     <string name="nav_movies">Movies</string>
+    <string name="player_speed">Playback speed</string>
+    <string name="player_previous_episode">Previous episode</string>
+    <string name="player_play_pause">Play or pause</string>
+    <string name="player_next_episode">Next episode</string>
+    <string name="player_more_options">More options</string>
+    <string name="player_episodes">Episodes</string>
+    <string name="player_rotate_screen">Rotate screen</string>
+    <string name="player_technical_info">Technical info</string>
+    <string name="player_more_label">More</string>
+    <string name="player_rotate_label">Rotate</string>
+    <string name="player_info_label">Info</string>
 </resources>

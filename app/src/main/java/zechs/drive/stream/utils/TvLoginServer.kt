@@ -178,7 +178,9 @@ class TvLoginServer(
                         sendResponse(writer, 413, "Payload Too Large", "application/json", "{\"error\":\"Payload excede limite seguro (64KB)\"}")
                         try {
                             reader.skip(contentLength.toLong())
-                        } catch (_: Exception) {}
+                        } catch (e: Exception) {
+                            AppLog.logSwallowed(TAG, "skipping oversized request body", e)
+                        }
                         return
                     }
                     if (contentLength > 0) {
@@ -304,7 +306,9 @@ class TvLoginServer(
                     }
                     return result
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                AppLog.logSwallowed(TAG, "parsing JSON body with Gson", e)
+            }
 
             try {
                 val json = JSONObject(trimmed)
@@ -314,7 +318,9 @@ class TvLoginServer(
                     result[key] = json.optString(key, "")
                 }
                 return result
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                AppLog.logSwallowed(TAG, "parsing JSON body with JSONObject", e)
+            }
         }
 
         // Fallback: form-urlencoded (code=xyz&url=...)

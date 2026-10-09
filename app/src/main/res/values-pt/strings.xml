@@ -307,4 +307,15 @@
     <string name="nav_favorites">Favoritos</string>
     <string name="nav_settings">Configurações</string>
     <string name="nav_movies">Filmes</string>
+    <string name="player_speed">Velocidade</string>
+    <string name="player_previous_episode">Episódio anterior</string>
+    <string name="player_play_pause">Reproduzir ou pausar</string>
+    <string name="player_next_episode">Próximo episódio</string>
+    <string name="player_more_options">Mais opções</string>
+    <string name="player_episodes">Episódios</string>
+    <string name="player_rotate_screen">Girar tela</string>
+    <string name="player_technical_info">Informações técnicas</string>
+    <string name="player_more_label">Mais</string>
+    <string name="player_rotate_label">Girar</string>
+    <string name="player_info_label">Info</string>
 </resources>

@@ -50,6 +50,7 @@ import zechs.drive.stream.utils.SeasonGroup
 import zechs.drive.stream.utils.VideoPlayer
 import zechs.drive.stream.utils.TvAccessibilityLayout
 import zechs.drive.stream.utils.FocusMemory
+import zechs.drive.stream.utils.AppLog
 import zechs.drive.stream.utils.state.Resource
 import zechs.drive.stream.utils.state.ResourceErrorKind
 
@@ -278,7 +279,9 @@ class FilesFragment : BaseFragment() {
                             binding.tvSelectedSeason.text = selectedSeason?.name ?: "Temporadas"
                         }
                     }
-                } catch (_: Exception) {}
+                } catch (e: Exception) {
+                    AppLog.logSwallowed(TAG, "updating season selector options", e)
+                }
             }
         } else {
             binding.seasonSelectorRow.isGone = true
@@ -872,6 +875,8 @@ class FilesFragment : BaseFragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        shimmerAnimator?.cancel()
+        shimmerAnimator = null
         binding.rvList.adapter = null
         _binding = null
     }

@@ -13,12 +13,13 @@ data class DriveClient(
     val scopes: List<String>
 ) : Serializable {
 
+    fun authUrlString(): String =
+        "${GOOGLE_ACCOUNTS_URL}/o/oauth2/auth?" +
+            "response_type=code&approval_prompt=force&access_type=offline" +
+            "&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scopes.joinToString(" ")}"
+
     fun authUrl(): Uri? = try {
-        Uri.parse(
-            "${GOOGLE_ACCOUNTS_URL}/o/oauth2/auth?" +
-                    "response_type=code&approval_prompt=force&access_type=offline" +
-                    "&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scopes.joinToString(" ")}"
-        )
+        Uri.parse(authUrlString())
     } catch (e: Exception) {
         null
     }
