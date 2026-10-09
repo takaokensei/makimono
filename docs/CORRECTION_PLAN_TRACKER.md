@@ -86,8 +86,20 @@ Base: `main` @ `460ac1b` (v1.6.4.8, versionCode 60).
 - [x] **BR-07**: Atualização de documentação em `README.md` e consolidação em `docs/`.
 - [x] **BR-08 & BR-09**: Suíte de 349 testes automatizados passando (100% sucesso) e integridade de CI garantida.
 
-### [ ] Fase 7: Arquitetura
-- [ ] **AR-01**: Testes de caracterização das regras puras de reprodução.
-- [ ] **AR-02**: Extração de helpers comuns (`PlaybackLabel`, `DisplayModeController`, etc.).
-- [ ] **AR-03**: Modularização do `HomeFragment` e `HomeViewModel`.
-- [ ] **AR-04 & AR-05**: Revisão da interface `PlayerEngine` e limpeza de código morto.
+### [x] Fase 7: Arquitetura (AR-01 a AR-05)
+- [x] **AR-01**: Testes de caracterização das regras puras de reprodução (`PlaybackLabelTest`, `PlaybackPlaylistPolicyTest`, `PlaybackProgressPolicyTest`, `PlaybackCoordinatorTest`).
+- [x] **AR-02**: Extração de helpers comuns (`PlaybackLabel`, `ShimmerController`, `FocusMemory`, `AppLog`, `TvAccessibilityLayout`).
+- [x] **AR-03**: Modularização do `HomeFragment` e `HomeViewModel` com políticas desacopladas (`HomeShelfPolicy`, `HomeShelfOrderPolicy`, `ContinueWatchingInputPolicy`, `FeaturedPreviewScheduler`).
+- [x] **AR-04 & AR-05**: Revisão da interface `PlayerEngine`, orquestração desacoplada e limpeza de código morto / AARs legados.
+
+---
+
+## 🏁 Fase 8: Portão Final de Qualidade e Entrega
+
+* **Auditoria de Claims (`scripts/verify-claims.sh`):** 100% Aprovado (Drive readonly, código OAuth mascarado, zero AdMob, zero Firebase, zero runBlocking no DataSource, fail-closed updater).
+* **Suíte de Testes Automatizados:** 349 testes passando com 100% de sucesso (`:app:testDebugUnitTest`).
+* **Análise Estática (Lint):** `abortOnError true` bloqueante com baseline versionado (`:app:lintDebug` aprovado com BUILD SUCCESSFUL).
+* **Compilação e Empacotamento:** `:app:assembleDebug` aprovado com sucesso (~18s).
+* **Segurança e Privacidade:** Sanitização automática de tokens no Logcat (`AppLog.kt`), credenciais isoladas e fora de logs/testes.
+* **Experiência TV (10-foot) e Mobile:** Rail TV 80dp compacto, anel de foco ciano 3dp (`#22D3EE`), overscan seguro (48dp lateral / 27dp vertical), conformidade de contraste WCAG AA (`#7C8696`), floor tipográfico de 12sp e skeleton shimmer.
+
