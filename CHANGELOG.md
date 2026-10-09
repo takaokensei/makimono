@@ -2,7 +2,11 @@
 
 Histórico consolidado de lançamentos e versões do Makimono. As notas detalhadas de cada versão encontram-se em [`docs/releases/`](docs/releases/).
 
----
+## [v1.6.4.9] — 2026-10-09
+- **Arquitetura de Domínio:** Criação do módulo `domain/` puro e casos de uso canônicos com regras ArchUnit.
+- **Motor de Reprodução:** Contrato comum `PlayerEngine`, `EngineSelector` inteligente, `PlaybackSession`, `ProgressRecorder` atômico e `SkipController`.
+- **Decomposição de Telas de TV:** `HomeFragment` (551 linhas), `SettingsFragment` (487 linhas) e `FilesFragment` (525 linhas), todas abaixo do limite de 600 linhas.
+- **Navegação & Foco D-pad:** Restauração de foco e clamp em estantes horizontais, distinção canônica de filmes vs séries e suíte `TvFocusChecklistTest` com 476 testes unitários no total.
 
 ## [v1.6.4.5] — 2026-10-08
 - **UI & TV UX:** Padronização de rótulos de navegação, experiência de reprodução de filmes ("Filme" em vez de "Episódio 01"), piso tipográfico de 12sp.
