@@ -32,6 +32,9 @@ import zechs.drive.stream.utils.PlaybackProgressPolicy
 import zechs.drive.stream.utils.SeasonEpisodeGrouper
 import zechs.drive.stream.utils.SeasonGroup
 import zechs.drive.stream.utils.state.Resource
+import zechs.drive.stream.domain.common.AppError
+import zechs.drive.stream.data.repository.DriveFailureClassifier
+import zechs.drive.stream.utils.state.ResourceErrorKind
 import java.util.Locale
 import javax.inject.Inject
 
@@ -60,7 +63,18 @@ sealed class SeriesDetailUiState {
         val hasIncompleteDriveListing: Boolean = false,
         val isMovie: Boolean = false
     ) : SeriesDetailUiState()
-    data class Error(val message: String) : SeriesDetailUiState()
+    data class Error(
+        val error: AppError,
+        val message: String = error.displayMessage
+    ) : SeriesDetailUiState()
+}
+
+sealed interface SeriesDetailEvent {
+    data class SelectSeason(val tab: SeasonTab) : SeriesDetailEvent
+    data class SaveFocus(val position: Int) : SeriesDetailEvent
+    data class ToggleStar(val folderId: String) : SeriesDetailEvent
+    data class ToggleFollow(val folderId: String) : SeriesDetailEvent
+    data class Retry(val folderId: String, val seriesTitle: String) : SeriesDetailEvent
 }
 
 @HiltViewModel
@@ -90,6 +104,19 @@ class SeriesDetailViewModel @Inject constructor(
     private var isFolderFollowed: Boolean = false
     private var animeEntry: TenraiAnimeService.TenraiAnimeEntry? = null
     private var franchiseArcs = listOf<TenraiAnimeService.TenraiFranchiseArc>()
+
+    var lastFocusedPosition: Int? = null
+    var selectedSeasonPosition: Int = 0
+
+    fun onEvent(event: SeriesDetailEvent) {
+        when (event) {
+            is SeriesDetailEvent.SelectSeason -> selectSeasonTab(event.tab)
+            is SeriesDetailEvent.SaveFocus -> { lastFocusedPosition = event.position }
+            is SeriesDetailEvent.ToggleStar -> toggleStar()
+            is SeriesDetailEvent.ToggleFollow -> toggleFollow()
+            is SeriesDetailEvent.Retry -> loadSeriesDetails(event.folderId, event.seriesTitle)
+        }
+    }
 
     fun loadSeriesDetails(folderId: String, seriesTitle: String, initialPoster: String? = null) {
         currentFolderId = folderId
@@ -132,15 +159,17 @@ class SeriesDetailViewModel @Inject constructor(
                 // 2. Fetch Drive files in folder
                 val driveResult = fetchAllDriveVideos(folderId)
                 val driveFiles = driveResult.files
-                if (driveFiles.isEmpty() && driveResult.errorMessage != null) {
+                if (driveFiles.isEmpty() && driveResult.appError != null) {
                     withContext(Dispatchers.Main) {
-                        _uiState.value = SeriesDetailUiState.Error(driveResult.errorMessage)
+                        _uiState.value = SeriesDetailUiState.Error(driveResult.appError)
                     }
                     return@launch
                 }
                 if (driveFiles.isEmpty()) {
                     withContext(Dispatchers.Main) {
-                        _uiState.value = SeriesDetailUiState.Error("Nenhum arquivo de vídeo encontrado na pasta.")
+                        _uiState.value = SeriesDetailUiState.Error(
+                            AppError.Empty("Nenhum arquivo de vídeo encontrado na pasta.")
+                        )
                     }
                     return@launch
                 }
@@ -244,7 +273,17 @@ class SeriesDetailViewModel @Inject constructor(
                 if (e is CancellationException) throw e
                 Log.e(TAG, "Error loading series details", e)
                 withContext(Dispatchers.Main) {
-                    _uiState.value = SeriesDetailUiState.Error(e.message ?: "Erro ao carregar detalhes da série.")
+                    val errorKind = DriveFailureClassifier.fromException(e)
+                    val appError = when (errorKind) {
+                        ResourceErrorKind.NETWORK -> AppError.Network(e.message ?: "Falha de rede.")
+                        ResourceErrorKind.AUTHENTICATION -> AppError.Authentication(e.message ?: "Sessão expirada.")
+                        ResourceErrorKind.NOT_FOUND -> AppError.NotFound(e.message ?: "Pasta não encontrada.")
+                        ResourceErrorKind.RATE_LIMITED -> AppError.RateLimited(e.message ?: "Limite de requisições excedido.")
+                        ResourceErrorKind.ACCESS_DENIED -> AppError.AccessDenied(e.message ?: "Acesso negado.")
+                        ResourceErrorKind.SERVER -> AppError.Server(e.message ?: "Instabilidade nos servidores.")
+                        else -> AppError.Unknown(e.message ?: "Erro ao carregar detalhes da série.")
+                    }
+                    _uiState.value = SeriesDetailUiState.Error(appError)
                 }
             }
         }
@@ -351,6 +390,7 @@ class SeriesDetailViewModel @Inject constructor(
     private data class DriveVideoFetch(
         val files: List<DriveFile>,
         val isIncomplete: Boolean,
+        val appError: AppError? = null,
         val errorMessage: String? = null
     )
 
@@ -365,9 +405,19 @@ class SeriesDetailViewModel @Inject constructor(
             is Resource.Loading -> null
         }
         if (directCollection == null) {
+            val errorKind = (directRes as? Resource.Error)?.errorKind
             val message = (directRes as? Resource.Error)?.message
                 ?: "Não foi possível carregar os arquivos desta pasta."
-            return DriveVideoFetch(emptyList(), isIncomplete = true, errorMessage = message)
+            val appError = when (errorKind) {
+                ResourceErrorKind.NETWORK -> AppError.Network(message)
+                ResourceErrorKind.AUTHENTICATION -> AppError.Authentication(message)
+                ResourceErrorKind.NOT_FOUND -> AppError.NotFound(message)
+                ResourceErrorKind.RATE_LIMITED -> AppError.RateLimited(message)
+                ResourceErrorKind.ACCESS_DENIED -> AppError.AccessDenied(message)
+                ResourceErrorKind.SERVER -> AppError.Server(message)
+                else -> AppError.Unknown(message)
+            }
+            return DriveVideoFetch(emptyList(), isIncomplete = true, appError = appError, errorMessage = message)
         }
 
         var isIncomplete = !directCollection.isComplete || directRes is Resource.Error

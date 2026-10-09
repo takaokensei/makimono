@@ -43,6 +43,7 @@ import zechs.drive.stream.utils.FocusEngine
 import zechs.drive.stream.utils.FocusMemory
 import zechs.drive.stream.utils.ShimmerController
 import zechs.drive.stream.ui.common.StateView
+import zechs.drive.stream.domain.common.AppError
 import java.util.Locale
 
 @AndroidEntryPoint
@@ -147,10 +148,14 @@ class SeriesDetailFragment : BaseFragment() {
 
         episodeAdapter = SeriesDetailEpisodeAdapter(
             onEpisodeClick = { episodeItem ->
+                val pos = episodeAdapter.currentList.indexOfFirst { it.file.id == episodeItem.file.id }
+                if (pos >= 0) viewModel.onEvent(SeriesDetailEvent.SaveFocus(pos))
                 FocusMemory.remember("details.episodes.${args.folderId}", episodeItem.file.id)
                 playEpisode(episodeItem)
             },
             onEpisodeLongClick = { episodeItem, focusAnchor ->
+                val pos = episodeAdapter.currentList.indexOfFirst { it.file.id == episodeItem.file.id }
+                if (pos >= 0) viewModel.onEvent(SeriesDetailEvent.SaveFocus(pos))
                 FocusMemory.remember("details.episodes.${args.folderId}", episodeItem.file.id)
                 showEpisodeContextMenu(episodeItem, focusAnchor)
             }
@@ -229,6 +234,7 @@ class SeriesDetailFragment : BaseFragment() {
                             binding.tvEmptyEpisodes.visibility = View.GONE
                             binding.tvPartialListingNotice.visibility = View.GONE
                             binding.btnRetry.visibility = View.GONE
+                            binding.stateView.visibility = View.GONE
                             binding.tvRomajiTitle.text = state.seriesTitle.ifBlank { args.name }
                             binding.tvEnglishSubtitle.visibility = View.GONE
                             state.posterUrl?.let { poster ->
@@ -243,9 +249,22 @@ class SeriesDetailFragment : BaseFragment() {
                             binding.seriesSkeleton.root.visibility = View.GONE
                             binding.pbLoading.visibility = View.GONE
                             binding.tvPartialListingNotice.visibility = View.GONE
-                            binding.tvEmptyEpisodes.visibility = View.VISIBLE
-                            binding.tvEmptyEpisodes.text = StateView.sanitizeErrorMessage(state.message)
-                            binding.btnRetry.visibility = View.VISIBLE
+                            binding.tvEmptyEpisodes.visibility = View.GONE
+                            binding.btnRetry.visibility = View.GONE
+                            binding.stateView.visibility = View.VISIBLE
+                            val stateType = when (state.error) {
+                                is AppError.Network -> StateView.StateType.ERROR_NETWORK
+                                is AppError.Authentication -> StateView.StateType.ERROR_AUTH
+                                is AppError.AccessDenied -> StateView.StateType.ERROR_ACCESS_DENIED
+                                is AppError.RateLimited -> StateView.StateType.ERROR_RATE_LIMITED
+                                is AppError.NotFound -> StateView.StateType.ERROR_NOT_FOUND
+                                is AppError.Server -> StateView.StateType.ERROR_SERVER
+                                is AppError.Empty -> StateView.StateType.EMPTY_FOLDER
+                                else -> StateView.StateType.ERROR_GENERIC
+                            }
+                            binding.stateView.setState(stateType) {
+                                viewModel.loadSeriesDetails(args.folderId, args.name, args.posterUrl)
+                            }
                         }
 
                         is SeriesDetailUiState.Success -> {
@@ -255,6 +274,7 @@ class SeriesDetailFragment : BaseFragment() {
                             binding.pbLoading.visibility = View.GONE
                             binding.tvEmptyEpisodes.visibility = View.GONE
                             binding.btnRetry.visibility = View.GONE
+                            binding.stateView.visibility = View.GONE
                             binding.tvPartialListingNotice.visibility =
                                 if (state.hasIncompleteDriveListing) View.VISIBLE else View.GONE
                             bindSeriesData(state)
@@ -497,7 +517,13 @@ class SeriesDetailFragment : BaseFragment() {
         // Do not steal focus again when the metadata enrichment state arrives.
         if (!hasRestoredInitialFocus) {
             hasRestoredInitialFocus = true
-            val restored = FocusMemory.restore(binding.rvEpisodes, "details.episodes.${args.folderId}") { pos ->
+            val viewModelFocusRestored = viewModel.lastFocusedPosition?.let { pos ->
+                binding.rvEpisodes.post {
+                    binding.rvEpisodes.findViewHolderForAdapterPosition(pos)?.itemView?.requestFocus()
+                }
+                true
+            } ?: false
+            val restored = viewModelFocusRestored || FocusMemory.restore(binding.rvEpisodes, "details.episodes.${args.folderId}") { pos ->
                 episodeAdapter.currentList.getOrNull(pos)?.file?.id
             }
             if (!restored) {
