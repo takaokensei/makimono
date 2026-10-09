@@ -20,7 +20,7 @@ import zechs.drive.stream.databinding.ItemPlayerDrawerSeasonBinding
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import zechs.drive.stream.data.remote.TenraiAnimeService
-import zechs.drive.stream.utils.EpisodeParser
+import zechs.drive.stream.domain.library.EpisodeParser
 import zechs.drive.stream.utils.SeasonEpisodeGrouper
 import zechs.drive.stream.utils.SeasonGroup
 import zechs.drive.stream.utils.FocusEngine

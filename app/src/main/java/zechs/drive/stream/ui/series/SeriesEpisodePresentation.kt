@@ -1,7 +1,7 @@
 package zechs.drive.stream.ui.series
 
 import java.util.Locale
-import zechs.drive.stream.utils.EpisodeParser
+import zechs.drive.stream.domain.library.EpisodeParser
 
 internal data class SeriesEpisodePresentation(
     val displayTitle: String,

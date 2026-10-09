@@ -27,7 +27,7 @@ import zechs.drive.stream.data.repository.WatchQueueRepository
 import zechs.drive.stream.ui.files.adapter.FilesDataModel
 import zechs.drive.stream.ui.series.adapter.SeasonTab
 import zechs.drive.stream.ui.series.adapter.SeriesEpisodeItem
-import zechs.drive.stream.utils.EpisodeParser
+import zechs.drive.stream.domain.library.EpisodeParser
 import zechs.drive.stream.utils.PlaybackProgressPolicy
 import zechs.drive.stream.utils.SeasonEpisodeGrouper
 import zechs.drive.stream.utils.SeasonGroup

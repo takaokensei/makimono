@@ -1,7 +1,7 @@
 package zechs.drive.stream.data.model
 
 import androidx.annotation.Keep
-import zechs.drive.stream.utils.EpisodeParser
+import zechs.drive.stream.domain.library.EpisodeParser
 import java.io.Serializable
 
 @Keep

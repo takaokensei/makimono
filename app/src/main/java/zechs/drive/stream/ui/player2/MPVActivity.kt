@@ -83,7 +83,7 @@ import zechs.drive.stream.utils.SavedSubtitle
 import zechs.drive.stream.utils.AppSettings
 import zechs.drive.stream.utils.MotionPolicy
 import zechs.drive.stream.utils.MalSessionManager
-import zechs.drive.stream.utils.EpisodeParser
+import zechs.drive.stream.domain.library.EpisodeParser
 import zechs.drive.stream.utils.MatroskaChapterParser
 import zechs.drive.stream.utils.util.Constants.Companion.DRIVE_API
 import zechs.drive.stream.utils.util.Orientation

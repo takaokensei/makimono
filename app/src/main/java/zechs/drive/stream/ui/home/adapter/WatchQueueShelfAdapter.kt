@@ -7,7 +7,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import zechs.drive.stream.data.model.WatchQueueItem
 import zechs.drive.stream.databinding.ItemContinueWatchingShelfBinding
-import zechs.drive.stream.utils.EpisodeParser
+import zechs.drive.stream.domain.library.EpisodeParser
 import zechs.drive.stream.utils.MediaImageLoader
 
 class WatchQueueShelfAdapter(

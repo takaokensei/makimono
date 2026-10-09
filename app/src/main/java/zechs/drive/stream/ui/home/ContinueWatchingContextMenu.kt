@@ -6,7 +6,7 @@ import androidx.appcompat.app.AlertDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import zechs.drive.stream.R
 import zechs.drive.stream.data.model.WatchList
-import zechs.drive.stream.utils.EpisodeParser
+import zechs.drive.stream.domain.library.EpisodeParser
 
 internal object ContinueWatchingContextMenu {
     enum class Action {

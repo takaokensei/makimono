@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import zechs.drive.stream.data.model.PlaylistItem
 import zechs.drive.stream.utils.PlaybackProgressPolicy
 
-import zechs.drive.stream.utils.EpisodeParser
+import zechs.drive.stream.domain.library.EpisodeParser
 import zechs.drive.stream.utils.SeasonEpisodeGrouper
 
 /**

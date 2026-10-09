@@ -1,7 +1,7 @@
 package zechs.drive.stream.ui.series
 
 import zechs.drive.stream.ui.series.adapter.SeriesEpisodeItem
-import zechs.drive.stream.utils.EpisodeParser
+import zechs.drive.stream.domain.library.EpisodeParser
 import zechs.drive.stream.utils.SeasonEpisodeGrouper
 
 /** Chooses a story episode for the primary Play/Continue action, independent of Drive order. */

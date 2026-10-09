@@ -44,7 +44,7 @@ import zechs.drive.stream.ui.player.PlayerLauncher
 import zechs.drive.stream.ui.player2.MPVActivity
 import zechs.drive.stream.ui.player.GlassMenuItem
 import zechs.drive.stream.ui.player.PlayerGlassMenuDialog
-import zechs.drive.stream.utils.EpisodeParser
+import zechs.drive.stream.domain.library.EpisodeParser
 import zechs.drive.stream.utils.SeasonEpisodeGrouper
 import zechs.drive.stream.utils.SeasonGroup
 import zechs.drive.stream.utils.VideoPlayer

@@ -2,7 +2,7 @@ package zechs.drive.stream.ui.player
 
 import zechs.drive.stream.data.model.PlaylistItem
 import zechs.drive.stream.data.model.SubtitleItem
-import zechs.drive.stream.utils.EpisodeParser
+import zechs.drive.stream.domain.library.EpisodeParser
 import zechs.drive.stream.utils.SeasonEpisodeGrouper
 
 /** Merges Drive page deltas without losing the active playlist or duplicating shortcuts. */

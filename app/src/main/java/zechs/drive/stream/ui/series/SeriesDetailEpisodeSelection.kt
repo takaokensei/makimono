@@ -1,7 +1,7 @@
 package zechs.drive.stream.ui.series
 
 import zechs.drive.stream.ui.series.adapter.SeriesEpisodeItem
-import zechs.drive.stream.utils.EpisodeParser
+import zechs.drive.stream.domain.library.EpisodeParser
 import zechs.drive.stream.utils.SeasonEpisodeGrouper
 
 /** Keeps the detail screen's "all episodes" list aligned with the grouper's playlist contract. */

@@ -21,7 +21,7 @@ import zechs.drive.stream.databinding.ItemLoadingBinding
 import zechs.drive.stream.databinding.ItemPageErrorBinding
 import zechs.drive.stream.ui.files.FolderPlaceholderPolicy
 import com.bumptech.glide.Glide
-import zechs.drive.stream.utils.EpisodeParser
+import zechs.drive.stream.domain.library.EpisodeParser
 import zechs.drive.stream.utils.FocusEngine
 import zechs.drive.stream.utils.MediaImageLoader
 

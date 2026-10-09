@@ -18,7 +18,7 @@ import zechs.drive.stream.data.model.MalAnimeNode
 import zechs.drive.stream.data.repository.AniSkipRepository
 import zechs.drive.stream.data.repository.TokenProvider
 import zechs.drive.stream.utils.AppLog
-import zechs.drive.stream.utils.EpisodeParser
+import zechs.drive.stream.domain.library.EpisodeParser
 import zechs.drive.stream.utils.MatroskaChapterParser
 import zechs.drive.stream.utils.util.Constants.Companion.DRIVE_API
 import javax.inject.Inject
