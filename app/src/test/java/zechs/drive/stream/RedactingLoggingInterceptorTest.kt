@@ -12,10 +12,11 @@ class RedactingLoggingInterceptorTest {
 
     @Test
     fun redact_bearerToken_isRedacted() {
-        val input = "Authorization: Bearer ya29.a0AfH6SMD_very_secret_token_value"
+        // Fixture sintética com padrão falso para evitar falsos-positivos em scanners de segredo
+        val input = "Authorization: Bearer ya29.FAKE_TEST_TOKEN"
         val output = RedactingLoggingInterceptor.redact(input)
         assertEquals("Authorization: Bearer [REDACTED]", output)
-        assertFalse(output.contains("ya29.a0AfH6SMD_very_secret_token_value"))
+        assertFalse(output.contains("ya29.FAKE_TEST_TOKEN"))
     }
 
     @Test

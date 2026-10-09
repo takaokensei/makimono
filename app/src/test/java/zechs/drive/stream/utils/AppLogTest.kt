@@ -40,10 +40,11 @@ class AppLogTest {
 
     @Test
     fun redact_googleAccessToken_isRedacted() {
-        val input = "Fetching file with token ya29.a0AfH6SMD_very_secret_token_value for download"
+        // Fixture sintética com padrão falso para evitar falsos-positivos em scanners de segredo
+        val input = "Fetching file with token ya29.FAKE_TEST_TOKEN for download"
         val output = AppLog.redact(input)
         assertTrue(output.contains("ya29.[REDACTED]"))
-        assertFalse(output.contains("ya29.a0AfH6SMD_very_secret_token_value"))
+        assertFalse(output.contains("ya29.FAKE_TEST_TOKEN"))
     }
 
     @Test
@@ -78,7 +79,8 @@ class AppLogTest {
     @Test
     fun loggingMethods_redactSensitiveContentAutomatically() {
         AppLog.d("TestTag", "Request with Bearer abc1234567")
-        AppLog.i("TestTag", "ya29.some_long_google_token")
+        // Fixture sintética com padrão falso
+        AppLog.i("TestTag", "ya29.FAKE_TEST_TOKEN_FOR_LOGGING")
         AppLog.w("TestTag", "Failed refresh with refresh_token=xyz789")
         AppLog.e("TestTag", "Fatal error with password=mySecretPassword")
 
