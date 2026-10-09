@@ -1,4 +1,4 @@
-﻿package zechs.drive.stream
+package zechs.drive.stream
 
 import app.cash.turbine.test
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -9,9 +9,9 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import zechs.drive.stream.data.model.PlaylistItem
-import zechs.drive.stream.ui.player.engine.EnginePlaybackState
-import zechs.drive.stream.ui.player.engine.PlaybackCoordinator
-import zechs.drive.stream.ui.player.engine.PlayerEngine
+import zechs.drive.stream.playback.engine.EnginePlaybackState
+import zechs.drive.stream.playback.engine.PlayerEngine
+import zechs.drive.stream.playback.session.PlaybackCoordinator
 import zechs.drive.stream.utils.PlaybackProgressPolicy
 
 class PlaybackCoordinatorTest {
