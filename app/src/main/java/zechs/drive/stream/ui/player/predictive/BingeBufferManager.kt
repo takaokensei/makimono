@@ -1,7 +1,6 @@
 package zechs.drive.stream.ui.player.predictive
 
 import android.content.Context
-import android.net.Uri
 import android.util.Log
 import androidx.annotation.VisibleForTesting
 import dagger.Lazy
@@ -55,7 +54,7 @@ class BingeBufferManager @Inject constructor(
         val fileId: String,
         val title: String,
         val token: String?,
-        val streamUri: Uri,
+        val streamUri: String,
         val chapters: List<MatroskaChapterParser.ParsedChapter>,
         val aniSkipChapters: List<MatroskaChapterParser.ParsedChapter>,
         val matchingSubtitles: List<SubtitleItem>,
@@ -95,14 +94,12 @@ class BingeBufferManager @Inject constructor(
             try {
                 Log.d(TAG, "Starting predictive binge buffer pre-warm for: ${nextItem.title} ($targetFileId)")
                 val token = tokenProvider.get().validToken()
-                val streamUri = Uri.parse(
-                    "$DRIVE_API/files/${targetFileId}?supportsAllDrives=True&alt=media"
-                )
+                val streamUri = "$DRIVE_API/files/${targetFileId}?supportsAllDrives=True&alt=media"
 
                 // 1. Pre-warm HTTP connection & parse Matroska chapters from initial 1MB
                 val chapters = try {
                     withTimeoutOrNull(6_000L) {
-                        chapterExtractor(streamUri.toString(), token)
+                        chapterExtractor(streamUri, token)
                     } ?: emptyList()
                 } catch (e: Exception) {
                     Log.w(TAG, "Predictive MKV chapter extraction error", e)
