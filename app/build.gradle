@@ -186,7 +186,7 @@ dependencies {
     testImplementation "androidx.room:room-testing:$room_version"
 
     // Gson
-    implementation "com.google.code.gson:gson:2.10.1"
+    implementation "com.google.code.gson:gson:2.14.0"
 
     // Moshi
     implementation "com.squareup.moshi:moshi:$moshi_version"
