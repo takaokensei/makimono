@@ -16,9 +16,13 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import zechs.drive.stream.domain.common.AppError
 import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.data.model.Starred
 import zechs.drive.stream.data.repository.DriveRepository
@@ -86,6 +90,20 @@ class FilesViewModel @Inject constructor(
     val filesList: LiveData<Resource<List<FilesDataModel>>>
         get() = _filesList
 
+    private val _uiState = MutableStateFlow<FilesUiState>(FilesUiState.Loading)
+    val uiState: StateFlow<FilesUiState> = _uiState.asStateFlow()
+
+    var lastFocusedPosition: Int? = null
+
+    fun onEvent(event: FilesEvent) {
+        when (event) {
+            is FilesEvent.QueryFiles -> queryFiles(event.query)
+            is FilesEvent.SelectSeason -> { /* no-op selection */ }
+            is FilesEvent.SaveFocus -> { lastFocusedPosition = event.position }
+            is FilesEvent.Retry -> queryFiles(activeQuery)
+        }
+    }
+
     private val _token = MutableLiveData<Event<Resource<FileToken>>>()
     val mpvFile: LiveData<Event<Resource<FileToken>>>
         get() = _token
@@ -132,6 +150,7 @@ class FilesViewModel @Inject constructor(
             response = null
             posterResolutionJob?.cancel()
             _filesList.postValue(Resource.Loading())
+            _uiState.value = FilesUiState.Loading
         }
 
         pageRequestJob?.takeIf { it.isActive }?.let { return it }
@@ -285,6 +304,16 @@ class FilesViewModel @Inject constructor(
         }
 
         response = updated
+        val initialVisibleCount = updated.count { it is FilesDataModel.File }
+        if (initialVisibleCount == 0 && isLastPage) {
+            _uiState.value = FilesUiState.Empty()
+        } else {
+            _uiState.value = FilesUiState.Content(
+                files = updated.toList(),
+                fileCount = initialVisibleCount,
+                isFirstLoad = !hasLoaded
+            )
+        }
         val generation = ++responseGeneration
         posterResolutionJob?.cancel()
         posterResolutionJob = viewModelScope.launch(Dispatchers.IO) {
@@ -308,6 +337,16 @@ class FilesViewModel @Inject constructor(
                 if (generation != responseGeneration) return@launch
                 response = withCachedPosters
                 _filesList.postValue(Resource.Success(withCachedPosters.toList()))
+                val visibleCount = withCachedPosters.count { it is FilesDataModel.File }
+                if (visibleCount == 0 && isLastPage) {
+                    _uiState.value = FilesUiState.Empty()
+                } else {
+                    _uiState.value = FilesUiState.Content(
+                        files = withCachedPosters.toList(),
+                        fileCount = visibleCount,
+                        isFirstLoad = !hasLoaded
+                    )
+                }
 
                 resolveMissingPosters(generation)
             } catch (cancel: CancellationException) {
@@ -349,6 +388,17 @@ class FilesViewModel @Inject constructor(
             return
         }
         if (currentFiles != null) response = currentFiles
+        val appErr = when (errorKind) {
+            ResourceErrorKind.NETWORK ->
+                AppError.Network(message ?: "Falha de rede. Verifique sua conexão.")
+            ResourceErrorKind.AUTHENTICATION, ResourceErrorKind.RATE_LIMITED ->
+                AppError.Authentication(message ?: "Sessão expirada. Reconecte sua conta.")
+            ResourceErrorKind.NOT_FOUND ->
+                AppError.NotFound(message ?: "Pasta ou arquivo não encontrado.")
+            else ->
+                AppError.Unknown(message ?: "Erro ao carregar arquivos.")
+        }
+        _uiState.value = FilesUiState.Error(appErr, currentFiles?.toList().orEmpty())
         _filesList.postValue(
             Resource.Error(
                 message ?: "Something went wrong",

@@ -35,6 +35,7 @@ import zechs.drive.stream.data.model.PlaylistItem
 import zechs.drive.stream.data.model.Starred
 import zechs.drive.stream.data.model.SubtitleItem
 import zechs.drive.stream.databinding.FragmentFilesBinding
+import zechs.drive.stream.domain.common.AppError
 import zechs.drive.stream.ui.BaseFragment
 import zechs.drive.stream.ui.files.adapter.FilesAdapter
 import zechs.drive.stream.ui.files.adapter.FilesDataModel
@@ -177,40 +178,65 @@ class FilesFragment : BaseFragment() {
 
     private fun setupFilesObserver() {
         if (!viewModel.hasLoaded) {
-            viewModel.queryFiles(args.query)
+            viewModel.onEvent(FilesEvent.QueryFiles(args.query))
         }
 
-        viewModel.filesList.observe(viewLifecycleOwner) { response ->
-            handleFilesList(response)
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { state ->
+                    renderFilesState(state)
+                }
+            }
         }
     }
 
-    private fun handleFilesList(response: Resource<List<FilesDataModel>>) {
-        when (response) {
-            is Resource.Success -> response.data?.let { files ->
-                onSuccess(files)
-            }
-
-            is Resource.Error -> {
-                val partialFiles = response.data
-                if (partialFiles?.any { it is FilesDataModel.File } == true) {
-                    onSuccess(partialFiles)
-                } else {
-                    showError(response.message, response.errorKind)
-                }
-            }
-
-            is Resource.Loading -> {
+    private fun renderFilesState(state: FilesUiState) {
+        when (state) {
+            is FilesUiState.Loading -> {
                 isLoading = true
                 if (!viewModel.hasLoaded) {
                     isLoading(true)
                 }
-                binding.error.root.apply {
-                    if (isVisible) {
-                        isGone = true
+                binding.error.root.isGone = true
+                binding.stateView.isGone = true
+            }
+            is FilesUiState.Empty -> {
+                isLoading(false)
+                isLoading = false
+                viewModel.hasLoaded = true
+                binding.error.root.isGone = true
+                binding.stateView.isVisible = true
+                binding.stateView.setState(zechs.drive.stream.ui.common.StateView.StateType.EMPTY_FOLDER)
+            }
+            is FilesUiState.Content -> {
+                binding.stateView.isGone = true
+                binding.error.root.isGone = true
+                onSuccess(state.files)
+                viewModel.lastFocusedPosition?.let { pos ->
+                    binding.rvList.post {
+                        binding.rvList.scrollToPosition(pos)
                     }
                 }
-                binding.error.btnConnectDrive.isGone = true
+            }
+            is FilesUiState.Error -> {
+                if (state.partialFiles.any { it is FilesDataModel.File }) {
+                    binding.stateView.isGone = true
+                    onSuccess(state.partialFiles)
+                } else {
+                    isLoading(false)
+                    isLoading = false
+                    binding.error.root.isGone = true
+                    binding.stateView.isVisible = true
+                    val stateType = when (state.error) {
+                        is AppError.Network -> zechs.drive.stream.ui.common.StateView.StateType.ERROR_NETWORK
+                        is AppError.Authentication -> zechs.drive.stream.ui.common.StateView.StateType.ERROR_AUTH
+                        is AppError.NotFound -> zechs.drive.stream.ui.common.StateView.StateType.ERROR_NOT_FOUND
+                        else -> zechs.drive.stream.ui.common.StateView.StateType.ERROR_GENERIC
+                    }
+                    binding.stateView.setState(stateType) {
+                        viewModel.onEvent(FilesEvent.Retry)
+                    }
+                }
             }
         }
     }
@@ -358,6 +384,14 @@ class FilesFragment : BaseFragment() {
                     ?.spanCount ?: 1
                 if (position in 0 until firstRowSize) {
                     view.nextFocusUpId = binding.etSearch.id
+                }
+                view.setOnFocusChangeListener { _, hasFocus ->
+                    if (hasFocus) {
+                        val pos = binding.rvList.getChildAdapterPosition(view)
+                        if (pos != RecyclerView.NO_POSITION) {
+                            viewModel.onEvent(FilesEvent.SaveFocus(pos))
+                        }
+                    }
                 }
             }
 
