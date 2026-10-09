@@ -1,49 +1,50 @@
 package zechs.drive.stream.ui.settings
 
+import android.content.res.ColorStateList
+import android.content.res.Configuration
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.graphics.Color
 import android.widget.LinearLayout
-import android.content.res.Configuration
-import android.content.res.ColorStateList
-import android.view.Gravity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
 import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.transition.TransitionManager
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.button.MaterialButton
-import zechs.drive.stream.databinding.ItemThemePreviewBinding
-import com.google.android.material.snackbar.Snackbar
 import com.bumptech.glide.Glide
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import zechs.drive.stream.R
 import zechs.drive.stream.databinding.FragmentSettingsBinding
+import zechs.drive.stream.databinding.ItemThemePreviewBinding
 import zechs.drive.stream.ui.BaseFragment
 import zechs.drive.stream.ui.main.MainViewModel
 import zechs.drive.stream.utils.AppTheme
+import zechs.drive.stream.utils.BackupSerializer
 import zechs.drive.stream.utils.MotionPolicy
 import zechs.drive.stream.utils.MotionPreference
-import zechs.drive.stream.utils.BackupSerializer
-import zechs.drive.stream.utils.VideoPlayer
-import zechs.drive.stream.utils.TvAccessibilityLayout
 import zechs.drive.stream.utils.SingleTapActivation
-import zechs.drive.stream.utils.state.Resource
+import zechs.drive.stream.utils.SubtitleStyle
+import zechs.drive.stream.utils.TvAccessibilityLayout
+import zechs.drive.stream.utils.TvFocusRing
+import zechs.drive.stream.utils.VideoPlayer
 import zechs.drive.stream.utils.ext.resolveThemeColor
-import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
-import zechs.drive.stream.data.repository.MalRepository
-import zechs.drive.stream.data.remote.ProfileArtCatalog
-import zechs.drive.stream.utils.MalSessionManager
+import zechs.drive.stream.utils.state.Resource
+import java.io.File
 
 @AndroidEntryPoint
 class SettingsFragment : BaseFragment() {
@@ -67,30 +68,7 @@ class SettingsFragment : BaseFragment() {
     )
 
     private val mainViewModel by activityViewModels<MainViewModel>()
-
-    @Inject
-    lateinit var malRepository: MalRepository
-
-    @Inject
-    lateinit var driveRepository: zechs.drive.stream.data.repository.DriveRepository
-
-    @Inject
-    lateinit var malSessionManager: MalSessionManager
-
-    @Inject
-    lateinit var profileManager: zechs.drive.stream.utils.ProfileManager
-
-    @Inject
-    lateinit var profileArtCatalog: ProfileArtCatalog
-
-    @Inject
-    lateinit var appSettings: zechs.drive.stream.utils.AppSettings
-
-    @Inject
-    lateinit var backupSerializer: BackupSerializer
-
-    @Inject
-    lateinit var sessionManager: zechs.drive.stream.utils.SessionManager
+    private val viewModel by viewModels<SettingsViewModel>()
 
     private val exportBackupLauncher = registerForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -122,7 +100,8 @@ class SettingsFragment : BaseFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         _binding = FragmentSettingsBinding.bind(view)
-        selectedSettingsCategory = savedInstanceState?.getInt(STATE_SETTINGS_CATEGORY, 0) ?: 0
+        selectedSettingsCategory = savedInstanceState?.getInt(STATE_SETTINGS_CATEGORY, 0)
+            ?: viewModel.uiState.value.selectedCategory
 
         binding.toolbar.setNavigationOnClickListener {
             findNavController().navigateUp()
@@ -145,11 +124,124 @@ class SettingsFragment : BaseFragment() {
         setupLogOut()
         setupCategoryNavigation()
         setupTvFocus()
+        observeUiStateAndEffects()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putInt(STATE_SETTINGS_CATEGORY, selectedSettingsCategory)
         super.onSaveInstanceState(outState)
+    }
+
+    private fun observeUiStateAndEffects() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    viewModel.uiState.collect { state ->
+                        renderUiState(state)
+                    }
+                }
+                launch {
+                    viewModel.effects.collect { effect ->
+                        handleEffect(effect)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun renderUiState(state: SettingsUiState) {
+        // Active Profile
+        state.activeProfile?.let { profile ->
+            binding.tvCurrentProfileName.text = "Perfil ativo: ${profile.name}"
+            val avatarRes = viewModel.getAvatarDrawableRes(profile.avatarResName)
+            val avatarSource: Any? = profile.avatarUrl
+                ?: if (profile.avatarResName == "avatar_caua") avatarRes
+                else viewModel.profileArtCatalog.defaultAvatarForProfile(profile.id)?.url
+            Glide.with(binding.ivSettingProfileAvatar)
+                .load(avatarSource)
+                .placeholder(avatarRes.takeIf { profile.avatarResName == "avatar_caua" } ?: R.drawable.avatar_caua)
+                .error(R.drawable.avatar_caua)
+                .circleCrop()
+                .into(binding.ivSettingProfileAvatar)
+        }
+
+        // Library Root
+        binding.tvLibraryRootValue.text = state.libraryRootName
+            ?: if (state.libraryRootId.isNullOrBlank()) getString(R.string.my_drive)
+            else state.libraryRootId
+
+        // Motion preference
+        binding.tvMotionPreferenceValue.text = when (state.motionPreference) {
+            MotionPreference.REDUCED -> getString(R.string.motion_reduced)
+            MotionPreference.SYSTEM -> getString(R.string.motion_follows_device)
+        }
+        reduceMotionEnabled = MotionPolicy.shouldReduceMotion(
+            state.motionPreference,
+            MotionPolicy.areSystemAnimationsEnabled()
+        )
+        if (reduceMotionEnabled) {
+            binding.root.findFocus()?.let { focused ->
+                focused.animate().cancel()
+                focused.scaleX = 1f
+                focused.scaleY = 1f
+                focused.translationZ = 0f
+            }
+        }
+
+        // Subtitle Summary
+        if (state.subtitleSummary.isNotBlank()) {
+            binding.tvSubtitleSizeValue.text = state.subtitleSummary
+        }
+
+        // Cache Summary
+        if (state.cacheSizeText.isNotBlank()) {
+            binding.tvCacheSizeValue.text = state.cacheSizeText
+        }
+
+        // MAL integration
+        val activeTint = requireContext().resolveThemeColor(R.attr.colorAccentPrimary)
+        val inactiveTint = requireContext().resolveThemeColor(R.attr.colorTextSecondary)
+        if (state.isMalLoggedIn) {
+            binding.tvMalTitle.text = "MyAnimeList"
+            binding.tvMalSubtitle.text = "Conectado como: ${state.malUsername ?: "Usuário"} • Toque para desconectar"
+            binding.ivMalIcon.setImageResource(R.drawable.ic_mal_24)
+            binding.ivMalIcon.imageTintList = ColorStateList.valueOf(activeTint)
+        } else {
+            binding.tvMalTitle.text = "MyAnimeList"
+            binding.tvMalSubtitle.text = "Conectar conta para scrobble automático"
+            binding.ivMalIcon.setImageResource(R.drawable.ic_mal_24)
+            binding.ivMalIcon.imageTintList = ColorStateList.valueOf(inactiveTint)
+        }
+        binding.switchMalSync.isChecked = state.isMalSyncEnabled
+        binding.settingMalSyncToggle.isVisible = state.isMalLoggedIn
+        binding.settingMalTransferToTv.isVisible = false
+
+        // Playback switches
+        binding.switchAutoSkip.isChecked = state.isAutoSkipEnabled
+        binding.switchGestures.isChecked = state.isGesturesEnabled
+        binding.switchAutoFrameRate?.isChecked = state.isAutoFrameRateEnabled
+        binding.switchMatchDynamicRange?.isChecked = state.isMatchDynamicRangeEnabled
+        binding.switchPredictiveBuffering?.isChecked = state.isPredictiveBufferingEnabled
+    }
+
+    private fun handleEffect(effect: SettingsUiEffect) {
+        when (effect) {
+            is SettingsUiEffect.ShowSnackbar -> showSnackBar(effect.message)
+            is SettingsUiEffect.RestartApp -> {
+                val activity = requireActivity()
+                activity.finish()
+                activity.startActivity(activity.intent)
+            }
+            is SettingsUiEffect.OpenMalAuthDialog -> {
+                val authDialog = MalAuthDialog(
+                    onCodeReceived = { code, verifier ->
+                        viewModel.onEvent(SettingsEvent.ExchangeMalToken(code, verifier))
+                    },
+                    clientId = effect.clientId
+                )
+                authDialog.show(parentFragmentManager, MalAuthDialog.TAG)
+            }
+        }
     }
 
     private fun setupCategoryNavigation() {
@@ -221,10 +313,6 @@ class SettingsFragment : BaseFragment() {
                 isFocusable = true
                 isFocusableInTouchMode = true
                 setOnClickListener { selectSettingsCategory(index, categories) }
-                // TV-style controls can consume the first touch only to acquire focus.
-                // Route a deliberate tap through the regular click listener immediately.
-                // Let the horizontal category scroller take over drag gestures while
-                // preserving single-tap activation for buttons that only gain focus.
                 SingleTapActivation.install(this, disallowParentIntercept = false)
                 setOnFocusChangeListener { view, hasFocus ->
                     if (hasFocus && !reduceMotionEnabled) {
@@ -258,6 +346,7 @@ class SettingsFragment : BaseFragment() {
     private fun selectSettingsCategory(index: Int, categories: List<SettingsCategory>) {
         if (index !in categories.indices) return
         selectedSettingsCategory = index
+        viewModel.onEvent(SettingsEvent.SelectCategory(index))
         applySettingsCategory(categories)
         binding.settingsScroll.smoothScrollTo(0, 0)
         updateSettingsFocusOrder()
@@ -309,14 +398,16 @@ class SettingsFragment : BaseFragment() {
         if (!isTv && resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE) return
         tvFocusEnabled = true
 
-        zechs.drive.stream.utils.TvFocusRing.install(binding.root)
+        TvFocusRing.install(binding.root)
 
         val rows = allSettingsRows()
-
         TvAccessibilityLayout.adaptSettingsRows(requireContext(), rows)
 
         rows.forEach { row ->
             row.setOnFocusChangeListener { view, hasFocus ->
+                if (hasFocus) {
+                    viewModel.onEvent(SettingsEvent.SaveFocus(view.id))
+                }
                 if (reduceMotionEnabled) {
                     view.animate().cancel()
                     view.scaleX = 1f
@@ -411,60 +502,26 @@ class SettingsFragment : BaseFragment() {
         ?.also { if (it.id == View.NO_ID) it.id = View.generateViewId() }
 
     private fun setupUserProfileSection() {
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                profileManager.activeProfileFlow.collect { profile ->
-                    binding.tvCurrentProfileName.text = "Perfil ativo: ${profile.name}"
-                    val avatarRes = profileManager.getAvatarDrawableRes(profile.avatarResName)
-                    val avatarSource: Any? = profile.avatarUrl
-                        ?: if (profile.avatarResName == "avatar_caua") avatarRes
-                        else profileArtCatalog.defaultAvatarForProfile(profile.id)?.url
-                    Glide.with(binding.ivSettingProfileAvatar)
-                        .load(avatarSource)
-                        .placeholder(avatarRes.takeIf { profile.avatarResName == "avatar_caua" } ?: R.drawable.avatar_caua)
-                        .error(R.drawable.avatar_caua)
-                        .circleCrop()
-                        .into(binding.ivSettingProfileAvatar)
-                }
-            }
-        }
-
         binding.settingSelectProfile.setOnClickListener {
             findNavController().navigate(R.id.action_settingsFragment_to_profileSelectionFragment)
         }
     }
 
     private fun setupLibraryRootSetting() {
-        fun refreshValue() {
-            val (rootId, rootName) = profileManager.getLibraryRoot()
-            binding.tvLibraryRootValue.text = rootName ?: if (rootId.isNullOrBlank()) getString(R.string.my_drive) else rootId
-        }
-
-        refreshValue()
         binding.settingLibraryRoot.setOnClickListener {
-            val (currentId, currentName) = profileManager.getLibraryRoot()
-            val effectiveName = currentName ?: if (currentId.isNullOrBlank()) getString(R.string.my_drive) else currentId
+            val currentState = viewModel.uiState.value
+            val effectiveName = currentState.libraryRootName
+                ?: if (currentState.libraryRootId.isNullOrBlank()) getString(R.string.my_drive)
+                else currentState.libraryRootId
             DriveFolderPickerDialog(
                 context = requireContext(),
                 lifecycleScope = viewLifecycleOwner.lifecycleScope,
                 initialSelectionName = effectiveName,
                 loadPage = { parentId, pageToken ->
-                    driveRepository.getFiles(
-                        query = LibraryRootFolderQuery.forParent(parentId),
-                        pageToken = pageToken,
-                        pageSize = 100
-                    )
+                    viewModel.getDriveFolderPage(parentId, pageToken)
                 },
                 onSelected = { rootId, rootName ->
-                    viewLifecycleOwner.lifecycleScope.launch {
-                        profileManager.setLibraryRoot(rootId, rootName)
-                        refreshValue()
-                        Snackbar.make(
-                            binding.root,
-                            getString(R.string.library_root_selected),
-                            Snackbar.LENGTH_SHORT
-                        ).show()
-                    }
+                    viewModel.onEvent(SettingsEvent.SetLibraryRoot(rootId, rootName))
                 },
                 onDismiss = {
                     binding.settingLibraryRoot.post { binding.settingLibraryRoot.requestFocus() }
@@ -483,7 +540,7 @@ class SettingsFragment : BaseFragment() {
                 .create()
 
             dialog.setOnShowListener {
-                dialog.window?.let { w -> zechs.drive.stream.utils.TvFocusRing.install(w.decorView) }
+                dialog.window?.let { w -> TvFocusRing.install(w.decorView) }
                 val targetIndex = mainViewModel.currentThemeIndex.coerceAtLeast(0)
                 container.getChildAt(targetIndex)?.requestFocus()
             }
@@ -511,6 +568,7 @@ class SettingsFragment : BaseFragment() {
 
                     cardTheme.setOnClickListener {
                         mainViewModel.setTheme(theme)
+                        viewModel.onEvent(SettingsEvent.SetTheme(theme))
                         binding.tvThemeCurrentValue.text = theme.displayName
                         dialog.dismiss()
                     }
@@ -540,136 +598,69 @@ class SettingsFragment : BaseFragment() {
                         else -> throw IllegalArgumentException("Unknown default player")
                     }
                     mainViewModel.setPlayer(player)
+                    viewModel.onEvent(SettingsEvent.SetPlayer(player))
                     binding.tvPlayerCurrentValue.text = players[item]
                     d.dismiss()
                 }
                 .create()
             dialog.setOnShowListener {
-                dialog.window?.let { w -> zechs.drive.stream.utils.TvFocusRing.install(w.decorView) }
+                dialog.window?.let { w -> TvFocusRing.install(w.decorView) }
             }
             dialog.show()
         }
     }
 
     private fun refreshConfigurableSummaries() {
-        viewLifecycleOwner.lifecycleScope.launch {
-            val theme = AppTheme.fromValue(mainViewModel.currentThemeIndex)
-            binding.tvThemeCurrentValue.text = theme.displayName
-            binding.tvPlayerCurrentValue.text = when (mainViewModel.currentPlayerIndex.value) {
-                VideoPlayer.MPV.value -> getString(R.string.mpv)
-                else -> getString(R.string.exoplayer)
-            }
-            try {
-                binding.tvSubtitleSizeValue.text = appSettings.fetchSubtitleStyle().summaryLabel()
-            } catch (e: Exception) {
-                Log.w(TAG, "Could not load subtitle summary", e)
-            }
+        val theme = AppTheme.fromValue(mainViewModel.currentThemeIndex)
+        binding.tvThemeCurrentValue.text = theme.displayName
+        binding.tvPlayerCurrentValue.text = when (mainViewModel.currentPlayerIndex.value) {
+            VideoPlayer.MPV.value -> getString(R.string.mpv)
+            else -> getString(R.string.exoplayer)
         }
     }
 
     private fun setupSubtitleAppearanceSetting() {
         binding.settingSubtitleSize.setOnClickListener {
-            viewLifecycleOwner.lifecycleScope.launch {
-                val initial = try {
-                    appSettings.fetchSubtitleStyle()
-                } catch (e: Exception) {
-                    zechs.drive.stream.utils.SubtitleStyle()
-                }
-                zechs.drive.stream.ui.player.SubtitleStyleDialog.show(requireContext(), initial) { updated ->
-                    viewLifecycleOwner.lifecycleScope.launch {
-                        try {
-                            appSettings.saveSubtitleStyle(updated)
-                            binding.tvSubtitleSizeValue.text = updated.summaryLabel()
-                            showSnackBar("Preferências de legenda salvas")
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error saving subtitle style", e)
-                        }
-                    }
-                }
+            val initial = SubtitleStyle()
+            zechs.drive.stream.ui.player.SubtitleStyleDialog.show(requireContext(), initial) { updated ->
+                viewModel.onEvent(SettingsEvent.SaveSubtitleStyle(updated))
             }
         }
     }
 
     private fun setupMotionPreference() {
-        val profileId = profileManager.getActiveProfile().id
-
-        fun updateSummary(preference: MotionPreference) {
-            binding.tvMotionPreferenceValue.text = when (preference) {
-                MotionPreference.REDUCED -> getString(R.string.motion_reduced)
-                MotionPreference.SYSTEM -> getString(R.string.motion_follows_device)
-            }
-            reduceMotionEnabled = MotionPolicy.shouldReduceMotion(
-                preference,
-                MotionPolicy.areSystemAnimationsEnabled()
-            )
-            if (reduceMotionEnabled) {
-                binding.root.findFocus()?.let { focused ->
-                    focused.animate().cancel()
-                    focused.scaleX = 1f
-                    focused.scaleY = 1f
-                    focused.translationZ = 0f
-                }
-            }
-        }
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            val initial = runCatching { appSettings.fetchMotionPreference(profileId) }
-                .getOrDefault(MotionPreference.SYSTEM)
-            updateSummary(initial)
-        }
-
         binding.settingReduceMotion.setOnClickListener {
             val options = arrayOf(
                 getString(R.string.motion_follows_device),
                 getString(R.string.motion_reduced)
             )
-            val profileForSelection = profileManager.getActiveProfile().id
-            viewLifecycleOwner.lifecycleScope.launch {
-                val current = runCatching { appSettings.fetchMotionPreference(profileForSelection) }
-                    .getOrDefault(MotionPreference.SYSTEM)
-                val selected = if (current == MotionPreference.REDUCED) 1 else 0
-                val dialog = MaterialAlertDialogBuilder(
-                    requireContext(),
-                    R.style.ThemeOverlay_DriveStream_Dialog
-                )
-                    .setTitle(R.string.reduce_motion)
-                    .setSingleChoiceItems(options, selected) { dialogInterface, index ->
-                        val preference = if (index == 1) MotionPreference.REDUCED else MotionPreference.SYSTEM
-                        viewLifecycleOwner.lifecycleScope.launch {
-                            runCatching { appSettings.saveMotionPreference(preference, profileForSelection) }
-                                .onSuccess {
-                                    updateSummary(preference)
-                                    showSnackBar("Preferência de movimento salva")
-                                }
-                                .onFailure { error ->
-                                    Log.e(TAG, "Error saving motion preference", error)
-                                    showSnackBar("Não foi possível salvar a preferência")
-                                }
-                        }
-                        dialogInterface.dismiss()
-                    }
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .create()
-                dialog.setOnShowListener {
-                    dialog.window?.let { window -> zechs.drive.stream.utils.TvFocusRing.install(window.decorView) }
+            val current = viewModel.uiState.value.motionPreference
+            val selected = if (current == MotionPreference.REDUCED) 1 else 0
+            val dialog = MaterialAlertDialogBuilder(
+                requireContext(),
+                R.style.ThemeOverlay_DriveStream_Dialog
+            )
+                .setTitle(R.string.reduce_motion)
+                .setSingleChoiceItems(options, selected) { dialogInterface, index ->
+                    val preference = if (index == 1) MotionPreference.REDUCED else MotionPreference.SYSTEM
+                    viewModel.onEvent(SettingsEvent.SaveMotionPreference(preference))
+                    dialogInterface.dismiss()
                 }
-                dialog.show()
+                .setNegativeButton(android.R.string.cancel, null)
+                .create()
+            dialog.setOnShowListener {
+                dialog.window?.let { window -> TvFocusRing.install(window.decorView) }
             }
+            dialog.show()
         }
     }
 
     private fun setupStorageAndCacheSetting() {
         fun updateCacheDisplay() {
-            viewLifecycleOwner.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
                 val sizeBytes = calculateTotalCacheBytes()
-                val sizeMb = sizeBytes / (1024.0 * 1024.0)
-                val displayStr = if (sizeMb < 0.1) {
-                    "Cache limpo (< 100 KB)"
-                } else {
-                    String.format(java.util.Locale.ROOT, "%.1f MB em cache (Posters, capas e legendas)", sizeMb)
-                }
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    binding.tvCacheSizeValue.text = displayStr
+                withContext(Dispatchers.Main) {
+                    viewModel.onEvent(SettingsEvent.UpdateCacheSize(sizeBytes))
                 }
             }
         }
@@ -680,50 +671,38 @@ class SettingsFragment : BaseFragment() {
             val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
                 .setTitle("Limpar Cache de Mídia e Legendas?")
                 .setMessage("Isso liberará espaço em disco removendo miniaturas temporárias e legendas baixadas. Seus perfis, favoritos e histórico de reprodução NÃO serão apagados.")
-                .setPositiveButton("Limpar") { dialog, _ ->
-                    dialog.dismiss()
+                .setPositiveButton("Limpar") { d, _ ->
+                    d.dismiss()
                     showSnackBar("Limpando cache...")
-                    viewLifecycleOwner.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
                         try {
-                            // 1. Clear Glide disk cache
-                            com.bumptech.glide.Glide.get(requireContext().applicationContext).clearDiskCache()
+                            Glide.get(requireContext().applicationContext).clearDiskCache()
+                            val subDir = File(requireContext().filesDir, "subtitles")
+                            if (subDir.exists()) subDir.deleteRecursively()
+                            val subCache = File(requireContext().cacheDir, "subtitles")
+                            if (subCache.exists()) subCache.deleteRecursively()
 
-                            // 2. Clear temp subtitle files
-                            val subDir = java.io.File(requireContext().filesDir, "subtitles")
-                            if (subDir.exists()) {
-                                subDir.deleteRecursively()
-                            }
-                            val subCache = java.io.File(requireContext().cacheDir, "subtitles")
-                            if (subCache.exists()) {
-                                subCache.deleteRecursively()
-                            }
+                            requireContext().cacheDir.listFiles()?.forEach { it.deleteRecursively() }
+                            requireContext().externalCacheDir?.listFiles()?.forEach { it.deleteRecursively() }
 
-                            // 3. Clear app general cache
-                            requireContext().cacheDir.listFiles()?.forEach { file ->
-                                file.deleteRecursively()
-                            }
-                            requireContext().externalCacheDir?.listFiles()?.forEach { file ->
-                                file.deleteRecursively()
-                            }
-
-                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                com.bumptech.glide.Glide.get(requireContext().applicationContext).clearMemory()
+                            withContext(Dispatchers.Main) {
+                                Glide.get(requireContext().applicationContext).clearMemory()
                                 updateCacheDisplay()
                                 showSnackBar("Cache limpo com sucesso! Espaço liberado.")
                             }
                         } catch (e: Exception) {
                             Log.e(TAG, "Error clearing cache", e)
-                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            withContext(Dispatchers.Main) {
                                 showSnackBar("Erro ao limpar cache: ${e.message}")
                             }
                         }
                     }
                 }
-                .setNegativeButton("Cancelar") { dialog, _ -> dialog.dismiss() }
+                .setNegativeButton("Cancelar") { d, _ -> d.dismiss() }
                 .create()
 
             dialog.setOnShowListener {
-                dialog.window?.let { w -> zechs.drive.stream.utils.TvFocusRing.install(w.decorView) }
+                dialog.window?.let { w -> TvFocusRing.install(w.decorView) }
                 dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)?.requestFocus()
             }
             dialog.show()
@@ -732,7 +711,7 @@ class SettingsFragment : BaseFragment() {
 
     private fun calculateTotalCacheBytes(): Long {
         var total = 0L
-        fun addDir(file: java.io.File?) {
+        fun addDir(file: File?) {
             if (file == null || !file.exists()) return
             if (file.isDirectory) {
                 file.listFiles()?.forEach { addDir(it) }
@@ -744,7 +723,7 @@ class SettingsFragment : BaseFragment() {
         try {
             addDir(requireContext().cacheDir)
             addDir(requireContext().externalCacheDir)
-            addDir(java.io.File(requireContext().filesDir, "subtitles"))
+            addDir(File(requireContext().filesDir, "subtitles"))
         } catch (e: Exception) {
             Log.w(TAG, "Error calculating cache size", e)
         }
@@ -752,7 +731,6 @@ class SettingsFragment : BaseFragment() {
     }
 
     private fun setupCheckForUpdates() {
-
         var isUserClick = false
         binding.settingCheckForUpdate.setOnClickListener {
             if (!mainViewModel.isChecking) {
@@ -782,14 +760,12 @@ class SettingsFragment : BaseFragment() {
         mainViewModel.latest.observe(viewLifecycleOwner) { state ->
             when (state) {
                 is Resource.Loading -> isChecking(true)
-
                 is Resource.Error -> {
                     isChecking(false)
                     val errorMsg = state.message?.takeIf { it.isNotBlank() }
                         ?: getString(R.string.unable_to_check_updates)
                     showSnackBar(errorMsg)
                 }
-
                 is Resource.Success -> {
                     isChecking(false)
                     val release = state.data
@@ -799,186 +775,129 @@ class SettingsFragment : BaseFragment() {
                 }
             }
         }
-
     }
 
     private fun setupMalIntegration() {
-        fun updateMalUi() {
-            val isLoggedIn = malSessionManager.isLoggedIn()
-            val username = malSessionManager.getUsername()
-            val activeTint = requireContext().resolveThemeColor(R.attr.colorAccentPrimary)
-            val inactiveTint = requireContext().resolveThemeColor(R.attr.colorTextSecondary)
-            if (isLoggedIn) {
-                binding.tvMalTitle.text = "MyAnimeList"
-                binding.tvMalSubtitle.text = "Conectado como: ${username ?: "Usuário"} • Toque para desconectar"
-                binding.ivMalIcon.setImageResource(R.drawable.ic_mal_24)
-                binding.ivMalIcon.imageTintList = android.content.res.ColorStateList.valueOf(activeTint)
-            } else {
-                binding.tvMalTitle.text = "MyAnimeList"
-                binding.tvMalSubtitle.text = "Conectar conta para scrobble automático"
-                binding.ivMalIcon.setImageResource(R.drawable.ic_mal_24)
-                binding.ivMalIcon.imageTintList = android.content.res.ColorStateList.valueOf(inactiveTint)
-            }
-            binding.switchMalSync.isChecked = malSessionManager.isSyncEnabled()
-            binding.settingMalSyncToggle.isVisible = isLoggedIn
-            // Direct token transfer over the LAN was removed. The TV flow uses
-            // the short-lived OAuth code handled by MalAuthDialog instead.
-            binding.settingMalTransferToTv.isVisible = false
-            updateSettingsFocusOrder()
-        }
-
-        updateMalUi()
-
         binding.settingMalSyncToggle.setOnClickListener {
             binding.switchMalSync.toggle()
         }
-
         binding.switchMalSync.setOnCheckedChangeListener { _, isChecked ->
-            malSessionManager.setSyncEnabled(isChecked)
-            showSnackBar(if (isChecked) "Sincronização com o MyAnimeList ativada" else "Sincronização com o MyAnimeList pausada")
+            viewModel.onEvent(SettingsEvent.SetMalSync(isChecked))
         }
 
         binding.settingMalAccount.setOnClickListener {
-            if (malSessionManager.isLoggedIn()) {
+            if (viewModel.uiState.value.isMalLoggedIn) {
                 val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
                     .setTitle("Desconectar do MyAnimeList?")
                     .setMessage("O scrobble automático de episódios será desativado.")
-                    .setPositiveButton("Desconectar") { dialog, _ ->
-                        malSessionManager.clearSession()
-                        updateMalUi()
-                        dialog.dismiss()
-                        showSnackBar("Conta do MyAnimeList desconectada")
+                    .setPositiveButton("Desconectar") { d, _ ->
+                        viewModel.onEvent(SettingsEvent.DisconnectMal)
+                        d.dismiss()
                     }
-                    .setNegativeButton("Cancelar") { dialog, _ -> dialog.dismiss() }
+                    .setNegativeButton("Cancelar") { d, _ -> d.dismiss() }
                     .create()
 
                 dialog.setOnShowListener {
-                    dialog.window?.let { w -> zechs.drive.stream.utils.TvFocusRing.install(w.decorView) }
+                    dialog.window?.let { w -> TvFocusRing.install(w.decorView) }
                     dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)?.requestFocus()
                 }
                 dialog.show()
             } else {
-                val openAuth = {
-                    val authDialog = MalAuthDialog(
-                        onCodeReceived = { code, verifier ->
-                            viewLifecycleOwner.lifecycleScope.launch {
-                                showSnackBar("Autenticando com MyAnimeList...")
-                                val res = malRepository.exchangeToken(code, verifier)
-                                if (res is Resource.Success) {
-                                    updateMalUi()
-                                    showSnackBar("MyAnimeList conectado com sucesso!")
-                                } else {
-                                    showSnackBar(res.message ?: "Falha ao conectar MyAnimeList")
-                                }
-                            }
-                        },
-                        clientId = malSessionManager.getClientId()
-                    )
-                    authDialog.show(parentFragmentManager, MalAuthDialog.TAG)
-                }
-
-                if (malSessionManager.getClientId().isBlank() || malSessionManager.getClientSecret().isBlank()) {
+                val clientId = viewModel.getMalClientId()
+                val clientSecret = viewModel.getMalClientSecret()
+                if (clientId.isBlank() || clientSecret.isBlank()) {
                     val fields = LinearLayout(requireContext()).apply {
                         orientation = LinearLayout.VERTICAL
                         setPadding(48, 0, 48, 0)
                     }
-                    val clientId = android.widget.EditText(requireContext()).apply {
+                    val clientIdInput = android.widget.EditText(requireContext()).apply {
                         hint = "Client ID"
-                        setText(malSessionManager.getClientId())
+                        setText(clientId)
                         isSingleLine = true
                         setBackgroundResource(R.drawable.glass_input_bg)
                         setPadding(32, 24, 32, 24)
                     }
-                    val clientSecret = android.widget.EditText(requireContext()).apply {
+                    val clientSecretInput = android.widget.EditText(requireContext()).apply {
                         hint = "Client Secret"
-                        setText(malSessionManager.getClientSecret())
+                        setText(clientSecret)
                         inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
                         isSingleLine = true
                         setBackgroundResource(R.drawable.glass_input_bg)
                         setPadding(32, 24, 32, 24)
                     }
-                    fields.addView(clientId)
-                    fields.addView(clientSecret)
+                    fields.addView(clientIdInput)
+                    fields.addView(clientSecretInput)
                     val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
                         .setTitle("Configurar MyAnimeList")
                         .setMessage("Crie uma aplicação OAuth no MyAnimeList e informe as credenciais. Elas serão armazenadas criptografadas.")
                         .setView(fields)
                         .setPositiveButton("Continuar") { _, _ ->
-                            if (clientId.text.isNullOrBlank() || clientSecret.text.isNullOrBlank()) {
+                            if (clientIdInput.text.isNullOrBlank() || clientSecretInput.text.isNullOrBlank()) {
                                 showSnackBar("Informe o Client ID e o Client Secret")
                             } else {
-                                malSessionManager.saveClientCredentials(clientId.text.toString(), clientSecret.text.toString())
-                                openAuth()
+                                viewModel.onEvent(
+                                    SettingsEvent.SaveMalCredentials(
+                                        clientIdInput.text.toString(),
+                                        clientSecretInput.text.toString()
+                                    )
+                                )
                             }
                         }
                         .setNegativeButton("Cancelar", null)
                         .create()
 
                     dialog.setOnShowListener {
-                        dialog.window?.let { w -> zechs.drive.stream.utils.TvFocusRing.install(w.decorView) }
-                        clientId.requestFocus()
+                        dialog.window?.let { w -> TvFocusRing.install(w.decorView) }
+                        clientIdInput.requestFocus()
                     }
                     dialog.show()
                 } else {
-                    openAuth()
+                    val authDialog = MalAuthDialog(
+                        onCodeReceived = { code, verifier ->
+                            viewModel.onEvent(SettingsEvent.ExchangeMalToken(code, verifier))
+                        },
+                        clientId = clientId
+                    )
+                    authDialog.show(parentFragmentManager, MalAuthDialog.TAG)
                 }
             }
         }
     }
 
     private fun setupPlaybackExperience() {
-        binding.switchAutoSkip.isChecked = malSessionManager.isAutoSkipEnabled()
         binding.settingAutoSkipToggle.setOnClickListener {
             binding.switchAutoSkip.toggle()
         }
         binding.switchAutoSkip.setOnCheckedChangeListener { _, isChecked ->
-            malSessionManager.setAutoSkipEnabled(isChecked)
-            showSnackBar(if (isChecked) "Pulo de aberturas automático ativado" else "Pulo de aberturas automático desativado")
+            viewModel.onEvent(SettingsEvent.SetAutoSkip(isChecked))
         }
 
-        binding.switchGestures.isChecked = malSessionManager.isGesturesEnabled()
         binding.settingGesturesToggle.setOnClickListener {
             binding.switchGestures.toggle()
         }
         binding.switchGestures.setOnCheckedChangeListener { _, isChecked ->
-            malSessionManager.setGesturesEnabled(isChecked)
-            showSnackBar(if (isChecked) "Gestos touch ativados" else "Gestos touch desativados")
-        }
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            binding.switchAutoFrameRate?.isChecked = appSettings.fetchAutoFrameRate()
-            binding.switchMatchDynamicRange?.isChecked = appSettings.fetchMatchDynamicRange()
-            binding.switchPredictiveBuffering?.isChecked = appSettings.fetchPredictiveBuffering()
+            viewModel.onEvent(SettingsEvent.SetGestures(isChecked))
         }
 
         binding.settingAutoFrameRateToggle?.setOnClickListener {
             binding.switchAutoFrameRate?.toggle()
         }
         binding.switchAutoFrameRate?.setOnCheckedChangeListener { _, isChecked ->
-            viewLifecycleOwner.lifecycleScope.launch {
-                appSettings.saveAutoFrameRate(isChecked)
-                showSnackBar(if (isChecked) "Taxa de quadros automática (AFR) ativada" else "Taxa de quadros automática (AFR) desativada")
-            }
+            viewModel.onEvent(SettingsEvent.SetAutoFrameRate(isChecked))
         }
 
         binding.settingMatchDynamicRangeToggle?.setOnClickListener {
             binding.switchMatchDynamicRange?.toggle()
         }
         binding.switchMatchDynamicRange?.setOnCheckedChangeListener { _, isChecked ->
-            viewLifecycleOwner.lifecycleScope.launch {
-                appSettings.saveMatchDynamicRange(isChecked)
-                showSnackBar(if (isChecked) "Alcance dinâmico HDR automático ativado" else "Alcance dinâmico HDR desativado")
-            }
+            viewModel.onEvent(SettingsEvent.SetMatchDynamicRange(isChecked))
         }
 
         binding.settingPredictiveBufferingToggle?.setOnClickListener {
             binding.switchPredictiveBuffering?.toggle()
         }
         binding.switchPredictiveBuffering?.setOnCheckedChangeListener { _, isChecked ->
-            viewLifecycleOwner.lifecycleScope.launch {
-                appSettings.savePredictiveBuffering(isChecked)
-                showSnackBar(if (isChecked) "Buffer preditivo de próximo episódio ativado" else "Buffer preditivo desativado")
-            }
+            viewModel.onEvent(SettingsEvent.SetPredictiveBuffering(isChecked))
         }
     }
 
@@ -996,7 +915,7 @@ class SettingsFragment : BaseFragment() {
     private fun exportBackupToUri(uri: android.net.Uri) {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val json = backupSerializer.exportBackupJson()
+                val json = viewModel.exportBackupJson()
                 requireContext().contentResolver.openOutputStream(uri)?.use { outputStream ->
                     outputStream.write(json.toByteArray(Charsets.UTF_8))
                 }
@@ -1028,7 +947,7 @@ class SettingsFragment : BaseFragment() {
             .create()
 
         dialog.setOnShowListener {
-            dialog.window?.let { w -> zechs.drive.stream.utils.TvFocusRing.install(w.decorView) }
+            dialog.window?.let { w -> TvFocusRing.install(w.decorView) }
         }
         dialog.show()
     }
@@ -1043,7 +962,7 @@ class SettingsFragment : BaseFragment() {
                     return@launch
                 }
 
-                val result = backupSerializer.importBackupJson(json, mode)
+                val result = viewModel.importBackupJson(json, mode)
                 if (result.isSuccess) {
                     val summary = "Backup restaurado: ${result.importedProfiles} perfis, ${result.importedWatches} históricos, ${result.importedFavorites} favoritos"
                     showSnackBar(summary)
@@ -1071,21 +990,15 @@ class SettingsFragment : BaseFragment() {
             val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
                 .setTitle(getString(R.string.log_out_dialog_title))
                 .setMessage(getString(R.string.log_out_dialog_message))
-                .setNegativeButton(getString(R.string.no)) { dialog, _ -> dialog.dismiss() }
-                .setPositiveButton(getString(R.string.yes)) { dialog, _ ->
-                    dialog.dismiss()
-                    lifecycleScope.launch {
-                        sessionManager.resetDataStore()
-                        val activity = requireActivity()
-                        activity.finish()
-                        kotlinx.coroutines.delay(250L)
-                        activity.startActivity(activity.intent)
-                    }
+                .setNegativeButton(getString(R.string.no)) { d, _ -> d.dismiss() }
+                .setPositiveButton(getString(R.string.yes)) { d, _ ->
+                    d.dismiss()
+                    viewModel.onEvent(SettingsEvent.ResetSession)
                 }
                 .create()
 
             dialog.setOnShowListener {
-                dialog.window?.let { w -> zechs.drive.stream.utils.TvFocusRing.install(w.decorView) }
+                dialog.window?.let { w -> TvFocusRing.install(w.decorView) }
                 dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)?.requestFocus()
             }
             dialog.show()
@@ -1097,5 +1010,4 @@ class SettingsFragment : BaseFragment() {
         tvFocusEnabled = false
         _binding = null
     }
-
 }
