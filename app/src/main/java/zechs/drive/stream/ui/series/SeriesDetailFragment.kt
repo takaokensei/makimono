@@ -440,7 +440,7 @@ class SeriesDetailFragment : BaseFragment() {
         // 5. Action Buttons
         val canResume = state.continueWatchingItem?.progressPercent in 1..94
         val actionRes = if (isMovie) {
-            if (canResume) R.string.series_action_continue_movie else R.string.series_action_play_movie
+            if (canResume) R.string.series_action_continue_movie else R.string.series_action_play
         } else {
             if (canResume) R.string.series_action_continue else R.string.series_action_play
         }

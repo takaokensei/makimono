@@ -22,6 +22,7 @@ import zechs.drive.stream.data.model.DriveQueryContext
 import zechs.drive.stream.data.model.File
 import zechs.drive.stream.data.model.FileCollectionResult
 import zechs.drive.stream.data.model.FilesResponse
+import zechs.drive.stream.data.remote.AnimeMetadata
 import zechs.drive.stream.data.remote.AnimePosterResolver
 import zechs.drive.stream.data.remote.TenraiAnimeService
 import zechs.drive.stream.data.repository.DriveRepository
@@ -181,5 +182,50 @@ class SeriesDetailViewModelTest {
     fun saveFocusPersistsLastFocusedPositionInViewModel() {
         viewModel.onEvent(SeriesDetailEvent.SaveFocus(3))
         assertEquals(3, viewModel.lastFocusedPosition)
+    }
+
+    @Test
+    fun movieDetailsDistinguishMovieFromSeriesWithCorrectSubtitleAndNoSeasonTabs() = runBlocking {
+        coEvery {
+            animePosterResolver.resolveMetadata(any())
+        } returns AnimeMetadata(
+            posterUrl = "https://example.com/poster.jpg",
+            isMovie = true,
+            titleEnglish = "Your Name"
+        )
+        coEvery {
+            driveRepository.getAllFilesDetailed(any(), any())
+        } returns Resource.Success(
+            FileCollectionResult(
+                files = listOf(
+                    File(
+                        id = "movie1",
+                        name = "Your Name (2016) 1080p.mkv",
+                        size = 5_000_000L,
+                        iconLink = "",
+                        mimeType = "video/x-matroska"
+                    )
+                ),
+                isComplete = true,
+                nextPageToken = null,
+                pagesFetched = 1,
+                queryContext = DriveQueryContext("query", 100, "name")
+            )
+        )
+
+        viewModel.loadSeriesDetails("movieFolder", "Your Name")
+
+        withTimeout(3_000) {
+            while (viewModel.uiState.value is SeriesDetailUiState.Loading) {
+                delay(10)
+            }
+        }
+
+        val state = viewModel.uiState.value
+        assertTrue(state is SeriesDetailUiState.Success)
+        val successState = state as SeriesDetailUiState.Success
+        assertTrue(successState.isMovie)
+        assertEquals("Filme", successState.continueWatchingSubtitle)
+        assertTrue(successState.seasonTabs.isEmpty())
     }
 }

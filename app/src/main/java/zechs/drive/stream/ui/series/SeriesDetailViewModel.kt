@@ -317,20 +317,7 @@ class SeriesDetailViewModel @Inject constructor(
         val fileModels = driveFiles.map { FilesDataModel.File(it) }
         allSeasonGroups = SeasonEpisodeGrouper.groupFiles(seriesTitle, fileModels)
         val tabs = if (isMovie) {
-            allSeasonGroups.mapIndexed { index, group ->
-                val (tabTitle, icon) = when {
-                    group.id == "season_all" || group.id.startsWith("season_") -> "Filme" to R.drawable.ic_movie_24
-                    group.id.contains("special", true) -> group.name to R.drawable.ic_star_filled_24
-                    group.id.contains("music", true) || group.id.contains("opening", true) -> group.name to R.drawable.ic_audio_24
-                    else -> group.name to (if (index == 0) R.drawable.ic_movie_24 else null)
-                }
-                SeasonTab(
-                    id = group.id,
-                    title = tabTitle,
-                    iconRes = icon,
-                    isSelected = index == 0
-                )
-            }
+            emptyList()
         } else {
             allSeasonGroups.mapIndexed { index, group ->
                 val icon = when {
@@ -351,14 +338,23 @@ class SeriesDetailViewModel @Inject constructor(
 
         val continueItem = PrimaryEpisodeSelection.select(allEpisodeItems)
         val continueSubtitle = continueItem?.let { item ->
-            val epPrefix = if (isMovie) "Filme Completo" else (item.episodeNumber?.let { "Ep. $it" } ?: "Ep. 01")
-            if (item.watchedDuration > 0 && item.totalDuration > item.watchedDuration) {
-                val remainingSec = (item.totalDuration - item.watchedDuration) / 1000
-                "$epPrefix • ${String.format(Locale.ROOT, "%02d:%02d", remainingSec / 60, remainingSec % 60)} restante"
+            if (isMovie) {
+                if (item.watchedDuration > 0 && item.totalDuration > item.watchedDuration) {
+                    val remainingSec = (item.totalDuration - item.watchedDuration) / 1000
+                    "Filme • ${String.format(Locale.ROOT, "%02d:%02d", remainingSec / 60, remainingSec % 60)} restante"
+                } else {
+                    "Filme"
+                }
             } else {
-                "$epPrefix • Iniciar reprodução"
+                val epPrefix = item.episodeNumber?.let { "Ep. $it" } ?: "Ep. 01"
+                if (item.watchedDuration > 0 && item.totalDuration > item.watchedDuration) {
+                    val remainingSec = (item.totalDuration - item.watchedDuration) / 1000
+                    "$epPrefix • ${String.format(Locale.ROOT, "%02d:%02d", remainingSec / 60, remainingSec % 60)} restante"
+                } else {
+                    "$epPrefix • Iniciar reprodução"
+                }
             }
-        } ?: if (isMovie) "Filme Completo • Iniciar reprodução" else "Ep. 01 • Iniciar reprodução"
+        } ?: if (isMovie) "Filme" else "Ep. 01 • Iniciar reprodução"
 
         return SeriesDetailUiState.Success(
             folderId = folderId,
