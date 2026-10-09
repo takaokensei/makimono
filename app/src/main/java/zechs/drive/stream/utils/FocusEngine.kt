@@ -39,7 +39,7 @@ object FocusEngine {
             return FocusTarget(scale = 1.0f, elevationDp = 0.0f)
         }
         return when (kind) {
-            FocusKind.CARD -> FocusTarget(scale = 1.08f, elevationDp = 12.0f)
+            FocusKind.CARD -> FocusTarget(scale = 1.06f, elevationDp = 12.0f)
             FocusKind.BUTTON -> FocusTarget(scale = 1.04f, elevationDp = 6.0f)
             FocusKind.LIST_ROW -> FocusTarget(scale = 1.0f, elevationDp = 0.0f)
             FocusKind.NONE -> FocusTarget(scale = 1.0f, elevationDp = 0.0f)

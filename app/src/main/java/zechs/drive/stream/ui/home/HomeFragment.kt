@@ -43,6 +43,7 @@ import zechs.drive.stream.utils.ProfileManager
 import zechs.drive.stream.utils.TvAccessibilityLayout
 import zechs.drive.stream.utils.VideoPlayer
 import zechs.drive.stream.utils.AppSettings
+import zechs.drive.stream.utils.FocusMemory
 import zechs.drive.stream.utils.MotionPolicy
 import zechs.drive.stream.utils.ext.navigateSafe
 import zechs.drive.stream.utils.ext.resolveThemeColor
@@ -380,7 +381,7 @@ class HomeFragment : BaseFragment() {
         val recentlyAddedShelf = binding.rvRecentlyAddedShelf
         val catalog = binding.rvAnimeLibrary
 
-        listOf(
+        val railItems = listOfNotNull(
             binding.btnBrandLogo,
             binding.btnNavInicio,
             binding.btnNavAnimes,
@@ -389,8 +390,10 @@ class HomeFragment : BaseFragment() {
             binding.btnNavFavoritos,
             binding.userProfilePill,
             binding.btnNavConfig
-        ).forEach { railItem ->
-            railItem?.nextFocusRightId = search.id
+        )
+        val initialTarget = play?.takeIf { it.isShown } ?: search.takeIf { it.isShown } ?: catalog
+        railItems.forEach { railItem ->
+            railItem.nextFocusRightId = initialTarget.id
         }
 
         search.nextFocusLeftId = binding.btnNavInicio.id
@@ -406,6 +409,10 @@ class HomeFragment : BaseFragment() {
         val focusLayoutListener = android.view.ViewTreeObserver.OnGlobalLayoutListener {
             val rows = listOfNotNull(continueShelf, queueShelf, followedShelf, starredShelf, recentlyAddedShelf, catalog).filter { it.isShown }
             val heroTarget = play?.takeIf { it.isShown } ?: search
+            val primaryTarget = play?.takeIf { it.isShown } ?: search.takeIf { it.isShown } ?: rows.firstOrNull() ?: catalog
+            railItems.forEach { railItem ->
+                railItem.nextFocusRightId = primaryTarget.id
+            }
             play?.nextFocusDownId = rows.firstOrNull()?.id ?: View.NO_ID
             info?.nextFocusDownId = rows.firstOrNull()?.id ?: View.NO_ID
             search.nextFocusDownId = play?.takeIf { it.isShown }?.id ?: rows.firstOrNull()?.id ?: View.NO_ID
@@ -796,6 +803,7 @@ class HomeFragment : BaseFragment() {
                 val item = animeAdapter.currentList[pos]
                 if (item is FilesDataModel.File) {
                     lastFocusedItemId = item.driveFile.id
+                    FocusMemory.remember("home.catalog", item.driveFile.id)
                     if (item.driveFile.isFolder || item.driveFile.isShortcutFolder) {
                         scheduleFeaturedPreview(item.driveFile, v)
                     }
@@ -817,6 +825,7 @@ class HomeFragment : BaseFragment() {
             HomeShelfScroll.alignHeading(binding.contentScrollView, binding.tvShelfLabel, v)
             val position = binding.rvContinueWatchingShelf.getChildAdapterPosition(v)
             continueWatchingAdapter.currentList.getOrNull(position)?.let { item ->
+                FocusMemory.remember("home.continue_watching", item.videoId)
                 findLibraryFolderForTitle(item.name)?.let { folder ->
                     scheduleFeaturedPreview(folder, v)
                 }
@@ -884,7 +893,14 @@ class HomeFragment : BaseFragment() {
             if (focusedView != null && focusedView.isAttachedToWindow) {
                 focusedView.requestFocus()
             } else {
-                focusContent()
+                val restored = FocusMemory.restore(binding.rvContinueWatchingShelf, "home.continue_watching") { pos ->
+                    continueWatchingAdapter.currentList.getOrNull(pos)?.videoId
+                } || FocusMemory.restore(binding.rvAnimeLibrary, "home.catalog") { pos ->
+                    (animeAdapter.currentList.getOrNull(pos) as? FilesDataModel.File)?.driveFile?.id
+                }
+                if (!restored) {
+                    focusContent()
+                }
             }
         }
     }
@@ -1008,6 +1024,16 @@ class HomeFragment : BaseFragment() {
         if (isSidebarExpanded) collapseSidebar() else expandSidebar()
     }
 
+    private fun isFocusInRail(): Boolean {
+        val currentFocus = activity?.currentFocus ?: return false
+        var view: View? = currentFocus
+        while (view != null) {
+            if (view === binding.navRail) return true
+            view = view.parent as? View
+        }
+        return false
+    }
+
     private fun setupBackPressedHandling() {
         requireActivity().onBackPressedDispatcher.addCallback(
             viewLifecycleOwner,
@@ -1016,6 +1042,8 @@ class HomeFragment : BaseFragment() {
                     if (isSidebarExpanded) {
                         collapseSidebar()
                         lastFocusedAnimeView?.requestFocus() ?: binding.rvAnimeLibrary.requestFocus()
+                    } else if (!usesOverlaySidebar() && !isFocusInRail()) {
+                        focusCurrentNavItem()
                     } else {
                         isEnabled = false
                         requireActivity().onBackPressedDispatcher.onBackPressed()

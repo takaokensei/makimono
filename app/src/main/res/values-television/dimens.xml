@@ -1,7 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <dimen name="tv_nav_rail_width">128dp</dimen>
+    <dimen name="tv_nav_rail_width">80dp</dimen>
     <dimen name="tv_nav_icon_size">24dp</dimen>
+    <dimen name="tv_overscan_margin">48dp</dimen>
+    <dimen name="tv_overscan_margin_vertical">27dp</dimen>
     <dimen name="profile_avatar_size">128dp</dimen>
     <dimen name="profile_title_size">32sp</dimen>
     <dimen name="profile_card_margin_horizontal">9dp</dimen>

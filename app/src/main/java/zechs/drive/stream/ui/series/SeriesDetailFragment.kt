@@ -40,6 +40,7 @@ import zechs.drive.stream.ui.series.SeriesEpisodeContextMenu
 import zechs.drive.stream.utils.VideoPlayer
 import zechs.drive.stream.utils.TvAccessibilityLayout
 import zechs.drive.stream.utils.FocusEngine
+import zechs.drive.stream.utils.FocusMemory
 import java.util.Locale
 
 @AndroidEntryPoint
@@ -143,9 +144,11 @@ class SeriesDetailFragment : BaseFragment() {
 
         episodeAdapter = SeriesDetailEpisodeAdapter(
             onEpisodeClick = { episodeItem ->
+                FocusMemory.remember("details.episodes.${args.folderId}", episodeItem.file.id)
                 playEpisode(episodeItem)
             },
             onEpisodeLongClick = { episodeItem, focusAnchor ->
+                FocusMemory.remember("details.episodes.${args.folderId}", episodeItem.file.id)
                 showEpisodeContextMenu(episodeItem, focusAnchor)
             }
         )
@@ -482,7 +485,12 @@ class SeriesDetailFragment : BaseFragment() {
         // Do not steal focus again when the metadata enrichment state arrives.
         if (!hasRestoredInitialFocus) {
             hasRestoredInitialFocus = true
-            binding.btnPrimaryAction.post { binding.btnPrimaryAction.requestFocus() }
+            val restored = FocusMemory.restore(binding.rvEpisodes, "details.episodes.${args.folderId}") { pos ->
+                episodeAdapter.currentList.getOrNull(pos)?.file?.id
+            }
+            if (!restored) {
+                binding.btnPrimaryAction.post { binding.btnPrimaryAction.requestFocus() }
+            }
         }
     }
 
@@ -569,6 +577,7 @@ class SeriesDetailFragment : BaseFragment() {
         startFromBeginning: Boolean = false,
         standalone: Boolean = false
     ) {
+        FocusMemory.remember("details.episodes.${args.folderId}", item.file.id)
         val currentState = viewModel.uiState.value as? SeriesDetailUiState.Success ?: return
 
         // A trailer must not inherit the narrative playlist or autoplay into an episode.
@@ -658,6 +667,15 @@ class SeriesDetailFragment : BaseFragment() {
                 episodes.getOrNull(which)?.let { playEpisode(it) }
             }
             .show()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (hasRestoredInitialFocus && ::episodeAdapter.isInitialized) {
+            FocusMemory.restore(binding.rvEpisodes, "details.episodes.${args.folderId}") { pos ->
+                episodeAdapter.currentList.getOrNull(pos)?.file?.id
+            }
+        }
     }
 
     override fun onDestroyView() {

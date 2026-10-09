@@ -99,7 +99,7 @@ object TvFocusRing {
                 }
                 ring = GradientDrawable().apply {
                     setColor(if (targetView.height <= 56 * density) fill else Color.TRANSPARENT)
-                    setStroke((2 * density).toInt().coerceAtLeast(1), accent)
+                    setStroke((3 * density).toInt().coerceAtLeast(1), accent)
                     setCornerRadius(cornerRadius)
                     setBounds(0, 0, targetView.width, targetView.height)
                     targetView.overlay.add(this)

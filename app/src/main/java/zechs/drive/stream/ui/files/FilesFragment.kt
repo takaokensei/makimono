@@ -49,6 +49,7 @@ import zechs.drive.stream.utils.SeasonEpisodeGrouper
 import zechs.drive.stream.utils.SeasonGroup
 import zechs.drive.stream.utils.VideoPlayer
 import zechs.drive.stream.utils.TvAccessibilityLayout
+import zechs.drive.stream.utils.FocusMemory
 import zechs.drive.stream.utils.state.Resource
 import zechs.drive.stream.utils.state.ResourceErrorKind
 
@@ -828,15 +829,19 @@ class FilesFragment : BaseFragment() {
         }
         filesAdapter.onFocusItemListener = { focusedView ->
             val position = binding.rvList.getChildAdapterPosition(focusedView)
-            if (position != RecyclerView.NO_POSITION &&
-                position >= filesAdapter.itemCount - 2 &&
-                !isLoading &&
-                !viewModel.isLastPage &&
-                !viewModel.hasFailed &&
-                filesAdapter.currentList.getOrNull(position) is FilesDataModel.File
-            ) {
-                Log.d(TAG, "Paginating via D-pad focus near end (pos=$position)")
-                viewModel.queryFiles(args.query)
+            if (position != RecyclerView.NO_POSITION) {
+                (filesAdapter.currentList.getOrNull(position) as? FilesDataModel.File)?.let { fileModel ->
+                    FocusMemory.remember("files.folder.${args.name}", fileModel.driveFile.id)
+                }
+                if (position >= filesAdapter.itemCount - 2 &&
+                    !isLoading &&
+                    !viewModel.isLastPage &&
+                    !viewModel.hasFailed &&
+                    filesAdapter.currentList.getOrNull(position) is FilesDataModel.File
+                ) {
+                    Log.d(TAG, "Paginating via D-pad focus near end (pos=$position)")
+                    viewModel.queryFiles(args.query)
+                }
             }
         }
         updateLayoutMode()
@@ -854,6 +859,15 @@ class FilesFragment : BaseFragment() {
         ) as TextView
         textView.maxLines = 5
         snackBar.show()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (_binding != null) {
+            FocusMemory.restore(binding.rvList, "files.folder.${args.name}") { pos ->
+                (filesAdapter.currentList.getOrNull(pos) as? FilesDataModel.File)?.driveFile?.id
+            }
+        }
     }
 
     override fun onDestroyView() {

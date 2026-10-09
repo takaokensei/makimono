@@ -7,9 +7,9 @@ import zechs.drive.stream.utils.FocusEngine.FocusKind
 class FocusEnginePolicyTest {
 
     @Test
-    fun card_focused_normalMotion_returns108ScaleAnd12Elevation() {
+    fun card_focused_normalMotion_returns106ScaleAnd12Elevation() {
         val target = FocusEngine.targetFor(FocusKind.CARD, focused = true, reducedMotion = false)
-        assertEquals(1.08f, target.scale, 0.001f)
+        assertEquals(1.06f, target.scale, 0.001f)
         assertEquals(12.0f, target.elevationDp, 0.001f)
     }
 

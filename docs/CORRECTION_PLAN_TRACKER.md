@@ -42,14 +42,14 @@ Base: `main` @ `460ac1b` (v1.6.4.8, versionCode 60).
 - [x] **UI-07**: Esconder seção "Episódios" para filmes e evitar quebras de navegação D-pad (`downTarget = View.NO_ID`).
 - [x] **UI-08**: Padronizar menu de navegação (rail, drawer e mobile bottom bar) unificado com strings `@string/nav_*`.
 
-### [ ] Fase 2: Foco, Zona Segura e Layout (FOC-01 a FOC-07)
-- [ ] **FOC-01**: Token unificado de foco (anel 3dp `#22D3EE`, escala 1.06 em cards, respeitando `ANIMATOR_DURATION_SCALE == 0`).
-- [ ] **FOC-02**: Correção de contorno cortado no Hero (`paddingBottom >= 8dp`, `clipToPadding="false"`).
-- [ ] **FOC-03**: Zona segura de overscan (48dp lateral, 30dp vertical para conteúdo interativo; fundos sangrando).
-- [ ] **FOC-04**: Foco inicial previsível em todas as telas, retenção de foco ao voltar, sem armadilha de D-pad.
-- [ ] **FOC-05**: Comportamento padronizado da tecla Voltar (conteúdo -> rail -> saída/confirmação; no player: fecha OSD -> sai).
-- [ ] **FOC-06**: Espaçamentos estruturados em múltiplos de 8dp.
-- [ ] **FOC-07**: Rail compacto de TV (Opção A: largura 80dp, ícones 24dp centralizados a 48dp da borda, indicador ativo `#22D3EE` 16x2dp, sem painel opaco).
+### [x] Fase 2: Foco, Zona Segura e Layout (FOC-01 a FOC-07)
+- [x] **FOC-01**: Token unificado de foco (anel 3dp `#22D3EE`, escala 1.06 em cards, respeitando `ANIMATOR_DURATION_SCALE == 0`).
+- [x] **FOC-02**: Correção de contorno cortado no Hero (`paddingBottom >= 8dp`, `clipToPadding="false"`).
+- [x] **FOC-03**: Zona segura de overscan (48dp lateral, 27dp vertical para conteúdo interativo; fundos sangrando).
+- [x] **FOC-04**: Foco inicial previsível em todas as telas, retenção de foco ao voltar via `FocusMemory`, sem armadilha de D-pad.
+- [x] **FOC-05**: Comportamento padronizado da tecla Voltar (conteúdo -> rail -> saída/confirmação via `isFocusInRail`; no player: fecha OSD -> sai).
+- [x] **FOC-06**: Espaçamentos estruturados em múltiplos de 8dp.
+- [x] **FOC-07**: Rail compacto de TV (Opção A: largura 80dp, ícones 24dp centralizados a 48dp da borda, indicador ativo `#22D3EE`, sem painel opaco).
 
 ### [ ] Fase 3: Tipografia, Contraste e Acessibilidade (TYP-01..04, A11Y-01..03)
 - [ ] **TYP-01**: Piso tipográfico mínimo de 12sp (Body 16sp, Callout 14sp, Badges 12sp).
