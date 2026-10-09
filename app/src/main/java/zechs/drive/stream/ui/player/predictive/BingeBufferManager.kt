@@ -3,9 +3,11 @@ package zechs.drive.stream.ui.player.predictive
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import dagger.Lazy
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -65,6 +67,10 @@ class BingeBufferManager @Inject constructor(
     @Volatile
     private var prewarmedEpisode: PrewarmedEpisode? = null
 
+    @VisibleForTesting
+    internal var chapterExtractor: suspend (streamUrl: String, token: String?) -> List<MatroskaChapterParser.ParsedChapter> =
+        { url, tok -> MatroskaChapterParser.extractChapters(url, tok) }
+
     /**
      * Triggers predictive pre-warming of the next episode in the background.
      */
@@ -72,19 +78,20 @@ class BingeBufferManager @Inject constructor(
         scope: CoroutineScope,
         nextItem: PlaylistItem,
         currentMalAnime: MalAnimeNode?,
-        folderSubtitles: List<SubtitleItem>
-    ) {
+        folderSubtitles: List<SubtitleItem>,
+        dispatcher: CoroutineDispatcher = Dispatchers.IO
+    ): Job? {
         val targetFileId = nextItem.fileId
-        if (targetFileId.isBlank()) return
+        if (targetFileId.isBlank()) return null
 
         val existing = prewarmedEpisode
         if (existing != null && existing.fileId == targetFileId && (System.currentTimeMillis() - existing.createdAt < EXPIRY_MS)) {
             Log.d(TAG, "Next episode '${nextItem.title}' is already pre-warmed and warm in cache.")
-            return
+            return null
         }
 
         activePrewarmJob?.cancel()
-        activePrewarmJob = scope.launch(Dispatchers.IO) {
+        val job = scope.launch(dispatcher) {
             try {
                 Log.d(TAG, "Starting predictive binge buffer pre-warm for: ${nextItem.title} ($targetFileId)")
                 val token = tokenProvider.get().validToken()
@@ -95,7 +102,7 @@ class BingeBufferManager @Inject constructor(
                 // 1. Pre-warm HTTP connection & parse Matroska chapters from initial 1MB
                 val chapters = try {
                     withTimeoutOrNull(6_000L) {
-                        MatroskaChapterParser.extractChapters(streamUri.toString(), token)
+                        chapterExtractor(streamUri.toString(), token)
                     } ?: emptyList()
                 } catch (e: Exception) {
                     Log.w(TAG, "Predictive MKV chapter extraction error", e)
@@ -142,6 +149,8 @@ class BingeBufferManager @Inject constructor(
                 Log.w(TAG, "Predictive pre-warming failed", e)
             }
         }
+        activePrewarmJob = job
+        return job
     }
 
     /**

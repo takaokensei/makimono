@@ -39,7 +39,9 @@ class BingeBufferManagerTest {
             context = context,
             tokenProvider = Lazy { tokenProvider },
             aniSkipRepository = Lazy { aniSkipRepository }
-        )
+        ).apply {
+            chapterExtractor = { _, _ -> emptyList() }
+        }
     }
 
     @Test
@@ -58,12 +60,14 @@ class BingeBufferManagerTest {
             SubtitleItem(id = "sub1", name = "Dandadan - 02.por.srt", languageLabel = "Português", languageCode = "por")
         )
 
-        bingeBufferManager.prewarmNextEpisode(
+        val job = bingeBufferManager.prewarmNextEpisode(
             scope = testScope,
             nextItem = nextEpisode,
             currentMalAnime = null,
-            folderSubtitles = subs
+            folderSubtitles = subs,
+            dispatcher = testDispatcher
         )
+        job?.join()
 
         // Verify prewarmed data is consumable
         val prewarmed = bingeBufferManager.consumePrewarmedData("file_next_456")
@@ -85,12 +89,14 @@ class BingeBufferManagerTest {
             thumbnailLink = null
         )
 
-        bingeBufferManager.prewarmNextEpisode(
+        val job = bingeBufferManager.prewarmNextEpisode(
             scope = testScope,
             nextItem = nextEpisode,
             currentMalAnime = null,
-            folderSubtitles = emptyList()
+            folderSubtitles = emptyList(),
+            dispatcher = testDispatcher
         )
+        job?.join()
 
         assertNull(bingeBufferManager.consumePrewarmedData("other_file_id"))
     }
@@ -103,12 +109,14 @@ class BingeBufferManagerTest {
             thumbnailLink = null
         )
 
-        bingeBufferManager.prewarmNextEpisode(
+        val job = bingeBufferManager.prewarmNextEpisode(
             scope = testScope,
             nextItem = nextEpisode,
             currentMalAnime = null,
-            folderSubtitles = emptyList()
+            folderSubtitles = emptyList(),
+            dispatcher = testDispatcher
         )
+        job?.join()
 
         bingeBufferManager.clear()
         assertNull(bingeBufferManager.consumePrewarmedData("file_to_clear"))
