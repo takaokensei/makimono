@@ -161,20 +161,28 @@ class FocusCoordinator(
     }
 
     fun restoreShelfFocus(shelfIndex: Int, itemIndex: Int) {
-        val shelf = when (shelfIndex) {
-            0 -> binding.rvContinueWatchingShelf
-            1 -> binding.rvWatchQueueShelf
-            2 -> binding.rvNewEpisodesShelf
-            3 -> binding.rvStarredShelf
-            4 -> binding.rvRecentlyAddedShelf
-            5 -> binding.rvAnimeLibrary
-            else -> null
-        } ?: return
+        val shelves = listOfNotNull(
+            binding.rvContinueWatchingShelf,
+            binding.rvWatchQueueShelf,
+            binding.rvNewEpisodesShelf,
+            binding.rvStarredShelf,
+            binding.rvRecentlyAddedShelf,
+            binding.rvAnimeLibrary
+        )
+        val shelf = shelves.getOrNull(shelfIndex) ?: return
+        if (!shelf.isShown) return
 
-        if (!shelf.isShown || (shelf.adapter?.itemCount ?: 0) <= itemIndex) return
-        shelf.scrollToPosition(itemIndex)
+        val itemCount = shelf.adapter?.itemCount ?: 0
+        val resolved = RailNavigationPolicy.resolveShelfFocusRestoration(
+            shelfIndex = shelfIndex,
+            itemIndex = itemIndex,
+            shelfItemCounts = mapOf(shelfIndex to itemCount)
+        ) ?: return
+
+        val targetPos = resolved.second
+        shelf.scrollToPosition(targetPos)
         shelf.postDelayed({
-            shelf.findViewHolderForAdapterPosition(itemIndex)?.itemView?.requestFocus()
+            shelf.findViewHolderForAdapterPosition(targetPos)?.itemView?.requestFocus()
         }, 100)
     }
 }

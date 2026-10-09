@@ -106,4 +106,19 @@ object RailNavigationPolicy {
             )
         }
     }
+
+    /**
+     * Valida e ajusta a restauração de foco em estantes horizontais (D-pad memory per Seção 7.3 e 9.5).
+     */
+    fun resolveShelfFocusRestoration(
+        shelfIndex: Int?,
+        itemIndex: Int?,
+        shelfItemCounts: Map<Int, Int>
+    ): Pair<Int, Int>? {
+        if (shelfIndex == null || itemIndex == null) return null
+        val count = shelfItemCounts[shelfIndex] ?: 0
+        if (count <= 0) return null
+        val safeItemIndex = itemIndex.coerceIn(0, count - 1)
+        return shelfIndex to safeItemIndex
+    }
 }

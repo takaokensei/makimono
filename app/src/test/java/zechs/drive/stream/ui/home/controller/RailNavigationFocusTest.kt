@@ -150,4 +150,18 @@ class RailNavigationFocusTest {
         assertFalse(pastas.isCatalogVisible)
         assertFalse(pastas.isFilterToggleVisible)
     }
+
+    @Test
+    fun `shelf focus restoration correctly calculates clamped indices and rejects invalid states`() {
+        val counts = mapOf(0 to 5, 1 to 3)
+        // Valid exact index
+        assertEquals(Pair(0, 2), RailNavigationPolicy.resolveShelfFocusRestoration(0, 2, counts))
+        // Out of bounds index is clamped to last item
+        assertEquals(Pair(0, 4), RailNavigationPolicy.resolveShelfFocusRestoration(0, 9, counts))
+        // Null shelf or item
+        assertNull(RailNavigationPolicy.resolveShelfFocusRestoration(null, 1, counts))
+        assertNull(RailNavigationPolicy.resolveShelfFocusRestoration(0, null, counts))
+        // Empty shelf
+        assertNull(RailNavigationPolicy.resolveShelfFocusRestoration(2, 0, counts))
+    }
 }
