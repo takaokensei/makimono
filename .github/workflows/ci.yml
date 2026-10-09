@@ -36,7 +36,7 @@ jobs:
         run: bash scripts/verify-claims.sh
 
       - name: Verify Secret Leaks (TruffleHog OSS)
-        uses: trufflesecurity/trufflehog@main
+        uses: trufflesecurity/trufflehog@e76dff8a7e57d6df0c60ad8cbf5d5cba505a8fc9 # v3.99.2
         with:
           path: ./
           base: ${{ github.event.pull_request.base.sha || github.event.before || github.event.repository.default_branch }}
