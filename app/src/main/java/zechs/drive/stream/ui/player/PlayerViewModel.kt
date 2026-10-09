@@ -106,37 +106,33 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    val progressRecorder by lazy {
+        zechs.drive.stream.playback.session.ProgressRecorder(watchListRepository, playbackProfileId)
+    }
+
     fun getWatch(videoId: String) = viewModelScope.launch(Dispatchers.IO) {
-        val video = watchListRepository.getWatch(videoId, playbackProfileId)
-        if (video == null) {
-            Log.d(TAG, "Video not found in database")
+        val resumePos = progressRecorder.getResumePosition(videoId)
+        if (resumePos > 0L) {
+            Log.d(TAG, "Starting at $resumePos")
+            _startDuration.send(resumePos)
         } else {
-            Log.d(TAG, "Starting at ${video.watchedDuration}")
-            _startDuration.send(zechs.drive.stream.utils.PlaybackProgressPolicy.resumePosition(video.watchedDuration, video.totalDuration))
+            Log.d(TAG, "Video not found or already finished in database")
         }
     }
 
-    suspend fun resumePosition(videoId: String): Long = kotlinx.coroutines.withContext(Dispatchers.IO) {
-        watchListRepository.getWatch(videoId, playbackProfileId)?.let {
-            zechs.drive.stream.utils.PlaybackProgressPolicy.resumePosition(it.watchedDuration, it.totalDuration)
-        } ?: 0L
-    }
+    suspend fun resumePosition(videoId: String): Long = progressRecorder.getResumePosition(videoId)
 
     fun getWatchPosition(videoId: String, onResult: (Long) -> Unit) = viewModelScope.launch(Dispatchers.IO) {
-        val video = watchListRepository.getWatch(videoId, playbackProfileId)
-        val pos = video?.let { zechs.drive.stream.utils.PlaybackProgressPolicy.resumePosition(it.watchedDuration, it.totalDuration) } ?: 0L
+        val pos = progressRecorder.getResumePosition(videoId)
         kotlinx.coroutines.withContext(Dispatchers.Main) {
             onResult(pos)
         }
     }
 
-    suspend fun getDelays(videoId: String): Pair<Long, Long> = kotlinx.coroutines.withContext(Dispatchers.IO) {
-        val watch = watchListRepository.getWatch(videoId, playbackProfileId)
-        Pair(watch?.audioDelayMs ?: 0L, watch?.subtitleDelayMs ?: 0L)
-    }
+    suspend fun getDelays(videoId: String): Pair<Long, Long> = progressRecorder.getDelays(videoId)
 
     fun saveDelays(videoId: String, audioDelayMs: Long, subtitleDelayMs: Long) = viewModelScope.launch(Dispatchers.IO) {
-        watchListRepository.updateDelays(videoId, audioDelayMs, subtitleDelayMs, playbackProfileId)
+        progressRecorder.updateDelays(videoId, audioDelayMs, subtitleDelayMs)
     }
 
     fun saveWatch(
@@ -148,41 +144,14 @@ class PlayerViewModel @Inject constructor(
         audioDelayMs: Long? = null,
         subtitleDelayMs: Long? = null
     ) = viewModelScope.launch(Dispatchers.IO) {
-        if (!zechs.drive.stream.utils.PlaybackProgressPolicy.shouldSave(watchedDuration, totalDuration)) {
-            Log.d(TAG, "Playback below minimum threshold or invalid, skipping save")
-            return@launch
-        }
-
-        val isFinished = zechs.drive.stream.utils.PlaybackProgressPolicy.isFinished(watchedDuration, totalDuration)
-        val finalWatched = if (isFinished && totalDuration > 0L) totalDuration else watchedDuration
-
-        val lookUpWatched = watchListRepository.getWatch(videoId, playbackProfileId)
-        val finalAudioDelay = audioDelayMs ?: lookUpWatched?.audioDelayMs ?: 0L
-        val finalSubtitleDelay = subtitleDelayMs ?: lookUpWatched?.subtitleDelayMs ?: 0L
-
-        val watch = lookUpWatched?.copy(
-            name = name,
-            videoId = videoId,
-            watchedDuration = finalWatched,
-            totalDuration = totalDuration,
-            // Keep whatever thumbnail we already had saved if this particular
-            // save-progress tick didn't come with a fresh one (e.g. resumed
-            // from a deep link without the Drive file object on hand).
-            thumbnailLink = thumbnailLink ?: lookUpWatched.thumbnailLink,
-            audioDelayMs = finalAudioDelay,
-            subtitleDelayMs = finalSubtitleDelay
-        ) ?: WatchList(
-            name = name,
-            videoId = videoId,
-            watchedDuration = finalWatched,
+        progressRecorder.recordProgress(
+            fileId = videoId,
+            title = name,
+            watchedDuration = watchedDuration,
             totalDuration = totalDuration,
             thumbnailLink = thumbnailLink,
-            audioDelayMs = finalAudioDelay,
-            subtitleDelayMs = finalSubtitleDelay
+            audioDelayMs = audioDelayMs,
+            subtitleDelayMs = subtitleDelayMs
         )
-
-        Log.d(TAG, "Saving video at ${watch.watchedDuration}/${watch.totalDuration} (finished=$isFinished, audioDelay=${finalAudioDelay}ms, subDelay=${finalSubtitleDelay}ms)")
-        watchListRepository.insertWatch(watch, playbackProfileId)
     }
-
 }

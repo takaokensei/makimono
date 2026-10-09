@@ -252,8 +252,10 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     private var playlist = mutableListOf<PlaylistItem>()
     private var nextEpisode: PlaylistItem? = null
     private var nextEpisodeCanceled = false
-    private val playbackCoordinator = PlaybackCoordinator()
     private var isNextEpisodeCardShowing = false
+    private val playbackCoordinator = PlaybackCoordinator()
+    private val skipController = zechs.drive.stream.playback.session.SkipController()
+    private lateinit var playbackSession: zechs.drive.stream.playback.session.PlaybackSession
     private var countdownJob: Job? = null
     private var progressTrackerJob: Job? = null
     private var folderSubtitles = mutableListOf<SubtitleItem>()
@@ -360,6 +362,11 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         tvAniSkipLabel = playerView.findViewById(R.id.tvAniSkipLabel)
         tvPlayerClock = playerView.findViewById(R.id.tvPlayerClock)
         chapterMarkersView = playerView.findViewById(R.id.chapterMarkersView)
+        playbackSession = zechs.drive.stream.playback.session.PlaybackSession(
+            progressRecorder = viewModel.progressRecorder,
+            coordinator = playbackCoordinator,
+            skipController = skipController
+        )
 
         // Back button
         toolbar.setNavigationOnClickListener {
@@ -1724,7 +1731,8 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
 
             val prewarmed = bingeBufferManager.get().consumePrewarmedData(fileId)
             if (prewarmed != null && prewarmed.chapters.isNotEmpty()) {
-                parsedChapters = prewarmed.chapters
+                skipController.setChapters(prewarmed.chapters)
+                parsedChapters = skipController.getChapters()
                 Log.d(TAG, "Applied pre-warmed MKV chapters for '$fileId': ${parsedChapters.size} (0ms latency)")
                 if (::player.isInitialized) {
                     updateIntroButtonVisibility(player.currentPosition)
@@ -1740,7 +1748,8 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                                 MatroskaChapterParser.extractChapters(streamUri.toString(), token)
                             }
                         } ?: emptyList()
-                        parsedChapters = chapters
+                        skipController.setChapters(chapters)
+                        parsedChapters = skipController.getChapters()
                         Log.d(TAG, "Extracted ${chapters.size} chapters from MKV")
                         if (::player.isInitialized) {
                             updateIntroButtonVisibility(player.currentPosition)
@@ -2195,20 +2204,8 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
 
     private fun mergeAniSkipChapters(aniSkipChapters: List<MatroskaChapterParser.ParsedChapter>) {
         if (aniSkipChapters.isEmpty()) return
-        val existing = parsedChapters.toMutableList()
-        val hasMkvOp = existing.any { it.type == MatroskaChapterParser.ChapterType.OPENING }
-        val hasMkvEd = existing.any { it.type == MatroskaChapterParser.ChapterType.ENDING }
-
-        for (aniCh in aniSkipChapters) {
-            if (aniCh.type == MatroskaChapterParser.ChapterType.OPENING && !hasMkvOp) {
-                existing.add(aniCh)
-            } else if (aniCh.type == MatroskaChapterParser.ChapterType.ENDING && !hasMkvEd) {
-                existing.add(aniCh)
-            } else if (aniCh.type == MatroskaChapterParser.ChapterType.RECAP && !existing.any { it.type == MatroskaChapterParser.ChapterType.RECAP }) {
-                existing.add(aniCh)
-            }
-        }
-        parsedChapters = existing.sortedBy { it.startTimeMs }
+        skipController.mergeAniSkipChapters(aniSkipChapters)
+        parsedChapters = skipController.getChapters()
         Log.d(TAG, "Updated parsedChapters with AniSkip: ${parsedChapters.size} total")
         if (::player.isInitialized) {
             val markers = parsedChapters.map { ch ->
@@ -2236,93 +2233,63 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             return
         }
 
-        // 1. Check if current position is within an OPENING or ENDING chapter
-        val specialChapter = if (parsedChapters.isNotEmpty()) {
-            parsedChapters.firstOrNull { chapter ->
-                chapter.type != MatroskaChapterParser.ChapterType.OTHER &&
-                        positionMs >= chapter.startTimeMs &&
-                        positionMs < chapter.endTimeMs
-            }
-        } else null
+        val (skipState, skipAction) = skipController.onPlaybackTick(
+            positionMs = positionMs,
+            autoSkipEnabled = malSessionManager.get().isAutoSkipEnabled(),
+            controllerVisible = controllerVisible,
+            controlsLocked = controlsLocked
+        )
 
-        activeSkipChapter = specialChapter
+        activeSkipChapter = skipState.activeChapter
 
-        if (specialChapter != null) {
-            val isOpOrRecap = specialChapter.type == MatroskaChapterParser.ChapterType.OPENING ||
-                    specialChapter.type == MatroskaChapterParser.ChapterType.RECAP
-            val isEnding = specialChapter.type == MatroskaChapterParser.ChapterType.ENDING
-            val isAutoSkip = malSessionManager.get().isAutoSkipEnabled()
-            if (isAutoSkip && (isOpOrRecap || isEnding) && !hasAutoSkippedCurrentInterval) {
-                if (positionMs in specialChapter.startTimeMs..(specialChapter.startTimeMs + 3_500L)) {
-                    hasAutoSkippedCurrentInterval = true
-                    player.seekTo(specialChapter.endTimeMs)
-                    val notifyText = if (isEnding) "⏩ Encerramento pulado automaticamente (AniSkip)"
-                                     else "⏩ Abertura pulada automaticamente (AniSkip)"
-                    val pillText = if (isEnding) "Encerramento pulado (AniSkip)"
-                                   else "Abertura pulada (AniSkip)"
-                    gestureHelper.showNotification(notifyText)
-                    showAniSkipPill(pillText)
-                    return
-                }
-            }
-
-            val label = when (specialChapter.type) {
-                MatroskaChapterParser.ChapterType.RECAP -> "Pular Recap"
-                MatroskaChapterParser.ChapterType.OPENING -> "Pular Abertura"
-                MatroskaChapterParser.ChapterType.ENDING -> "Pular Encerramento"
-                else -> "Pular"
-            }
-            btnSkipIntro.text = label
-            binding.btnNetflixSkip.text = label
-
-            if (!controllerVisible) {
-                // Watching video without HUD: show floating Netflix-style pill
-                binding.netflixSkipRow.animate().cancel()
-                binding.netflixSkipRow.alpha = 1f
-                binding.netflixSkipRow.visibility = View.VISIBLE
-                skipIntroRow.visibility = View.GONE
+        if (skipAction is zechs.drive.stream.playback.session.SkipController.SkipAction.AutoSkip) {
+            player.seekTo(skipAction.targetPositionMs)
+            gestureHelper.showNotification(skipAction.message)
+            val pillText = if (activeSkipChapter?.type == MatroskaChapterParser.ChapterType.ENDING) {
+                "Encerramento pulado (AniSkip)"
             } else {
-                // Controls HUD is visible: show button above timeline
-                binding.netflixSkipRow.animate().cancel()
-                binding.netflixSkipRow.visibility = View.GONE
-                skipIntroRow.animate().cancel()
-                skipIntroRow.alpha = 1f
-                skipIntroRow.visibility = View.VISIBLE
+                "Abertura pulada (AniSkip)"
             }
+            showAniSkipPill(pillText)
             return
         }
 
-        // 2. Outside special chapters: floating pill MUST ALWAYS BE GONE
-        hasAutoSkippedCurrentInterval = false
-        binding.netflixSkipRow.animate().cancel()
-        binding.netflixSkipRow.visibility = View.GONE
-
-        // 3. Fallback for files WITHOUT chapters: only show skip button in the HUD controls when controller is open
-        val hasRecognizedChapters = parsedChapters.any { it.type != MatroskaChapterParser.ChapterType.OTHER }
-        if (!hasRecognizedChapters && controllerVisible) {
-            val isFirst140s = positionMs in 1_000L..140_000L
-            if (isFirst140s) {
-                btnSkipIntro.text = "Pular Abertura (+90s)"
+        when (val ui = skipState.buttonUi) {
+            is zechs.drive.stream.playback.session.SkipController.SkipButtonUi.Visible -> {
+                btnSkipIntro.text = ui.label
+                binding.btnNetflixSkip.text = ui.label
+                if (ui.isOverlay) {
+                    binding.netflixSkipRow.animate().cancel()
+                    binding.netflixSkipRow.alpha = 1f
+                    binding.netflixSkipRow.visibility = View.VISIBLE
+                    skipIntroRow.visibility = View.GONE
+                } else {
+                    binding.netflixSkipRow.animate().cancel()
+                    binding.netflixSkipRow.visibility = View.GONE
+                    skipIntroRow.animate().cancel()
+                    skipIntroRow.alpha = 1f
+                    skipIntroRow.visibility = View.VISIBLE
+                }
+            }
+            zechs.drive.stream.playback.session.SkipController.SkipButtonUi.Hidden -> {
+                binding.netflixSkipRow.animate().cancel()
+                binding.netflixSkipRow.visibility = View.GONE
                 skipIntroRow.animate().cancel()
-                skipIntroRow.alpha = 1f
-                skipIntroRow.visibility = View.VISIBLE
-                return
+                skipIntroRow.visibility = View.GONE
             }
         }
-
-        skipIntroRow.animate().cancel()
-        skipIntroRow.visibility = View.GONE
     }
 
     private fun performSkipIntroOrCredits() {
-        val chapter = activeSkipChapter
-        if (chapter != null && chapter.endTimeMs > player.currentPosition) {
-            seekTo(chapter.endTimeMs)
-            val label = when (chapter.type) {
+        val target = skipController.performSkip(player.currentPosition)
+        if (target != null && target > player.currentPosition) {
+            seekTo(target)
+            val chapter = skipController.getActiveChapter()
+            val label = when (chapter?.type) {
                 MatroskaChapterParser.ChapterType.RECAP -> "⏩ Recap pulado"
                 MatroskaChapterParser.ChapterType.OPENING -> "⏩ Abertura pulada"
                 MatroskaChapterParser.ChapterType.ENDING -> "⏩ Encerramento pulado"
-                else -> "⏩ Capítulo pulado"
+                else -> if (chapter != null) "⏩ Capítulo pulado" else "⏩ +90s Pular Abertura"
             }
             Snackbar.make(playerView, label, 750).apply {
                 anchorView = progressViewGroup
