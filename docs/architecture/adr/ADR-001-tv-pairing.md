@@ -1,6 +1,7 @@
 # ADR-001 — pareamento TV/celular e autorização Google Drive
 
-Data: 04/10/2026. Estado: **decisão e prova local de contrato em andamento**, sem OAuth, persistência ou infraestrutura implantada. Tickets: Q07–Q12 do `APPLE_GRADE_PRODUCT_PLAN.md`.
+Data: 04/10/2026. Atualizado: 09/10/2026 (Fase 3: remoção formal do `TvLoginServer.kt` do app Android).
+Estado: **Aceito / Em andamento no backend**. Servidor HTTP local no app Android removido por violação de segurança e obsolescência.
 
 ## Contexto e decisão
 
