@@ -41,7 +41,11 @@ jobs:
           path: ./
           base: ${{ github.event.pull_request.base.sha || github.event.before || github.event.repository.default_branch }}
           head: ${{ github.event.pull_request.head.sha || github.sha }}
-          extra_args: --debug --only-verified
+      - name: Run static quality guards
+        run: |
+          python3 tools/checks/check_strings.py
+          python3 tools/checks/check_no_direct_log.py
+          python3 tools/checks/baseline_diff.py app/lint-baseline.xml
 
       - name: Run lint checks
         run: ./gradlew lintDebug --no-daemon
