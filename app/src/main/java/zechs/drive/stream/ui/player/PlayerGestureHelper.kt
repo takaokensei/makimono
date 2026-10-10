@@ -15,6 +15,7 @@ import android.view.ViewConfiguration
 import androidx.core.view.isVisible
 import zechs.drive.stream.R
 import zechs.drive.stream.databinding.ViewPlayerGestureHudBinding
+import zechs.drive.stream.playback.osd.PillVisibilityPolicy
 import java.util.Locale
 import kotlin.math.abs
 
@@ -53,6 +54,18 @@ class PlayerGestureHelper(
     private val handler = Handler(Looper.getMainLooper())
     private val touchSlop = ViewConfiguration.get(activity).scaledTouchSlop
 
+    private val motionPillEnter = activity.resources.getInteger(R.integer.motion_pill_enter).toLong()
+    private val motionPillExit = activity.resources.getInteger(R.integer.motion_pill_exit).toLong()
+    private val motionCard = activity.resources.getInteger(R.integer.motion_card).toLong()
+
+    private val brightnessPolicy = PillVisibilityPolicy()
+    private val volumePolicy = PillVisibilityPolicy()
+    private val seekPolicy = PillVisibilityPolicy()
+    private val notificationPolicy = PillVisibilityPolicy()
+    private val speedPolicy = PillVisibilityPolicy()
+    private val doubleTapLeftPolicy = PillVisibilityPolicy()
+    private val doubleTapRightPolicy = PillVisibilityPolicy()
+
     private var dragMode = DragMode.NONE
     private var startX = 0f
     private var startY = 0f
@@ -64,43 +77,69 @@ class PlayerGestureHelper(
     private var isGestureActive = false
 
     private val hideBrightnessRunnable = Runnable {
+        brightnessPolicy.onHideAnimationStarted()
+        hudBinding.gestureBrightnessPill.animate().cancel()
         hudBinding.gestureBrightnessPill.animate()
             .alpha(0f)
-            .setDuration(250)
-            .withEndAction { hudBinding.gestureBrightnessPill.visibility = View.GONE }
+            .setDuration(motionPillExit)
+            .withEndAction {
+                if (brightnessPolicy.onHideAnimationEnded()) {
+                    hudBinding.gestureBrightnessPill.visibility = View.GONE
+                }
+            }
             .start()
     }
 
     private val hideVolumeRunnable = Runnable {
+        volumePolicy.onHideAnimationStarted()
+        hudBinding.gestureVolumePill.animate().cancel()
         hudBinding.gestureVolumePill.animate()
             .alpha(0f)
-            .setDuration(250)
-            .withEndAction { hudBinding.gestureVolumePill.visibility = View.GONE }
+            .setDuration(motionPillExit)
+            .withEndAction {
+                if (volumePolicy.onHideAnimationEnded()) {
+                    hudBinding.gestureVolumePill.visibility = View.GONE
+                }
+            }
             .start()
     }
 
     private val hideSeekRunnable = Runnable {
+        seekPolicy.onHideAnimationStarted()
+        hudBinding.gestureSeekCard.animate().cancel()
         hudBinding.gestureSeekCard.animate()
             .alpha(0f)
-            .setDuration(250)
-            .withEndAction { hudBinding.gestureSeekCard.visibility = View.GONE }
+            .setDuration(motionCard)
+            .withEndAction {
+                if (seekPolicy.onHideAnimationEnded()) {
+                    hudBinding.gestureSeekCard.visibility = View.GONE
+                }
+            }
             .start()
     }
 
     private val hideNotificationRunnable = Runnable {
+        notificationPolicy.onHideAnimationStarted()
+        hudBinding.gestureNotificationPill.animate().cancel()
         hudBinding.gestureNotificationPill.animate()
             .alpha(0f)
-            .setDuration(250)
-            .withEndAction { hudBinding.gestureNotificationPill.visibility = View.GONE }
+            .setDuration(motionPillExit)
+            .withEndAction {
+                if (notificationPolicy.onHideAnimationEnded()) {
+                    hudBinding.gestureNotificationPill.visibility = View.GONE
+                }
+            }
             .start()
     }
 
     fun showNotification(text: String, durationMs: Long = 2500L) {
         handler.removeCallbacks(hideNotificationRunnable)
+        notificationPolicy.requestShow()
         hudBinding.tvGestureNotificationText.text = text
         hudBinding.gestureNotificationPill.animate().cancel()
         hudBinding.gestureNotificationPill.alpha = 1f
         hudBinding.gestureNotificationPill.visibility = View.VISIBLE
+        notificationPolicy.requestDelayedHide()
         handler.postDelayed(hideNotificationRunnable, durationMs)
     }
 
@@ -119,12 +158,12 @@ class PlayerGestureHelper(
             when {
                 e.x < width * 0.35f -> {
                     callback.onSeekRelative(-10_000L)
-                    showDoubleTapBubble(hudBinding.doubleTapLeftBubble)
+                    showDoubleTapBubble(hudBinding.doubleTapLeftBubble, doubleTapLeftPolicy)
                     return true
                 }
                 e.x > width * 0.65f -> {
                     callback.onSeekRelative(10_000L)
-                    showDoubleTapBubble(hudBinding.doubleTapRightBubble)
+                    showDoubleTapBubble(hudBinding.doubleTapRightBubble, doubleTapRightPolicy)
                     return true
                 }
                 else -> {
@@ -140,10 +179,11 @@ class PlayerGestureHelper(
             callback.onSetSpeed(2.0f)
             hudBinding.root.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
 
+            speedPolicy.requestShow()
             hudBinding.gestureSpeedPill.animate().cancel()
             hudBinding.gestureSpeedPill.alpha = 0f
             hudBinding.gestureSpeedPill.visibility = View.VISIBLE
-            hudBinding.gestureSpeedPill.animate().alpha(1f).setDuration(200).start()
+            hudBinding.gestureSpeedPill.animate().alpha(1f).setDuration(motionPillEnter).start()
         }
     })
 
@@ -214,6 +254,7 @@ class PlayerGestureHelper(
                 when (dragMode) {
                     DragMode.BRIGHTNESS -> {
                         handler.removeCallbacks(hideBrightnessRunnable)
+                        brightnessPolicy.requestShow()
                         val deltaPercent = -(deltaY / (height * 0.75f))
                         val newBrightness = (initialBrightness + deltaPercent).coerceIn(0.01f, 1.0f)
                         val lp = activity.window.attributes
@@ -224,15 +265,15 @@ class PlayerGestureHelper(
                         hudBinding.pbGestureBrightness.progress = percent
                         hudBinding.tvGestureBrightnessText.text = "$percent%"
 
-                        if (!hudBinding.gestureBrightnessPill.isVisible) {
-                            hudBinding.gestureBrightnessPill.alpha = 1f
-                            hudBinding.gestureBrightnessPill.visibility = View.VISIBLE
-                        }
+                        hudBinding.gestureBrightnessPill.animate().cancel()
+                        hudBinding.gestureBrightnessPill.alpha = 1f
+                        hudBinding.gestureBrightnessPill.visibility = View.VISIBLE
                         return true
                     }
 
                     DragMode.VOLUME -> {
                         handler.removeCallbacks(hideVolumeRunnable)
+                        volumePolicy.requestShow()
                         val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
                         val deltaPercent = -(deltaY / (height * 0.75f))
                         val newVol = (initialVolume + (deltaPercent * maxVol)).toInt().coerceIn(0, maxVol)
@@ -245,15 +286,15 @@ class PlayerGestureHelper(
                             if (newVol == 0) R.drawable.ic_volume_off_24 else R.drawable.ic_volume_up_24
                         )
 
-                        if (!hudBinding.gestureVolumePill.isVisible) {
-                            hudBinding.gestureVolumePill.alpha = 1f
-                            hudBinding.gestureVolumePill.visibility = View.VISIBLE
-                        }
+                        hudBinding.gestureVolumePill.animate().cancel()
+                        hudBinding.gestureVolumePill.alpha = 1f
+                        hudBinding.gestureVolumePill.visibility = View.VISIBLE
                         return true
                     }
 
                     DragMode.SEEK -> {
                         handler.removeCallbacks(hideSeekRunnable)
+                        seekPolicy.requestShow()
                         val duration = callback.getDuration().coerceAtLeast(1L)
                         val deltaPercent = (deltaX / width)
                         val deltaMs = (deltaPercent * SEEK_STEP_MAX_MS).toLong()
@@ -263,10 +304,9 @@ class PlayerGestureHelper(
                         hudBinding.tvGestureSeekDelta.text = "$sign${formatTime(abs(deltaMs))}"
                         hudBinding.tvGestureSeekTime.text = "${formatTime(pendingSeekTargetMs)} / ${formatTime(duration)}"
 
-                        if (!hudBinding.gestureSeekCard.isVisible) {
-                            hudBinding.gestureSeekCard.alpha = 1f
-                            hudBinding.gestureSeekCard.visibility = View.VISIBLE
-                        }
+                        hudBinding.gestureSeekCard.animate().cancel()
+                        hudBinding.gestureSeekCard.alpha = 1f
+                        hudBinding.gestureSeekCard.visibility = View.VISIBLE
                         return true
                     }
 
@@ -278,22 +318,34 @@ class PlayerGestureHelper(
                 if (isLongPressSpeeding) {
                     isLongPressSpeeding = false
                     callback.onSetSpeed(1.0f)
+                    speedPolicy.onHideAnimationStarted()
+                    hudBinding.gestureSpeedPill.animate().cancel()
                     hudBinding.gestureSpeedPill.animate()
                         .alpha(0f)
-                        .setDuration(200)
-                        .withEndAction { hudBinding.gestureSpeedPill.visibility = View.GONE }
+                        .setDuration(motionPillExit)
+                        .withEndAction {
+                            if (speedPolicy.onHideAnimationEnded()) {
+                                hudBinding.gestureSpeedPill.visibility = View.GONE
+                            }
+                        }
                         .start()
                 }
 
                 when (dragMode) {
                     DragMode.SEEK -> {
                         callback.onSeekTo(pendingSeekTargetMs)
+                        seekPolicy.requestDelayedHide()
+                        handler.removeCallbacks(hideSeekRunnable)
                         handler.postDelayed(hideSeekRunnable, 500)
                     }
                     DragMode.BRIGHTNESS -> {
+                        brightnessPolicy.requestDelayedHide()
+                        handler.removeCallbacks(hideBrightnessRunnable)
                         handler.postDelayed(hideBrightnessRunnable, 700)
                     }
                     DragMode.VOLUME -> {
+                        volumePolicy.requestDelayedHide()
+                        handler.removeCallbacks(hideVolumeRunnable)
                         handler.postDelayed(hideVolumeRunnable, 700)
                     }
                     else -> Unit
@@ -309,31 +361,39 @@ class PlayerGestureHelper(
     }
 
     fun showSpeedPill() {
+        speedPolicy.requestShow()
         hudBinding.gestureSpeedPill.animate().cancel()
         hudBinding.gestureSpeedPill.alpha = 0f
         hudBinding.gestureSpeedPill.visibility = View.VISIBLE
-        hudBinding.gestureSpeedPill.animate().alpha(1f).setDuration(180).start()
+        hudBinding.gestureSpeedPill.animate().alpha(1f).setDuration(motionPillEnter).start()
     }
 
     fun hideSpeedPill() {
+        speedPolicy.onHideAnimationStarted()
+        hudBinding.gestureSpeedPill.animate().cancel()
         hudBinding.gestureSpeedPill.animate()
             .alpha(0f)
-            .setDuration(180)
-            .withEndAction { hudBinding.gestureSpeedPill.visibility = View.GONE }
+            .setDuration(motionPillExit)
+            .withEndAction {
+                if (speedPolicy.onHideAnimationEnded()) {
+                    hudBinding.gestureSpeedPill.visibility = View.GONE
+                }
+            }
             .start()
     }
 
     fun showSeekRipple(deltaSeconds: Int) {
         if (deltaSeconds > 0) {
             hudBinding.tvDoubleTapRightText.text = "+${deltaSeconds}s"
-            showDoubleTapBubble(hudBinding.doubleTapRightBubble)
+            showDoubleTapBubble(hudBinding.doubleTapRightBubble, doubleTapRightPolicy)
         } else if (deltaSeconds < 0) {
             hudBinding.tvDoubleTapLeftText.text = "${deltaSeconds}s"
-            showDoubleTapBubble(hudBinding.doubleTapLeftBubble)
+            showDoubleTapBubble(hudBinding.doubleTapLeftBubble, doubleTapLeftPolicy)
         }
     }
 
-    private fun showDoubleTapBubble(bubble: View) {
+    private fun showDoubleTapBubble(bubble: View, policy: PillVisibilityPolicy) {
+        policy.requestShow()
         bubble.animate().cancel()
         bubble.alpha = 0f
         bubble.scaleX = 0.8f
@@ -344,16 +404,42 @@ class PlayerGestureHelper(
             .alpha(1f)
             .scaleX(1f)
             .scaleY(1f)
-            .setDuration(160)
+            .setDuration(motionPillEnter)
             .withEndAction {
+                policy.onHideAnimationStarted()
                 bubble.animate()
                     .alpha(0f)
                     .setStartDelay(200)
-                    .setDuration(240)
-                    .withEndAction { bubble.visibility = View.GONE }
+                    .setDuration(motionPillExit)
+                    .withEndAction {
+                        if (policy.onHideAnimationEnded()) {
+                            bubble.visibility = View.GONE
+                        }
+                    }
                     .start()
             }
             .start()
+    }
+
+    fun cancelAll() {
+        handler.removeCallbacks(hideBrightnessRunnable)
+        handler.removeCallbacks(hideVolumeRunnable)
+        handler.removeCallbacks(hideSeekRunnable)
+        handler.removeCallbacks(hideNotificationRunnable)
+        brightnessPolicy.cancel()
+        volumePolicy.cancel()
+        seekPolicy.cancel()
+        notificationPolicy.cancel()
+        speedPolicy.cancel()
+        doubleTapLeftPolicy.cancel()
+        doubleTapRightPolicy.cancel()
+        hudBinding.gestureBrightnessPill.animate().cancel()
+        hudBinding.gestureVolumePill.animate().cancel()
+        hudBinding.gestureSeekCard.animate().cancel()
+        hudBinding.gestureNotificationPill.animate().cancel()
+        hudBinding.gestureSpeedPill.animate().cancel()
+        hudBinding.doubleTapLeftBubble.animate().cancel()
+        hudBinding.doubleTapRightBubble.animate().cancel()
     }
 
     private fun formatTime(millis: Long): String {

@@ -99,7 +99,7 @@ object FocusEngine {
                 springY.animateToFinalPosition(target.scale)
                 v.animate()
                     .translationZ(target.elevationDp * density)
-                    .setDuration(150L)
+                    .setDuration(v.resources.getInteger(R.integer.motion_focus).toLong())
                     .start()
             }
             onFocusChange?.invoke(v, hasFocus)

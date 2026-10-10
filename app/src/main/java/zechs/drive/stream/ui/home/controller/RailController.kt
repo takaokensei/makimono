@@ -375,20 +375,22 @@ class RailController(
         setNavItemsFocusable(true)
 
         binding.sidebarDimOverlay?.apply {
+            animate().cancel()
             visibility = View.VISIBLE
             alpha = 0f
             animate()
                 .alpha(1f)
-                .setDuration(220L)
+                .setDuration(binding.root.resources.getInteger(R.integer.motion_osd_show).toLong())
                 .setInterpolator(DecelerateInterpolator())
                 .start()
         }
 
         binding.navRail.apply {
             bringToFront()
+            animate().cancel()
             animate()
                 .translationX(0f)
-                .setDuration(240L)
+                .setDuration(binding.root.resources.getInteger(R.integer.motion_card).toLong())
                 .setInterpolator(DecelerateInterpolator())
                 .withEndAction {
                     focusCurrentNavItem()
@@ -405,18 +407,20 @@ class RailController(
         setNavItemsFocusable(false)
 
         binding.sidebarDimOverlay?.apply {
+            animate().cancel()
             animate()
                 .alpha(0f)
-                .setDuration(200L)
+                .setDuration(binding.root.resources.getInteger(R.integer.motion_osd_hide).toLong())
                 .setInterpolator(AccelerateInterpolator())
                 .withEndAction { visibility = View.GONE }
                 .start()
         }
 
         val railWidth = binding.navRail.width.toFloat().coerceAtLeast(240f.dpToPx())
+        binding.navRail.animate().cancel()
         binding.navRail.animate()
             .translationX(-railWidth)
-            .setDuration(220L)
+            .setDuration(binding.root.resources.getInteger(R.integer.motion_card).toLong())
             .setInterpolator(AccelerateInterpolator())
             .withEndAction {
                 if (!isSidebarExpanded) {

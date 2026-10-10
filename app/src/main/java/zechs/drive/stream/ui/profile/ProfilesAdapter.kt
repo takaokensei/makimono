@@ -247,7 +247,7 @@ class ProfilesAdapter(
             .alpha(1f)
             .translationY(0f)
             .setStartDelay(position * 40L)
-            .setDuration(180L)
+            .setDuration(card.resources.getInteger(R.integer.motion_card).toLong())
             .setInterpolator(DecelerateInterpolator())
             .start()
     }

@@ -21,6 +21,8 @@ import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import zechs.drive.stream.BuildConfig
+import zechs.drive.stream.playback.osd.OsdController
+import zechs.drive.stream.playback.osd.OsdViewHost
 import zechs.drive.stream.utils.MakimonoMediaSessionHelper
 import zechs.drive.stream.utils.MakimonoPiPHelper
 import zechs.drive.stream.utils.PlaybackProgressPolicy
@@ -117,6 +119,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
     private lateinit var binding: ActivityMpvBinding
     private lateinit var player: MPVView
     private lateinit var controller: PlayerControlViewBinding
+    private lateinit var osdController: OsdController
 
     // ViewModel
     private val viewModel by viewModels<PlayerViewModel>()
@@ -256,6 +259,50 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
 
         player = binding.player
         controller = binding.controller
+
+        osdController = OsdController(
+            context = this,
+            host = object : OsdViewHost {
+                override val rootControllerView: View?
+                    get() = controller.root
+                override val titleBlock: View?
+                    get() = controller.titleBlock
+                override val controlsScrollView: View?
+                    get() = controller.controlsScrollView
+                override val mainControlsRoot: View?
+                    get() = controller.mainControls
+                override val topScrim: View?
+                    get() = controller.topScrim
+                override val skipIntroRow: View?
+                    get() = controller.skipIntroRow
+                override val nextEpisodeCard: View?
+                    get() = binding.nextEpisodeCard.root
+
+                override fun onOsdVisibilityChanged(visible: Boolean) {
+                    if (!visible) {
+                        zechs.drive.stream.utils.TvFocusRing.clear(binding.root)
+                    } else {
+                        handleLockingControls()
+                        controller.btnPlayPause.post { controller.btnPlayPause.requestFocus() }
+                    }
+                    val currentPos = (player.timePos ?: 0).toDouble()
+                    checkChapterAutoSkip(currentPos)
+                }
+
+                override fun onElevationPolicyChanged(elevated: Boolean) {
+                    MPVLib.setPropertyInt("sub-margin-y", SubtitleElevationPolicy.resolve(elevated).mpvMarginY)
+                }
+
+                override fun onShowPrepared() {
+                    try {
+                        val timeFormat = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+                        controller.root.findViewById<TextView>(R.id.tvPlayerClock)?.text = timeFormat.format(java.util.Date())
+                    } catch (_: Exception) {}
+                }
+            },
+            isReviewMode = intent.getStringExtra("reviewMediaUri") != null,
+            getReduceMotion = { reduceMotionEnabled }
+        )
 
         controller
             .playerToolbar
@@ -738,7 +785,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                 zechs.drive.stream.utils.PlayerDpadFocus.next(
                     direction = it,
                     controlsVisible = isControlsShowing(),
-                    controlsTransitioning = isHidingControls,
+                    controlsTransitioning = if (::osdController.isInitialized) osdController.isHiding else false,
                     blockingOverlayVisible = binding.nextEpisodeCard.root.isVisible ||
                         binding.netflixSkipRow.isVisible,
                     focusedItem = focusedItem
@@ -919,12 +966,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
             binding.netflixSkipRow.visibility = View.GONE
             return true
         }
-        if (zechs.drive.stream.utils.PlayerControllerVisibility.shouldConsumeBack(
-                controllerVisible = controller.root.isVisible,
-                isHiding = isHidingControls
-            )
-        ) {
-            if (isControlsShowing()) {
+        if (::osdController.isInitialized && osdController.shouldConsumeBack) {
+            if (osdController.isVisible) {
                 hideControls()
                 gestureHelper.showNotification(getString(R.string.player_back_again_to_exit))
             }
@@ -933,136 +976,23 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         return false
     }
 
-    private fun isControlsShowing(): Boolean =
-        zechs.drive.stream.utils.PlayerControllerVisibility.isVisible(
-            controllerVisible = controller.root.isVisible,
-            isHiding = isHidingControls
-        )
-
-    private var isHidingControls = false
+    private fun isControlsShowing(): Boolean {
+        if (!::osdController.isInitialized) return false
+        return osdController.isVisible
+    }
 
     private fun showControlsWithFocus() {
-        if (isControlsShowing()) {
+        if (!::osdController.isInitialized) return
+        if (osdController.isVisible) {
             if (!controller.root.hasFocus()) controller.btnPlayPause.requestFocus()
             return
         }
-        isHidingControls = false
-        val root = controller.root
-        if (reduceMotionEnabled) {
-            listOf(controller.titleBlock, controller.controlsScrollView, controller.mainControls, controller.topScrim)
-                .forEach { it.animate().cancel() }
-            controller.titleBlock.translationY = 0f
-            controller.titleBlock.alpha = 1f
-            controller.controlsScrollView.translationY = 0f
-            controller.controlsScrollView.alpha = 1f
-            controller.mainControls.alpha = 1f
-            controller.topScrim.alpha = 1f
-            if (binding.nextEpisodeCard.root.isVisible) {
-                binding.nextEpisodeCard.root.translationY = -resources.getDimensionPixelOffset(R.dimen.next_episode_card_offset).toFloat()
-            }
-            root.isVisible = true
-            controller.btnPlayPause.post { controller.btnPlayPause.requestFocus() }
-            handleLockingControls()
-            val currentPos = (player.timePos ?: 0).toDouble()
-            checkChapterAutoSkip(currentPos)
-            return
-        }
-        // T4.1: Update top bar clock with current time
-        try {
-            val timeFormat = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
-            controller.root.findViewById<TextView>(R.id.tvPlayerClock)?.text = timeFormat.format(java.util.Date())
-        } catch (_: Exception) {}
-
-        // T4.6: Elevate subtitles above bottom capsule HUD in MPV
-        MPVLib.setPropertyInt("sub-margin-y", SubtitleElevationPolicy.resolve(true).mpvMarginY)
-
-        val density = resources.displayMetrics.density
-        val animDuration = 220L
-
-        controller.titleBlock.animate().cancel()
-        controller.controlsScrollView.animate().cancel()
-        controller.mainControls.animate().cancel()
-        controller.topScrim.animate().cancel()
-
-        controller.titleBlock.translationY = -8f * density
-        controller.titleBlock.alpha = 0f
-        controller.controlsScrollView.translationY = 8f * density
-        controller.controlsScrollView.alpha = 0f
-        controller.mainControls.alpha = 0f
-        controller.topScrim.alpha = 0f
-
-        root.isVisible = true
-
-        controller.titleBlock.animate().translationY(0f).alpha(1f).setDuration(animDuration).start()
-        controller.controlsScrollView.animate().translationY(0f).alpha(1f).setDuration(animDuration).start()
-        controller.mainControls.animate().alpha(1f).setDuration(animDuration).start()
-        controller.topScrim.animate().alpha(1f).setDuration(animDuration).start()
-
-        if (binding.nextEpisodeCard.root.isVisible) {
-            binding.nextEpisodeCard.root.animate().translationY(-resources.getDimensionPixelOffset(R.dimen.next_episode_card_offset).toFloat()).setDuration(animDuration).start()
-        }
-        handleLockingControls()
-        val currentPos = (player.timePos ?: 0).toDouble()
-        checkChapterAutoSkip(currentPos)
-        controller.btnPlayPause.post {
-            controller.btnPlayPause.requestFocus()
-        }
+        osdController.show()
     }
 
     private fun hideControls() {
-        if (!controller.root.isVisible) return
-        zechs.drive.stream.utils.TvFocusRing.clear(binding.root)
-        isHidingControls = true
-        if (reduceMotionEnabled) {
-            listOf(controller.titleBlock, controller.controlsScrollView, controller.mainControls,
-                controller.skipIntroRow, controller.topScrim).forEach { it.animate().cancel() }
-            controller.root.isVisible = false
-            controller.titleBlock.translationY = 0f
-            controller.titleBlock.alpha = 1f
-            controller.controlsScrollView.translationY = 0f
-            controller.controlsScrollView.alpha = 1f
-            controller.mainControls.alpha = 1f
-            controller.skipIntroRow.alpha = 1f
-            controller.topScrim.alpha = 1f
-            binding.nextEpisodeCard.root.translationY = 0f
-            isHidingControls = false
-            val currentPos = (player.timePos ?: 0).toDouble()
-            checkChapterAutoSkip(currentPos)
-            return
-        }
-        // T4.6: Restore subtitle baseline clearance when OSD hides in MPV
-        MPVLib.setPropertyInt("sub-margin-y", SubtitleElevationPolicy.resolve(false).mpvMarginY)
-
-        val density = resources.displayMetrics.density
-        val animDuration = 150L
-
-        controller.titleBlock.animate().cancel()
-        controller.controlsScrollView.animate().cancel()
-        controller.mainControls.animate().cancel()
-        controller.skipIntroRow.animate().cancel()
-        controller.topScrim.animate().cancel()
-
-        controller.titleBlock.animate().translationY(-8f * density).alpha(0f).setDuration(animDuration).start()
-        controller.controlsScrollView.animate().translationY(8f * density).alpha(0f).setDuration(animDuration).start()
-        controller.mainControls.animate().alpha(0f).setDuration(animDuration).start()
-        controller.skipIntroRow.animate().alpha(0f).setDuration(animDuration).start()
-        controller.topScrim.animate().alpha(0f).setDuration(animDuration).withEndAction {
-            isHidingControls = false
-            controller.root.isVisible = false
-            controller.titleBlock.translationY = 0f
-            controller.titleBlock.alpha = 1f
-            controller.controlsScrollView.translationY = 0f
-            controller.controlsScrollView.alpha = 1f
-            controller.mainControls.alpha = 1f
-            controller.skipIntroRow.alpha = 1f
-            controller.topScrim.alpha = 1f
-        }.start()
-
-        if (binding.nextEpisodeCard.root.isVisible) {
-            binding.nextEpisodeCard.root.animate().translationY(0f).setDuration(animDuration).start()
-        }
-        val currentPos = (player.timePos ?: 0).toDouble()
-        checkChapterAutoSkip(currentPos)
+        if (!::osdController.isInitialized) return
+        osdController.hide()
     }
 
     override fun onPlayerModalVisibilityChanged(isVisible: Boolean) {
@@ -1148,27 +1078,35 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                 controller.btnSkipIntro.text = ui.label
                 if (ui.isOverlay) {
                     if (binding.netflixSkipRow.visibility != View.VISIBLE) {
+                        binding.netflixSkipRow.animate().cancel()
                         binding.netflixSkipRow.alpha = 0f
                         binding.netflixSkipRow.visibility = View.VISIBLE
-                        binding.netflixSkipRow.animate().alpha(1f).setDuration(250L).start()
+                        val motionEnter = resources.getInteger(R.integer.motion_pill_enter).toLong()
+                        binding.netflixSkipRow.animate().alpha(1f).setDuration(motionEnter).start()
                     }
                 } else {
+                    binding.netflixSkipRow.animate().cancel()
                     binding.netflixSkipRow.visibility = View.GONE
                 }
                 if (controller.root.isVisible && !controller.skipIntroRow.isVisible && !controlsLocked) {
+                    controller.skipIntroRow.animate().cancel()
                     controller.skipIntroRow.alpha = 0f
                     controller.skipIntroRow.visibility = View.VISIBLE
-                    controller.skipIntroRow.animate().alpha(1f).setDuration(200L).start()
+                    val motionEnter = resources.getInteger(R.integer.motion_pill_enter).toLong()
+                    controller.skipIntroRow.animate().alpha(1f).setDuration(motionEnter).start()
                 }
             }
             zechs.drive.stream.playback.session.SkipController.SkipButtonUi.Hidden -> {
+                val motionExit = resources.getInteger(R.integer.motion_pill_exit).toLong()
                 if (binding.netflixSkipRow.visibility == View.VISIBLE) {
-                    binding.netflixSkipRow.animate().alpha(0f).setDuration(200L).withEndAction {
+                    binding.netflixSkipRow.animate().cancel()
+                    binding.netflixSkipRow.animate().alpha(0f).setDuration(motionExit).withEndAction {
                         binding.netflixSkipRow.visibility = View.GONE
                     }.start()
                 }
                 if (controller.skipIntroRow.isVisible) {
-                    controller.skipIntroRow.animate().alpha(0f).setDuration(200L).withEndAction {
+                    controller.skipIntroRow.animate().cancel()
+                    controller.skipIntroRow.animate().alpha(0f).setDuration(motionExit).withEndAction {
                         controller.skipIntroRow.visibility = View.GONE
                     }.start()
                 }
@@ -2345,9 +2283,11 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
 
         MediaImageLoader.card(card.ivNextEpisodeThumb, ThumbnailUrl.medium(next.thumbnailLink))
 
+        card.root.animate().cancel()
         card.root.alpha = 0f
         card.root.visibility = View.VISIBLE
-        card.root.animate().alpha(1f).setDuration(250L).start()
+        val motionCardDuration = resources.getInteger(R.integer.motion_card).toLong()
+        card.root.animate().alpha(1f).setDuration(motionCardDuration).start()
 
         card.btnPlayNextEpisodeNow.setOnClickListener {
             playNextEpisodeDirectly()
@@ -2389,7 +2329,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         }
         isNextEpisodeCardShowing = false
         val card = binding.nextEpisodeCard.root
-        card.animate().alpha(0f).setDuration(200L).withEndAction {
+        card.animate().cancel()
+        val motionCardDuration = resources.getInteger(R.integer.motion_card).toLong()
+        card.animate().alpha(0f).setDuration(motionCardDuration).withEndAction {
             card.visibility = View.GONE
             card.translationY = 0f
         }.start()
@@ -2578,12 +2520,16 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
     private fun updateIntroButtonVisibility(timeSeconds: Long) {
         val shouldShow = timeSeconds in 1L..140L
         val row = controller.skipIntroRow
+        val motionEnter = resources.getInteger(R.integer.motion_pill_enter).toLong()
+        val motionExit = resources.getInteger(R.integer.motion_pill_exit).toLong()
         if (shouldShow && !row.isVisible && !controlsLocked && controller.root.isVisible) {
+            row.animate().cancel()
             row.alpha = 0f
             row.isVisible = true
-            row.animate().alpha(1f).setDuration(200L).start()
+            row.animate().alpha(1f).setDuration(motionEnter).start()
         } else if (!shouldShow && row.isVisible) {
-            row.animate().alpha(0f).setDuration(200L).withEndAction {
+            row.animate().cancel()
+            row.animate().alpha(0f).setDuration(motionExit).withEndAction {
                 row.isVisible = false
             }.start()
         }
@@ -2745,7 +2691,17 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
     ////////////////    END OF MPV EVENTS    ////////////////
 
 
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        if (::osdController.isInitialized && osdController.isVisible) {
+            osdController.resetInactivityTimer()
+        }
+    }
+
     override fun onPause() {
+        if (::osdController.isInitialized) {
+            osdController.cancelInactivityTimer()
+        }
         saveProgress()
 
         activityIsForeground = false

@@ -16,4 +16,13 @@
     <!-- Emphasized motion spec for important transitions -->
     <item name="motion_spec_emphasized" type="integer">300</item>
     <item name="motion_easing_emphasized" type="string" translatable="false">emphasized</item>
+
+    <!-- Apple HIG / Leanback motion tokens (Plano v4 Fase I) -->
+    <item name="motion_osd_show" type="integer">220</item>
+    <item name="motion_osd_hide" type="integer">150</item>
+    <item name="motion_focus" type="integer">150</item>
+    <item name="motion_card" type="integer">220</item>
+    <item name="motion_pill_enter" type="integer">200</item>
+    <item name="motion_pill_exit" type="integer">150</item>
+    <item name="motion_crossfade" type="integer">200</item>
 </resources>

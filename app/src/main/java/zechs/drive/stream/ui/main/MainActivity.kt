@@ -135,7 +135,7 @@ class MainActivity : AppCompatActivity() {
         splashScreen.setOnExitAnimationListener { splashScreenView ->
             splashScreenView.view.animate()
                 .alpha(0f)
-                .setDuration(250L)
+                .setDuration(resources.getInteger(R.integer.motion_crossfade).toLong())
                 .withEndAction { splashScreenView.remove() }
                 .start()
         }
@@ -743,7 +743,7 @@ class MainActivity : AppCompatActivity() {
 
         binding.vinhetaContainer.animate()
             .alpha(0f)
-            .setDuration(600L)
+            .setDuration(resources.getInteger(R.integer.motion_spec_slow).toLong())
             .setInterpolator(android.view.animation.AccelerateDecelerateInterpolator())
             .withEndAction {
                 binding.vinhetaContainer.visibility = View.GONE

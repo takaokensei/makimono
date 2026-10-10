@@ -286,7 +286,7 @@ class SettingsFragment : BaseFragment() {
                 SingleTapActivation.install(this, disallowParentIntercept = false)
                 setOnFocusChangeListener { view, hasFocus ->
                     if (hasFocus && !reduceMotionEnabled) {
-                        view.animate().scaleX(1.025f).scaleY(1.025f).setDuration(100L).start()
+                        view.animate().scaleX(1.025f).scaleY(1.025f).setDuration(view.resources.getInteger(R.integer.motion_focus).toLong()).start()
                     } else {
                         view.animate().cancel()
                         view.scaleX = 1f
@@ -389,7 +389,7 @@ class SettingsFragment : BaseFragment() {
                     .scaleX(if (hasFocus) 1.015f else 1f)
                     .scaleY(if (hasFocus) 1.015f else 1f)
                     .translationZ(if (hasFocus) 6f else 0f)
-                    .setDuration(120L)
+                    .setDuration(view.resources.getInteger(R.integer.motion_focus).toLong())
                     .start()
             }
         }

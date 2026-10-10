@@ -25,6 +25,8 @@ import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import zechs.drive.stream.BuildConfig
+import zechs.drive.stream.playback.osd.OsdController
+import zechs.drive.stream.playback.osd.OsdViewHost
 import zechs.drive.stream.utils.MakimonoMediaSessionHelper
 import zechs.drive.stream.utils.MakimonoPiPHelper
 import zechs.drive.stream.utils.PlaybackProgressPolicy
@@ -256,6 +258,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     private val playbackCoordinator = PlaybackCoordinator()
     private val skipController = zechs.drive.stream.playback.session.SkipController()
     private lateinit var playbackSession: zechs.drive.stream.playback.session.PlaybackSession
+    private lateinit var osdController: OsdController
     private var countdownJob: Job? = null
     private var progressTrackerJob: Job? = null
     private var folderSubtitles = mutableListOf<SubtitleItem>()
@@ -366,6 +369,61 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             progressRecorder = viewModel.progressRecorder,
             coordinator = playbackCoordinator,
             skipController = skipController
+        )
+
+        osdController = OsdController(
+            context = this,
+            host = object : OsdViewHost {
+                override val rootControllerView: View?
+                    get() = playerView.findViewById(R.id.controls)
+                override val titleBlock: View?
+                    get() = this@PlayerActivity.titleBlock
+                override val controlsScrollView: View?
+                    get() = this@PlayerActivity.controlsScrollView
+                override val mainControlsRoot: View?
+                    get() = this@PlayerActivity.mainControlsRoot
+                override val topScrim: View?
+                    get() = playerView.findViewById(R.id.topScrim)
+                override val skipIntroRow: View?
+                    get() = this@PlayerActivity.skipIntroRow
+                override val nextEpisodeCard: View?
+                    get() = binding.nextEpisodeCard.root
+
+                override fun onOsdVisibilityChanged(visible: Boolean) {
+                    val becameVisible = visible && !controllerVisible
+                    controllerVisible = visible
+                    if (!visible) {
+                        zechs.drive.stream.utils.TvFocusRing.clear(playerView)
+                        playerView.hideController()
+                    } else {
+                        playerView.showController()
+                    }
+                    if (becameVisible) {
+                        handleLockingControls()
+                        btnPlayPause.post { btnPlayPause.requestFocus() }
+                    }
+                    if (::player.isInitialized) {
+                        updateIntroButtonVisibility(player.currentPosition)
+                    }
+                }
+
+                override fun onElevationPolicyChanged(elevated: Boolean) {
+                    playerView.subtitleView?.setBottomPaddingFraction(
+                        SubtitleElevationPolicy.resolve(elevated).exoPaddingFraction
+                    )
+                }
+
+                override fun onShowPrepared() {
+                    try {
+                        val timeFormat = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+                        tvPlayerClock?.text = timeFormat.format(java.util.Date())
+                    } catch (e: Exception) {
+                        AppLog.logSwallowed(TAG, "updating player clock", e)
+                    }
+                }
+            },
+            isReviewMode = intent.getStringExtra("reviewMediaUri") != null,
+            getReduceMotion = { reduceMotionEnabled }
         )
 
         // Back button
@@ -1084,36 +1142,8 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             }
         })
 
-        playerView.setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { visibility ->
-            val isVisible = visibility == View.VISIBLE
-            val becameVisible = isVisible && !controllerVisible
-            controllerVisible = isVisible
-            if (!isVisible) {
-                zechs.drive.stream.utils.TvFocusRing.clear(playerView)
-            }
-
-            val targetCardY = if (isVisible) -resources.getDimensionPixelOffset(R.dimen.next_episode_card_offset).toFloat() else 0f
-            if (binding.nextEpisodeCard.root.isVisible) {
-                binding.nextEpisodeCard.root.animate().translationY(targetCardY).setDuration(220L).start()
-            }
-
-            if (becameVisible) {
-                handleLockingControls()
-                btnPlayPause.post {
-                    btnPlayPause.requestFocus()
-                }
-            }
-
-            if (isVisible) {
-                if (::player.isInitialized) {
-                    updateIntroButtonVisibility(player.currentPosition)
-                }
-            } else {
-                if (::player.isInitialized) {
-                    updateIntroButtonVisibility(player.currentPosition)
-                }
-            }
-        })
+        // Plan v4 Fase I: Controller visibility and satellite animations are managed
+        // exclusively by OsdController. No competing listeners or timers on PlayerView.
 
         lifecycleScope.launch {
             try {
@@ -1185,7 +1215,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                 zechs.drive.stream.utils.PlayerDpadFocus.next(
                     direction = it,
                     controlsVisible = isControlsShowing(),
-                    controlsTransitioning = isHidingControls,
+                    controlsTransitioning = if (::osdController.isInitialized) osdController.isHiding else false,
                     blockingOverlayVisible = binding.nextEpisodeCard.root.isVisible ||
                         binding.netflixSkipRow.isVisible,
                     focusedItem = focusedItem
@@ -1362,11 +1392,8 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     }
 
     private fun isControlsShowing(): Boolean {
-        if (!::playerView.isInitialized) return false
-        return zechs.drive.stream.utils.PlayerControllerVisibility.isVisible(
-            controllerVisible = playerView.isControllerFullyVisible,
-            isHiding = isHidingControls
-        )
+        if (!::osdController.isInitialized) return false
+        return osdController.isVisible
     }
 
     override fun onPlayerModalVisibilityChanged(isVisible: Boolean) {
@@ -1409,13 +1436,9 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             binding.netflixSkipRow.visibility = View.GONE
             return true
         }
-        if (zechs.drive.stream.utils.PlayerControllerVisibility.shouldConsumeBack(
-                controllerVisible = controllerVisible,
-                isHiding = isHidingControls
-            )
-        ) {
-            if (isControlsShowing()) {
-                animateHideController()
+        if (::osdController.isInitialized && osdController.shouldConsumeBack) {
+            if (osdController.isVisible) {
+                osdController.hide()
                 gestureHelper.showNotification(getString(R.string.player_back_again_to_exit))
             }
             return true
@@ -1424,114 +1447,15 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     }
 
     private var controllerVisible = false
-    private var isHidingControls = false
 
     private fun animateHideController(onComplete: (() -> Unit)? = null) {
-        if (!::playerView.isInitialized) return
-        zechs.drive.stream.utils.TvFocusRing.clear(playerView)
-        isHidingControls = true
-        if (reduceMotionEnabled) {
-            listOf(titleBlock, controlsScrollView, mainControlsRoot, skipIntroRow)
-                .forEach { it.animate().cancel() }
-            playerView.findViewById<View>(R.id.topScrim)?.animate()?.cancel()
-            playerView.hideController()
-            titleBlock.translationY = 0f
-            titleBlock.alpha = 1f
-            controlsScrollView.translationY = 0f
-            controlsScrollView.alpha = 1f
-            mainControlsRoot.alpha = 1f
-            skipIntroRow.alpha = 1f
-            playerView.findViewById<View>(R.id.topScrim)?.alpha = 1f
-            isHidingControls = false
-            onComplete?.invoke()
-            return
-        }
-        val density = resources.displayMetrics.density
-        val animDuration = 150L
-        val topScrim = playerView.findViewById<View>(R.id.topScrim)
-
-        // T4.6: Restore subtitle baseline clearance when OSD hides
-        playerView.subtitleView?.setBottomPaddingFraction(
-            SubtitleElevationPolicy.resolve(false).exoPaddingFraction
-        )
-
-        titleBlock.animate().cancel()
-        controlsScrollView.animate().cancel()
-        mainControlsRoot.animate().cancel()
-        skipIntroRow.animate().cancel()
-        topScrim?.animate()?.cancel()
-
-        titleBlock.animate().translationY(-8f * density).alpha(0f).setDuration(animDuration).start()
-        controlsScrollView.animate().translationY(8f * density).alpha(0f).setDuration(animDuration).start()
-        mainControlsRoot.animate().alpha(0f).setDuration(animDuration).start()
-        skipIntroRow.animate().alpha(0f).setDuration(animDuration).start()
-
-        (topScrim ?: controlsScrollView).animate().alpha(0f).setDuration(animDuration).withEndAction {
-            isHidingControls = false
-            playerView.hideController()
-            titleBlock.translationY = 0f
-            titleBlock.alpha = 1f
-            controlsScrollView.translationY = 0f
-            controlsScrollView.alpha = 1f
-            mainControlsRoot.alpha = 1f
-            skipIntroRow.alpha = 1f
-            topScrim?.alpha = 1f
-            onComplete?.invoke()
-        }.start()
+        if (!::osdController.isInitialized) return
+        osdController.hide(onComplete)
     }
 
     private fun animateShowController() {
-        if (!::playerView.isInitialized) return
-        isHidingControls = false
-
-        // T4.1: Update top bar clock with current time
-        try {
-            val timeFormat = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
-            tvPlayerClock?.text = timeFormat.format(java.util.Date())
-        } catch (e: Exception) {
-            AppLog.logSwallowed(TAG, "updating player clock", e)
-        }
-
-        // T4.6: Elevate subtitles above bottom capsule HUD
-        playerView.subtitleView?.setBottomPaddingFraction(
-            SubtitleElevationPolicy.resolve(true).exoPaddingFraction
-        )
-
-        if (reduceMotionEnabled) {
-            listOf(titleBlock, controlsScrollView, mainControlsRoot)
-                .forEach { it.animate().cancel() }
-            playerView.findViewById<View>(R.id.topScrim)?.animate()?.cancel()
-            titleBlock.translationY = 0f
-            titleBlock.alpha = 1f
-            controlsScrollView.translationY = 0f
-            controlsScrollView.alpha = 1f
-            mainControlsRoot.alpha = 1f
-            playerView.findViewById<View>(R.id.topScrim)?.alpha = 1f
-            playerView.showController()
-            return
-        }
-        val density = resources.displayMetrics.density
-        val animDuration = 220L
-        val topScrim = playerView.findViewById<View>(R.id.topScrim)
-
-        titleBlock.translationY = -8f * density
-        titleBlock.alpha = 0f
-        controlsScrollView.translationY = 8f * density
-        controlsScrollView.alpha = 0f
-        mainControlsRoot.alpha = 0f
-        topScrim?.alpha = 0f
-
-        playerView.showController()
-
-        titleBlock.animate().cancel()
-        controlsScrollView.animate().cancel()
-        mainControlsRoot.animate().cancel()
-        topScrim?.animate()?.cancel()
-
-        titleBlock.animate().translationY(0f).alpha(1f).setDuration(animDuration).start()
-        controlsScrollView.animate().translationY(0f).alpha(1f).setDuration(animDuration).start()
-        mainControlsRoot.animate().alpha(1f).setDuration(animDuration).start()
-        topScrim?.animate()?.alpha(1f)?.setDuration(animDuration)?.start()
+        if (!::osdController.isInitialized) return
+        osdController.show()
     }
 
     private fun handleLockingControls() {
@@ -1650,12 +1574,10 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
 
         playerView.apply {
             player = this@PlayerActivity.player
-            // Always hide controls on touch so the UI doesn't get stuck visible
-            controllerHideOnTouch = true
-            // Keep controllerAutoShow false so seeks do not force the OSD to pop up
+            // Plan v4 Fase I: Disable native timeout and touch hide; OsdController is the single owner.
+            controllerHideOnTouch = false
             controllerAutoShow = false
-            // Auto-hide controls after 4.5 seconds of inactivity so UI disappears naturally
-            controllerShowTimeoutMs = if (reviewMediaUri != null) 30_000 else 4500
+            controllerShowTimeoutMs = 0
         }
 
         val audioAttributes = AudioAttributes.Builder()
@@ -2052,7 +1974,8 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
 
         card.root.alpha = 0f
         card.root.visibility = View.VISIBLE
-        card.root.animate().alpha(1f).setDuration(250L).start()
+        val motionCardDuration = resources.getInteger(R.integer.motion_card).toLong()
+        card.root.animate().alpha(1f).setDuration(motionCardDuration).start()
 
         card.btnPlayNextEpisodeNow.setOnClickListener {
             playNextEpisodeDirectly()
@@ -2095,7 +2018,8 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         }
         isNextEpisodeCardShowing = false
         val card = binding.nextEpisodeCard.root
-        card.animate().alpha(0f).setDuration(200L).withEndAction {
+        val motionCardDuration = resources.getInteger(R.integer.motion_card).toLong()
+        card.animate().alpha(0f).setDuration(motionCardDuration).withEndAction {
             card.visibility = View.GONE
             card.translationY = 0f
         }.start()
@@ -2195,7 +2119,8 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         aniskipPillJob?.cancel()
         aniskipPillJob = lifecycleScope.launch {
             delay(3000L)
-            aniskipPill.animate().alpha(0f).setDuration(300L).withEndAction {
+            val motionExit = resources.getInteger(R.integer.motion_pill_exit).toLong()
+            aniskipPill.animate().alpha(0f).setDuration(motionExit).withEndAction {
                 aniskipPill.visibility = View.GONE
             }.start()
         }
@@ -3316,7 +3241,17 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         updateOrientation(newConfig)
     }
 
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        if (::osdController.isInitialized && osdController.isVisible) {
+            osdController.resetInactivityTimer()
+        }
+    }
+
     override fun onPause() {
+        if (::osdController.isInitialized) {
+            osdController.cancelInactivityTimer()
+        }
         saveProgress()
         super.onPause()
     }
@@ -3333,6 +3268,9 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     }
 
     override fun onDestroy() {
+        if (::gestureHelper.isInitialized) {
+            gestureHelper.cancelAll()
+        }
         countdownJob?.cancel()
         mediaSessionHelper?.release()
         mediaSessionHelper = null

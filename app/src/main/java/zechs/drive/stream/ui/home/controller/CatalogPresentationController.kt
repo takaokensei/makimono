@@ -174,7 +174,7 @@ class CatalogPresentationController(
             .scaleX(targetScale)
             .scaleY(targetScale)
             .translationZ(if (hasFocus) elevation else 0f)
-            .setDuration(120L)
+            .setDuration(view.resources.getInteger(R.integer.motion_focus).toLong())
             .start()
     }
 
