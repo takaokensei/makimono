@@ -1,6 +1,8 @@
 package zechs.drive.stream.ui.player.utils
 
 import android.net.Uri
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.*
 import androidx.media3.common.util.Assertions
 import zechs.drive.stream.utils.AppLog
@@ -8,6 +10,7 @@ import zechs.drive.stream.data.repository.TokenProvider
 import zechs.drive.stream.ui.player.PlayerActivity.Companion.TAG
 import java.io.IOException
 
+@OptIn(UnstableApi::class)
 class AuthenticatingDataSource(
     private val wrappedDataSource: DefaultHttpDataSource,
     private val tokenProvider: TokenProvider
