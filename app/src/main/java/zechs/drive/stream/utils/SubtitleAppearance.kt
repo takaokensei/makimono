@@ -1,9 +1,12 @@
 package zechs.drive.stream.utils
 
 import android.util.TypedValue
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.SubtitleView
 
+@OptIn(UnstableApi::class)
 object SubtitleAppearance {
 
     fun applyToExo(subtitleView: SubtitleView?, style: SubtitleStyle) {

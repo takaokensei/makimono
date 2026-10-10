@@ -3,7 +3,9 @@ package zechs.drive.stream.ui.player
 import android.content.Context
 import android.graphics.Color
 import android.view.LayoutInflater
+import androidx.annotation.OptIn
 import androidx.media3.common.text.Cue
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.CaptionStyleCompat
 import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -15,6 +17,7 @@ import zechs.drive.stream.utils.SubtitleCueComposer
 import zechs.drive.stream.utils.SubtitleFontFamily
 import zechs.drive.stream.utils.SubtitleStyle
 
+@OptIn(UnstableApi::class)
 object SubtitleStyleDialog {
 
     fun show(
