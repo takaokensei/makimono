@@ -4,8 +4,10 @@ import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.os.Build
 import android.view.Display
+import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.Format
+import androidx.media3.common.util.UnstableApi
 
 /**
  * Apple TV / Netflix Grade HDR Mode Manager (Match Dynamic Range).
@@ -13,6 +15,7 @@ import androidx.media3.common.Format
  * evaluates display HDR capabilities, dynamically switches the Android Activity
  * window color mode to COLOR_MODE_HDR on API 26+, and restores SDR on exit.
  */
+@OptIn(UnstableApi::class)
 object HdrModeManager {
     private const val TAG = "HdrModeManager"
 

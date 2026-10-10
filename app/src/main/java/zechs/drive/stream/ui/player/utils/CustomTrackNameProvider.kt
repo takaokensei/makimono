@@ -1,11 +1,13 @@
 package zechs.drive.stream.ui.player.utils
 
 import android.content.res.Resources
+import androidx.annotation.OptIn
 import androidx.media3.common.Format
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.DefaultTrackNameProvider
 import androidx.media3.common.MimeTypes
 
-
+@OptIn(UnstableApi::class)
 class CustomTrackNameProvider(
     resources: Resources
 ) : DefaultTrackNameProvider(resources) {
