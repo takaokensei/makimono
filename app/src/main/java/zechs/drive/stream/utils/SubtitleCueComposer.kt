@@ -4,12 +4,15 @@ import android.graphics.Typeface
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.StyleSpan
+import androidx.annotation.OptIn
 import androidx.media3.common.text.Cue
+import androidx.media3.common.util.UnstableApi
 
 /**
  * Normalizes ExoPlayer cues for a stable, Netflix-like presentation:
  * bottom dialogue at a fixed line, top signs preserved, overlapping bottom lines merged.
  */
+@OptIn(UnstableApi::class)
 object SubtitleCueComposer {
 
     private const val DEFAULT_BOTTOM_LINE = 0.95f
