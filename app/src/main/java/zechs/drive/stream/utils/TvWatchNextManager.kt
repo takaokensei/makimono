@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import zechs.drive.stream.data.model.WatchList
 import zechs.drive.stream.ui.main.MainActivity
+import android.annotation.SuppressLint
 import zechs.drive.stream.ui.player.PlayerLauncher
 
 /**
@@ -26,6 +27,7 @@ import zechs.drive.stream.ui.player.PlayerLauncher
  * - Removed when media is finished (>= 90% per [WatchList.hasFinished]).
  * - Safe execution across non-TV devices and environments without TV providers.
  */
+@SuppressLint("RestrictedApi")
 object TvWatchNextManager {
 
     private const val TAG = "TvWatchNextManager"
