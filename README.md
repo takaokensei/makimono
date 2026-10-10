@@ -78,7 +78,7 @@ Execute as tarefas de validação e verificação de integridade:
 - **Testes Unitários:** 498 anotações `@Test` no código-fonte gerando **505 execuções** registradas no relatório JUnit XML (0 falhas, 0 erros). A contagem superior no executor decorre da avaliação de regras dinâmicas de arquitetura via ArchUnit (`DomainRulesArchitectureTest`). Verificação: `python tools/checks/count_tests.py`.
 - **Android Lint (Baseline):** 939 issues catalogadas em `app/lint-baseline.xml` com **0 erros bloqueantes** e paridade completa de internacionalização (`MissingTranslation`: 0). Principais categorias: `HardcodedText` (286), `UnsafeOptInUsageError` (180), `UnusedResources` (178), `SetTextI18n` (102), `NewApi` (20). Verificação: `python tools/checks/count_lint_categories.py`.
 - **Ferramentas de Verificação Contínua (`tools/checks/`):**
-  - `check_strings.py`: Validação de paridade estrita de strings (387 chaves em `values` e `values-pt` + 3 técnicas em `motion_spec.xml`).
+  - `check_strings.py`: Validação de paridade estrita de strings (390 tags `<string>` no total em `values/strings.xml`, sendo 387 traduzíveis validadas contra `values-pt/strings.xml` e 3 não-traduzíveis técnicas marcadas com `translatable="false"`).
   - `check_contrast.py`: Validação de conformidade WCAG AAA/AA para todas as paletas de cores.
   - `check_layout_colors.py` & `check_typography.py`: Auditoria de uso de tokens semânticos e tipografia.
   - `count_tests.py` & `count_lint_categories.py`: Auditoria automatizada de testes e baseline do Lint.
