@@ -1,15 +1,19 @@
 package zechs.drive.stream.data.repository
 
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import zechs.drive.stream.data.local.WatchListDao
 import zechs.drive.stream.data.model.WatchList
 import zechs.drive.stream.utils.ProfileManager
+import zechs.drive.stream.utils.TvWatchNextManager
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class WatchListRepository @Inject constructor(
     private val watchListDao: WatchListDao,
-    private val profileManager: ProfileManager
+    private val profileManager: ProfileManager,
+    @ApplicationContext private val context: Context? = null
 ) {
 
     private fun currentProfileId(): String = profileManager.getActiveProfile().id
@@ -23,7 +27,15 @@ class WatchListRepository @Inject constructor(
         } else {
             watchList
         }
-        return watchListDao.upsertWatch(watchWithProfile)
+        val rowId = watchListDao.upsertWatch(watchWithProfile)
+        context?.let { ctx ->
+            if (watchWithProfile.hasFinished()) {
+                TvWatchNextManager.removeWatchNext(ctx, watchWithProfile.videoId)
+            } else {
+                TvWatchNextManager.updateWatchNext(ctx, watchWithProfile)
+            }
+        }
+        return rowId
     }
 
     suspend fun getWatch(
@@ -65,12 +77,22 @@ class WatchListRepository @Inject constructor(
 
     suspend fun deleteWatch(
         watch: WatchList
-    ) = watchListDao.deleteWatch(watch)
+    ) {
+        context?.let { ctx ->
+            TvWatchNextManager.removeWatchNext(ctx, watch.videoId)
+        }
+        watchListDao.deleteWatch(watch)
+    }
 
     suspend fun deleteWatchByVideoId(
         videoId: String,
         profileId: String = currentProfileId()
-    ) = watchListDao.deleteWatchByVideoId(videoId, profileId)
+    ) {
+        context?.let { ctx ->
+            TvWatchNextManager.removeWatchNext(ctx, videoId)
+        }
+        watchListDao.deleteWatchByVideoId(videoId, profileId)
+    }
 
     suspend fun getAllWatches(
         profileId: String = currentProfileId()

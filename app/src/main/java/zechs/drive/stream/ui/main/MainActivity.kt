@@ -60,6 +60,7 @@ import zechs.drive.stream.utils.AppUpdateManager
 import zechs.drive.stream.utils.MediaImageLoader
 import zechs.drive.stream.utils.ProfileManager
 import zechs.drive.stream.utils.SessionManager
+import zechs.drive.stream.ui.player.PlayerLauncher
 import zechs.drive.stream.utils.ext.navigateSafe
 import zechs.drive.stream.utils.state.Resource
 import zechs.drive.stream.utils.util.Converter
@@ -171,6 +172,33 @@ class MainActivity : AppCompatActivity() {
         redirectOnLogin()
 
         setupVinheta(savedInstanceState)
+        handlePlaybackDeepLink(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handlePlaybackDeepLink(intent)
+    }
+
+    private fun handlePlaybackDeepLink(intent: Intent?) {
+        if (intent == null) return
+        val fileId = intent.getStringExtra(PlayerLauncher.EXTRA_FILE_ID)
+            ?: intent.data?.takeIf { it.scheme == "makimono" && it.host == "watch" }?.lastPathSegment
+            ?: return
+
+        val title = intent.getStringExtra(PlayerLauncher.EXTRA_TITLE) ?: ""
+        val isMovie = intent.getBooleanExtra(PlayerLauncher.EXTRA_IS_MOVIE, false)
+
+        AppLog.d(TAG, "Handling deep link playback from Android TV Watch Next: fileId=$fileId, title=$title, isMovie=$isMovie")
+        lifecycleScope.launch {
+            PlayerLauncher.launch(
+                context = this@MainActivity,
+                fileId = fileId,
+                title = title,
+                isMovie = isMovie
+            )
+        }
     }
 
     private fun themeObserver() {

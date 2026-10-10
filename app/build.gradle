@@ -261,6 +261,9 @@ dependencies {
     // QR Code
     implementation "com.google.zxing:core:3.5.3"
 
+    // Android TV Provider (Watch Next / Platform Channels)
+    implementation "androidx.tvprovider:tvprovider:1.0.0"
+
     testImplementation "junit:junit:4.13.2"
     testImplementation "io.mockk:mockk:1.13.11"
     testImplementation "app.cash.turbine:turbine:1.1.0"
