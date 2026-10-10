@@ -81,6 +81,53 @@ Resultados [F]:
 
 ---
 
+## 2.3 Medições em Android TV AVD (MakimonoAndroidTV1080p)
+
+Dispositivo: **MakimonoAndroidTV1080p (emulator-5554)**  
+Sistema Operacional: **Android 16 (API 36)**  
+Resolução Física: `1920 × 1080` (320 dpi - xhdpi)  
+Número de iterações: **5 execuções consecutivas** por modalidade.
+
+### Cold Startup (TTID — Inicialização a Frio)
+Comando:
+```bash
+adb -s emulator-5554 shell am start -W -S -n zechs.drive.stream.visualreview/zechs.drive.stream.ui.main.MainActivity
+```
+
+Resultados [F]:
+- **Execução 1:** 6578 ms (WaitTime: 6584 ms)
+- **Execução 2:** 6486 ms (WaitTime: 6498 ms)
+- **Execução 3:** 7323 ms (WaitTime: 7337 ms)
+- **Execução 4:** 6764 ms (WaitTime: 6808 ms)
+- **Execução 5:** 7094 ms (WaitTime: 7098 ms)
+
+**Estatísticas:**
+- **Mínimo:** `6486 ms`
+- **Máximo:** `7323 ms`
+- **Mediana:** `6764.0 ms`
+- **Média:** `6849.0 ms`
+
+### Warm Startup (Inicialização a Quente)
+Comando:
+```bash
+adb -s emulator-5554 shell am start -W -n zechs.drive.stream.visualreview/zechs.drive.stream.ui.main.MainActivity
+```
+
+Resultados [F] (WaitTime após retorno à Home):
+- **Execução 1:** 48 ms
+- **Execução 2:** 33 ms
+- **Execução 3:** 28 ms
+- **Execução 4:** 28 ms
+- **Execução 5:** 26 ms
+
+**Estatísticas:**
+- **Mínimo:** `26 ms`
+- **Máximo:** `48 ms`
+- **Mediana:** `28.0 ms`
+- **Média:** `32.6 ms`
+
+---
+
 ## 3. Cobertura de Código Medida (JaCoCo)
 
 Configuração integrada ao build Gradle:
