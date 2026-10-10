@@ -576,192 +576,22 @@
             column="17"/>
     </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 23 (current min is 21): `android.view.Display#getSupportedModes`"
-        errorLine1="        val supportedModes = display.supportedModes ?: return null"
-        errorLine2="                                     ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/zechs/drive/stream/utils/AutoFrameRatePolicy.kt"
-            line="60"
-            column="38"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 23 (current min is 21): `android.view.Display#getMode`"
-        errorLine1="        val currentMode = display.mode"
-        errorLine2="                                  ~~~~">
-        <location
-            file="src/main/java/zechs/drive/stream/utils/AutoFrameRatePolicy.kt"
-            line="63"
-            column="35"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 23 (current min is 21): `android.view.Display.Mode#getPhysicalWidth`"
-        errorLine1="        val targetWidth = currentMode?.physicalWidth ?: 1920"
-        errorLine2="                                       ~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/zechs/drive/stream/utils/AutoFrameRatePolicy.kt"
-            line="64"
-            column="40"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 23 (current min is 21): `android.view.Display.Mode#getPhysicalHeight`"
-        errorLine1="        val targetHeight = currentMode?.physicalHeight ?: 1080"
-        errorLine2="                                        ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/zechs/drive/stream/utils/AutoFrameRatePolicy.kt"
-            line="65"
-            column="41"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 23 (current min is 21): `android.view.Display.Mode#getPhysicalHeight`"
-        errorLine1="            it.physicalWidth == targetWidth &amp;&amp; it.physicalHeight == targetHeight"
-        errorLine2="                                                  ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/zechs/drive/stream/utils/AutoFrameRatePolicy.kt"
-            line="69"
-            column="51"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 23 (current min is 21): `android.view.Display.Mode#getPhysicalWidth`"
-        errorLine1="            it.physicalWidth == targetWidth &amp;&amp; it.physicalHeight == targetHeight"
-        errorLine2="               ~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/zechs/drive/stream/utils/AutoFrameRatePolicy.kt"
-            line="69"
-            column="16"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 23 (current min is 21): `android.view.Display.Mode#getRefreshRate`"
-        errorLine1="            val rate = mode.refreshRate"
-        errorLine2="                            ~~~~~~~~~~~">
-        <location
-            file="src/main/java/zechs/drive/stream/utils/AutoFrameRatePolicy.kt"
-            line="78"
-            column="29"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 23 (current min is 21): `android.view.Display.Mode#getModeId`"
-        errorLine1="                modeId = it.modeId,"
-        errorLine2="                            ~~~~~~">
-        <location
-            file="src/main/java/zechs/drive/stream/utils/AutoFrameRatePolicy.kt"
-            line="98"
-            column="29"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 23 (current min is 21): `android.view.Display.Mode#getRefreshRate`"
-        errorLine1="                refreshRate = it.refreshRate,"
-        errorLine2="                                 ~~~~~~~~~~~">
-        <location
-            file="src/main/java/zechs/drive/stream/utils/AutoFrameRatePolicy.kt"
-            line="99"
-            column="34"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 23 (current min is 21): `android.view.Display.Mode#getPhysicalWidth`"
-        errorLine1="                width = it.physicalWidth,"
-        errorLine2="                           ~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/zechs/drive/stream/utils/AutoFrameRatePolicy.kt"
-            line="100"
-            column="28"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 23 (current min is 21): `android.view.Display.Mode#getPhysicalHeight`"
-        errorLine1="                height = it.physicalHeight"
-        errorLine2="                            ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/zechs/drive/stream/utils/AutoFrameRatePolicy.kt"
-            line="101"
-            column="29"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 31 (current min is 21): `android.view.Surface#setFrameRate`"
-        errorLine1="            surface.setFrameRate("
-        errorLine2="                    ~~~~~~~~~~~~">
-        <location
-            file="src/main/java/zechs/drive/stream/utils/AutoFrameRatePolicy.kt"
-            line="119"
-            column="21"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 34 (current min is 21): `android.view.Surface#clearFrameRate`"
-        errorLine1="            surface.clearFrameRate()"
-        errorLine2="                    ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/zechs/drive/stream/utils/AutoFrameRatePolicy.kt"
-            line="143"
-            column="21"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Field requires API level 23 (current min is 21): `android.view.WindowManager.LayoutParams#preferredDisplayModeId`"
-        errorLine1="            if (params.preferredDisplayModeId != modeMatch.modeId) {"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/zechs/drive/stream/utils/AutoFrameRatePolicy.kt"
-            line="165"
-            column="17"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Field requires API level 23 (current min is 21): `android.view.WindowManager.LayoutParams#preferredDisplayModeId`"
-        errorLine1="                params.preferredDisplayModeId = modeMatch.modeId"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/zechs/drive/stream/utils/AutoFrameRatePolicy.kt"
-            line="166"
-            column="17"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Field requires API level 23 (current min is 21): `android.view.WindowManager.LayoutParams#preferredDisplayModeId`"
-        errorLine1="            if (params.preferredDisplayModeId != 0) {"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/zechs/drive/stream/utils/AutoFrameRatePolicy.kt"
-            line="222"
-            column="17"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Field requires API level 23 (current min is 21): `android.view.WindowManager.LayoutParams#preferredDisplayModeId`"
-        errorLine1="                params.preferredDisplayModeId = 0"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/zechs/drive/stream/utils/AutoFrameRatePolicy.kt"
-            line="223"
-            column="17"/>
-    </issue>
 
     <issue
         id="NewApi"
