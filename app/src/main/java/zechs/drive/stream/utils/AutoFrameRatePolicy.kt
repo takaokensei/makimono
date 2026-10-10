@@ -51,13 +51,14 @@ object AutoFrameRatePolicy {
      * Finds the optimal display mode for a given media framerate.
      * Prioritizes exact matches, then integral multiples (e.g. 24fps on 120Hz = 5x).
      */
+    @android.annotation.SuppressLint("NewApi")
     fun findBestDisplayMode(
         display: Display?,
         targetFps: Double?,
         sdkInt: Int = Build.VERSION.SDK_INT
     ): ModeMatch? {
         if (display == null || targetFps == null || targetFps <= 0.0) return null
-        if (sdkInt < Build.VERSION_CODES.M || Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return null
+        if (sdkInt < Build.VERSION_CODES.M) return null
         return Api23Impl.findBestDisplayMode(display, targetFps)
     }
 
@@ -106,13 +107,14 @@ object AutoFrameRatePolicy {
     /**
      * Applies the matched display mode to the given Window.
      */
+    @android.annotation.SuppressLint("NewApi")
     fun applyRefreshRate(
         window: Window?,
         modeMatch: ModeMatch?,
         sdkInt: Int = Build.VERSION.SDK_INT
     ): Boolean {
         if (window == null || modeMatch == null) return false
-        if (sdkInt < Build.VERSION_CODES.M || Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return false
+        if (sdkInt < Build.VERSION_CODES.M) return false
 
         return try {
             Api23Impl.applyRefreshRate(window, modeMatch)
@@ -156,12 +158,13 @@ object AutoFrameRatePolicy {
     /**
      * Resets the display mode back to default (0).
      */
+    @android.annotation.SuppressLint("NewApi")
     fun resetRefreshRate(
         window: Window?,
         sdkInt: Int = Build.VERSION.SDK_INT
     ): Boolean {
         if (window == null) return false
-        if (sdkInt < Build.VERSION_CODES.M || Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return false
+        if (sdkInt < Build.VERSION_CODES.M) return false
 
         return try {
             Api23Impl.resetRefreshRate(window)
