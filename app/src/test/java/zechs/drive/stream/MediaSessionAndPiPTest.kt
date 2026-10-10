@@ -45,4 +45,39 @@ class MediaSessionAndPiPTest {
         assertFalse(MakimonoPiPHelper.isValidAspectRatio(1920, 0))
         assertFalse(MakimonoPiPHelper.isValidAspectRatio(-100, -100))
     }
+
+    @Test
+    fun `media session callback contracts support play pause skip and seek`() {
+        var played = false
+        var paused = false
+        var skippedNext = false
+        var skippedPrev = false
+        var seekPosition = -1L
+        var stopped = false
+
+        val callback = object : zechs.drive.stream.utils.MakimonoMediaSessionHelper.Callback {
+            override fun onPlay() { played = true }
+            override fun onPause() { paused = true }
+            override fun onSkipToNext() { skippedNext = true }
+            override fun onSkipToPrevious() { skippedPrev = true }
+            override fun onSeekTo(positionMs: Long) { seekPosition = positionMs }
+            override fun onStop() { stopped = true }
+        }
+
+        callback.onPlay()
+        callback.onPause()
+        callback.onSkipToNext()
+        callback.onSkipToPrevious()
+        callback.onSeekTo(45000L)
+        callback.onFastForward()
+        callback.onRewind()
+        callback.onStop()
+
+        assertTrue(played)
+        assertTrue(paused)
+        assertTrue(skippedNext)
+        assertTrue(skippedPrev)
+        assertEquals(45000L, seekPosition)
+        assertTrue(stopped)
+    }
 }
