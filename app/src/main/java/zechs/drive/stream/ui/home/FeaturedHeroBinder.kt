@@ -2,6 +2,7 @@ package zechs.drive.stream.ui.home
 
 import android.content.Context
 import android.view.View
+import androidx.core.widget.TextViewCompat
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
@@ -40,7 +41,7 @@ internal class FeaturedHeroBinder(
                 featured.genres.take(3).forEach { genreName ->
                     val pill = android.widget.TextView(context).apply {
                         text = genreName
-                        setTextAppearance(R.style.TextAppearance_Makimono_TV_Caption)
+                        TextViewCompat.setTextAppearance(this, R.style.TextAppearance_Makimono_TV_Caption)
                         setBackgroundResource(R.drawable.glass_meta_pill_bg)
                         setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.obsidian_text_secondary))
                         val padH = (8 * density).toInt()

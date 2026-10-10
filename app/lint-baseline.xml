@@ -593,16 +593,6 @@
 
 
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 23 (current min is 21): `android.widget.TextView#setTextAppearance`"
-        errorLine1="                        setTextAppearance(R.style.TextAppearance_Makimono_TV_Caption)"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/zechs/drive/stream/ui/home/FeaturedHeroBinder.kt"
-            line="43"
-            column="25"/>
-    </issue>
 
     <issue
         id="NewApi"
