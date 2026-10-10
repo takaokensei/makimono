@@ -22,19 +22,19 @@
 
 ## 2. Matriz de Evidência e Rubrica de Nota (Seção 13 do Plano v2)
 
-Conforme as diretrizes da Seção 13, cada área foi reavaliada com base estrita em **evidências novas e reproduzíveis [F]**:
+Conforme as diretrizes estritas da Seção 13, cada área foi recalculada distinguindo rigorosamente **evidência de código/build [F]** de **evidência em hardware de TV real**:
 
-| Área | Baseline Inicial (Fase 0) | Nota Final (Fase 7) | Variação | Evidência Comprovada |
+| Área | Baseline Inicial (Fase 0) | Nota Realista (Fase 7) | Variação | Evidência Comprovada e Limitações |
 |---|---|---|---|---|
-| **Arquitetura** | 6.5/10 | **8.5/10** | +2.0 | Camada de domínio puro isolada de Android (`DomainRulesArchitectureTest`); desacoplamento dos motores de mídia via `PlayerEngine`, `PlaybackSession` e `ProgressRecorder`; 3 maiores telas decompostas abaixo de 600 linhas (`HomeFragment` 551L, `SettingsFragment` 487L, `FilesFragment` 525L). |
-| **Segurança (Uso Pessoal)** | 6.0/10 | **8.5/10** | +2.5 | ADR-003 formalizado; fixtures de teste auditadas sem segredos reais; substituição total de `android.util.Log` direto por `AppLog` com filtro e redação automática de tokens. |
-| **Android TV e Navegação** | 6.5/10 | **8.5/10** | +2.0 | TV navigation rail vertical de 80dp sob D-pad; memória e clamp de foco em estantes horizontais; distinção canônica de Filme vs Série; integração com o canal do sistema "Watch Next" e deep link direto; suíte `TvFocusChecklistTest` com 11 cenários passando. |
-| **Desempenho e Reprodução** | 7.0/10 | **8.5/10** | +1.5 | `DisplayModeController` moderno utilizando `Surface.setFrameRate` (Android 11+) e compatibilidade histórica; benchmark e perf-baseline documentados em `docs/qa/perf-baseline.md`. |
-| **Qualidade de Código** | 6.5/10 | **8.5/10** | +2.0 | Baseline do Lint reduzida de 1.038 para 940 ocorrências (-98 issues); 100% das violações de `MissingTranslation` zeradas; 480 testes unitários automatizados com 100% de aprovação (0 falhas). |
-| **Build e CI** | 7.0/10 | **8.5/10** | +1.5 | Todas as Actions do GitHub fixadas por SHA canônico de 40 dígitos; pipeline compatível com Linux e Windows; release automatizado gerando 10 assets multi-ABI com checksums SHA-256. |
-| **Design e UX** | 6.5/10 | **8.5/10** | +2.0 | Tema canônico Obsidian documentado em `DESIGN.md`; 451 usos de cores legadas `layout_literal_*` convertidos em tokens semânticos; conformidade WCAG de contraste verificada via script; 100% de paridade de strings em pt-BR (387 chaves). |
-| **Documentação** | 6.5/10 | **9.0/10** | +2.5 | Estrutura canônica consolidada em `docs/` (`architecture/`, `design/`, `qa/`, `releases/`); 8 relatórios detalhados de conclusão de fases (Fases 0 a 7); rastreadores e ADRs atualizados. |
-| **Média Ponderada** | **6.6/10** | **8.6/10** | **+2.0** | **Produto elevado ao padrão comercial premium com evidências empíricas reproduzíveis em todas as dimensões.** |
+| **Arquitetura** | 5.0/10 | **5.5/10** | +0.5 | Camada de domínio puro isolada (`DomainRulesArchitectureTest`) e 3 telas grandes decompostas (< 600 linhas). *Limitação:* `PlayerActivity` e `MPVActivity` continuam com ~3.300 e ~2.800 linhas, mantendo dois motores paralelos na UI. |
+| **Segurança (Uso Pessoal)** | 3.5/10 | **4.0/10** | +0.5 | ADR-003 formalizado, fixtures sanitizadas e 100% dos logs migrados para `AppLog` com redação de tokens. *Limitação:* credenciais embutidas no BuildConfig mantidas por decisão de app privado. |
+| **Android TV e Navegação** | 6.5/10 | **7.0/10** | +0.5 | Navigation rail vertical de 80dp, memória de foco em estantes, modo Filme vs Série e integração com canal Watch Next (`TvWatchNextManager`). *Limitação:* `TvFocusChecklistTest` valida políticas na JVM; teste em TV física com UiAutomator ainda pendente. |
+| **Desempenho e Reprodução** | 6.0/10 | **6.0/10** | 0.0 | `DisplayModeController` modernizado (`Surface.setFrameRate`). *Limitação:* sem medição com Macrobenchmark rodando em hardware nesta fase. |
+| **Qualidade de Código** | 6.0/10 | **6.5/10** | +0.5 | Baseline do Lint reduzida de 1.038 para 940 (-98 issues), categoria `MissingTranslation` zerada, zero `android.util.Log` direto e 481 execuções de testes unitários passando. |
+| **Build e CI** | 6.0/10 | **6.5/10** | +0.5 | Actions fixadas por SHA canônico, CI multi-SO e release automatizado multi-ABI com checksums SHA-256. *Limitação:* branch ainda não integrada na `main`. |
+| **Design e UX** | 6.5/10 | **7.0/10** | +0.5 | Tema Obsidian formalizado em `DESIGN.md`, 451 usos de `layout_literal_*` eliminados em favor de tokens semânticos, 100% de paridade de texto pt-BR (387 strings em `strings.xml`, 390 recursos totais) e contraste WCAG validado. |
+| **Documentação** | 3.0/10 | **4.5/10** | +1.5 | Documentação canônica consolidada em `docs/` (`architecture/`, `design/`, `qa/`, `releases/`) e relatórios de conclusão de todas as fases. |
+| **Média Realista** | **5.3/10** | **5.9/10** | **+0.6** | **Avanço sólido e mensurável em código, design e build. A elevação para 7+ em TV e desempenho depende de validação em aparelho físico.** |
 
 ---
 
