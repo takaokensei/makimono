@@ -594,27 +594,7 @@
 
 
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 29 (current min is 21): `android.graphics.drawable.StateListDrawable#getStateCount`"
-        errorLine1="            stateSpecs = (0 until selector.stateCount).map(selector::getStateSet),"
-        errorLine2="                                           ~~~~~~~~~~">
-        <location
-            file="src/main/java/zechs/drive/stream/utils/TvFocusRing.kt"
-            line="155"
-            column="44"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Method reference requires API level 29 (current min is 21): `android.graphics.drawable.StateListDrawable::getStateSet`"
-        errorLine1="            stateSpecs = (0 until selector.stateCount).map(selector::getStateSet),"
-        errorLine2="                                                           ~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/zechs/drive/stream/utils/TvFocusRing.kt"
-            line="155"
-            column="60"/>
-    </issue>
 
     <issue
         id="UnusedAttribute"

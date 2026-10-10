@@ -151,10 +151,19 @@ object TvFocusRing {
 
     private fun hasFocusedBackground(drawable: Drawable?): Boolean {
         val selector = drawable as? StateListDrawable ?: return false
-        return FocusSelectorPolicy.hasFocusedState(
-            stateSpecs = (0 until selector.stateCount).map(selector::getStateSet),
-            focusedStateAttribute = android.R.attr.state_focused
-        )
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return false
+        return Api29Impl.hasFocusedState(selector)
+    }
+
+    @androidx.annotation.RequiresApi(android.os.Build.VERSION_CODES.Q)
+    private object Api29Impl {
+        @androidx.annotation.DoNotInline
+        fun hasFocusedState(selector: StateListDrawable): Boolean {
+            return FocusSelectorPolicy.hasFocusedState(
+                stateSpecs = (0 until selector.stateCount).map(selector::getStateSet),
+                focusedStateAttribute = android.R.attr.state_focused
+            )
+        }
     }
 
     private fun android.content.Context.resolveThemeColor(attribute: Int): Int {
