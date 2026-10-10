@@ -2,6 +2,13 @@
 
 Histórico consolidado de lançamentos e versões do Makimono. As notas detalhadas de cada versão encontram-se em [`docs/releases/`](docs/releases/).
 
+## [v1.6.5.0] — 2026-10-09
+- **Android TV Watch Next Channel:** Integração completa do canal do sistema "Watch Next" via `androidx.tvprovider`, sincronização automática em `WatchListRepository` e deep links `makimono://watch/{videoId}`.
+- **Design System Obsidian:** Padronização canônica em `DESIGN.md`, conversão de 451 cores legadas em tokens semânticos e conformidade total com contraste WCAG.
+- **Paridade de Tradução:** 85 chaves adicionadas a `values-pt/strings.xml` atingindo 100% de paridade (387 strings) guardada por script de CI.
+- **Higiene de Logs e Lint:** 100% de `android.util.Log` direto substituído por `AppLog` (com redação de tokens), redução de 98 issues de lint com categoria `MissingTranslation` zerada.
+- **Qualidade & Testes:** 480 testes unitários passando (100% sucesso, 0 falhas).
+
 ## [v1.6.4.9] — 2026-10-09
 - **Arquitetura de Domínio:** Criação do módulo `domain/` puro e casos de uso canônicos com regras ArchUnit.
 - **Motor de Reprodução:** Contrato comum `PlayerEngine`, `EngineSelector` inteligente, `PlaybackSession`, `ProgressRecorder` atômico e `SkipController`.
