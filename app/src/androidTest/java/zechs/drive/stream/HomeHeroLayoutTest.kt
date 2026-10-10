@@ -26,7 +26,7 @@ class HomeHeroLayoutTest {
             val hero = root.findViewById<ViewGroup>(R.id.featuredHeroContainer)
             hero.visibility = View.VISIBLE
             root.findViewById<TextView>(R.id.tvFeaturedTitle).text = "Sousou no Frieren: Beyond Journey's End"
-            root.findViewById<TextView>(R.id.tvFeaturedJapaneseTitle).text = "A long native title for this series"
+            root.findViewById<TextView>(R.id.tvFeaturedOverline)?.text = "A long native title for this series"
             root.findViewById<TextView>(R.id.tvFeaturedSynopsis).text = "A complete synopsis with enough text to fill all three lines. ".repeat(8)
             root.findViewById<LinearLayout>(R.id.layoutFeaturedGenres).addView(TextView(context).apply {
                 text = "Fantasy   Adventure   Drama"

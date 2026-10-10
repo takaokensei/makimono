@@ -70,7 +70,12 @@ class ProfileMigrationTest {
             db.version = 6
         }
         fun open() = Room.databaseBuilder(context, WatchListDatabase::class.java, name)
-            .addMigrations(WatchListDatabase.MIGRATION_6_7).build()
+            .addMigrations(
+                WatchListDatabase.MIGRATION_6_7,
+                WatchListDatabase.MIGRATION_7_8,
+                WatchListDatabase.MIGRATION_8_9,
+                WatchListDatabase.MIGRATION_9_10
+            ).build()
         val profile = UserProfile("legacy-id", "Perfil", "avatar_anime", true, "drive-root", "Animes", 42,
             "https://example.org/avatar.jpg", "https://example.org/banner.jpg", true, true)
         try {

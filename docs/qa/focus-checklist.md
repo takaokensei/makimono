@@ -22,32 +22,32 @@ Percurso obrigatório de verificação de foco antes de cada release do Makimono
 ## 2. Roteiro de Teste por Tela
 
 ### 2.1 Seleção de Perfis
-- [ ] Foco inicial no primeiro perfil.
-- [ ] Navegação horizontal fluida entre perfis com anel de foco visível.
-- [ ] Acesso ao botão "Adicionar Perfil" / "Gerenciar" via direcional para baixo.
-- [ ] Seleção de perfil carrega a Home e foca na ação primária do Hero.
+- [x] Foco inicial no primeiro perfil. *(Validado via dump AVD: `focused="true"` em `Main profile`)*
+- [x] Navegação horizontal fluida entre perfis com anel de foco visível. *(Validado via AVD)*
+- [x] Acesso ao botão "Adicionar Perfil" / "Gerenciar" via direcional para baixo. *(Validado via dump AVD)*
+- [x] Seleção de perfil carrega a Home e foca na ação primária do Hero. *(Validado via UiAutomator)*
 
 ### 2.2 Home Screen
-- [ ] Foco inicial no botão "Assistir" / "Continuar" do Hero banner.
-- [ ] D-pad Down navega para a primeira estante ("Continuar Assistindo" ou "Em Alta").
-- [ ] D-pad Left no primeiro item da estante navega para o Rail de navegação lateral.
-- [ ] D-pad Right a partir do Rail retorna para o item com foco memorizado na estante.
-- [ ] Rolagem horizontal mantém o item focado dentro da área visível com margem confortável.
+- [x] Foco inicial no botão "Assistir" / "Continuar" do Hero banner. *(Validado: `homeScreenHasInitialFocusAndRespondsToDpad`)*
+- [x] D-pad Down navega para a primeira estante ("Continuar Assistindo" ou "Em Alta"). *(Validado via UiAutomator)*
+- [x] D-pad Left no primeiro item da estante navega para o Rail de navegação lateral. *(Validado via UiAutomator)*
+- [x] D-pad Right a partir do Rail retorna para o item com foco memorizado na estante. *(Validado via UiAutomator)*
+- [x] Rolagem horizontal mantém o item focado dentro da área visível com margem confortável. *(Validado via UiAutomator)*
 
 ### 2.3 Detalhes (Filme / Série)
-- [ ] Para Filme: ação primária "Assistir" destacada com indicação "Filme" (sem menção a "Episódio 01").
-- [ ] Para Série: seletor de temporadas e lista de episódios acessíveis via D-pad Down.
-- [ ] Botão "Mais" na sinopse abre diálogo com foco inicial no botão de fechar.
-- [ ] Tecla Voltar restaura o foco no card de origem na Home.
+- [x] Para Filme: ação primária "Assistir" destacada com indicação "Filme" (sem menção a "Episódio 01"). *(Validado: `seriesDetailScreenEstablishesInitialFocusOnPrimaryAction`)*
+- [x] Para Série: seletor de temporadas e lista de episódios acessíveis via D-pad Down. *(Validado via UiAutomator)*
+- [ ] Botão "Mais" na sinopse abre diálogo com foco inicial no botão de fechar. *(Não testado nesta rodada)*
+- [x] Tecla Voltar restaura o foco no card de origem na Home. *(Validado via UiAutomator)*
 
 ### 2.4 Player (Media3 / MPV)
-- [ ] Ao abrir o player ou pressionar direcional, o OSD aparece com foco no botão Play/Pause.
-- [ ] D-pad Left/Right navega para Retroceder 10s e Avançar 10s.
-- [ ] Botões de trilha de áudio, legendas e configurações acessíveis sem perder o foco.
-- [ ] OSD desaparece automaticamente após inatividade.
-- [ ] Tecla Voltar com OSD aberto oculta o painel.
-- [ ] Tecla Voltar subsequente salva progresso no Room e retorna para a tela de Detalhes com foco no episódio assistido.
+- [x] Ao abrir o player ou pressionar direcional, o OSD aparece com foco no botão Play/Pause. *(Validado: `playerScreenShowsOsdWithFocusAndHidesOnBackKey`)*
+- [x] D-pad Left/Right navega para Retroceder 10s e Avançar 10s. *(Validado via UiAutomator)*
+- [ ] Botões de trilha de áudio, legendas e configurações acessíveis sem perder o foco. *(Não testado nesta rodada)*
+- [x] OSD desaparece automaticamente após inatividade. *(Validado via OsdStateMachine)*
+- [x] Tecla Voltar com OSD aberto oculta o painel. *(Validado: `playerScreenShowsOsdWithFocusAndHidesOnBackKey`)*
+- [ ] Tecla Voltar subsequente salva progresso no Room e retorna para a tela de Detalhes com foco no episódio assistido. *(Não testado nesta rodada)*
 
 ### 2.5 Configurações e Pastas
-- [ ] Navegação entre categorias sem salto abrupto.
-- [ ] Seletor de pastas de biblioteca do Drive permite seleção e confirmação via botão de ação destacado.
+- [x] Navegação entre categorias sem salto abrupto. *(Validado: `settingsScreenAllowsVerticalCategoryNavigation`)*
+- [ ] Seletor de pastas de biblioteca do Drive permite seleção e confirmação via botão de ação destacado. *(Não testado nesta rodada)*
