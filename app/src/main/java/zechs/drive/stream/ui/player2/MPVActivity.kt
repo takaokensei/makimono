@@ -297,7 +297,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                     try {
                         val timeFormat = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
                         controller.root.findViewById<TextView>(R.id.tvPlayerClock)?.text = timeFormat.format(java.util.Date())
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) {
+                        AppLog.d(TAG, "Failed updating clock on OSD show: ${e.message}")
+                    }
                 }
             },
             isReviewMode = intent.getStringExtra("reviewMediaUri") != null,

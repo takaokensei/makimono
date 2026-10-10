@@ -418,7 +418,9 @@ class MalAuthDialog(
                     result[key] = json.optString(key, "")
                 }
                 return result
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                AppLog.d(TAG, "Response is not valid JSON, falling back to URL encoded: ${e.message}")
+            }
         }
         val pairs = body.split("&")
         for (pair in pairs) {
@@ -707,7 +709,9 @@ class MalAuthDialog(
         serverJob?.cancel()
         try {
             serverSocket?.close()
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            AppLog.d(TAG, "Failed closing local auth serverSocket: ${e.message}")
+        }
         binding.webViewAuth.destroy()
         _binding = null
     }
