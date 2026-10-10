@@ -1539,7 +1539,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
     private fun updatePlaybackStatus(paused: Boolean) {
         TransitionManager.beginDelayedTransition(
             controller.mainControls,
-            AutoTransition().apply { duration = 250L }
+            AutoTransition().apply { duration = resources.getInteger(R.integer.motion_spec_normal).toLong() }
         )
 
         controller.btnPlayPause.icon = ContextCompat.getDrawable(
@@ -2143,7 +2143,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         if (!reduceMotionEnabled) {
             TransitionManager.beginDelayedTransition(
                 controller.root,
-                AutoTransition().apply { duration = 150L }
+                AutoTransition().apply { duration = resources.getInteger(R.integer.motion_osd_hide).toLong() }
             )
         }
         if (controlsLocked) {

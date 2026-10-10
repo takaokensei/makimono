@@ -118,14 +118,10 @@ class TvFocusNavigationUiAutomatorTest {
     fun playerScreenShowsOsdWithFocusAndHidesOnBackKey() {
         launchReviewScreen("player_exo_activity")
 
-        // Wait for player to settle
-        Thread.sleep(1000L)
-
-        // Press DPAD Center / OK to ensure OSD is active
+        // Wait for player to settle and ensure OSD is active
+        device.wait(Until.hasObject(By.pkg(targetPackage)), LAUNCH_TIMEOUT_MS)
         device.pressDPadCenter()
-        Thread.sleep(ANIMATION_SETTLE_MS)
-
-        val focusedControl = device.findObject(By.focused(true))
+        val focusedControl = device.wait(Until.findObject(By.focused(true)), LAUNCH_TIMEOUT_MS)
         assertNotNull("Player OSD must present clear focus on primary control (e.g. Play/Pause)", focusedControl)
 
         // Press Back key: should consume OSD dismissal without closing player

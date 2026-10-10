@@ -9,7 +9,7 @@ Documento canônico especificando a matriz de validação de hardware, resoluç�
 | Dispositivo | Identificador | Tipo | Resolução Física (`wm size`) | Densidade (`wm density`) | Versão Android | Status de Teste |
 |---|---|---|---|---|---|---|
 | **Motorola moto g34 5G** | `0086442783` | Físico (USB) | 720 × 1600 px | 280 dpi | Android 15 (API 35) | APK instalado (`v1.6.5.0-arm64-v8a`), OSD validado |
-| **MakimonoAndroidTV1080p** | `emulator-5554` | AVD Android TV | 1920 × 1080 px | 320 dpi (xhdpi) | Android 16 (API 36) | Validado via UiAutomator (11/11 testes aprovados) |
+| **MakimonoAndroidTV1080p** | `emulator-5554` | AVD Android TV | 1920 × 1080 px | 320 dpi (xhdpi) | Android 16 (API 36) | Suíte UiAutomator (`TvFocusNavigationUiAutomatorTest`, 4/4) e suíte instrumentada total (11/11) aprovadas |
 
 ---
 

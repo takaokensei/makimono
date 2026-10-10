@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.animation.LinearInterpolator
 import androidx.fragment.app.Fragment
 import com.google.android.material.transition.MaterialSharedAxis
+import zechs.drive.stream.R
 
 abstract class BaseFragment : Fragment() {
 
@@ -25,7 +26,7 @@ abstract class BaseFragment : Fragment() {
             /* forward */ true
         ).apply {
             interpolator = LinearInterpolator()
-            duration = 300
+            duration = resources.getInteger(R.integer.motion_spec_gentle).toLong()
         }
 
         returnTransition = MaterialSharedAxis(
@@ -33,7 +34,7 @@ abstract class BaseFragment : Fragment() {
             /* forward */ false
         ).apply {
             interpolator = LinearInterpolator()
-            duration = 300
+            duration = resources.getInteger(R.integer.motion_spec_gentle).toLong()
         }
 
         exitTransition = MaterialSharedAxis(
@@ -41,7 +42,7 @@ abstract class BaseFragment : Fragment() {
             /* forward */ true
         ).apply {
             interpolator = LinearInterpolator()
-            duration = 250
+            duration = resources.getInteger(R.integer.motion_spec_normal).toLong()
         }
 
     }

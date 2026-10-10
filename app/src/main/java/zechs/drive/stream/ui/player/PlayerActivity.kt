@@ -513,7 +513,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             TransitionManager.beginDelayedTransition(
                 playerView, AutoTransition().apply {
                     interpolator = AccelerateInterpolator()
-                    duration = 250
+                    duration = resources.getInteger(R.integer.motion_spec_normal).toLong()
                 }
             )
             playerView.apply {
@@ -993,7 +993,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                 mainControlsRoot,
                 AutoTransition().apply {
                     interpolator = AccelerateInterpolator()
-                    duration = 150L
+                    duration = resources.getInteger(R.integer.motion_osd_hide).toLong()
                 }
             )
             btnPlayPause.icon = ContextCompat.getDrawable(
@@ -1461,7 +1461,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     private fun handleLockingControls() {
         if (!reduceMotionEnabled) {
             TransitionManager.beginDelayedTransition(
-                playerView, AutoTransition().apply { duration = 150L }
+                playerView, AutoTransition().apply { duration = resources.getInteger(R.integer.motion_osd_hide).toLong() }
             )
         }
         if (controlsLocked) {

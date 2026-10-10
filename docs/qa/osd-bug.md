@@ -58,18 +58,20 @@ Durante a reprodução de mídia em tela cheia, ao ocultar os controles do playe
    - Suporte a redução de movimento (`MotionPolicy.isReducedMotion()`): transição instantânea sem translação.
 
 4. **Eliminação de Literais de Movimento:**
-   - 100% das chamadas `.setDuration(...)` em `app/src/main/` migradas para os tokens semânticos de `motion_spec.xml` (`motion_osd_show`, `motion_osd_hide`, `motion_card`, `motion_pill_enter`, `motion_pill_exit`, `motion_focus`, `motion_crossfade`).
+   - 100% das durações de animação de view e transições de layout (`AutoTransition`, `MaterialSharedAxis`, `.setDuration(...)`) em `app/src/main/` migradas para os tokens semânticos de `motion_spec.xml` (`motion_osd_show`, `motion_osd_hide`, `motion_card`, `motion_pill_enter`, `motion_pill_exit`, `motion_focus`, `motion_crossfade`, `motion_spec_gentle`, `motion_spec_normal`). Zero durações literais remanescentes em código de animação.
 
 ---
 
-## 5. Evidência em Dispositivo Físico
+## 5. Evidência em Android TV (MakimonoAndroidTV1080p)
 
-- **Dispositivo:** Motorola moto g34 5G (`0086442783`), Android 15 (API 35).
-- **Logcat Verificado:**
+- **Dispositivo:** AVD Android TV (`emulator-5554`), Android 16 (API 36), 1920x1080, 320 dpi.
+- **Logcat Verificado no Emulador (`OsdController`):**
   ```text
-  10-10 01:20:21.425 D VisualReviewActivity: Opening local player fixture (1765856 bytes)
-  10-10 01:20:27.316 D OsdController: [OSD_CONTROLLER] show() called -> action=StartShow, state=SHOWING
-  10-10 01:20:57.585 D OsdController: [OSD_CONTROLLER] Inactivity timeout expired (30000ms) -> hiding
-  10-10 01:20:57.587 D OsdController: [OSD_CONTROLLER] hide() called -> action=StartHide, state=HIDING
+  10-10 21:44:30.237  5501  5501 D OsdController: [OSD_CONTROLLER] show() called -> action=StartShow, state=SHOWING
+  10-10 21:45:00.392  5501  5501 D OsdController: [OSD_CONTROLLER] Inactivity timeout expired (30000ms) -> hiding
+  10-10 21:45:00.393  5501  5501 D OsdController: [OSD_CONTROLLER] hide() called -> action=StartHide, state=HIDING
   ```
-- **Resultado:** Exatamente 1 pedido de ocultação, 1 transição de alpha decrescente em 150ms sem flashes residuais ou reaparecimento.
+- **Validação via UiAutomator (`TvFocusNavigationUiAutomatorTest#playerScreenShowsOsdWithFocusAndHidesOnBackKey`):**
+  - OSD exibe com foco ativo no controle primário (`btnPlayPause`).
+  - Tecla Back oculta o painel consumindo o evento sem fechar a `PlayerActivity`.
+  - Exatamente 1 pedido de exibição (`StartShow`) e 1 pedido de ocultação (`StartHide`), com 1 queda de alpha sem reentrada duplicada.
