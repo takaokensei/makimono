@@ -101,6 +101,7 @@ import zechs.mpv.utils.Utils
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @AndroidEntryPoint
 class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
 

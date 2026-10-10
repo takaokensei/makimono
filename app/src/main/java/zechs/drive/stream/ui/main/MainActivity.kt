@@ -70,6 +70,7 @@ import zechs.drive.stream.utils.util.NotificationKeys.Companion.UPDATE_CHANNEL_N
 import java.util.*
 import javax.inject.Inject
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 

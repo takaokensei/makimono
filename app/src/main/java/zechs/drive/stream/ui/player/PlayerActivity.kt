@@ -124,6 +124,7 @@ import javax.inject.Inject
 import kotlin.math.roundToInt
 
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @AndroidEntryPoint
 class PlayerActivity : AppCompatActivity(), PlayerModalHost {
 

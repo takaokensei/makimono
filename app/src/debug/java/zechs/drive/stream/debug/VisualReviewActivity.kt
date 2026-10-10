@@ -57,6 +57,7 @@ import dagger.hilt.components.SingletonComponent
 import java.io.File
 
 /** Renders production XML and adapters with explicit fixtures, without touching account or Room. */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @AndroidEntryPoint
 class VisualReviewActivity : AppCompatActivity(), zechs.drive.stream.ui.player.PlayerModalHost {
     private val poster = "https://cdn.myanimelist.net/images/anime/1015/138006l.jpg"
