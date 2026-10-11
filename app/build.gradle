@@ -70,8 +70,8 @@ android {
         applicationId "zechs.drive.stream"
         minSdk 21
         targetSdk 33
-        versionCode 62
-        versionName "1.6.5.0"
+        versionCode 66
+        versionName "1.6.5.3"
         archivesBaseName = "makimono-v${versionName}"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

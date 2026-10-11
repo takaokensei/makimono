@@ -33,9 +33,36 @@ data class LatestRelease(
 ) {
 
     fun isLatest(): Boolean {
-        val cleanTag = tagName.removePrefix("v").trim()
-        val currentVersion = BuildConfig.VERSION_NAME.removePrefix("v").trim()
-        return cleanTag == currentVersion
+        return isInstalledVersionAtLeast(tagName, BuildConfig.VERSION_NAME)
+    }
+
+    companion object {
+        fun isInstalledVersionAtLeast(remoteTag: String, installedVersion: String): Boolean {
+            val cleanRemote = remoteTag.removePrefix("v").trim()
+            val cleanInstalled = installedVersion.removePrefix("v").trim()
+            if (cleanRemote.equals(cleanInstalled, ignoreCase = true)) return true
+
+            fun parseParts(ver: String): List<Int> {
+                return ver.split(".", "-", "_")
+                    .mapNotNull { part ->
+                        val digits = part.takeWhile { it.isDigit() }
+                        if (digits.isNotEmpty()) digits.toIntOrNull() else null
+                    }
+            }
+
+            val remoteParts = parseParts(cleanRemote)
+            val installedParts = parseParts(cleanInstalled)
+            val maxLen = maxOf(remoteParts.size, installedParts.size)
+
+            for (i in 0 until maxLen) {
+                val r = remoteParts.getOrElse(i) { 0 }
+                val inst = installedParts.getOrElse(i) { 0 }
+                if (inst > r) return true
+                if (inst < r) return false
+            }
+
+            return true
+        }
     }
 
     /**
