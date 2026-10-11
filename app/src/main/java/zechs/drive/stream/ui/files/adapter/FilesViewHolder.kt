@@ -104,7 +104,13 @@ sealed class FilesViewHolder(
                     cardVideoThumb.visibility = View.GONE
                     iconContainer.visibility = View.VISIBLE
 
-                    if (item.isSubtitleFile) {
+                    if (item.source == zechs.drive.stream.data.model.MediaSource.LOCAL) {
+                        when {
+                            item.isSubtitleFile -> ivFileType.setImageResource(R.drawable.ic_subtitles_24)
+                            item.isVideoFile -> ivFileType.setImageResource(R.drawable.ic_movie_24)
+                            else -> ivFileType.setImageResource(R.drawable.ic_folder_24)
+                        }
+                    } else if (item.isSubtitleFile) {
                         ivFileType.setImageResource(R.drawable.ic_subtitles_24)
                     } else {
                         val iconLink = item.iconLink128 ?: R.drawable.ic_my_drive_24
@@ -310,11 +316,12 @@ sealed class FilesViewHolder(
                 tvGridTypeBadge.apply {
                     val badgeText = when {
                         isFolder -> null
+                        item.source == zechs.drive.stream.data.model.MediaSource.LOCAL -> "LOCAL"
                         ext.isNotEmpty() && ext.length in 2..4 -> ext
                         item.isSubtitleFile -> "LEGENDA"
                         else -> null
                     }
-                    isVisible = badgeText != null && resTag == null && codecTag == null
+                    isVisible = badgeText != null && (item.source == zechs.drive.stream.data.model.MediaSource.LOCAL || (resTag == null && codecTag == null))
                     text = badgeText.orEmpty()
                 }
 
