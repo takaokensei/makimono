@@ -694,12 +694,17 @@ class MainActivity : AppCompatActivity() {
                                     } else file.id
 
                                     val cached = existingMeta[targetId] ?: existingMeta[file.id]
-                                    if (cached != null && !cached.posterUrl.isNullOrBlank() && !cached.bannerUrl.isNullOrBlank()) {
+                                    val isComplete = cached != null &&
+                                        !cached.posterUrl.isNullOrBlank() &&
+                                        !cached.bannerUrl.isNullOrBlank() &&
+                                        !cached.synopsis.isNullOrBlank()
+
+                                    if (isComplete) {
                                         // Already cached in Room: ensure Glide memory and disk cache are warm
-                                        MediaImageLoader.preloadPoster(applicationContext, cached.posterUrl)
+                                        MediaImageLoader.preloadPoster(applicationContext, cached!!.posterUrl)
                                         MediaImageLoader.preloadBackdrop(applicationContext, cached.bannerUrl)
                                     } else {
-                                        // Missing poster or banner: resolve from AniList/TMDB
+                                        // Missing poster, banner, or synopsis: resolve from AniList/TMDB
                                         val meta = animePosterResolver.resolveMetadata(file.name)
                                         if (meta != null) {
                                             folderMetadataRepository.saveAnimeMetadata(targetId, file.name, meta)

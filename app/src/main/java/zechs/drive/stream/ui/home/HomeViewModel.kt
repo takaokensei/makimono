@@ -655,6 +655,7 @@ class HomeViewModel @Inject constructor(
                                 if (meta != null) {
                                     file.copy(
                                         posterUrl = meta.posterUrl ?: file.posterUrl,
+                                        description = meta.synopsis ?: file.description,
                                         isMovie = meta.isMovie
                                     )
                                 } else file
@@ -697,7 +698,7 @@ class HomeViewModel @Inject constructor(
                                     file.shortcutDetails.targetId
                                 } else file.id
                                 val meta = allMeta[targetId] ?: allMeta[file.id]
-                                (file.isFolder || file.isShortcutFolder) && (meta?.posterUrl.isNullOrBlank() || meta?.bannerUrl.isNullOrBlank())
+                                (file.isFolder || file.isShortcutFolder) && (meta?.posterUrl.isNullOrBlank() || meta?.bannerUrl.isNullOrBlank() || meta?.synopsis.isNullOrBlank())
                             }
 
                             unresolvedIndices.chunked(6).forEach { chunk ->
@@ -716,12 +717,16 @@ class HomeViewModel @Inject constructor(
                                                     folderName = file.name,
                                                     metadata = meta
                                                 )
-                                                Triple(index, poster, meta.isMovie)
+                                                ResolvedItemData(index, poster, meta.synopsis, meta.isMovie)
                                             } else null
                                         }
                                     }.awaitAll()
-                                }.filterNotNull().forEach { (index, poster, isMovie) ->
-                                    updatedList[index] = updatedList[index].copy(posterUrl = poster, isMovie = isMovie)
+                                }.filterNotNull().forEach { item ->
+                                    updatedList[item.index] = updatedList[item.index].copy(
+                                        posterUrl = item.poster,
+                                        description = item.synopsis ?: updatedList[item.index].description,
+                                        isMovie = item.isMovie
+                                    )
                                 }
                                 _animeLibrary.value = updatedList.toList()
                                 applyCurrentFilter()
@@ -1264,3 +1269,10 @@ class HomeViewModel @Inject constructor(
     }
 
 }
+
+private data class ResolvedItemData(
+    val index: Int,
+    val poster: String,
+    val synopsis: String?,
+    val isMovie: Boolean
+)
