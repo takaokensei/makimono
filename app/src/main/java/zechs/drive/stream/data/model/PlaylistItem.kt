@@ -7,5 +7,6 @@ import java.io.Serializable
 data class PlaylistItem(
     val fileId: String,
     val title: String,
-    val thumbnailLink: String? = null
+    val thumbnailLink: String? = null,
+    val localUri: String? = null
 ) : Serializable

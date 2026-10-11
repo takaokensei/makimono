@@ -19,6 +19,7 @@ import zechs.drive.stream.data.repository.TokenProvider
 import zechs.drive.stream.utils.AppLog
 import zechs.drive.stream.domain.library.EpisodeParser
 import zechs.drive.stream.utils.MatroskaChapterParser
+import zechs.drive.stream.utils.MediaUriResolver
 import zechs.drive.stream.utils.util.Constants.Companion.DRIVE_API
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -93,8 +94,9 @@ class BingeBufferManager @Inject constructor(
         val job = scope.launch(dispatcher) {
             try {
                 AppLog.d(TAG, "Starting predictive binge buffer pre-warm for: ${nextItem.title} ($targetFileId)")
-                val token = tokenProvider.get().validToken()
-                val streamUri = "$DRIVE_API/files/${targetFileId}?supportsAllDrives=True&alt=media"
+                val streamUri = MediaUriResolver.resolveStreamUri(targetFileId, nextItem.localUri)
+                val isLocal = MediaUriResolver.isLocalUri(streamUri)
+                val token = if (isLocal) null else tokenProvider.get().validToken()
 
                 // 1. Pre-warm HTTP connection & parse Matroska chapters from initial 1MB
                 val chapters = try {

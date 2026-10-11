@@ -19,7 +19,11 @@ data class DriveFile(
     val modifiedTime: String? = null,
     /** Optional user-authored Drive description; never inferred from a filename. */
     val description: String? = null,
-    val isMovie: Boolean = false
+    val isMovie: Boolean = false,
+    /** Where the bytes live; defaults to DRIVE so legacy call sites are unaffected. */
+    val source: MediaSource = MediaSource.DRIVE,
+    /** content:// or file:// URI; only set when [source] is LOCAL. */
+    val localUri: String? = null
 ) {
     val humanSize = size?.let { Converter.toHumanSize(it) }
 

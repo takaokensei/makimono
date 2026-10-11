@@ -109,6 +109,7 @@ import zechs.drive.stream.data.model.MalAnimeNode
 import zechs.drive.stream.data.repository.AniSkipRepository
 import zechs.drive.stream.data.repository.MalRepository
 import zechs.drive.stream.utils.MalSessionManager
+import zechs.drive.stream.utils.MediaUriResolver
 import zechs.drive.stream.utils.util.Constants.Companion.DRIVE_API
 import zechs.drive.stream.utils.util.Orientation
 import zechs.drive.stream.utils.util.getNextOrientation
@@ -251,6 +252,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
 
     // Playlist & Next Episode Auto-Play
     private var currentFileId: String = ""
+    private var currentLocalUri: String? = null
     private var currentTitle: String = ""
     private var currentThumbnailLink: String? = null
     private var playlist = mutableListOf<PlaylistItem>()
@@ -676,6 +678,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         }
 
         currentFileId = intent.getStringExtra("fileId") ?: ""
+        currentLocalUri = intent.getStringExtra(PlayerLauncher.EXTRA_LOCAL_URI)
         currentTitle = intent.getStringExtra("title") ?: ""
         currentThumbnailLink = intent.getStringExtra("thumbnailLink")
         val siblingFolderId = intent.getStringExtra(PlayerLauncher.EXTRA_SIBLING_FOLDER_ID)
@@ -832,6 +835,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         if (intent == null) return
         setIntent(intent)
         currentFileId = intent.getStringExtra("fileId") ?: ""
+        currentLocalUri = intent.getStringExtra(PlayerLauncher.EXTRA_LOCAL_URI)
         currentTitle = intent.getStringExtra("title") ?: ""
         currentThumbnailLink = intent.getStringExtra("thumbnailLink")
         playMedia()
@@ -2064,6 +2068,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         saveProgress()
 
         currentFileId = next.fileId
+        currentLocalUri = next.localUri
         currentTitle = next.title
         currentThumbnailLink = next.thumbnailLink
         nextEpisodeCanceled = false
@@ -2087,6 +2092,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         saveProgress()
 
         currentFileId = prev.fileId
+        currentLocalUri = prev.localUri
         currentTitle = prev.title
         currentThumbnailLink = prev.thumbnailLink
         nextEpisodeCanceled = false
@@ -2124,6 +2130,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         saveProgress()
 
         currentFileId = item.fileId
+        currentLocalUri = item.localUri
         currentTitle = item.title
         currentThumbnailLink = item.thumbnailLink
         nextEpisodeCanceled = false
@@ -2313,9 +2320,8 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     }
 
     private fun getStreamUrl(fileId: String): Uri {
-        val uri = Uri.parse(
-            "$DRIVE_API/files/${fileId}?supportsAllDrives=True&alt=media"
-        )
+        val streamUrl = MediaUriResolver.resolveStreamUri(fileId, currentLocalUri)
+        val uri = Uri.parse(streamUrl)
         AppLog.d(TAG, "STREAM_URL=$uri")
         return uri
     }

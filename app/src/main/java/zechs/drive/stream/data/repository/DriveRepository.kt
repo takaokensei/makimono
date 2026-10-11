@@ -13,6 +13,8 @@ import kotlinx.coroutines.delay
 import retrofit2.HttpException
 import java.io.IOException
 import java.net.SocketTimeoutException
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -20,7 +22,8 @@ import javax.inject.Singleton
 class DriveRepository @Inject constructor(
     private val driveApi: DriveApi,
     private val tokenApi: Lazy<TokenApi>,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    @ApplicationContext private val context: Context? = null
 ) {
 
     companion object {
@@ -617,6 +620,39 @@ class DriveRepository @Inject constructor(
             AppLog.d(TAG, "Subtitle already in cache: ${destFile.absolutePath}")
             return destFile
         }
+
+        // Se for legenda local, copiar diretamente do content/file stream para o cache de legendas
+        if (sub.source == MediaSource.LOCAL || !sub.uri.isNullOrBlank()) {
+            return try {
+                val uriString = sub.uri ?: sub.id
+                val inputStream = if (uriString.startsWith("content://") && context != null) {
+                    context.contentResolver.openInputStream(android.net.Uri.parse(uriString))
+                } else {
+                    val rawPath = uriString.removePrefix("file://")
+                    val localFile = java.io.File(rawPath)
+                    if (localFile.exists()) localFile.inputStream() else null
+                }
+
+                if (inputStream != null) {
+                    destFile.parentFile?.mkdirs()
+                    inputStream.use { input ->
+                        destFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    AppLog.d(TAG, "Local subtitle copied to cache (${destFile.length()} bytes): ${destFile.absolutePath}")
+                    destFile
+                } else {
+                    AppLog.w(TAG, "Could not open stream for local subtitle: $uriString")
+                    null
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                AppLog.e(TAG, "Exception reading local subtitle ${sub.name}", e)
+                null
+            }
+        }
+
         return try {
             executeWithTokenRetry { token ->
                 val response = driveApi.downloadFile("Bearer $token", sub.id)

@@ -10,7 +10,9 @@ data class SubtitleItem(
     val name: String,
     val ext: String = name.substringAfterLast(".", "ass").lowercase(),
     val languageLabel: String = parseLanguageLabel(name),
-    val languageCode: String = parseLanguageCode(name)
+    val languageCode: String = parseLanguageCode(name),
+    val source: MediaSource = MediaSource.DRIVE,
+    val uri: String? = null
 ) : Serializable {
 
     fun matchesVideo(videoTitle: String): Boolean {

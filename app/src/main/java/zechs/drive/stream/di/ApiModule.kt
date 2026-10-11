@@ -1,11 +1,13 @@
 package zechs.drive.stream.di
 
+import android.content.Context
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.Lazy
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -155,9 +157,10 @@ object ApiModule {
     fun provideDriveRepository(
         driveApi: DriveApi,
         tokenApi: Lazy<TokenApi>,
-        sessionManager: SessionManager
+        sessionManager: SessionManager,
+        @ApplicationContext appContext: Context
     ): DriveRepository {
-        return DriveRepository(driveApi, tokenApi, sessionManager)
+        return DriveRepository(driveApi, tokenApi, sessionManager, appContext)
     }
 
     @Provides

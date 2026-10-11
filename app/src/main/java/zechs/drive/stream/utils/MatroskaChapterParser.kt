@@ -66,6 +66,23 @@ object MatroskaChapterParser {
         }
 
     private fun fetchRange(streamUrl: String, accessToken: String?, startByte: Long, endByte: Long): ByteArray? {
+        if (streamUrl.startsWith("/") || streamUrl.startsWith("file://")) {
+            return try {
+                val file = java.io.File(streamUrl.removePrefix("file://"))
+                if (!file.exists()) return null
+                java.io.RandomAccessFile(file, "r").use { raf ->
+                    raf.seek(startByte)
+                    val len = (endByte - startByte + 1).coerceAtMost(raf.length() - startByte).toInt()
+                    if (len <= 0) return null
+                    val buf = ByteArray(len)
+                    raf.readFully(buf)
+                    buf
+                }
+            } catch (e: Exception) {
+                AppLog.w(TAG, "fetchRange local file failed: ${e.message}")
+                null
+            }
+        }
         var conn: HttpURLConnection? = null
         return try {
             val url = URL(streamUrl)

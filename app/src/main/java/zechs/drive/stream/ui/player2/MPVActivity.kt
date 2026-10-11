@@ -59,6 +59,7 @@ import zechs.drive.stream.utils.DeviceUi
 import zechs.drive.stream.R
 import zechs.drive.stream.data.model.PlaylistItem
 import zechs.drive.stream.data.model.SubtitleItem
+import zechs.drive.stream.utils.MediaUriResolver
 import zechs.drive.stream.databinding.ActivityMpvBinding
 import zechs.drive.stream.databinding.PlayerControlViewBinding
 import zechs.drive.stream.data.model.MalAnimeNode
@@ -169,6 +170,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
 
     // Playlist & Next Episode Auto-Play
     private var currentFileId: String = ""
+    private var currentLocalUri: String? = null
     private var currentTitle: String = ""
     private var currentThumbnailLink: String? = null
     private var playlist = mutableListOf<PlaylistItem>()
@@ -349,6 +351,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         )
 
         currentFileId = intent.getStringExtra("fileId") ?: ""
+        currentLocalUri = intent.getStringExtra(PlayerLauncher.EXTRA_LOCAL_URI)
         currentTitle = intent.getStringExtra("title") ?: ""
         currentThumbnailLink = intent.getStringExtra("thumbnailLink")
         val isMovieExtra = intent.getBooleanExtra(PlayerLauncher.EXTRA_IS_MOVIE, false)
@@ -1299,6 +1302,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         if (i == null) return
         setIntent(i)
         currentFileId = i.getStringExtra("fileId") ?: ""
+        currentLocalUri = i.getStringExtra(PlayerLauncher.EXTRA_LOCAL_URI)
         currentTitle = i.getStringExtra("title") ?: ""
         currentThumbnailLink = i.getStringExtra("thumbnailLink")
         playMedia()
@@ -1440,15 +1444,32 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
             durationMs = ((player.duration ?: 0) * 1000L).coerceAtLeast(0L)
         )
 
-        val playUri = getStreamUrl(fileId)
+        val rawUri = getStreamUrl(fileId)
+        val isLocal = MediaUriResolver.isLocalUri(rawUri)
+        val playUri = if (rawUri.startsWith("content://")) {
+            try {
+                contentResolver.openFileDescriptor(Uri.parse(rawUri), "r")?.let { pfd ->
+                    "fd://${pfd.detachFd()}"
+                } ?: rawUri
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Failed to resolve file descriptor for $rawUri", e)
+                rawUri
+            }
+        } else {
+            rawUri
+        }
         hasAutoSelectedMpvTracks = false
         isFileLoaded = false
         pendingResumePositionMs = resumeMs.coerceAtLeast(0L)
         pendingSubtitles.clear()
-        MPVLib.setOptionString(
-            "http-header-fields",
-            "Authorization: Bearer $accessToken"
-        )
+        if (isLocal) {
+            MPVLib.setOptionString("http-header-fields", "")
+        } else {
+            MPVLib.setOptionString(
+                "http-header-fields",
+                "Authorization: Bearer $accessToken"
+            )
+        }
         player.play(playUri)
 
         // Load external Drive subtitles (.ass, .srt, etc.)
@@ -1522,11 +1543,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
     }
 
     private fun getStreamUrl(fileId: String): String {
-        val uri = Uri.parse(
-            "${DRIVE_API}/files/${fileId}?supportsAllDrives=True&alt=media"
-        )
-        AppLog.d(TAG, "STREAM_URL=$uri")
-        return uri.toString()
+        val streamUrl = MediaUriResolver.resolveStreamUri(fileId, currentLocalUri)
+        AppLog.d(TAG, "STREAM_URL=$streamUrl")
+        return streamUrl
     }
 
     private fun hideSystemUI() {
@@ -2371,6 +2390,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         saveProgress()
 
         currentFileId = next.fileId
+        currentLocalUri = next.localUri
         currentTitle = next.title
         currentThumbnailLink = next.thumbnailLink
         nextEpisodeCanceled = false
@@ -2391,6 +2411,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         saveProgress()
 
         currentFileId = prev.fileId
+        currentLocalUri = prev.localUri
         currentTitle = prev.title
         currentThumbnailLink = prev.thumbnailLink
         nextEpisodeCanceled = false
@@ -2425,6 +2446,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         saveProgress()
 
         currentFileId = item.fileId
+        currentLocalUri = item.localUri
         currentTitle = item.title
         currentThumbnailLink = item.thumbnailLink
         nextEpisodeCanceled = false

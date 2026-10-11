@@ -27,6 +27,7 @@ object PlayerLauncher {
     const val EXTRA_SIBLING_FOLDER_ID = "siblingFolderId"
     const val EXTRA_PROFILE_ID = "playbackProfileId"
     const val EXTRA_IS_MOVIE = "isMovie"
+    const val EXTRA_LOCAL_URI = "localUri"
 
     fun resolvePlayerType(
         playerType: VideoPlayer = VideoPlayer.EXO_PLAYER,
@@ -68,7 +69,8 @@ object PlayerLauncher {
         startPosition: Long = -1L,
         isMovie: Boolean = false,
         autoRouting: Boolean = true,
-        deviceCaps: DeviceCaps = DeviceCaps()
+        deviceCaps: DeviceCaps = DeviceCaps(),
+        localUri: String? = null
     ): Intent {
         val targetPlayer = resolvePlayerType(
             playerType = playerType,
@@ -92,6 +94,7 @@ object PlayerLauncher {
             playlist?.let { putExtra(EXTRA_PLAYLIST, it) }
             subtitles?.let { putExtra(EXTRA_SUBTITLES, it) }
             siblingFolderId?.let { putExtra(EXTRA_SIBLING_FOLDER_ID, it) }
+            localUri?.let { putExtra(EXTRA_LOCAL_URI, it) }
             // Zero is an explicit "start from beginning" request; -1 means resume
             // from the saved watch position (or begin at zero when none exists).
             if (startPosition >= 0L) {
@@ -115,7 +118,8 @@ object PlayerLauncher {
         startPosition: Long = -1L,
         isMovie: Boolean = false,
         autoRouting: Boolean = true,
-        deviceCaps: DeviceCaps = DeviceCaps()
+        deviceCaps: DeviceCaps = DeviceCaps(),
+        localUri: String? = null
     ) {
         val intent = createIntent(
             context = context,
@@ -132,7 +136,8 @@ object PlayerLauncher {
             startPosition = startPosition,
             isMovie = isMovie,
             autoRouting = autoRouting,
-            deviceCaps = deviceCaps
+            deviceCaps = deviceCaps,
+            localUri = localUri
         )
         context.startActivity(intent)
     }
