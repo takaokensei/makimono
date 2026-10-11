@@ -419,7 +419,12 @@ class FilesFragment : BaseFragment() {
         val subItems = models.mapNotNull { item ->
             if (item is FilesDataModel.File) {
                 val f = item.driveFile
-                if (f.isSubtitleFile) SubtitleItem(f.id, f.name) else null
+                if (f.isSubtitleFile) SubtitleItem(
+                    id = f.id,
+                    name = f.name,
+                    source = f.source,
+                    uri = f.localUri
+                ) else null
             } else null
         }
         return ArrayList(subItems)
@@ -431,9 +436,9 @@ class FilesFragment : BaseFragment() {
             if (item is FilesDataModel.File) {
                 val f = item.driveFile
                 when {
-                    f.isVideoFile -> PlaylistItem(f.id, f.name, f.thumbnailLink)
+                    f.isVideoFile -> PlaylistItem(f.id, f.name, f.thumbnailLink, f.localUri)
                     f.isShortcut && f.isShortcutVideo && f.shortcutDetails.targetId != null ->
-                        PlaylistItem(f.shortcutDetails.targetId, f.name, f.thumbnailLink)
+                        PlaylistItem(f.shortcutDetails.targetId, f.name, f.thumbnailLink, f.localUri)
                     else -> null
                 }
             } else null
@@ -459,7 +464,8 @@ class FilesFragment : BaseFragment() {
             thumbnailLink = file.thumbnailLink,
             themeIndex = mainViewModel.currentThemeIndex,
             playlist = playlist,
-            subtitles = subtitles
+            subtitles = subtitles,
+            localUri = file.localUri
         )
     }
 
@@ -472,11 +478,12 @@ class FilesFragment : BaseFragment() {
             fileId = fileToken.fileId,
             title = fileToken.fileName,
             seriesTitle = args.name,
-            accessToken = fileToken.accessToken,
+            accessToken = fileToken.accessToken.takeIf { it.isNotBlank() },
             thumbnailLink = fileToken.thumbnailLink,
             themeIndex = mainViewModel.currentThemeIndex,
             playlist = playlist,
-            subtitles = subtitles
+            subtitles = subtitles,
+            localUri = fileToken.localUri
         )
     }
 

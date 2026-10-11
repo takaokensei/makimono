@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import zechs.drive.stream.domain.common.AppError
 import zechs.drive.stream.data.model.DriveFile
+import zechs.drive.stream.data.model.ShortcutDetails
 import zechs.drive.stream.data.model.Starred
 import zechs.drive.stream.data.repository.DriveRepository
 import zechs.drive.stream.data.repository.DriveFailureClassifier
@@ -37,8 +38,8 @@ import zechs.drive.stream.utils.state.ResourceErrorKind
 import java.net.SocketTimeoutException
 import zechs.drive.stream.data.remote.AnimePosterResolver
 import zechs.drive.stream.data.repository.FolderMetadataRepository
+import zechs.drive.stream.data.repository.LocalMediaRepository
 import javax.inject.Inject
-
 
 @HiltViewModel
 class FilesViewModel @Inject constructor(
@@ -46,7 +47,8 @@ class FilesViewModel @Inject constructor(
     private val sessionManager: SessionManager,
     private val folderMetadataRepository: FolderMetadataRepository,
     private val animePosterResolver: AnimePosterResolver,
-    private val favoriteRepository: zechs.drive.stream.data.repository.FavoriteRepository
+    private val favoriteRepository: zechs.drive.stream.data.repository.FavoriteRepository,
+    private val localMediaRepository: LocalMediaRepository? = null
 ) : ViewModel() {
 
     fun recordFolderOpened(folderId: String, folderName: String) = viewModelScope.launch(Dispatchers.IO) {
@@ -173,7 +175,11 @@ class FilesViewModel @Inject constructor(
             try {
                 ensureActive()
                 if (query != null) {
-                    getQuery(query, requestGeneration)
+                    if (query.startsWith(LocalMediaRepository.LOCAL_BUCKET_PREFIX)) {
+                        getLocalBucketFiles(query, requestGeneration)
+                    } else {
+                        getQuery(query, requestGeneration)
+                    }
                 } else {
                     getTeamDrives(requestGeneration)
                 }
@@ -217,6 +223,40 @@ class FilesViewModel @Inject constructor(
         }
     }
 
+    private suspend fun getLocalBucketFiles(query: String, requestGeneration: Long) {
+        val bucketId = query.removePrefix(LocalMediaRepository.LOCAL_BUCKET_PREFIX)
+        val videos = localMediaRepository?.getVideosInFolder(bucketId) ?: emptyList()
+        val subtitles = localMediaRepository?.getSubtitlesInFolder(bucketId) ?: emptyList()
+
+        currentCoroutineContext().ensureActive()
+        if (requestGeneration != pageRequestGeneration) return
+
+        val filesList = mutableListOf<FilesDataModel.File>()
+        videos.forEach { filesList.add(FilesDataModel.File(it)) }
+        subtitles.forEach { sub ->
+            val driveSub = DriveFile(
+                id = sub.id,
+                name = sub.name,
+                size = null,
+                mimeType = when (sub.ext) {
+                    "srt" -> "application/x-subrip"
+                    "ass", "ssa" -> "text/x-ssa"
+                    "vtt" -> "text/vtt"
+                    else -> "text/plain"
+                },
+                iconLink = null,
+                shortcutDetails = ShortcutDetails(null, null),
+                starred = Starred.UNSTARRED,
+                source = zechs.drive.stream.data.model.MediaSource.LOCAL,
+                localUri = sub.uri
+            )
+            filesList.add(FilesDataModel.File(driveSub))
+        }
+
+        isLastPage = true
+        postSuccess(filesList, requestGeneration)
+    }
+
     private suspend fun getQuery(query: String, requestGeneration: Long) {
         val filesResponse = driveRepository.getFiles(
             query = query,
@@ -241,15 +281,28 @@ class FilesViewModel @Inject constructor(
                 if (requestGeneration != pageRequestGeneration) return
                 nextPageToken = files.nextPageToken
                 isLastPage = nextPageToken == null
-                val filesList = driveFiles
+                val driveList = driveFiles
                     .map { driveFile ->
                         val targetId = favoriteTargetsByFileId.getValue(driveFile.id)
                         val starredStatus = if (targetId in favoriteTargetIds) Starred.STARRED else driveFile.starred
                         FilesDataModel.File(driveFile.copy(starred = starredStatus))
                     }
                     .distinctBy { it.driveFile.id }
+                    .toMutableList()
 
-                postSuccess(filesList, requestGeneration)
+                // Se for a primeira página da raiz de pastas, adiciona as pastas locais detectadas
+                if (response == null && query.contains("'root' in parents") && localMediaRepository != null) {
+                    val localFolders = try {
+                        localMediaRepository.getLocalVideoFolders().map { FilesDataModel.File(it) }
+                    } catch (e: Exception) {
+                        emptyList()
+                    }
+                    if (localFolders.isNotEmpty()) {
+                        driveList.addAll(0, localFolders)
+                    }
+                }
+
+                postSuccess(driveList, requestGeneration)
             }
             is Resource.Error -> {
                 publishPageError(filesResponse.message, requestGeneration, filesResponse.errorKind)
@@ -458,11 +511,24 @@ class FilesViewModel @Inject constructor(
         val fileId: String,
         val fileName: String,
         val accessToken: String,
-        val thumbnailLink: String? = null
+        val thumbnailLink: String? = null,
+        val localUri: String? = null
     )
 
     fun fetchToken(file: DriveFile) = viewModelScope.launch {
         _token.postValue(Event(Resource.Loading()))
+
+        if (file.source == zechs.drive.stream.data.model.MediaSource.LOCAL || !file.localUri.isNullOrBlank()) {
+            val fileToken = FileToken(
+                fileId = file.id,
+                fileName = file.name,
+                accessToken = "",
+                thumbnailLink = file.thumbnailLink,
+                localUri = file.localUri
+            )
+            _token.postValue(Event(Resource.Success(fileToken)))
+            return@launch
+        }
 
         val client = sessionManager.fetchClient() ?: run {
             _token.postValue(Event(Resource.Error("Client not found")))
