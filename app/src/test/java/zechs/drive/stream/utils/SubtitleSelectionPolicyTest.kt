@@ -29,4 +29,13 @@ class SubtitleSelectionPolicyTest {
         assertTrue(SubtitleSelectionPolicy.scorePortuguese("Português") >
                 SubtitleSelectionPolicy.scorePortuguese("forced signs songs"))
     }
+
+    @Test
+    fun `local subtitles outrank drive and all other subtitles`() {
+        assertEquals(30, SubtitleSelectionPolicy.scorePortuguese("★ [Local] Português (BR) (SRT)"))
+        assertTrue(
+            SubtitleSelectionPolicy.scorePortuguese("★ [Local] Português (BR)") >
+            SubtitleSelectionPolicy.scorePortuguese("★ [Drive] Português (BR)")
+        )
+    }
 }

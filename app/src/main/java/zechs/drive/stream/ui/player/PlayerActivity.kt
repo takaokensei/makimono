@@ -1659,11 +1659,12 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                     val (subUri, mimeType) = zechs.drive.stream.utils.SubtitleConverter.prepareSubtitleForExoPlayer(
                         cacheDir, sub, cachedFile, currentSubtitleStyle.bridgeGapMs, currentSubtitleStyle.subtitleDelayMs
                     )
+                    val subTag = if (sub.source == zechs.drive.stream.data.model.MediaSource.LOCAL) "[Local]" else "[Drive]"
                     subConfigs.add(
                         MediaItem.SubtitleConfiguration.Builder(subUri)
                             .setMimeType(mimeType)
                             .setLanguage(sub.languageCode)
-                            .setLabel("★ [Drive] ${sub.languageLabel}")
+                            .setLabel("★ $subTag ${sub.languageLabel}")
                             .setRoleFlags(C.ROLE_FLAG_SUBTITLE)
                             .setSelectionFlags(if (isPortuguese) C.SELECTION_FLAG_DEFAULT else 0)
                             .build()
@@ -1810,7 +1811,8 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         val finalUri = rawUri
 
         val isPortuguese = sub.languageCode == "por" || sub.name.lowercase().contains(".por.") || sub.name.lowercase().contains("pt")
-        val trackLabel = if (isMatching) "★ [Drive] ${sub.languageLabel}" else "📁 [Drive] ${sub.name}"
+        val subTag = if (sub.source == zechs.drive.stream.data.model.MediaSource.LOCAL) "[Local]" else "[Drive]"
+        val trackLabel = if (isMatching) "★ $subTag ${sub.languageLabel}" else "📁 $subTag ${sub.name}"
 
         val subConfig = MediaItem.SubtitleConfiguration.Builder(finalUri)
             .setMimeType(mimeType)
@@ -2551,18 +2553,20 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             }
         }
 
-        // 4. ALL Google Drive folder subtitles: ALWAYS list them!
+        // 4. ALL folder subtitles: ALWAYS list them!
         folderSubtitles.forEach { sub ->
+            val subTag = if (sub.source == zechs.drive.stream.data.model.MediaSource.LOCAL) "[Local]" else "[Drive]"
+            val sourceDesc = if (sub.source == zechs.drive.stream.data.model.MediaSource.LOCAL) "Armazenamento Local" else "Google Drive"
             val alreadyPresent = choices.any {
                 it.displayName.contains(sub.name, ignoreCase = true) ||
-                (it.displayName.contains("[Drive]", ignoreCase = true) && it.displayName.contains(sub.languageLabel, ignoreCase = true))
+                (it.displayName.contains(subTag, ignoreCase = true) && it.displayName.contains(sub.languageLabel, ignoreCase = true))
             }
             if (!alreadyPresent) {
                 val isMatching = sub.matchesVideo(videoTitle)
-                val prefix = if (isMatching) "★ [Drive] " else "📁 [Drive] "
+                val prefix = if (isMatching) "★ $subTag " else "📁 $subTag "
                 val tag = if (isMatching) " (Episódio atual)" else " (Outro episódio)"
                 val label = "$prefix${sub.name}$tag"
-                choices.add(ExoSubChoice(null, -1, sub, null, null, label, "Google Drive", false))
+                choices.add(ExoSubChoice(null, -1, sub, null, null, label, sourceDesc, false))
             }
         }
 

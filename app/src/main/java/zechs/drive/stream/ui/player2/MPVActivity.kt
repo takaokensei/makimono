@@ -1528,7 +1528,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
 
         val isPortuguese = sub.languageCode == "por" || sub.name.lowercase().contains(".por.") || sub.name.lowercase().contains("pt")
         val selectMode = if (isPortuguese) "select" else "auto"
-        val trackTitle = if (sub.id.startsWith("saved_")) sub.name else "★ [Drive] ${sub.languageLabel}"
+        val subTag = if (sub.source == zechs.drive.stream.data.model.MediaSource.LOCAL) "[Local]" else "[Drive]"
+        val trackTitle = if (sub.id.startsWith("saved_")) sub.name else "★ $subTag ${sub.languageLabel}"
         AppLog.d(TAG, "Adding external subtitle to MPV: ${cached.absolutePath} (mode=$selectMode)")
         MPVLib.command(arrayOf("sub-add", cached.absolutePath, selectMode, trackTitle, sub.languageCode))
         if (isPortuguese) {
@@ -1800,18 +1801,20 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
             )
         }
 
-        // 4. ALL Google Drive folder subtitles: ALWAYS list them!
+        // 4. ALL folder subtitles: ALWAYS list them!
         folderSubtitles.forEach { sub ->
+            val subTag = if (sub.source == zechs.drive.stream.data.model.MediaSource.LOCAL) "[Local]" else "[Drive]"
+            val sourceDesc = if (sub.source == zechs.drive.stream.data.model.MediaSource.LOCAL) "Armazenamento Local" else "Google Drive"
             val alreadyPresent = choices.any {
                 it.label.contains(sub.name, ignoreCase = true) ||
-                (it.label.contains("[Drive]", ignoreCase = true) && it.label.contains(sub.languageLabel, ignoreCase = true))
+                (it.label.contains(subTag, ignoreCase = true) && it.label.contains(sub.languageLabel, ignoreCase = true))
             }
             if (!alreadyPresent) {
                 val isMatching = sub.matchesVideo(videoTitle)
-                val prefix = if (isMatching) "★ [Drive] " else "📁 [Drive] "
+                val prefix = if (isMatching) "★ $subTag " else "📁 $subTag "
                 val tag = if (isMatching) " (Episódio atual)" else " (Outro episódio)"
                 val label = "$prefix${sub.name}$tag"
-                choices.add(SubChoice(null, sub, null, null, label, "Google Drive", false))
+                choices.add(SubChoice(null, sub, null, null, label, sourceDesc, false))
             }
         }
 
@@ -1853,7 +1856,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                     val cached = viewModel.downloadSubtitle(sub, cacheDir)
                     if (cached != null && cached.exists()) {
                         withContext(Dispatchers.Main) {
-                            val trackTitle = "★ [Drive] ${sub.languageLabel}"
+                            val subTag = if (sub.source == zechs.drive.stream.data.model.MediaSource.LOCAL) "[Local]" else "[Drive]"
+                            val trackTitle = "★ $subTag ${sub.languageLabel}"
                             AppLog.d(TAG, "Manual add external subtitle to MPV: ${cached.absolutePath}")
                             MPVLib.command(arrayOf("sub-add", cached.absolutePath, "select", trackTitle, sub.languageCode))
                             player.loadTracks()
@@ -1861,7 +1865,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                         }
                     } else {
                         withContext(Dispatchers.Main) {
-                            configSnackbar("Erro ao baixar legenda do Drive")
+                            val errMsg = if (sub.source == zechs.drive.stream.data.model.MediaSource.LOCAL) "Erro ao carregar legenda local" else "Erro ao baixar legenda do Drive"
+                            configSnackbar(errMsg)
                         }
                     }
                 }

@@ -33,6 +33,7 @@ object SubtitleSelectionPolicy {
     fun scorePortuguese(label: String): Int {
         val l = label.lowercase()
         return when {
+            l.contains("[local]") -> 30
             l.contains("[drive]") -> 25
             l.contains("brasil") || l.contains("brazil") || l.contains("pt-br") ||
                     l.contains("pt_br") || l.contains("ptbr") -> 15
