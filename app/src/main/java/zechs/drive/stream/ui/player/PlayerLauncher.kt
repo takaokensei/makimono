@@ -4,6 +4,11 @@ import android.content.Context
 import android.content.Intent
 import zechs.drive.stream.data.model.PlaylistItem
 import zechs.drive.stream.data.model.SubtitleItem
+import zechs.drive.stream.playback.engine.DeviceCaps
+import zechs.drive.stream.playback.engine.EngineChoice
+import zechs.drive.stream.playback.engine.EngineSelector
+import zechs.drive.stream.playback.engine.MediaInfo
+import zechs.drive.stream.playback.engine.UserEnginePreference
 import zechs.drive.stream.ui.player2.MPVActivity
 import zechs.drive.stream.utils.VideoPlayer
 import zechs.drive.stream.utils.AppTheme
@@ -23,6 +28,31 @@ object PlayerLauncher {
     const val EXTRA_PROFILE_ID = "playbackProfileId"
     const val EXTRA_IS_MOVIE = "isMovie"
 
+    fun resolvePlayerType(
+        playerType: VideoPlayer = VideoPlayer.EXO_PLAYER,
+        title: String,
+        subtitles: List<SubtitleItem>? = null,
+        autoRouting: Boolean = true,
+        deviceCaps: DeviceCaps = DeviceCaps()
+    ): VideoPlayer {
+        if (!autoRouting || playerType == VideoPlayer.MPV) {
+            return playerType
+        }
+        val hasAss = subtitles?.any { it.ext == "ass" || it.ext == "ssa" } == true
+        val extension = title.substringAfterLast('.', "").lowercase().takeIf { it.isNotEmpty() }
+        val media = MediaInfo(
+            name = title,
+            extension = extension,
+            hasAssSubtitles = hasAss,
+            hasSrtSubtitles = subtitles?.any { it.ext == "srt" } == true
+        )
+        val pref = if (hasAss) UserEnginePreference.AUTO else UserEnginePreference.FORCE_MEDIA3
+        return when (EngineSelector.selectEngine(media, deviceCaps, pref)) {
+            is EngineChoice.Media3 -> VideoPlayer.EXO_PLAYER
+            is EngineChoice.Mpv -> VideoPlayer.MPV
+        }
+    }
+
     fun createIntent(
         context: Context,
         playerType: VideoPlayer = VideoPlayer.EXO_PLAYER,
@@ -36,9 +66,18 @@ object PlayerLauncher {
         subtitles: ArrayList<SubtitleItem>? = null,
         siblingFolderId: String? = null,
         startPosition: Long = -1L,
-        isMovie: Boolean = false
+        isMovie: Boolean = false,
+        autoRouting: Boolean = true,
+        deviceCaps: DeviceCaps = DeviceCaps()
     ): Intent {
-        val targetClass = when (playerType) {
+        val targetPlayer = resolvePlayerType(
+            playerType = playerType,
+            title = title,
+            subtitles = subtitles,
+            autoRouting = autoRouting,
+            deviceCaps = deviceCaps
+        )
+        val targetClass = when (targetPlayer) {
             VideoPlayer.EXO_PLAYER -> PlayerActivity::class.java
             VideoPlayer.MPV -> MPVActivity::class.java
         }
@@ -74,7 +113,9 @@ object PlayerLauncher {
         subtitles: ArrayList<SubtitleItem>? = null,
         siblingFolderId: String? = null,
         startPosition: Long = -1L,
-        isMovie: Boolean = false
+        isMovie: Boolean = false,
+        autoRouting: Boolean = true,
+        deviceCaps: DeviceCaps = DeviceCaps()
     ) {
         val intent = createIntent(
             context = context,
@@ -89,7 +130,9 @@ object PlayerLauncher {
             subtitles = subtitles,
             siblingFolderId = siblingFolderId,
             startPosition = startPosition,
-            isMovie = isMovie
+            isMovie = isMovie,
+            autoRouting = autoRouting,
+            deviceCaps = deviceCaps
         )
         context.startActivity(intent)
     }
