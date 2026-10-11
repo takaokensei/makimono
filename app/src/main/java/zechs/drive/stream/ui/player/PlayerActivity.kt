@@ -243,6 +243,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     private var forcedSubtitleUri: Uri? = null
     private var activeExternalSubItem: SubtitleItem? = null
     private var activeExternalSubFile: java.io.File? = null
+    private var currentAudioDelayMs = 0L
     private var currentSubtitleOffsetMs = 0L
     private var currentSubtitleStyle = zechs.drive.stream.utils.SubtitleStyle()
     private var isNightModeAudioEnabled = false
@@ -1611,7 +1612,11 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         if (fileId != null) {
             viewModel.getWatch(fileId)
             lifecycleScope.launch {
-                val (_, savedSubDelay) = viewModel.getDelays(fileId)
+                val (savedAudioDelay, savedSubDelay) = viewModel.getDelays(fileId)
+                if (savedAudioDelay != 0L) {
+                    currentAudioDelayMs = savedAudioDelay
+                    AppLog.d(TAG, "Restored saved audio offset: ${savedAudioDelay}ms")
+                }
                 if (savedSubDelay != 0L) {
                     currentSubtitleOffsetMs = savedSubDelay
                     AppLog.d(TAG, "Restored saved subtitle offset: ${savedSubDelay}ms")
@@ -2372,8 +2377,58 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             Snackbar.make(playerView, "Áudio: ${chosen.name}", 750).apply {
                 anchorView = progressViewGroup
             }.show()
+        }.setFooterSecondary("Sincronia") {
+            showAudioSyncDialog()
         }.setFooterPrimary(nightModeLabel) {
             toggleNightModeAudio()
+        }.show()
+    }
+
+    private fun showAudioSyncDialog() {
+        val options = arrayOf(
+            "+1000 ms (Adiantar 1s)",
+            "+500 ms (Adiantar)",
+            "+250 ms (Adiantar)",
+            "+100 ms (Adiantar um pouco)",
+            "0 ms (Sincronizado)",
+            "-100 ms (Atrasar um pouco)",
+            "-250 ms (Atrasar)",
+            "-500 ms (Atrasar)",
+            "-1000 ms (Atrasar 1s)"
+        )
+        val offsets = longArrayOf(1000L, 500L, 250L, 100L, 0L, -100L, -250L, -500L, -1000L)
+        val selectedIdx = offsets.indexOfFirst { it == currentAudioDelayMs }.takeIf { it >= 0 } ?: 4
+
+        val title = if (currentAudioDelayMs != 0L) {
+            "Sincronia de Áudio (${if (currentAudioDelayMs > 0) "+" else ""}${currentAudioDelayMs}ms)"
+        } else {
+            "Sincronia de Áudio (0ms)"
+        }
+
+        val items = options.mapIndexed { idx, label ->
+            GlassMenuItem(
+                id = "audio_sync_$idx",
+                title = label,
+                isSelected = idx == selectedIdx,
+                tag = offsets[idx]
+            )
+        }
+
+        PlayerGlassMenuDialog(
+            context = this,
+            title = title,
+            items = items
+        ) { selected ->
+            val chosenOffset = selected.tag as? Long ?: 0L
+            currentAudioDelayMs = chosenOffset
+            val fid = currentFileId.ifBlank { intent.getStringExtra("fileId") ?: "" }
+            if (fid.isNotBlank()) {
+                viewModel.saveDelays(fid, currentAudioDelayMs, currentSubtitleOffsetMs)
+            }
+            val sign = if (chosenOffset > 0) "+" else ""
+            Snackbar.make(playerView, "Sincronia de áudio: ${sign}${chosenOffset}ms", 1500).apply {
+                anchorView = progressViewGroup
+            }.show()
         }.show()
     }
 
@@ -2736,7 +2791,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             currentSubtitleOffsetMs = chosenOffset
             val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") ?: "" }
             if (fileId.isNotBlank()) {
-                viewModel.saveDelays(fileId, 0L, currentSubtitleOffsetMs)
+                viewModel.saveDelays(fileId, currentAudioDelayMs, currentSubtitleOffsetMs)
             }
 
             val activeSub = activeExternalSubItem
