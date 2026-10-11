@@ -191,8 +191,12 @@ class FilesFragment : BaseFragment() {
         binding.root.findViewById<View>(R.id.filesHome)?.setOnClickListener { returnHome("Início") }
         binding.root.findViewById<View>(R.id.filesBrand)?.setOnClickListener { returnHome("Início") }
         binding.root.findViewById<View>(R.id.filesCatalog)?.setOnClickListener { returnHome("Animes") }
+        binding.root.findViewById<View>(R.id.filesFilmes)?.setOnClickListener { returnHome("Filmes") }
         binding.root.findViewById<View>(R.id.filesFavorites)?.setOnClickListener { returnHome("Favoritos") }
         binding.root.findViewById<View>(R.id.filesFolders)?.setOnClickListener { binding.etSearch.requestFocus() }
+        binding.root.findViewById<View>(R.id.userProfilePill)?.setOnClickListener {
+            findNavController().navigate(R.id.profileSelectionFragment)
+        }
         binding.root.findViewById<View>(R.id.filesSettings)?.setOnClickListener {
             findNavController().navigate(R.id.settingsFragment)
         }
