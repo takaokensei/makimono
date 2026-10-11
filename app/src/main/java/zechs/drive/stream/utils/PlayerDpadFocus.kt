@@ -15,7 +15,7 @@ object PlayerDpadFocus {
         if (!controlsVisible || controlsTransitioning || blockingOverlayVisible) return null
 
         return when {
-            direction == PlayerFocusDirection.UP && focusedItem == PlayerFocusItem.PLAY_PAUSE ->
+            direction == PlayerFocusDirection.UP && focusedItem != PlayerFocusItem.EXIT ->
                 PlayerFocusItem.EXIT
             direction == PlayerFocusDirection.DOWN && focusedItem == PlayerFocusItem.EXIT ->
                 PlayerFocusItem.PLAY_PAUSE

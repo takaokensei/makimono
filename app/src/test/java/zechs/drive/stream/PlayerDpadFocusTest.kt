@@ -13,6 +13,9 @@ class PlayerDpadFocusTest {
         assertEquals(PlayerFocusItem.EXIT, PlayerDpadFocus.next(
             PlayerFocusDirection.UP, true, false, false, PlayerFocusItem.PLAY_PAUSE
         ))
+        assertEquals(PlayerFocusItem.EXIT, PlayerDpadFocus.next(
+            PlayerFocusDirection.UP, true, false, false, PlayerFocusItem.OTHER
+        ))
         assertEquals(PlayerFocusItem.PLAY_PAUSE, PlayerDpadFocus.next(
             PlayerFocusDirection.DOWN, true, false, false, PlayerFocusItem.EXIT
         ))

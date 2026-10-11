@@ -1197,6 +1197,27 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             return true
         }
 
+        val isHorizontalDpad = event.keyCode in listOf(
+            KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_DPAD_RIGHT
+        )
+        if (isControlsShowing() && isHorizontalDpad) {
+            if (btnBack.isFocused) {
+                return true
+            }
+            val timeBar = playerView.findViewById<View>(androidx.media3.ui.R.id.exo_progress)
+            val isTimeBarFocused = timeBar?.isFocused == true
+            if (!isTimeBarFocused) {
+                val isAtLeftEdge = event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT &&
+                    playerView.findViewById<View>(R.id.btnSubtitle)?.isFocused == true
+                val isAtRightEdge = event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT &&
+                    playerView.findViewById<View>(R.id.btnInfo)?.isFocused == true
+                if (isAtLeftEdge || isAtRightEdge) {
+                    return true
+                }
+            }
+        }
+
         if (handledFocusDirectionKeyCode == event.keyCode) {
             if (event.action == KeyEvent.ACTION_UP) handledFocusDirectionKeyCode = null
             return true
