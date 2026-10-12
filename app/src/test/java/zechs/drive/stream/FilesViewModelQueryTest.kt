@@ -43,6 +43,7 @@ class FilesViewModelQueryTest {
     private val folderMetadataRepository = mockk<FolderMetadataRepository>(relaxed = true)
     private val animePosterResolver = mockk<AnimePosterResolver>(relaxed = true)
     private val favoriteRepository = mockk<FavoriteRepository>(relaxed = true)
+    private val localMediaRepository = mockk<zechs.drive.stream.data.repository.LocalMediaRepository>(relaxed = true)
 
     private lateinit var viewModel: FilesViewModel
 
@@ -56,7 +57,8 @@ class FilesViewModelQueryTest {
             sessionManager,
             folderMetadataRepository,
             animePosterResolver,
-            favoriteRepository
+            favoriteRepository,
+            localMediaRepository
         )
     }
 
