@@ -525,17 +525,11 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
                         ?: MPVLib.getPropertyString("audio-params/channels"),
                     sampleRateHz = MPVLib.getPropertyInt("audio-params/samplerate"),
                     subtitleTrack = MpvTechnicalInfoDisplay.subtitleSelection(subtitleId, subtitleTrack),
-                    cacheDurationSeconds = MPVLib.getPropertyDouble("demuxer-cache-duration")
-                ).toMutableList().apply {
-                    currentHdrStatus?.let { hdr ->
-                        if (hdr.isHdrActive) {
-                            add(MpvTechnicalInfoDisplay.Row("hdr", "Alcance Dinâmico", hdr.colorSpaceDesc))
-                        }
-                    }
-                    currentAfrState?.let { afr ->
-                        add(MpvTechnicalInfoDisplay.Row("afr", "Taxa de Quadros (AFR)", afr.technicalSummary))
-                    }
-                }
+                    cacheDurationSeconds = MPVLib.getPropertyDouble("demuxer-cache-duration"),
+                    engineName = "MPV (libmpv)",
+                    hdrSummary = currentHdrStatus?.takeIf { it.isHdrActive }?.colorSpaceDesc,
+                    afrSummary = currentAfrState?.technicalSummary
+                )
                 zechs.drive.stream.ui.player.PlayerGlassMenuDialog(this@MPVActivity, "Informações técnicas",
                     properties.map { row -> zechs.drive.stream.ui.player.GlassMenuItem(
                         id = row.id,

@@ -82,4 +82,33 @@ class MpvTechnicalInfoDisplayTest {
         assertEquals("Indisponível", MpvTechnicalInfoDisplay.subtitleSelection(null, null))
         assertEquals("Indisponível", MpvTechnicalInfoDisplay.subtitleSelection("invalid", null))
     }
+
+    @Test
+    fun `rowsForMedia3 formats ExoPlayer formats into unified technical info rows`() {
+        val rows = MpvTechnicalInfoDisplay.rowsForMedia3(
+            videoMimeType = "video/hevc",
+            width = 3840,
+            height = 2160,
+            frameRate = 23.976f,
+            activeDecoder = "c2.android.hevc.decoder",
+            audioMimeType = "audio/eac3",
+            channelCount = 6,
+            sampleRateHz = 48_000,
+            subtitleLabel = "Português (BR)",
+            bufferedDurationSeconds = 14.5,
+            hdrSummary = "HDR10 (BT.2020)",
+            afrSummary = "23.976 Hz ativo"
+        ).associateBy { it.id }
+
+        assertEquals("ExoPlayer (Media3)", rows.getValue("engine").value)
+        assertEquals("HEVC (H.265)", rows.getValue("video").value)
+        assertEquals("3840×2160", rows.getValue("resolution").value)
+        assertEquals("23.976 fps", rows.getValue("fps").value)
+        assertEquals("c2.android.hevc.decoder", rows.getValue("decoder").value)
+        assertEquals("Dolby Digital Plus (E-AC-3) • Surround (5.1) • 48.0 kHz", rows.getValue("audio").value)
+        assertEquals("Português (BR)", rows.getValue("subtitle").value)
+        assertEquals("14.5 s (estimativa)", rows.getValue("buffer").value)
+        assertEquals("HDR10 (BT.2020)", rows.getValue("hdr").value)
+        assertEquals("23.976 Hz ativo", rows.getValue("afr").value)
+    }
 }

@@ -36,4 +36,61 @@ internal object PrimaryEpisodeSelection {
             right.file.name,
             EpisodeParser.parse(right.file.name)
         )
+
+    /**
+     * Formats the primary CTA button label per P-10 ("Continuar E5 · faltam 12 min").
+     */
+    fun formatContinueCta(item: SeriesEpisodeItem?, isMovie: Boolean = false): String {
+        if (item == null) {
+            return if (isMovie) "Assistir filme" else "Assistir E1"
+        }
+        val canResume = item.progressPercent in 1..94 &&
+            item.watchedDuration > 0L &&
+            item.totalDuration > item.watchedDuration
+        val remainingMinutes = if (canResume) {
+            ((item.totalDuration - item.watchedDuration) / 60_000L).coerceAtLeast(1L)
+        } else {
+            0L
+        }
+        return if (isMovie) {
+            if (canResume) {
+                "Continuar · faltam $remainingMinutes min"
+            } else {
+                "Assistir filme"
+            }
+        } else {
+            val epNum = item.episodeNumber?.takeIf { it > 0 } ?: 1
+            if (canResume) {
+                "Continuar E$epNum · faltam $remainingMinutes min"
+            } else {
+                "Assistir E$epNum"
+            }
+        }
+    }
+
+    /**
+     * Formats the secondary subtitle line under the primary action button.
+     */
+    fun formatContinueSubtitle(item: SeriesEpisodeItem?, isMovie: Boolean = false): String {
+        if (item == null) {
+            return if (isMovie) "Filme" else "Ep. 01 • Iniciar reprodução"
+        }
+        val hasRemaining = item.watchedDuration > 0L && item.totalDuration > item.watchedDuration
+        return if (isMovie) {
+            if (hasRemaining) {
+                val remainingSec = (item.totalDuration - item.watchedDuration) / 1000L
+                "Filme • ${String.format(java.util.Locale.ROOT, "%02d:%02d", remainingSec / 60, remainingSec % 60)} restante"
+            } else {
+                "Filme"
+            }
+        } else {
+            val epPrefix = item.episodeNumber?.let { "Ep. $it" } ?: "Ep. 01"
+            if (hasRemaining) {
+                val remainingSec = (item.totalDuration - item.watchedDuration) / 1000L
+                "$epPrefix • ${String.format(java.util.Locale.ROOT, "%02d:%02d", remainingSec / 60, remainingSec % 60)} restante"
+            } else {
+                "$epPrefix • Iniciar reprodução"
+            }
+        }
+    }
 }

@@ -2,8 +2,11 @@ package zechs.drive.stream.ui.player2
 
 import java.util.Locale
 
-/** Presents MPV properties as reported; unavailable values remain explicit. */
-internal object MpvTechnicalInfoDisplay {
+/**
+ * Unified technical telemetry formatter for both Media3 (ExoPlayer) and libmpv engines (P-17).
+ * Presents properties as reported; unavailable values remain explicit.
+ */
+object MpvTechnicalInfoDisplay {
     data class Row(val id: String, val title: String, val value: String)
 
     fun rows(
@@ -16,16 +19,81 @@ internal object MpvTechnicalInfoDisplay {
         channels: String?,
         sampleRateHz: Int?,
         subtitleTrack: String?,
-        cacheDurationSeconds: Double?
-    ): List<Row> = listOf(
-        Row("video", "Vídeo", present(videoCodec)),
-        Row("resolution", "Resolução", dimensions(width, height)),
-        Row("fps", "FPS do contêiner", fps(containerFps)),
-        Row("decoder", "Decodificador ativo", decoder(activeDecoder)),
-        Row("audio", "Áudio", audio(audioCodec, channels, sampleRateHz)),
-        Row("subtitle", "Legenda", subtitleTrack?.takeIf(String::isNotBlank) ?: "Indisponível"),
-        Row("buffer", "Cache do demuxer", cache(cacheDurationSeconds))
-    )
+        cacheDurationSeconds: Double?,
+        engineName: String? = null,
+        hdrSummary: String? = null,
+        afrSummary: String? = null
+    ): List<Row> = buildList {
+        if (!engineName.isNullOrBlank()) {
+            add(Row("engine", "Motor", engineName.trim()))
+        }
+        add(Row("video", "Vídeo", present(videoCodec)))
+        add(Row("resolution", "Resolução", dimensions(width, height)))
+        add(Row("fps", "FPS do contêiner", fps(containerFps)))
+        add(Row("decoder", "Decodificador ativo", decoder(activeDecoder)))
+        add(Row("audio", "Áudio", audio(audioCodec, channels, sampleRateHz)))
+        add(Row("subtitle", "Legenda", subtitleTrack?.takeIf(String::isNotBlank) ?: "Indisponível"))
+        add(Row("buffer", "Cache do demuxer", cache(cacheDurationSeconds)))
+        if (!hdrSummary.isNullOrBlank()) {
+            add(Row("hdr", "Alcance Dinâmico", hdrSummary.trim()))
+        }
+        if (!afrSummary.isNullOrBlank()) {
+            add(Row("afr", "Taxa de Quadros (AFR)", afrSummary.trim()))
+        }
+    }
+
+    /**
+     * Builds unified technical info rows from Media3 (ExoPlayer) format properties (P-17).
+     */
+    fun rowsForMedia3(
+        videoMimeType: String?,
+        width: Int?,
+        height: Int?,
+        frameRate: Float?,
+        activeDecoder: String?,
+        audioMimeType: String?,
+        channelCount: Int?,
+        sampleRateHz: Int?,
+        subtitleLabel: String?,
+        bufferedDurationSeconds: Double?,
+        hdrSummary: String? = null,
+        afrSummary: String? = null
+    ): List<Row> {
+        val videoCodec = zechs.drive.stream.ui.player.MediaInfoDisplay.videoCodec(videoMimeType)
+            .takeUnless { it == "Codec desconhecido" }
+        val audioCodec = when {
+            audioMimeType.isNullOrBlank() -> null
+            audioMimeType.contains("mp4a", true) || audioMimeType.contains("aac", true) -> "AAC"
+            audioMimeType.contains("opus", true) -> "Opus"
+            audioMimeType.contains("flac", true) -> "FLAC"
+            audioMimeType.contains("ac3", true) && !audioMimeType.contains("eac3", true) -> "Dolby Digital (AC-3)"
+            audioMimeType.contains("eac3", true) -> "Dolby Digital Plus (E-AC-3)"
+            else -> audioMimeType.substringAfterLast('/').takeIf(String::isNotBlank)
+        }
+        val channels = when {
+            channelCount == 1 -> "Mono (1.0)"
+            channelCount == 2 -> "Estéreo (2.0)"
+            channelCount == 6 -> "Surround (5.1)"
+            channelCount == 8 -> "Surround (7.1)"
+            channelCount != null && channelCount > 0 -> "$channelCount canais"
+            else -> null
+        }
+        return rows(
+            videoCodec = videoCodec,
+            width = width,
+            height = height,
+            containerFps = frameRate?.takeIf { it.isFinite() && it > 0f }?.toDouble(),
+            activeDecoder = activeDecoder,
+            audioCodec = audioCodec,
+            channels = channels,
+            sampleRateHz = sampleRateHz,
+            subtitleTrack = subtitleLabel?.takeIf(String::isNotBlank) ?: "Desativadas",
+            cacheDurationSeconds = bufferedDurationSeconds,
+            engineName = "ExoPlayer (Media3)",
+            hdrSummary = hdrSummary,
+            afrSummary = afrSummary
+        )
+    }
 
     fun subtitleSelection(trackIdProperty: String?, selectedTrackLabel: String?): String {
         val trackId = trackIdProperty?.trim()?.lowercase(Locale.ROOT)

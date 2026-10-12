@@ -360,24 +360,7 @@ class SeriesDetailViewModel @Inject constructor(
         }
 
         val continueItem = PrimaryEpisodeSelection.select(allEpisodeItems)
-        val continueSubtitle = continueItem?.let { item ->
-            if (isMovie) {
-                if (item.watchedDuration > 0 && item.totalDuration > item.watchedDuration) {
-                    val remainingSec = (item.totalDuration - item.watchedDuration) / 1000
-                    "Filme • ${String.format(Locale.ROOT, "%02d:%02d", remainingSec / 60, remainingSec % 60)} restante"
-                } else {
-                    "Filme"
-                }
-            } else {
-                val epPrefix = item.episodeNumber?.let { "Ep. $it" } ?: "Ep. 01"
-                if (item.watchedDuration > 0 && item.totalDuration > item.watchedDuration) {
-                    val remainingSec = (item.totalDuration - item.watchedDuration) / 1000
-                    "$epPrefix • ${String.format(Locale.ROOT, "%02d:%02d", remainingSec / 60, remainingSec % 60)} restante"
-                } else {
-                    "$epPrefix • Iniciar reprodução"
-                }
-            }
-        } ?: if (isMovie) "Filme" else "Ep. 01 • Iniciar reprodução"
+        val continueSubtitle = PrimaryEpisodeSelection.formatContinueSubtitle(continueItem, isMovie)
 
         return SeriesDetailUiState.Success(
             folderId = folderId,
@@ -673,15 +656,7 @@ class SeriesDetailViewModel @Inject constructor(
             val targetGroup = allSeasonGroups.firstOrNull { it.id == selectedTabId }
             val filtered = getEpisodesForGroup(targetGroup)
             val continueItem = PrimaryEpisodeSelection.select(allEpisodeItems)
-            val continueSubtitle = continueItem?.let { item ->
-                val epText = item.episodeNumber?.let { "Ep. $it" } ?: "Ep. 01"
-                if (item.watchedDuration > 0 && item.totalDuration > item.watchedDuration) {
-                    val remainingSec = (item.totalDuration - item.watchedDuration) / 1000
-                    "$epText • ${String.format(Locale.ROOT, "%02d:%02d", remainingSec / 60, remainingSec % 60)} restante"
-                } else {
-                    "$epText • Iniciar reprodução"
-                }
-            } ?: "Ep. 01 • Iniciar reprodução"
+            val continueSubtitle = PrimaryEpisodeSelection.formatContinueSubtitle(continueItem, currentState.isMovie)
 
             withContext(Dispatchers.Main) {
                 _uiState.value = currentState.copy(

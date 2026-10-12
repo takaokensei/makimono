@@ -67,7 +67,53 @@ class PrimaryEpisodeSelectionTest {
         assertNull(PrimaryEpisodeSelection.select(emptyList()))
     }
 
-    private fun episode(id: String, name: String, progress: Int = 0) = SeriesEpisodeItem(
+    @Test
+    fun `formatContinueCta shows remaining minutes for in-progress episode`() {
+        val ep5 = episode(
+            id = "ep5",
+            name = "Show - 05.mkv",
+            progress = 50,
+            episodeNumber = 5,
+            watchedDuration = 12 * 60_000L,
+            totalDuration = 24 * 60_000L
+        )
+        assertEquals("Continuar E5 · faltam 12 min", PrimaryEpisodeSelection.formatContinueCta(ep5, isMovie = false))
+    }
+
+    @Test
+    fun `formatContinueCta shows start label for unwatched episode and movie`() {
+        val ep1 = episode(
+            id = "ep1",
+            name = "Show - 01.mkv",
+            progress = 0,
+            episodeNumber = 1
+        )
+        assertEquals("Assistir E1", PrimaryEpisodeSelection.formatContinueCta(ep1, isMovie = false))
+        assertEquals("Assistir filme", PrimaryEpisodeSelection.formatContinueCta(ep1, isMovie = true))
+    }
+
+    @Test
+    fun `formatContinueSubtitle formats remaining time MM SS for series and movies`() {
+        val ep5 = episode(
+            id = "ep5",
+            name = "Show - 05.mkv",
+            progress = 50,
+            episodeNumber = 5,
+            watchedDuration = 12 * 60_000L,
+            totalDuration = 24 * 60_000L
+        )
+        assertEquals("Ep. 5 • 12:00 restante", PrimaryEpisodeSelection.formatContinueSubtitle(ep5, isMovie = false))
+        assertEquals("Filme • 12:00 restante", PrimaryEpisodeSelection.formatContinueSubtitle(ep5, isMovie = true))
+    }
+
+    private fun episode(
+        id: String,
+        name: String,
+        progress: Int = 0,
+        episodeNumber: Int? = null,
+        watchedDuration: Long = 0L,
+        totalDuration: Long = 0L
+    ) = SeriesEpisodeItem(
         file = DriveFile(
             id = id,
             name = name,
@@ -78,11 +124,11 @@ class PrimaryEpisodeSelectionTest {
             starred = Starred.UNSTARRED
         ),
         displayTitle = name,
-        episodeNumber = null,
+        episodeNumber = episodeNumber,
         durationText = "24 min",
         audioBadgeText = "",
         progressPercent = progress,
-        watchedDuration = 0L,
-        totalDuration = 0L
+        watchedDuration = watchedDuration,
+        totalDuration = totalDuration
     )
 }
