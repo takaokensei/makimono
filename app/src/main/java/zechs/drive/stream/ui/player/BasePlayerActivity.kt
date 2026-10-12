@@ -98,4 +98,48 @@ abstract class BasePlayerActivity : AppCompatActivity(), PlayerModalHost {
             onEpisodeSelected(selectedEpisode)
         }.show()
     }
+
+    protected abstract fun getWatchedPositionMs(): Long
+    protected abstract fun getTotalDurationMs(): Long
+    protected abstract fun getCurrentFileId(): String
+    protected abstract fun getCurrentTitle(): String
+    protected abstract fun getCurrentThumbnail(): String?
+    protected abstract fun getAudioDelayMs(): Long?
+    protected abstract fun getSubtitleDelayMs(): Long?
+    protected abstract fun saveWatchProgress(
+        title: String,
+        fileId: String,
+        watchedDuration: Long,
+        totalDuration: Long,
+        thumbnailLink: String?,
+        audioDelayMs: Long?,
+        subtitleDelayMs: Long?
+    )
+
+    /**
+     * Persiste o progresso de reprodução no banco de dados local via ProgressRecorder/ViewModel.
+     * Centralizado na BasePlayerActivity para garantir consistência entre os motores ExoPlayer e MPV (T-303).
+     */
+    protected fun saveProgress() {
+        val watchedDuration = getWatchedPositionMs()
+        val totalDuration = getTotalDurationMs()
+        if (zechs.drive.stream.utils.PlaybackProgressPolicy.shouldSave(watchedDuration, totalDuration)) {
+            val fileId = getCurrentFileId().ifBlank { intent.getStringExtra("fileId") ?: "" }
+            val title = getCurrentTitle().ifBlank { intent.getStringExtra("title") ?: "" }
+            if (fileId.isBlank()) {
+                zechs.drive.stream.utils.AppLog.w("BasePlayerActivity", "saveProgress: no fileId available (neither state nor intent), skipping save")
+                return
+            }
+            val thumbnailLink = getCurrentThumbnail() ?: intent.getStringExtra("thumbnailLink")
+            saveWatchProgress(
+                title = title,
+                fileId = fileId,
+                watchedDuration = watchedDuration,
+                totalDuration = totalDuration,
+                thumbnailLink = thumbnailLink,
+                audioDelayMs = getAudioDelayMs(),
+                subtitleDelayMs = getSubtitleDelayMs()
+            )
+        }
+    }
 }

@@ -48,8 +48,11 @@ class PlaybackSettingsDelegate(
                     }
                     mainViewModel.setPlayer(player)
                     viewModel.onEvent(SettingsEvent.SetPlayer(player))
-                    binding.tvPlayerCurrentValue.text = players[item]
+                    binding.tvPlayerCurrentValue.text = formatSelectedPlayerSummary(player)
                     d.dismiss()
+                }
+                .setNeutralButton(R.string.details) { _, _ ->
+                    showRoutingRulesDialog()
                 }
                 .create()
             dialog.setOnShowListener {
@@ -60,6 +63,29 @@ class PlaybackSettingsDelegate(
             }
             dialog.show()
         }
+    }
+
+    private fun formatSelectedPlayerSummary(player: VideoPlayer): String {
+        return when (player) {
+            VideoPlayer.MPV -> context.getString(R.string.mpv)
+            VideoPlayer.EXO_PLAYER -> "${context.getString(R.string.exoplayer)} (ASS/SSA → MPV)"
+        }
+    }
+
+    private fun showRoutingRulesDialog() {
+        val rulesText = zechs.drive.stream.playback.engine.EngineSelector
+            .describeActiveRules()
+            .joinToString(separator = "\n• ", prefix = "• ")
+        val rulesDialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
+            .setTitle(R.string.default_player)
+            .setMessage(rulesText)
+            .setPositiveButton(R.string.ok, null)
+            .create()
+        rulesDialog.setOnShowListener {
+            rulesDialog.window?.let { w -> TvFocusRing.install(w.decorView) }
+            rulesDialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)?.requestFocus()
+        }
+        rulesDialog.show()
     }
 
     private fun setupSubtitleAppearanceSetting() {

@@ -723,20 +723,26 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
         val coordinatorState = playbackCoordinator.state.value
         nextEpisode = coordinatorState.nextEpisode
         prevEpisode = coordinatorState.prevEpisode
+        val navState = zechs.drive.stream.playback.session.NextEpisodePolicy.resolveNavigationControls(
+            isMovie = isMovie,
+            playlistSize = playlist.size,
+            prevEpisode = prevEpisode,
+            nextEpisode = nextEpisode
+        )
 
         if (::controller.isInitialized) {
-            controller.btnEpisodes.visibility = if (isMovie || playlist.size <= 1) View.GONE else View.VISIBLE
-            controller.btnPrevEp.isEnabled = prevEpisode != null
-            controller.btnPrevEp.alpha = if (prevEpisode != null) 1.0f else 0.35f
-            controller.btnNextEp.isEnabled = nextEpisode != null
-            controller.btnNextEp.alpha = if (nextEpisode != null) 1.0f else 0.35f
+            controller.btnEpisodes.visibility = if (navState.showEpisodesDrawerButton) View.VISIBLE else View.GONE
+            controller.btnPrevEp.isEnabled = navState.canSkipPrevious
+            controller.btnPrevEp.alpha = navState.prevButtonAlpha
+            controller.btnNextEp.isEnabled = navState.canSkipNext
+            controller.btnNextEp.alpha = navState.nextButtonAlpha
         }
         mediaSessionHelper?.updatePlaybackState(
             isPlaying = if (::player.isInitialized) !(player.paused ?: true) else false,
             positionMs = if (::player.isInitialized) ((player.timePos ?: 0) * 1000L).coerceAtLeast(0L) else 0L,
             speed = (MPVLib.getPropertyDouble("speed") ?: 1.0).toFloat(),
-            canSkipNext = nextEpisode != null,
-            canSkipPrevious = prevEpisode != null
+            canSkipNext = navState.canSkipNext,
+            canSkipPrevious = navState.canSkipPrevious
         )
         AppLog.d(TAG, "updateNextEpisode: prevEpisode=${prevEpisode?.title}, nextEpisode=${nextEpisode?.title}")
     }
@@ -2216,34 +2222,31 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
         }
     }
 
-    private fun saveProgress() {
-        val watchedDuration = player.timePos ?: return
-        val totalDuration = player.duration ?: return
-        AppLog.d(TAG, "MPV(current=$watchedDuration, total=$totalDuration)")
-        // convert these two values from seconds to milliseconds
-        val watchedDurationInMills = (watchedDuration * 1000).toLong()
-        val totalDurationInMills = (totalDuration * 1000).toLong()
-        AppLog.d(TAG, "MPV(current=$watchedDurationInMills, total=$totalDurationInMills)")
-        AppLog.d(TAG, "MPV(saveProgress=${Utils.prettyTime(watchedDuration)})")
-
-        if (PlaybackProgressPolicy.shouldSave(watchedDurationInMills, totalDurationInMills)) {
-            val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") ?: "" }
-            val title = currentTitle.ifBlank { intent.getStringExtra("title") ?: "" }
-            if (fileId.isBlank()) {
-                AppLog.w(TAG, "saveProgress: no fileId available (neither state nor intent), skipping save")
-                return
-            }
-            val thumbnailLink = currentThumbnailLink ?: intent.getStringExtra("thumbnailLink")
-            viewModel.saveWatch(
-                name = title,
-                videoId = fileId,
-                watchedDuration = watchedDurationInMills,
-                totalDuration = totalDurationInMills,
-                thumbnailLink = thumbnailLink,
-                audioDelayMs = currentAudioDelayMs,
-                subtitleDelayMs = currentSubtitleDelayMs
-            )
-        }
+    override fun getWatchedPositionMs(): Long = ((player.timePos ?: 0) * 1000L)
+    override fun getTotalDurationMs(): Long = ((player.duration ?: 0) * 1000L)
+    override fun getCurrentFileId(): String = currentFileId
+    override fun getCurrentTitle(): String = currentTitle
+    override fun getCurrentThumbnail(): String? = currentThumbnailLink
+    override fun getAudioDelayMs(): Long? = currentAudioDelayMs
+    override fun getSubtitleDelayMs(): Long? = currentSubtitleDelayMs
+    override fun saveWatchProgress(
+        title: String,
+        fileId: String,
+        watchedDuration: Long,
+        totalDuration: Long,
+        thumbnailLink: String?,
+        audioDelayMs: Long?,
+        subtitleDelayMs: Long?
+    ) {
+        viewModel.saveWatch(
+            name = title,
+            videoId = fileId,
+            watchedDuration = watchedDuration,
+            totalDuration = totalDuration,
+            thumbnailLink = thumbnailLink,
+            audioDelayMs = audioDelayMs,
+            subtitleDelayMs = subtitleDelayMs
+        )
     }
 
     private fun checkAutoPlayNextEpisode(timePosSeconds: Long, durationSeconds: Long) {

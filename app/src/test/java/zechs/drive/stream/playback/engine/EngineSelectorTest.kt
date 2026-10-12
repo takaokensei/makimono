@@ -95,4 +95,27 @@ class EngineSelectorTest {
         assertTrue(choice is EngineChoice.Media3)
         assertTrue(choice.reason.contains("Low-RAM device"))
     }
+
+    @Test
+    fun `PGS subtitles route to MPV via declarative rule`() {
+        val pgsMedia = standardMedia.copy(hasPgsSubtitles = true)
+        val choice = EngineSelector.selectEngine(pgsMedia, defaultDevice)
+        assertTrue(choice is EngineChoice.Mpv)
+        assertEquals("rule_pgs_subtitles", choice.ruleId)
+    }
+
+    @Test
+    fun `HDR media with compatible codecs routes to Media3 with rule_hdr_media3`() {
+        val hdrMedia = standardMedia.copy(isHdr = true)
+        val choice = EngineSelector.selectEngine(hdrMedia, defaultDevice)
+        assertTrue(choice is EngineChoice.Media3)
+        assertEquals("rule_hdr_media3", choice.ruleId)
+    }
+
+    @Test
+    fun `describeActiveRules returns human-readable rule summaries`() {
+        val summaries = EngineSelector.describeActiveRules()
+        assertEquals(7, summaries.size)
+        assertTrue(summaries.first().contains("ASS/SSA"))
+    }
 }

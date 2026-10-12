@@ -73,6 +73,17 @@ abstract class BasePlayerEngineContractTest {
         engine.setSpeed(1.5f)
         assertEquals(1.5f, engine.playbackState.value.speed, 0.001f)
     }
+
+    @Test
+    fun `release resets playback state and stops playback`() {
+        val engine = createEngine()
+        engine.load(PlaylistItem("id-9", "Episode 9"), 10_000L)
+        engine.play()
+        assertTrue(engine.playbackState.value.isPlaying)
+        engine.release()
+        assertFalse(engine.playbackState.value.isPlaying)
+        assertEquals(0L, engine.playbackState.value.currentPositionMs)
+    }
 }
 
 /**

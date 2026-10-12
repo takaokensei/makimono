@@ -34,10 +34,11 @@ def main():
     print(f"Anotações @Test no código-fonte: {annotation_count}")
     print(f"Execuções de teste (XML JUnit):   {total_executions}")
     print(f"Falhas: {failures}, Erros: {errors}, Ignorados: {skipped}")
+    diff = total_executions - annotation_count
     print("\nExplicação da diferença:")
-    print("A herança de classes de teste (BasePlayerEngineContractTest com 7 métodos @Test herdados")
+    print(f"A herança de classes de teste (BasePlayerEngineContractTest com {diff} métodos @Test herdados")
     print("e executados independentemente por Media3EngineContractTest e MpvEngineContractTest) adiciona")
-    print(f"+7 execuções em tempo de execução ao total reportado no JUnit.")
+    print(f"+{diff} execuções em tempo de execução ao total reportado no JUnit.")
 
 if __name__ == "__main__":
     main()

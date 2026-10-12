@@ -793,43 +793,31 @@ class PlayerActivity : BasePlayerActivity() {
     }
 
     private fun updateNextEpisode() {
-        if (::btnEpisodes.isInitialized) {
-            btnEpisodes.visibility = if (isMovie || playlist.size <= 1) View.GONE else View.VISIBLE
-        }
         playbackCoordinator.setPlaylist(playlist, currentFileId, currentTitle)
-        if (playlist.isEmpty()) {
-            nextEpisode = null
-            prevEpisode = null
-            if (::btnPrevEp.isInitialized) {
-                btnPrevEp.isEnabled = false
-                btnPrevEp.alpha = 0.35f
-                btnNextEp.isEnabled = false
-                btnNextEp.alpha = 0.35f
-            }
-            mediaSessionHelper?.updatePlaybackState(
-                isPlaying = if (::player.isInitialized) player.isPlaying else false,
-                positionMs = if (::player.isInitialized) player.currentPosition else 0L,
-                speed = if (::player.isInitialized) player.playbackParameters.speed else 1.0f,
-                canSkipNext = false,
-                canSkipPrevious = false
-            )
-            return
-        }
         val coordinatorState = playbackCoordinator.state.value
         nextEpisode = coordinatorState.nextEpisode
         prevEpisode = coordinatorState.prevEpisode
+        val navState = zechs.drive.stream.playback.session.NextEpisodePolicy.resolveNavigationControls(
+            isMovie = isMovie,
+            playlistSize = playlist.size,
+            prevEpisode = prevEpisode,
+            nextEpisode = nextEpisode
+        )
+        if (::btnEpisodes.isInitialized) {
+            btnEpisodes.visibility = if (navState.showEpisodesDrawerButton) View.VISIBLE else View.GONE
+        }
         if (::btnPrevEp.isInitialized) {
-            btnPrevEp.isEnabled = prevEpisode != null
-            btnPrevEp.alpha = if (prevEpisode != null) 1.0f else 0.35f
-            btnNextEp.isEnabled = nextEpisode != null
-            btnNextEp.alpha = if (nextEpisode != null) 1.0f else 0.35f
+            btnPrevEp.isEnabled = navState.canSkipPrevious
+            btnPrevEp.alpha = navState.prevButtonAlpha
+            btnNextEp.isEnabled = navState.canSkipNext
+            btnNextEp.alpha = navState.nextButtonAlpha
         }
         mediaSessionHelper?.updatePlaybackState(
             isPlaying = if (::player.isInitialized) player.isPlaying else false,
             positionMs = if (::player.isInitialized) player.currentPosition else 0L,
             speed = if (::player.isInitialized) player.playbackParameters.speed else 1.0f,
-            canSkipNext = nextEpisode != null,
-            canSkipPrevious = prevEpisode != null
+            canSkipNext = navState.canSkipNext,
+            canSkipPrevious = navState.canSkipPrevious
         )
         val currentIndex = playlist.indexOfFirst { it.fileId == currentFileId }
         AppLog.d(TAG, "updateNextEpisode: currentIndex=$currentIndex, prevEpisode=${prevEpisode?.title}, nextEpisode=${nextEpisode?.title}")
@@ -3261,26 +3249,31 @@ class PlayerActivity : BasePlayerActivity() {
         dialog.show()
     }
 
-    private fun saveProgress() {
-        val watchedDuration = player.currentPosition
-        val totalDuration = player.duration
-        if (PlaybackProgressPolicy.shouldSave(watchedDuration, totalDuration)) {
-            val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") ?: "" }
-            val title = currentTitle.ifBlank { intent.getStringExtra("title") ?: "" }
-            if (fileId.isBlank()) {
-                AppLog.w(TAG, "saveProgress: no fileId available (neither state nor intent), skipping save")
-                return
-            }
-            val thumbnailLink = currentThumbnailLink ?: intent.getStringExtra("thumbnailLink")
-            viewModel.saveWatch(
-                name = title,
-                videoId = fileId,
-                watchedDuration = watchedDuration,
-                totalDuration = totalDuration,
-                thumbnailLink = thumbnailLink,
-                subtitleDelayMs = currentSubtitleOffsetMs
-            )
-        }
+    override fun getWatchedPositionMs(): Long = if (::player.isInitialized) player.currentPosition else 0L
+    override fun getTotalDurationMs(): Long = if (::player.isInitialized) player.duration else 0L
+    override fun getCurrentFileId(): String = currentFileId
+    override fun getCurrentTitle(): String = currentTitle
+    override fun getCurrentThumbnail(): String? = currentThumbnailLink
+    override fun getAudioDelayMs(): Long? = null
+    override fun getSubtitleDelayMs(): Long? = currentSubtitleOffsetMs
+    override fun saveWatchProgress(
+        title: String,
+        fileId: String,
+        watchedDuration: Long,
+        totalDuration: Long,
+        thumbnailLink: String?,
+        audioDelayMs: Long?,
+        subtitleDelayMs: Long?
+    ) {
+        viewModel.saveWatch(
+            name = title,
+            videoId = fileId,
+            watchedDuration = watchedDuration,
+            totalDuration = totalDuration,
+            thumbnailLink = thumbnailLink,
+            audioDelayMs = audioDelayMs,
+            subtitleDelayMs = subtitleDelayMs
+        )
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
