@@ -76,7 +76,7 @@ Execute as tarefas de validação e verificação de integridade:
 ./gradlew testDebugUnitTest lintDebug assembleDebug
 ```
 
-### Métricas de Integridade do Código (v1.7.1)
+### Métricas de Integridade do Código (v1.8.0)
 
 - **Testes Unitários:** 575 anotações `@Test` no código-fonte gerando **583 execuções** registradas no relatório JUnit XML (0 falhas, 0 erros). A contagem superior (+8 execuções) decorre da herança de testes de contrato: `BasePlayerEngineContractTest` define 8 métodos de teste executados para os motores Media3 e MPV. Verificação: `python tools/checks/count_tests.py`.
 - **Android Lint (Baseline):** 681 issues catalogadas em `app/lint-baseline.xml` com **0 erros bloqueantes** e **0 erros filtrados pela baseline**, além de paridade completa de internacionalização (`MissingTranslation`: 0, `MissingQuantity`: 0, `Untranslatable`: 0, `ContentDescription`: 0). Principais categorias: `HardcodedText` (286), `UnusedResources` (158), `SetTextI18n` (102), `InconsistentLayout` (18), `UnusedAttribute` (15). Verificação: `python tools/checks/count_lint_categories.py`.
