@@ -1,0 +1,78 @@
+{
+  "app/src/main/java/zechs/drive/stream/data/local/WatchListDao.kt": [
+    "no-wildcard-imports:import androidx.room.*"
+  ],
+  "app/src/main/java/zechs/drive/stream/data/remote/AnimePosterResolver.kt": [
+    "max-line-length:96"
+  ],
+  "app/src/main/java/zechs/drive/stream/data/remote/DriveApi.kt": [
+    "no-wildcard-imports:import retrofit2.http.*"
+  ],
+  "app/src/main/java/zechs/drive/stream/data/remote/MalApi.kt": [
+    "no-wildcard-imports:import retrofit2.http.*"
+  ],
+  "app/src/main/java/zechs/drive/stream/data/repository/DriveRepository.kt": [
+    "no-wildcard-imports:import zechs.drive.stream.data.model.*"
+  ],
+  "app/src/main/java/zechs/drive/stream/domain/library/EpisodeParser.kt": [
+    "max-line-length:32",
+    "max-line-length:360",
+    "max-line-length:37"
+  ],
+  "app/src/main/java/zechs/drive/stream/ui/home/HomeFragment.kt": [
+    "max-line-length:401"
+  ],
+  "app/src/main/java/zechs/drive/stream/ui/home/HomeViewModel.kt": [
+    "max-line-length:1124",
+    "max-line-length:1167",
+    "max-line-length:1237",
+    "max-line-length:392",
+    "max-line-length:712",
+    "max-line-length:934"
+  ],
+  "app/src/main/java/zechs/drive/stream/ui/home/controller/RailController.kt": [
+    "max-line-length:210"
+  ],
+  "app/src/main/java/zechs/drive/stream/ui/home/controller/ShelvesController.kt": [
+    "max-line-length:210"
+  ],
+  "app/src/main/java/zechs/drive/stream/ui/main/MainActivity.kt": [
+    "max-line-length:638"
+  ],
+  "app/src/main/java/zechs/drive/stream/ui/player/PlayerActivity.kt": [
+    "no-wildcard-imports:import androidx.core.view.*",
+    "no-wildcard-imports:import androidx.media3.common.*",
+    "no-wildcard-imports:import androidx.media3.exoplayer.ExoPlaybackException.*"
+  ],
+  "app/src/main/java/zechs/drive/stream/ui/player/predictive/BingeBufferManager.kt": [
+    "max-line-length:144"
+  ],
+  "app/src/main/java/zechs/drive/stream/ui/player/utils/AuthenticatingDataSource.kt": [
+    "no-wildcard-imports:import androidx.media3.datasource.*"
+  ],
+  "app/src/main/java/zechs/drive/stream/ui/player2/MPVActivity.kt": [
+    "max-line-length:1860",
+    "max-line-length:2544",
+    "max-line-length:2546",
+    "no-wildcard-imports:import android.media.AudioManager.*"
+  ],
+  "app/src/main/java/zechs/drive/stream/ui/profile/ProfileSelectionFragment.kt": [
+    "max-line-length:207",
+    "max-line-length:209"
+  ],
+  "app/src/main/java/zechs/drive/stream/ui/series/SeriesDetailFragment.kt": [
+    "max-line-length:361"
+  ],
+  "app/src/main/java/zechs/drive/stream/ui/settings/MalAuthDialog.kt": [
+    "max-line-length:359"
+  ],
+  "app/src/main/java/zechs/drive/stream/ui/settings/delegates/DataSessionSettingsDelegate.kt": [
+    "max-line-length:239"
+  ],
+  "app/src/main/java/zechs/drive/stream/utils/AppLog.kt": [
+    "no-debug-stdio:65"
+  ],
+  "app/src/main/java/zechs/drive/stream/utils/util/Orientation.kt": [
+    "no-wildcard-imports:import android.content.pm.ActivityInfo.*"
+  ]
+}

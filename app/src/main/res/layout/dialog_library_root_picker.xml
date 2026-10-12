@@ -39,7 +39,7 @@
             android:layout_marginStart="@dimen/space_3"
             android:layout_weight="1"
             android:ellipsize="start"
-            android:maxLines="1"
+            android:singleLine="true"
             android:text="@string/my_drive"
             android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
             android:textColor="?attr/colorTextSecondary" />
@@ -51,7 +51,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/space_2"
         android:ellipsize="middle"
-        android:maxLines="1"
+        android:singleLine="true"
         android:textColor="?attr/colorTextSecondary"
         android:textAppearance="@style/TextAppearance.Makimono.TV.Caption" />
 

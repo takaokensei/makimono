@@ -143,9 +143,6 @@
     <string name="client_id">Client ID</string>
     <string name="client_secret">Client Secret</string>
     <string name="redirect_uri">URI de redirecionamento</string>
-    <string name="default_client_id" translatable="false" />
-    <string name="default_client_secret" translatable="false" />
-    <string name="default_redirect_uri" translatable="false">http://127.0.0.1:53682/</string>
     <string name="need_help">Precisa de ajuda?</string>
     <string name="drive_scope">https://www.googleapis.com/auth/drive.readonly</string>
     <string name="scopes">Permissões (Scopes)</string>

@@ -8,6 +8,12 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      run_instrumented:
+        description: 'Run instrumented tests on headless Android TV emulator (T-905 / D-90)'
+        required: false
+        default: 'false'
+        type: boolean
 
 jobs:
   validate:
@@ -46,6 +52,9 @@ jobs:
           python3 tools/checks/check_strings.py
           python3 tools/checks/check_no_direct_log.py
           python3 tools/checks/check_readme_claims.py
+          python3 tools/checks/check_kotlin_literals.py
+          python3 tools/checks/check_kotlin_style.py
+          python3 tools/checks/check_immutable_tag.py --self-test
           python3 tools/checks/baseline_diff.py app/lint-baseline.xml
 
       - name: Run lint checks

@@ -100,19 +100,19 @@ internal class FeaturedHeroBinder(
                 imageView.setImageResource(R.drawable.kodi_primary_bg)
             } else if (displayedBackdropUrl != imageUrl) {
                 displayedBackdropUrl = imageUrl
-                val request = Glide.with(imageView)
+                val baseRequest = Glide.with(imageView)
                     .load(imageUrl)
                     .override(1440, 810)
                     .centerCrop()
                     .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
                     .placeholder(R.drawable.kodi_primary_bg)
                     .error(R.drawable.kodi_primary_bg)
-                if (reduceMotionEnabled) {
-                    request.dontAnimate()
+                val finalRequest = if (reduceMotionEnabled) {
+                    baseRequest.dontAnimate()
                 } else {
-                    request.transition(DrawableTransitionOptions.withCrossFade(400))
+                    baseRequest.transition(DrawableTransitionOptions.withCrossFade(400))
                 }
-                request.into(imageView)
+                finalRequest.into(imageView)
             }
         }
 

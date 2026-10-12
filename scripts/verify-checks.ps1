@@ -24,4 +24,10 @@ if ($LASTEXITCODE -ne 0) { throw "check_readme_claims failed" }
 python tools/checks/check_kotlin_literals.py
 if ($LASTEXITCODE -ne 0) { throw "check_kotlin_literals failed" }
 
+python tools/checks/check_kotlin_style.py
+if ($LASTEXITCODE -ne 0) { throw "check_kotlin_style failed" }
+
+python tools/checks/check_immutable_tag.py --self-test
+if ($LASTEXITCODE -ne 0) { throw "check_immutable_tag self-test failed" }
+
 Write-Host "==> All static verification checks passed!" -ForegroundColor Green

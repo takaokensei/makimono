@@ -78,11 +78,13 @@ Execute as tarefas de validação e verificação de integridade:
 
 ### Métricas de Integridade do Código (v1.7.1)
 
-- **Testes Unitários:** 574 anotações `@Test` no código-fonte gerando **582 execuções** registradas no relatório JUnit XML (0 falhas, 0 erros). A contagem superior (+8 execuções) decorre da herança de testes de contrato: `BasePlayerEngineContractTest` define 8 métodos de teste executados para os motores Media3 e MPV. Verificação: `python tools/checks/count_tests.py`.
-- **Android Lint (Baseline):** 739 issues catalogadas em `app/lint-baseline.xml` com **0 erros bloqueantes** e paridade completa de internacionalização (`MissingTranslation`: 0). Principais categorias: `HardcodedText` (286), `UnusedResources` (178), `SetTextI18n` (102), `InconsistentLayout` (18), `UnusedAttribute` (15). Verificação: `python tools/checks/count_lint_categories.py`.
+- **Testes Unitários:** 575 anotações `@Test` no código-fonte gerando **583 execuções** registradas no relatório JUnit XML (0 falhas, 0 erros). A contagem superior (+8 execuções) decorre da herança de testes de contrato: `BasePlayerEngineContractTest` define 8 métodos de teste executados para os motores Media3 e MPV. Verificação: `python tools/checks/count_tests.py`.
+- **Android Lint (Baseline):** 681 issues catalogadas em `app/lint-baseline.xml` com **0 erros bloqueantes** e **0 erros filtrados pela baseline**, além de paridade completa de internacionalização (`MissingTranslation`: 0, `MissingQuantity`: 0, `Untranslatable`: 0, `ContentDescription`: 0). Principais categorias: `HardcodedText` (286), `UnusedResources` (158), `SetTextI18n` (102), `InconsistentLayout` (18), `UnusedAttribute` (15). Verificação: `python tools/checks/count_lint_categories.py`.
 - **Ferramentas de Verificação Contínua (`tools/checks/`):**
   - `check_strings.py`: Validação de paridade estrita de strings (416 tags `<string>` no total em `values/strings.xml`, sendo 413 traduzíveis validadas contra `values-pt/strings.xml` e 3 não-traduzíveis técnicas marcadas com `translatable="false"`).
   - `check_kotlin_literals.py`: Guarda contra literais de UI hardcoded (`Toast.makeText`, `setTitle`, `setMessage`, `setText`) em arquivos Kotlin.
+  - `check_kotlin_style.py`: Verificação estática de estilo e higiene Kotlin com baseline versionada (`config/ktlint-baseline.json`).
+  - `check_immutable_tag.py`: Guarda de imutabilidade de tags de release com autoteste (`--self-test`).
   - `check_contrast.py`: Validação de conformidade WCAG AAA/AA para todas as paletas de cores e gradientes sobre imagem.
   - `check_layout_colors.py` & `check_typography.py`: Auditoria de uso de tokens semânticos e tipografia.
   - `check_no_direct_log.py`: Guarda contra chamadas diretas a `android.util.Log` fora de `AppLog.kt`.
