@@ -15,3 +15,4 @@ Este diretório armazena as propostas formais da Fase 4 (`P-10` a `P-18`) e port
 | P-16 | Lista de capítulos e marcadores no OSD | [P-16-capitulos-marcadores-osd.md](P-16-capitulos-marcadores-osd.md) | Implementado e testado |
 | P-17 | Painel de informação técnica | [P-17-painel-informacao-tecnica.md](P-17-painel-informacao-tecnica.md) | Implementado e testado |
 | P-18 | Prévia no destaque da Home | [P-18-previa-destaque-home.md](P-18-previa-destaque-home.md) | Só desenho (sem código) |
+| D-50 | Progresso entre aparelhos (escopo OAuth) | [D-50-sincronizacao-progresso.md](D-50-sincronizacao-progresso.md) | Proposta de arquitetura (sem código) |

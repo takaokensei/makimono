@@ -61,4 +61,39 @@ class TvWatchNextManagerTest {
         )
         assertTrue(finished.hasFinished())
     }
+
+    @Test
+    fun classifySyncAction_upsertsInProgressAndRemovesFinishedOrZeroProgress() {
+        val inProgress = WatchList(
+            name = "Frieren - 05",
+            videoId = "vid_005",
+            watchedDuration = 600_000L,
+            totalDuration = 1_440_000L
+        )
+        val finished = WatchList(
+            name = "Frieren - 05",
+            videoId = "vid_005",
+            watchedDuration = 1_400_000L,
+            totalDuration = 1_440_000L
+        )
+        val unwatched = WatchList(
+            name = "Frieren - 06",
+            videoId = "vid_006",
+            watchedDuration = 0L,
+            totalDuration = 1_440_000L
+        )
+
+        org.junit.Assert.assertEquals(
+            TvWatchNextManager.SyncAction.UPSERT_CONTINUE,
+            TvWatchNextManager.classifySyncAction(inProgress)
+        )
+        org.junit.Assert.assertEquals(
+            TvWatchNextManager.SyncAction.REMOVE,
+            TvWatchNextManager.classifySyncAction(finished)
+        )
+        org.junit.Assert.assertEquals(
+            TvWatchNextManager.SyncAction.REMOVE,
+            TvWatchNextManager.classifySyncAction(unwatched)
+        )
+    }
 }

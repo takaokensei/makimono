@@ -521,6 +521,7 @@ class SeriesDetailViewModel @Inject constructor(
         val updatedTabs = currentState.seasonTabs.map {
             it.copy(isSelected = it.id == tab.id)
         }
+        selectedSeasonPosition = updatedTabs.indexOfFirst { it.isSelected }.coerceAtLeast(0)
 
         val targetGroup = allSeasonGroups.firstOrNull { it.id == tab.id }
         val filteredEpisodes = getEpisodesForGroup(targetGroup)

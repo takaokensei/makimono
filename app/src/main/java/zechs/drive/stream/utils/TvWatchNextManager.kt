@@ -124,6 +124,23 @@ object TvWatchNextManager {
         }
     }
 
+    enum class SyncAction {
+        UPSERT_CONTINUE,
+        REMOVE
+    }
+
+    /**
+     * Pure decision rule for Android TV Watch Next channel synchronization (T-505):
+     * - Items with meaningful progress that have not finished are upserted to Watch Next.
+     * - Completed or zero-progress items are removed from Watch Next.
+     */
+    fun classifySyncAction(watch: WatchList): SyncAction {
+        if (watch.watchedDuration <= 0L || watch.totalDuration <= 0L || watch.hasFinished()) {
+            return SyncAction.REMOVE
+        }
+        return SyncAction.UPSERT_CONTINUE
+    }
+
     /**
      * Synchronizes a list of recent in-progress titles to the Watch Next system row.
      */
@@ -133,10 +150,9 @@ object TvWatchNextManager {
     ) = withContext(Dispatchers.IO) {
         try {
             for (watch in recentWatches) {
-                if (watch.hasFinished()) {
-                    removeWatchNext(context, watch.videoId)
-                } else {
-                    updateWatchNext(context, watch)
+                when (classifySyncAction(watch)) {
+                    SyncAction.REMOVE -> removeWatchNext(context, watch.videoId)
+                    SyncAction.UPSERT_CONTINUE -> updateWatchNext(context, watch)
                 }
             }
         } catch (e: Exception) {

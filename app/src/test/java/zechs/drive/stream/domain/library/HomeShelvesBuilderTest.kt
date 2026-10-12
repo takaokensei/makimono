@@ -78,4 +78,18 @@ class HomeShelvesBuilderTest {
         assertEquals("shelf_recently_added", shelves[3].id)
         assertEquals("shelf_catalog", shelves[4].id)
     }
+
+    @Test
+    fun `removedFromContinueWatchingIds filters dismissed items out of Continue Watching shelf`() {
+        val item1 = LibraryMediaItem("1", "Item 1", lastAccessedTimestamp = 100L, progressPercentage = 45f)
+        val item2 = LibraryMediaItem("2", "Item 2", lastAccessedTimestamp = 200L, progressPercentage = 60f)
+
+        val shelves = builder.build(
+            continueWatching = listOf(item1, item2),
+            removedFromContinueWatchingIds = setOf("2")
+        )
+
+        assertEquals(1, shelves.size)
+        assertEquals(listOf("1"), shelves[0].items.map { it.id })
+    }
 }

@@ -11,13 +11,14 @@ class HomeShelvesBuilder {
         starred: List<LibraryMediaItem> = emptyList(),
         followed: List<LibraryMediaItem> = emptyList(),
         recentlyAdded: List<LibraryMediaItem> = emptyList(),
-        catalog: List<LibraryMediaItem> = emptyList()
+        catalog: List<LibraryMediaItem> = emptyList(),
+        removedFromContinueWatchingIds: Set<String> = emptySet()
     ): List<LibraryShelf> {
         val shelves = mutableListOf<LibraryShelf>()
 
-        // 1. Continuar assistindo (primeira estante, ordenada por último acesso)
+        // 1. Continuar assistindo (primeira estante, ordenada por último acesso, respeitando remoções T-503)
         val inProgress = continueWatching
-            .filter { it.progressPercentage in 1f..95f }
+            .filter { it.id !in removedFromContinueWatchingIds && it.progressPercentage in 1f..95f }
             .sortedByDescending { it.lastAccessedTimestamp }
 
         if (inProgress.isNotEmpty()) {
