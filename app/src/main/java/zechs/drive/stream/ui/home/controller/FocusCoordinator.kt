@@ -123,13 +123,13 @@ class FocusCoordinator(
         }.coerceIn(0, (target.adapter?.itemCount ?: 1) - 1)
 
         target.scrollToPosition(targetPosition)
-        target.postDelayed({
+        zechs.drive.stream.utils.LifecycleDelays.postDelayed(target, 64) {
             if (target.findViewHolderForAdapterPosition(targetPosition)?.itemView?.requestFocus() != true) {
-                target.postDelayed({
+                zechs.drive.stream.utils.LifecycleDelays.postDelayed(target, 64) {
                     target.findViewHolderForAdapterPosition(targetPosition)?.itemView?.requestFocus()
-                }, 64)
+                }
             }
-        }, 64)
+        }
         return true
     }
 
@@ -181,8 +181,8 @@ class FocusCoordinator(
 
         val targetPos = resolved.second
         shelf.scrollToPosition(targetPos)
-        shelf.postDelayed({
+        zechs.drive.stream.utils.LifecycleDelays.postDelayed(shelf, 100) {
             shelf.findViewHolderForAdapterPosition(targetPos)?.itemView?.requestFocus()
-        }, 100)
+        }
     }
 }

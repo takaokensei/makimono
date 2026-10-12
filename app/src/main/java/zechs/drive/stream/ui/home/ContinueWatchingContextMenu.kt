@@ -43,15 +43,17 @@ internal object ContinueWatchingContextMenu {
             .create()
             .also { dialog ->
                 dialog.setOnDismissListener {
-                    focusAnchor?.postDelayed({
-                        if (focusAnchor.isAttachedToWindow && focusAnchor.isShown) {
-                            if (focusAnchor.isInTouchMode) {
-                                focusAnchor.requestFocusFromTouch()
-                            } else {
-                                focusAnchor.requestFocus()
+                    focusAnchor?.let { anchor ->
+                        zechs.drive.stream.utils.LifecycleDelays.postDelayed(anchor, FOCUS_RESTORE_DELAY_MS) {
+                            if (anchor.isShown) {
+                                if (anchor.isInTouchMode) {
+                                    anchor.requestFocusFromTouch()
+                                } else {
+                                    anchor.requestFocus()
+                                }
                             }
                         }
-                    }, FOCUS_RESTORE_DELAY_MS)
+                    }
                 }
                 dialog.show()
             }

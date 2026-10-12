@@ -18,7 +18,7 @@ internal object HomeShelfScroll {
 
     fun alignHeading(scroll: NestedScrollView, heading: View?, focusedItem: View) {
         val safeSpacing = (12 * focusedItem.resources.displayMetrics.density).toInt()
-        focusedItem.postDelayed({
+        zechs.drive.stream.utils.LifecycleDelays.postDelayed(focusedItem, 180L) {
             val sectionHeading = heading ?: return@postDelayed
             if (!scroll.isShown || !focusedItem.isShown || !focusedItem.hasFocus() || !sectionHeading.isShown) {
                 return@postDelayed
@@ -39,6 +39,6 @@ internal object HomeShelfScroll {
                 topSpacing = safeSpacing
             )
             if (delta > 0) scroll.smoothScrollBy(0, delta)
-        }, 180L)
+        }
     }
 }

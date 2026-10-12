@@ -1439,12 +1439,12 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                 animateShowController()
                 val target = modalReturnFocus
                 modalReturnFocus = null
-                playerView.postDelayed({
+                zechs.drive.stream.utils.LifecycleDelays.postDelayed(playerView, 250L, this@PlayerActivity) {
                     if (!isControlsShowing()) return@postDelayed
                     target?.takeIf { it.isShown && it.isFocusable }
                         ?.requestFocus()
                         ?: playerView.findViewById<View>(R.id.btnPlayPause)?.requestFocus()
-                }, 250L)
+                }
             }
             PlayerModalTransition.NONE -> Unit
         }

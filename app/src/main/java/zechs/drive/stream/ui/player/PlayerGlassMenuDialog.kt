@@ -203,9 +203,9 @@ class PlayerGlassMenuDialog(
 
         if (attemptsRemaining > 0) {
             list.scrollToPosition(targetPosition)
-            list.postDelayed({
+            zechs.drive.stream.utils.LifecycleDelays.postDelayed(list, 32L) {
                 requestInitialItemFocus(dialogBinding, targetPosition, attemptsRemaining - 1)
-            }, 32L)
+            }
         } else {
             dialogBinding.btnDialogClose.requestFocus()
         }

@@ -24,15 +24,15 @@ internal object SeriesEpisodeContextMenu {
             .create()
 
         dialog.setOnCancelListener {
-            focusAnchor.postDelayed({
-                if (focusAnchor.isAttachedToWindow && focusAnchor.isShown) {
+            zechs.drive.stream.utils.LifecycleDelays.postDelayed(focusAnchor, FOCUS_RESTORE_DELAY_MS) {
+                if (focusAnchor.isShown) {
                     if (focusAnchor.isInTouchMode) {
                         focusAnchor.requestFocusFromTouch()
                     } else {
                         focusAnchor.requestFocus()
                     }
                 }
-            }, FOCUS_RESTORE_DELAY_MS)
+            }
         }
         dialog.show()
         return dialog

@@ -475,10 +475,10 @@ class MainActivity : AppCompatActivity() {
                                 ).show()
                             }
 
-                            binding.root.postDelayed({
+                            zechs.drive.stream.utils.LifecycleDelays.postDelayed(binding.root, 1500L, this@MainActivity) {
                                 dismissProgressDialog()
                                 viewModel.resetUpdateState()
-                            }, 1500L)
+                            }
                         }
                         is MainViewModel.UpdateDownloadState.Failed -> {
                             dismissProgressDialog()

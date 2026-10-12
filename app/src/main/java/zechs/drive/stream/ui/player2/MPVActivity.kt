@@ -1037,12 +1037,12 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                 showControlsWithFocus()
                 val target = modalReturnFocus
                 modalReturnFocus = null
-                controller.root.postDelayed({
+                zechs.drive.stream.utils.LifecycleDelays.postDelayed(controller.root, 250L, this@MPVActivity) {
                     if (!isControlsShowing()) return@postDelayed
                     target?.takeIf { it.isShown && it.isFocusable }
                         ?.requestFocus()
                         ?: controller.btnPlayPause.requestFocus()
-                }, 250L)
+                }
             }
             PlayerModalTransition.NONE -> Unit
         }
