@@ -200,6 +200,25 @@ class FilesFragment : BaseFragment() {
         binding.root.findViewById<View>(R.id.filesSettings)?.setOnClickListener {
             findNavController().navigate(R.id.settingsFragment)
         }
+
+        val navItems = listOfNotNull(
+            binding.root.findViewById<View>(R.id.filesBrand),
+            binding.root.findViewById<View>(R.id.filesHome),
+            binding.root.findViewById<View>(R.id.filesCatalog),
+            binding.root.findViewById<View>(R.id.filesFilmes),
+            binding.root.findViewById<View>(R.id.filesFolders),
+            binding.root.findViewById<View>(R.id.filesFavorites),
+            binding.root.findViewById<View>(R.id.userProfilePill),
+            binding.root.findViewById<View>(R.id.filesSettings)
+        )
+        navItems.forEach { item ->
+            item.setOnKeyListener { _, keyCode, event ->
+                if (event.action == android.view.KeyEvent.ACTION_DOWN && keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) {
+                    binding.etSearch.requestFocus()
+                    true
+                } else false
+            }
+        }
     }
 
     override fun onStart() {
@@ -352,9 +371,10 @@ class FilesFragment : BaseFragment() {
             )
             findNavController().navigate(action)
         } else {
+            val isLocal = targetFolderId.startsWith(zechs.drive.stream.data.repository.LocalMediaRepository.LOCAL_BUCKET_PREFIX)
             val action = FilesFragmentDirections.actionFilesFragmentSelf(
                 name = file.name,
-                query = "'$targetFolderId' in parents and trashed=false",
+                query = if (isLocal) targetFolderId else "'$targetFolderId' in parents and trashed=false",
                 folderPath = navigation.folderPath.toTypedArray()
             )
             findNavController().navigate(action)
@@ -490,6 +510,7 @@ class FilesFragment : BaseFragment() {
     private fun setupRecyclerView() {
         binding.rvList.apply {
             adapter = filesAdapter
+            itemAnimator = null
             addOnScrollListener(paginationHandler.scrollListener)
         }
         filesAdapter.onFocusItemListener = { focusedView ->

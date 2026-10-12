@@ -239,7 +239,12 @@ class SeriesDetailFragment : BaseFragment() {
                             binding.tvEnglishSubtitle.visibility = View.GONE
                             state.posterUrl?.let { poster ->
                                 MediaImageLoader.poster(binding.ivSeriesPosterCard, poster)
-                                MediaImageLoader.backdrop(binding.ivHeroBackdrop, poster)
+                            }
+                            if (!state.bannerUrl.isNullOrBlank()) {
+                                MediaImageLoader.backdrop(binding.ivHeroBackdrop, state.bannerUrl)
+                            } else {
+                                com.bumptech.glide.Glide.with(binding.ivHeroBackdrop).clear(binding.ivHeroBackdrop)
+                                binding.ivHeroBackdrop.setImageDrawable(null)
                             }
                         }
 
@@ -295,10 +300,13 @@ class SeriesDetailFragment : BaseFragment() {
             MediaImageLoader.poster(binding.ivSeriesPosterCard, sharpPoster)
         }
 
-        // Ambient Backdrop (Banner or subtle ambient poster)
-        val bannerOrBackdrop = state.aniListMetadata?.bannerUrl ?: state.fallbackPosterUrl ?: sharpPoster
-        if (bannerOrBackdrop != null) {
+        // Ambient Backdrop (Banner only, avoid stretching sharp vertical poster as backdrop)
+        val bannerOrBackdrop = state.aniListMetadata?.bannerUrl ?: state.fallbackPosterUrl
+        if (!bannerOrBackdrop.isNullOrBlank()) {
             MediaImageLoader.backdrop(binding.ivHeroBackdrop, bannerOrBackdrop)
+        } else {
+            com.bumptech.glide.Glide.with(binding.ivHeroBackdrop).clear(binding.ivHeroBackdrop)
+            binding.ivHeroBackdrop.setImageDrawable(null)
         }
 
         // Dynamic Color Gradient Tint from AniList dominant color

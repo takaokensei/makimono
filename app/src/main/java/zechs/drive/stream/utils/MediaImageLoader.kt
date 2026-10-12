@@ -18,7 +18,18 @@ object MediaImageLoader {
     }
 
     fun backdrop(view: ImageView, url: String?) {
-        load(view, url, 1440, 810, R.drawable.kodi_primary_bg)
+        if (url.isNullOrBlank()) {
+            Glide.with(view).clear(view)
+            view.setImageDrawable(null)
+            return
+        }
+        Glide.with(view)
+            .load(url)
+            .override(1440, 810)
+            .centerCrop()
+            .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
+            .dontAnimate()
+            .into(view)
     }
 
     fun preloadPoster(context: Context, url: String?) {

@@ -37,7 +37,7 @@ class FilesAdapter(
         set(value) {
             if (field != value) {
                 field = value
-                notifyItemRangeChanged(0, itemCount)
+                notifyDataSetChanged()
             }
         }
 

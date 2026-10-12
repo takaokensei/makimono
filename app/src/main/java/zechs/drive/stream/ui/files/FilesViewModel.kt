@@ -48,7 +48,7 @@ class FilesViewModel @Inject constructor(
     private val folderMetadataRepository: FolderMetadataRepository,
     private val animePosterResolver: AnimePosterResolver,
     private val favoriteRepository: zechs.drive.stream.data.repository.FavoriteRepository,
-    private val localMediaRepository: LocalMediaRepository? = null
+    private val localMediaRepository: LocalMediaRepository
 ) : ViewModel() {
 
     fun recordFolderOpened(folderId: String, folderName: String) = viewModelScope.launch(Dispatchers.IO) {
@@ -175,7 +175,7 @@ class FilesViewModel @Inject constructor(
             try {
                 ensureActive()
                 if (query != null) {
-                    if (query.startsWith(LocalMediaRepository.LOCAL_BUCKET_PREFIX)) {
+                    if (query.contains(LocalMediaRepository.LOCAL_BUCKET_PREFIX)) {
                         getLocalBucketFiles(query, requestGeneration)
                     } else {
                         getQuery(query, requestGeneration)
@@ -224,9 +224,12 @@ class FilesViewModel @Inject constructor(
     }
 
     private suspend fun getLocalBucketFiles(query: String, requestGeneration: Long) {
-        val bucketId = query.removePrefix(LocalMediaRepository.LOCAL_BUCKET_PREFIX)
-        val videos = localMediaRepository?.getVideosInFolder(bucketId) ?: emptyList()
-        val subtitles = localMediaRepository?.getSubtitlesInFolder(bucketId) ?: emptyList()
+        val bucketPart = query.substringAfter(LocalMediaRepository.LOCAL_BUCKET_PREFIX)
+            .substringBefore("'")
+            .substringBefore(" ")
+            .trim()
+        val videos = localMediaRepository.getVideosInFolder(bucketPart)
+        val subtitles = localMediaRepository.getSubtitlesInFolder(bucketPart)
 
         currentCoroutineContext().ensureActive()
         if (requestGeneration != pageRequestGeneration) return

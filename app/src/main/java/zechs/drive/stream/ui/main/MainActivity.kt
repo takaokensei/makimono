@@ -607,8 +607,25 @@ class MainActivity : AppCompatActivity() {
                     return@launch
                 }
 
-                withContext(Dispatchers.Main) {
-                    binding.tvVinhetaPreloadStatus.text = "Sincronizando biblioteca…"
+                // Fast Reload: if metadata is already cached in Room, release intro immediately
+                // Background sync continues concurrently without blocking the user
+                val hasCachedMetadata = try {
+                    folderMetadataRepository.getAllMetadata().isNotEmpty()
+                } catch (e: Exception) {
+                    false
+                }
+
+                if (hasCachedMetadata) {
+                    AppLog.d(TAG, "Fast Reload: local metadata cached, releasing vinheta immediately")
+                    withContext(Dispatchers.Main) {
+                        isPreloadFinished = true
+                        timeoutJob.cancel()
+                        checkDismissVinheta()
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        binding.tvVinhetaPreloadStatus.text = "Sincronizando biblioteca…"
+                    }
                 }
 
                 val (configuredId, configuredName) = profileManager.getLibraryRoot()

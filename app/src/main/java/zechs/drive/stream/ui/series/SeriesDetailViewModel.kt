@@ -42,7 +42,8 @@ sealed class SeriesDetailUiState {
     data class Loading(
         val folderId: String,
         val seriesTitle: String,
-        val posterUrl: String? = null
+        val posterUrl: String? = null,
+        val bannerUrl: String? = null
     ) : SeriesDetailUiState()
     data class Success(
         val folderId: String,
@@ -125,6 +126,27 @@ class SeriesDetailViewModel @Inject constructor(
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                // Check local Room cache immediately so cached posters/banners display with zero delay
+                val initialCached = try {
+                    folderMetadataRepository.getMetadata(folderId)
+                } catch (e: Exception) {
+                    null
+                }
+                if (initialCached != null) {
+                    val quickPoster = initialPoster ?: initialCached.posterUrl
+                    val quickBanner = initialCached.bannerUrl
+                    withContext(Dispatchers.Main) {
+                        if (_uiState.value is SeriesDetailUiState.Loading) {
+                            _uiState.value = SeriesDetailUiState.Loading(
+                                folderId = folderId,
+                                seriesTitle = seriesTitle,
+                                posterUrl = quickPoster,
+                                bannerUrl = quickBanner
+                            )
+                        }
+                    }
+                }
+
                 // Record folder opened for Home screen Recents / Continue
                 folderMetadataRepository.recordFolderOpened(folderId, seriesTitle)
 
