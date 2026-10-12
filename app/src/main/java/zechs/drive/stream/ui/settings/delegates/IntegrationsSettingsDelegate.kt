@@ -46,8 +46,8 @@ class IntegrationsSettingsDelegate(
 
     private fun showDisconnectDialog() {
         val dialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
-            .setTitle("Desconectar do MyAnimeList?")
-            .setMessage("O scrobble automático de episódios será desativado.")
+            .setTitle(R.string.settings_mal_disconnect_title)
+            .setMessage(R.string.settings_mal_disconnect_message)
             .setPositiveButton("Desconectar") { d, _ ->
                 viewModel.onEvent(SettingsEvent.DisconnectMal)
                 d.dismiss()
@@ -88,8 +88,8 @@ class IntegrationsSettingsDelegate(
             fields.addView(clientIdInput)
             fields.addView(clientSecretInput)
             val dialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
-                .setTitle("Configurar MyAnimeList")
-                .setMessage("Crie uma aplicação OAuth no MyAnimeList e informe as credenciais. Elas serão armazenadas criptografadas.")
+                .setTitle(R.string.settings_mal_configure_title)
+                .setMessage(R.string.settings_mal_configure_message)
                 .setView(fields)
                 .setPositiveButton("Continuar") { _, _ ->
                     if (clientIdInput.text.isNullOrBlank() || clientSecretInput.text.isNullOrBlank()) {

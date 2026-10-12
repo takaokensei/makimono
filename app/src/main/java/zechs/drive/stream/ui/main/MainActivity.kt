@@ -390,8 +390,8 @@ class MainActivity : AppCompatActivity() {
         val asset = release.getBestApkAsset()
 
         updateDialog = MaterialAlertDialogBuilder(this)
-            .setTitle("Atualização — Makimono ${release.tagName}")
-            .setMessage("Uma nova versão do Makimono (${release.tagName}) está disponível com melhorias e correções.\n\nArquivo: ${asset?.name ?: "makimono.apk"}\n\nDeseja atualizar agora?")
+            .setTitle(getString(R.string.update_dialog_title, release.tagName))
+            .setMessage(getString(R.string.update_dialog_message, release.tagName, asset?.name ?: "makimono.apk"))
             .setPositiveButton("Atualizar Agora") { dialog, _ ->
                 dialog.dismiss()
                 viewModel.startUpdateDownload(release)

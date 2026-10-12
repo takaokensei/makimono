@@ -130,7 +130,7 @@ class QueueFragment : Fragment() {
 
     private fun removeFromQueue(item: WatchQueueItem) {
         viewModel.removeFromQueue(item.fileId)
-        Toast.makeText(requireContext(), "Removido da fila", Toast.LENGTH_SHORT).show()
+        Toast.makeText(requireContext(), R.string.queue_item_removed, Toast.LENGTH_SHORT).show()
     }
 
     private fun moveQueueItem(fromPosition: Int, toPosition: Int) {

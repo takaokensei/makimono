@@ -78,11 +78,12 @@ Execute as tarefas de validação e verificação de integridade:
 
 ### Métricas de Integridade do Código (v1.7.1)
 
-- **Testes Unitários:** 570 anotações `@Test` no código-fonte gerando **578 execuções** registradas no relatório JUnit XML (0 falhas, 0 erros). A contagem superior (+8 execuções) decorre da herança de testes de contrato: `BasePlayerEngineContractTest` define 8 métodos de teste executados para os motores Media3 e MPV. Verificação: `python tools/checks/count_tests.py`.
+- **Testes Unitários:** 571 anotações `@Test` no código-fonte gerando **579 execuções** registradas no relatório JUnit XML (0 falhas, 0 erros). A contagem superior (+8 execuções) decorre da herança de testes de contrato: `BasePlayerEngineContractTest` define 8 métodos de teste executados para os motores Media3 e MPV. Verificação: `python tools/checks/count_tests.py`.
 - **Android Lint (Baseline):** 739 issues catalogadas em `app/lint-baseline.xml` com **0 erros bloqueantes** e paridade completa de internacionalização (`MissingTranslation`: 0). Principais categorias: `HardcodedText` (286), `UnusedResources` (178), `SetTextI18n` (102), `InconsistentLayout` (18), `UnusedAttribute` (15). Verificação: `python tools/checks/count_lint_categories.py`.
 - **Ferramentas de Verificação Contínua (`tools/checks/`):**
-  - `check_strings.py`: Validação de paridade estrita de strings (393 tags `<string>` no total em `values/strings.xml`, sendo 390 traduzíveis validadas contra `values-pt/strings.xml` e 3 não-traduzíveis técnicas marcadas com `translatable="false"`).
-  - `check_contrast.py`: Validação de conformidade WCAG AAA/AA para todas as paletas de cores.
+  - `check_strings.py`: Validação de paridade estrita de strings (416 tags `<string>` no total em `values/strings.xml`, sendo 413 traduzíveis validadas contra `values-pt/strings.xml` e 3 não-traduzíveis técnicas marcadas com `translatable="false"`).
+  - `check_kotlin_literals.py`: Guarda contra literais de UI hardcoded (`Toast.makeText`, `setTitle`, `setMessage`, `setText`) em arquivos Kotlin.
+  - `check_contrast.py`: Validação de conformidade WCAG AAA/AA para todas as paletas de cores e gradientes sobre imagem.
   - `check_layout_colors.py` & `check_typography.py`: Auditoria de uso de tokens semânticos e tipografia.
   - `check_no_direct_log.py`: Guarda contra chamadas diretas a `android.util.Log` fora de `AppLog.kt`.
   - `check_readme_claims.py`: Validação contínua de paridade entre as afirmações do README e os valores reais do código.

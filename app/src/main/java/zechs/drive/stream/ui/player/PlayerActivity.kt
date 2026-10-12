@@ -2942,7 +2942,7 @@ class PlayerActivity : BasePlayerActivity() {
 
         val dialog = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog).apply {
             setTitle(getString(R.string.chapters))
-            setMessage("Nenhum capítulo embutido foi detectado neste arquivo de vídeo.\n\nDeseja alternar para o MPV Player?")
+            setMessage(R.string.player_no_chapters_switch_mpv)
             setPositiveButton("Abrir no MPV") { dialog, _ ->
                 dialog.dismiss()
                 launchMpvFallback()

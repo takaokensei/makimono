@@ -50,7 +50,7 @@ class CatalogPresentationController(
         catalogSort = prefs.getInt("sort", 0).coerceIn(0, 2)
         binding.root.findViewById<View>(R.id.btnCatalogSort)?.setOnClickListener { button ->
             MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
-                .setTitle("Ordenar catálogo")
+                .setTitle(R.string.catalog_sort_title)
                 .setSingleChoiceItems(arrayOf("Ordem da biblioteca", "Nome: A–Z", "Nome: Z–A"), catalogSort) { dialog, choice ->
                     catalogSort = choice
                     prefs.edit().putInt("sort", choice).apply()
@@ -81,7 +81,7 @@ class CatalogPresentationController(
             viewModel.onEvent(HomeEvent.Search(query))
         }
 
-        binding.btnClearSearch.setOnClickListener { binding.etSearchAnime.setText("") }
+        binding.btnClearSearch.setOnClickListener { binding.etSearchAnime.text?.clear() }
         binding.etSearchAnime.setOnKeyListener { _, keyCode, event ->
             if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
                 if (binding.etSearchAnime.selectionStart == 0) {

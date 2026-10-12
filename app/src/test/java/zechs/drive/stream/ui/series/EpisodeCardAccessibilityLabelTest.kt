@@ -43,4 +43,15 @@ class EpisodeCardAccessibilityLabelTest {
 
         assertEquals("Reproduzir Episódio 03, 24 min, Assistido", label)
     }
+
+    @Test
+    fun `buildContinueWatchingLabel announces series title, episode and remaining time on Home`() {
+        val label = EpisodeCardAccessibilityLabel.buildContinueWatchingLabel(
+            title = "Frieren",
+            episodeBadge = "T1: Ep. 05",
+            remainingLabel = "12 min restantes"
+        )
+
+        assertEquals("Frieren, T1: Ep. 05, 12 min restantes", label)
+    }
 }

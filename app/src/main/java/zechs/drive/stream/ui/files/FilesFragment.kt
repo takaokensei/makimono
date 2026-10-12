@@ -396,8 +396,8 @@ class FilesFragment : BaseFragment() {
 
         if (matchingVideo != null) {
             MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
-                .setTitle("Legenda Externa")
-                .setMessage("Deseja reproduzir o vídeo correspondente '${matchingVideo.name}' com esta legenda?")
+                .setTitle(R.string.external_subtitle_title)
+                .setMessage(getString(R.string.external_subtitle_play_match, matchingVideo.name))
                 .setPositiveButton("Reproduzir") { _, _ ->
                     launchVideoPlayer(matchingVideo)
                 }
@@ -405,8 +405,8 @@ class FilesFragment : BaseFragment() {
                 .show()
         } else {
             MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
-                .setTitle("Legenda Externa")
-                .setMessage("Arquivo de legenda (${subFile.name}). Coloque um arquivo de vídeo na mesma pasta para vinculação automática.")
+                .setTitle(R.string.external_subtitle_title)
+                .setMessage(getString(R.string.external_subtitle_no_match, subFile.name))
                 .setPositiveButton(android.R.string.ok, null)
                 .show()
         }

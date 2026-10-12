@@ -66,7 +66,7 @@ internal class FeaturedHeroBinder(
         val metadata = buildList {
             featured.year?.let { add(it.toString()) }
             featured.episodeCount?.let {
-                add(context.getString(R.string.home_featured_episode_count, it))
+                add(context.resources.getQuantityString(R.plurals.home_featured_episode_count, it, it))
             }
             featured.score?.let {
                 add(context.getString(R.string.home_featured_score, it))

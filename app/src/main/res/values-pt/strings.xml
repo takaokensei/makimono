@@ -75,6 +75,7 @@
     <string name="home_continue_completed">Concluído</string>
     <plurals name="home_continue_remaining_minutes">
         <item quantity="one">%1$d min restante</item>
+        <item quantity="many">%1$d min restantes</item>
         <item quantity="other">%1$d min restantes</item>
     </plurals>
     <string name="select_subtitle">Selecionar faixa de legenda</string>
@@ -191,6 +192,7 @@
     <string name="notif_new_episodes_title">Novidade em %1$s</string>
     <plurals name="notif_new_episodes_body">
         <item quantity="one">%1$d novo episódio disponível</item>
+        <item quantity="many">%1$d novos episódios disponíveis</item>
         <item quantity="other">%1$d novos episódios disponíveis</item>
     </plurals>
     <string name="action_follow">Seguir série</string>
@@ -344,7 +346,11 @@
     <string name="home_featured_play">Assistir agora</string>
     <string name="home_featured_open">Abrir</string>
     <string name="home_featured_info">Detalhes</string>
-    <string name="home_featured_episode_count">%1$d episódios</string>
+    <plurals name="home_featured_episode_count">
+        <item quantity="one">%1$d episódio</item>
+        <item quantity="many">%1$d episódios</item>
+        <item quantity="other">%1$d episódios</item>
+    </plurals>
     <string name="home_featured_score">★ %1$.1f</string>
     <string name="home_featured_separator"> · </string>
     <string name="home_continue_at">Continuar de %1$s</string>
@@ -401,4 +407,28 @@
     <string name="home_starred_video_subtitle">Vídeo favorito</string>
     <string name="home_starred_size_and_play">%1$s · Reproduzir</string>
     <string name="home_starred_favorite">Favoritado</string>
+    <string name="external_subtitle_title">Legenda Externa</string>
+    <string name="external_subtitle_play_match">Deseja reproduzir o vídeo correspondente \'%1$s\' com esta legenda?</string>
+    <string name="external_subtitle_no_match">Arquivo de legenda (%1$s). Coloque um arquivo de vídeo na mesma pasta para vinculação automática.</string>
+    <string name="catalog_sort_title">Ordenar catálogo</string>
+    <string name="home_starting_file">Iniciando %1$s…</string>
+    <string name="home_history_empty">O histórico está vazio</string>
+    <string name="update_dialog_title">Atualização — Makimono %1$s</string>
+    <string name="update_dialog_message">Uma nova versão do Makimono (%1$s) está disponível com melhorias e correções.\n\nArquivo: %2$s\n\nDeseja atualizar agora?</string>
+    <string name="player_no_chapters_switch_mpv">Nenhum capítulo embutido foi detectado neste arquivo de vídeo.\n\nDeseja alternar para o MPV Player?</string>
+    <string name="subtitle_style_sample_text">Vou apresentar. Ele também é\ndo Clube de Fotografia.</string>
+    <string name="subtitle_style_dialog_title">Personalizar legendas</string>
+    <string name="subtitle_style_pick_color">Escolher cor</string>
+    <string name="drive_session_unavailable">Sessão do Drive indisponível. Entre novamente na conta.</string>
+    <string name="mpv_no_chapters_found">Nenhum capítulo encontrado neste arquivo.</string>
+    <string name="mpv_switching_to_exoplayer">Alternando para ExoPlayer…</string>
+    <string name="queue_item_removed">Removido da fila</string>
+    <string name="settings_clear_cache_title">Limpar Cache de Mídia e Legendas?</string>
+    <string name="settings_clear_cache_message">Isso liberará espaço em disco removendo miniaturas temporárias e legendas baixadas. Seus perfis, favoritos e histórico de reprodução NÃO serão apagados.</string>
+    <string name="settings_restore_backup_title">Restaurar Backup</string>
+    <string name="settings_restore_backup_message">Escolha como deseja aplicar os dados do arquivo de backup:</string>
+    <string name="settings_mal_disconnect_title">Desconectar do MyAnimeList?</string>
+    <string name="settings_mal_disconnect_message">O scrobble automático de episódios será desativado.</string>
+    <string name="settings_mal_configure_title">Configurar MyAnimeList</string>
+    <string name="settings_mal_configure_message">Crie uma aplicação OAuth no MyAnimeList e informe as credenciais. Elas serão armazenadas criptografadas.</string>
 </resources>

@@ -44,7 +44,7 @@ class HomeActionHandler(
             } else file
             launchVideoPlayer(target)
         } else if (file.isFolder || file.isShortcutFolder) {
-            Toast.makeText(context, "Iniciando ${file.name}...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.home_starting_file, file.name), Toast.LENGTH_SHORT).show()
             viewModel.getResumeOrFirstEpisode(file) { video, startPos ->
                 if (video != null) {
                     launchVideoPlayer(video, startPos)
@@ -104,7 +104,7 @@ class HomeActionHandler(
     fun showWatchHistoryDialog() {
         val items = viewModel.watchHistory.value
         if (items.isEmpty()) {
-            Toast.makeText(context, "O histórico está vazio", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.home_history_empty, Toast.LENGTH_SHORT).show()
             return
         }
         val menuItems = items.mapIndexed { index, watch ->

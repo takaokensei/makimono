@@ -281,7 +281,11 @@
     <string name="home_featured_play">Assistir agora</string>
     <string name="home_featured_open">Abrir</string>
     <string name="home_featured_info">Detalhes</string>
-    <string name="home_featured_episode_count">%1$d episódios</string>
+    <plurals name="home_featured_episode_count">
+        <item quantity="one">%1$d episódio</item>
+        <item quantity="many">%1$d episódios</item>
+        <item quantity="other">%1$d episódios</item>
+    </plurals>
     <string name="home_featured_score">★ %1$.1f</string>
     <string name="home_featured_separator">&#160;·&#160;</string>
     <string name="home_continue_at">Continuar de %1$s</string>
@@ -412,4 +416,28 @@
     <string name="player_more_label">More</string>
     <string name="player_rotate_label">Rotate</string>
     <string name="player_info_label">Info</string>
+    <string name="external_subtitle_title">External Subtitle</string>
+    <string name="external_subtitle_play_match">Do you want to play the matching video \'%1$s\' with this subtitle?</string>
+    <string name="external_subtitle_no_match">Subtitle file (%1$s). Place a video file in the same folder for automatic linking.</string>
+    <string name="catalog_sort_title">Sort catalog</string>
+    <string name="home_starting_file">Starting %1$s…</string>
+    <string name="home_history_empty">Watch history is empty</string>
+    <string name="update_dialog_title">Update — Makimono %1$s</string>
+    <string name="update_dialog_message">A new version of Makimono (%1$s) is available with improvements and fixes.\n\nFile: %2$s\n\nUpdate now?</string>
+    <string name="player_no_chapters_switch_mpv">No embedded chapters were detected in this video file.\n\nSwitch to MPV Player?</string>
+    <string name="subtitle_style_sample_text">I will introduce him. He is also\nfrom the Photography Club.</string>
+    <string name="subtitle_style_dialog_title">Customize subtitles</string>
+    <string name="subtitle_style_pick_color">Choose color</string>
+    <string name="drive_session_unavailable">Drive session unavailable. Please sign in again.</string>
+    <string name="mpv_no_chapters_found">No chapters found in this file.</string>
+    <string name="mpv_switching_to_exoplayer">Switching to ExoPlayer…</string>
+    <string name="queue_item_removed">Removed from queue</string>
+    <string name="settings_clear_cache_title">Clear Media &amp; Subtitle Cache?</string>
+    <string name="settings_clear_cache_message">This will free disk space by removing temporary thumbnails and downloaded subtitles. Your profiles, favorites, and playback history will NOT be erased.</string>
+    <string name="settings_restore_backup_title">Restore Backup</string>
+    <string name="settings_restore_backup_message">Choose how to apply the backup file data:</string>
+    <string name="settings_mal_disconnect_title">Disconnect from MyAnimeList?</string>
+    <string name="settings_mal_disconnect_message">Automatic episode scrobbling will be disabled.</string>
+    <string name="settings_mal_configure_title">Configure MyAnimeList</string>
+    <string name="settings_mal_configure_message">Create an OAuth application on MyAnimeList and enter the credentials. They will be stored encrypted.</string>
 </resources>

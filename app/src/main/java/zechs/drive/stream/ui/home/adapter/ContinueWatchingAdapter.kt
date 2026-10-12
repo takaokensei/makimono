@@ -101,6 +101,12 @@ class ContinueWatchingAdapter(
 
             binding.tvShelfItemRemaining.text = remainingLabel
             binding.pbShelfItemProgress.progress = progressPct
+            binding.cardShelfItem.contentDescription =
+                zechs.drive.stream.ui.series.EpisodeCardAccessibilityLabel.buildContinueWatchingLabel(
+                    title = binding.tvShelfItemTitle.text.toString(),
+                    episodeBadge = epBadgeText,
+                    remainingLabel = remainingLabel
+                )
 
             MediaImageLoader.card(
                 binding.ivShelfItemThumb,

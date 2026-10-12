@@ -67,8 +67,8 @@ class DataSessionSettingsDelegate(
 
         binding.settingClearCache.setOnClickListener {
             val dialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
-                .setTitle("Limpar Cache de Mídia e Legendas?")
-                .setMessage("Isso liberará espaço em disco removendo miniaturas temporárias e legendas baixadas. Seus perfis, favoritos e histórico de reprodução NÃO serão apagados.")
+                .setTitle(R.string.settings_clear_cache_title)
+                .setMessage(R.string.settings_clear_cache_message)
                 .setPositiveButton("Limpar") { d, _ ->
                     d.dismiss()
                     showSnackBar("Limpando cache...")
@@ -205,8 +205,8 @@ class DataSessionSettingsDelegate(
             "Substituir todos os dados existentes"
         )
         val dialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
-            .setTitle("Restaurar Backup")
-            .setMessage("Escolha como deseja aplicar os dados do arquivo de backup:")
+            .setTitle(R.string.settings_restore_backup_title)
+            .setMessage(R.string.settings_restore_backup_message)
             .setItems(options) { _, which ->
                 val mode = if (which == 0) {
                     BackupSerializer.ImportMode.MERGE

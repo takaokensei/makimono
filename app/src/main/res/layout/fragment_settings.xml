@@ -94,6 +94,7 @@
                     android:layout_width="32dp"
                     android:layout_height="32dp"
                     android:layout_marginEnd="16dp"
+                    android:importantForAccessibility="no"
                     android:src="@drawable/avatar_caua" />
 
                 <LinearLayout
@@ -519,6 +520,7 @@
                     android:id="@+id/ivMalChevron"
                     android:layout_width="20dp"
                     android:layout_height="20dp"
+                    android:importantForAccessibility="no"
                     android:src="@drawable/ic_external_24"
                     app:tint="?attr/colorTextSecondary" />
             </LinearLayout>
@@ -570,6 +572,7 @@
                 <ImageView
                     android:layout_width="20dp"
                     android:layout_height="20dp"
+                    android:importantForAccessibility="no"
                     android:src="@drawable/ic_external_24"
                     app:tint="?attr/colorTextSecondary" />
             </LinearLayout>

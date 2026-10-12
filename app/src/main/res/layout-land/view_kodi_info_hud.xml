@@ -29,6 +29,7 @@
             <ImageView
                 android:layout_width="18dp"
                 android:layout_height="18dp"
+                android:importantForAccessibility="no"
                 android:src="@drawable/ic_info_24"
                 app:tint="?attr/colorAccentPrimary" />
 

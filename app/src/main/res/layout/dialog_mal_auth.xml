@@ -22,6 +22,7 @@
             android:layout_width="26dp"
             android:layout_height="26dp"
             android:layout_marginEnd="12dp"
+            android:importantForAccessibility="no"
             android:src="@drawable/ic_unlock_24"
             app:tint="?attr/colorAccentPrimary" />
 
@@ -180,6 +181,7 @@
                     android:layout_width="220dp"
                     android:layout_height="220dp"
                     android:layout_gravity="center"
+                    android:importantForAccessibility="no"
                     android:padding="8dp"
                     android:scaleType="fitCenter"
                     tools:src="@drawable/ic_player_24" />

@@ -1324,7 +1324,7 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
             val accessToken = withContext(Dispatchers.IO) { tokenProvider.get().validToken() }
             if (isFinishing || fileId != currentFileId) return@launch
             if (fileId.isBlank() || accessToken == null) {
-                Toast.makeText(this@MPVActivity, "Sessão do Drive indisponível. Entre novamente na conta.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@MPVActivity, R.string.drive_session_unavailable, Toast.LENGTH_LONG).show()
                 finish()
                 return@launch
             }
@@ -2047,7 +2047,7 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
         if (chapters.isEmpty()) {
             val dialog = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_DriveStream_Dialog)
                 .setTitle(getString(R.string.chapters))
-                .setMessage("Nenhum capítulo encontrado neste arquivo.")
+                .setMessage(R.string.mpv_no_chapters_found)
                 .setPositiveButton(android.R.string.ok) { dialog, _ -> dialog.dismiss() }
                 .create()
             dialog.setOnDismissListener { onPlayerModalVisibilityChanged(false) }
@@ -2784,7 +2784,7 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
             startActivity(exoIntent)
-            Toast.makeText(this, "Alternando para ExoPlayer...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.mpv_switching_to_exoplayer, Toast.LENGTH_SHORT).show()
             finish()
         } catch (e: Exception) {
             AppLog.e(TAG, "Error launching Exo fallback", e)

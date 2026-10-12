@@ -31,7 +31,7 @@ object SubtitleStyleDialog {
         fun refreshPreview() {
             SubtitleAppearance.applyToExo(binding.subtitlePreview, working)
             val previewCue = Cue.Builder()
-                .setText("Vou apresentar. Ele também é\ndo Clube de Fotografia.")
+                .setText(context.getString(R.string.subtitle_style_sample_text))
                 .build()
             binding.subtitlePreview.setCues(
                 SubtitleCueComposer.compose(listOf(previewCue), working)
@@ -179,7 +179,7 @@ object SubtitleStyleDialog {
         refreshPreview()
 
         val dialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
-            .setTitle("Personalizar legendas")
+            .setTitle(R.string.subtitle_style_dialog_title)
             .setView(binding.root)
             .setNegativeButton("Cancelar", null)
             .setPositiveButton("Salvar") { _, _ ->
@@ -236,7 +236,7 @@ object SubtitleStyleDialog {
         val initialIndex = colors.indexOfFirst { it == initialColor }.coerceAtLeast(0)
         
         val colorDialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
-            .setTitle("Escolher cor")
+            .setTitle(R.string.subtitle_style_pick_color)
             .setSingleChoiceItems(items, initialIndex) { d, which ->
                 onColorSelected(colors[which])
                 d.dismiss()

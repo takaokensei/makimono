@@ -62,12 +62,45 @@ def main() -> int:
         if focused_ratio < 4.5:
             failures.append(f"{palette}.accent_primary with bg_surface is below 4.5:1")
 
+    scrim_drawables = (
+        ("bg_scrim_bottom.xml", "endColor"),
+        ("bg_scrim_left.xml", "startColor"),
+        ("shelf_item_scrim.xml", "endColor"),
+        ("series_detail_hero_scrim.xml", "endColor"),
+        ("player_bottom_scrim.xml", "endColor"),
+    )
+    android_ns = "{http://schemas.android.com/apk/res/android}"
+    print("\nGradient Scrims (composited over #FFFFFF worst-case bright artwork):")
+    for filename, attr_name in scrim_drawables:
+        drawable_path = ROOT / "app/src/main/res/drawable" / filename
+        d_root = ET.parse(drawable_path).getroot()
+        grad = d_root.find("gradient")
+        raw_hex = grad.attrib[f"{android_ns}{attr_name}"].lstrip("#")
+        if len(raw_hex) == 8:
+            alpha = int(raw_hex[0:2], 16) / 255.0
+            rgb = (int(raw_hex[2:4], 16), int(raw_hex[4:6], 16), int(raw_hex[6:8], 16))
+        else:
+            alpha = 1.0
+            rgb = (int(raw_hex[0:2], 16), int(raw_hex[2:4], 16), int(raw_hex[4:6], 16))
+        composited = tuple(int(round(alpha * c + (1.0 - alpha) * 255)) for c in rgb)
+        for palette in PALETTES:
+            for role in ("text_primary", "text_secondary"):
+                fg = token(colors, palette, role)
+                ratio = contrast(fg, composited)
+                if ratio < 4.5:
+                    failures.append(
+                        f"{filename} ({attr_name}=#{raw_hex}) with {palette}.{role} over #FFFFFF is {ratio:.2f}:1 (< 4.5:1)"
+                    )
+        obs_primary = contrast(token(colors, "obsidian", "text_primary"), composited)
+        obs_secondary = contrast(token(colors, "obsidian", "text_secondary"), composited)
+        print(f"  {filename:30} primary={obs_primary:5.2f}:1  secondary={obs_secondary:5.2f}:1")
+
     if failures:
         print("\nContrast failures:")
         for failure in failures:
             print(f"- {failure}")
         return 1
-    print("\nPrimary/secondary text meets 7:1; default and focused action text meet 4.5:1.")
+    print("\nPrimary/secondary text meets 7:1; default, focused action, and image gradient scrims meet >= 4.5:1.")
     return 0
 
 
