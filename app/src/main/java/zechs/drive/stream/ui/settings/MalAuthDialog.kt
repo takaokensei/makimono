@@ -95,9 +95,17 @@ class MalAuthDialog(
         setupManualMode()
         startTvMalServer()
 
-        return MaterialAlertDialogBuilder(requireContext())
+        val dialog = MaterialAlertDialogBuilder(requireContext())
             .setView(binding.root)
             .create()
+
+        dialog.setOnShowListener {
+            binding.btnModeBrowser.post {
+                binding.btnModeBrowser.requestFocus()
+            }
+        }
+
+        return dialog
     }
 
     private fun switchMode(mode: Mode) {

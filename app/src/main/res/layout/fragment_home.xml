@@ -719,7 +719,7 @@
 
         </FrameLayout>
 
-        <!-- Dim Overlay behind expanded sidebar (giving that dim/blur effect over the animes) -->
+        <!-- Dim Overlay behind expanded sidebar: clickable="true" captures touch events to prevent click-through, while focusable="false" ensures D-pad navigation targets navRail items instead of the scrim (T-205 / Q-003) -->
         <View
             android:id="@+id/sidebarDimOverlay"
             android:layout_width="match_parent"

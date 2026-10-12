@@ -88,13 +88,17 @@ class HomeActionHandler(
             actions += { viewModel.addToQueue(file) }
         }
 
-        MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
+        val dialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
             .setTitle(file.name)
-            .setItems(options.toTypedArray()) { dialog, which ->
-                dialog.dismiss()
+            .setItems(options.toTypedArray()) { d, which ->
+                d.dismiss()
                 actions.getOrNull(which)?.invoke()
             }
-            .show()
+            .create()
+        dialog.setOnShowListener {
+            dialog.listView?.post { dialog.listView?.requestFocus() }
+        }
+        dialog.show()
     }
 
     fun showWatchHistoryDialog() {
@@ -138,17 +142,21 @@ class HomeActionHandler(
     }
 
     fun showQueueItemContextMenu(item: WatchQueueItem) {
-        MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
+        val dialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
             .setTitle(item.name)
-            .setItems(arrayOf("Reproduzir", "Remover da fila")) { dialog, which ->
-                dialog.dismiss()
+            .setItems(arrayOf("Reproduzir", "Remover da fila")) { d, which ->
+                d.dismiss()
                 if (which == 0) {
                     playQueueItem(item)
                 } else {
                     viewModel.removeFromQueue(item.fileId)
                 }
             }
-            .show()
+            .create()
+        dialog.setOnShowListener {
+            dialog.listView?.post { dialog.listView?.requestFocus() }
+        }
+        dialog.show()
     }
 
     fun launchVideoPlayer(file: DriveFile, startPosition: Long = -1L) {

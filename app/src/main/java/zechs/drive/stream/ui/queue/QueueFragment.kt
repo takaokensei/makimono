@@ -89,10 +89,19 @@ class QueueFragment : Fragment() {
                     binding.layoutEmpty.visibility = View.VISIBLE
                     binding.rvQueue.visibility = View.GONE
                     binding.tvEmptyMessage.text = "Sua fila está vazia\nAdicione animes para assistir depois"
+                    if (DeviceUi.isTenFootExperience(requireContext())) {
+                        binding.btnBack.post { binding.btnBack.requestFocus() }
+                    }
                 } else {
                     binding.layoutEmpty.visibility = View.GONE
                     binding.rvQueue.visibility = View.VISIBLE
                     queueAdapter.submitList(queueItems)
+                    if (DeviceUi.isTenFootExperience(requireContext())) {
+                        binding.rvQueue.post {
+                            binding.rvQueue.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus()
+                                ?: binding.rvQueue.requestFocus()
+                        }
+                    }
                 }
             }
         }

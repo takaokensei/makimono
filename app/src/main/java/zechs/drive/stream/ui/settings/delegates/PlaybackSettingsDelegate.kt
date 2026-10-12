@@ -54,6 +54,9 @@ class PlaybackSettingsDelegate(
                 .create()
             dialog.setOnShowListener {
                 dialog.window?.let { w -> TvFocusRing.install(w.decorView) }
+                dialog.listView?.post {
+                    dialog.listView?.requestFocus()
+                }
             }
             dialog.show()
         }
