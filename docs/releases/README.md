@@ -1,6 +1,7 @@
 # Diretrizes de Release e Versionamento — Makimono
 
 Documento canônico para versionamento semântico, geração de changelog e notas de versão.
+Consulte também a [Política de Release e Integridade de Artefatos](POLICY.md) para regras de imutabilidade e distribuição.
 
 ---
 

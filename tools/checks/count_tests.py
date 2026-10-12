@@ -35,9 +35,9 @@ def main():
     print(f"Execuções de teste (XML JUnit):   {total_executions}")
     print(f"Falhas: {failures}, Erros: {errors}, Ignorados: {skipped}")
     print("\nExplicação da diferença:")
-    print("O framework de testes de arquitetura ArchUnit (DomainRulesArchitectureTest) executa")
-    print("múltiplas asserções de regras dinâmicas sob cada anotação, resultando em mais")
-    print(f"execuções reportadas no JUnit ({total_executions}) do que anotações estáticas ({annotation_count}).")
+    print("A herança de classes de teste (BasePlayerEngineContractTest com 7 métodos @Test herdados")
+    print("e executados independentemente por Media3EngineContractTest e MpvEngineContractTest) adiciona")
+    print(f"+7 execuções em tempo de execução ao total reportado no JUnit.")
 
 if __name__ == "__main__":
     main()

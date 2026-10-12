@@ -15,4 +15,10 @@ if ($LASTEXITCODE -ne 0) { throw "check_layout_colors failed" }
 python tools/checks/check_typography.py
 if ($LASTEXITCODE -ne 0) { throw "check_typography failed" }
 
+python tools/checks/check_no_direct_log.py
+if ($LASTEXITCODE -ne 0) { throw "check_no_direct_log failed" }
+
+python tools/checks/check_readme_claims.py
+if ($LASTEXITCODE -ne 0) { throw "check_readme_claims failed" }
+
 Write-Host "==> All static verification checks passed!" -ForegroundColor Green

@@ -29,9 +29,9 @@
 ## 📋 Requisitos de Ambiente
 
 - **JDK:** OpenJDK 17 ou superior (`JAVA_HOME` configurado)
-- **Android SDK:** `compileSdk 34`, `targetSdk 34`, `minSdk 26`
+- **Android SDK:** `compileSdk 34`, `targetSdk 33`, `minSdk 21`
 - **Build Tools:** Android SDK Build-Tools 34.0.0
-- **Dispositivo:** Android 8.0+ (celular/tablet) ou Android TV 11+ (1080p / 4K UHD)
+- **Dispositivo:** Android 5.0+ (Lollipop, API 21+) para celular/tablet ou Android TV 11+ (1080p / 4K UHD)
 
 ---
 
@@ -49,6 +49,9 @@
    cp local.properties.example local.properties
    ```
    Defina o caminho do Android SDK (`sdk.dir`) e as credenciais necessárias conforme descrito no arquivo de exemplo.
+
+   > [!NOTE]
+   > **Ambiente Windows:** Para evitar falhas de carregamento de classes de teste no Gradle decorrentes de caminhos com caracteres não-ASCII (ex: `C:\Users\Nome Com Acento\...`), execute o build e testes a partir de um caminho estritamente ASCII ou monte uma unidade virtual temporária (ex: `subst T: .` e acesse a partir de `T:\`).
 
 3. **Compilar o APK de desenvolvimento:**
    ```bash
@@ -73,18 +76,19 @@ Execute as tarefas de validação e verificação de integridade:
 ./gradlew testDebugUnitTest lintDebug assembleDebug
 ```
 
-### Métricas de Integridade do Código (Fase B / v1.6.5.0)
+### Métricas de Integridade do Código (v1.7.1)
 
-- **Testes Unitários:** 498 anotações `@Test` no código-fonte gerando **505 execuções** registradas no relatório JUnit XML (0 falhas, 0 erros). A contagem superior no executor decorre da avaliação de regras dinâmicas de arquitetura via ArchUnit (`DomainRulesArchitectureTest`). Verificação: `python tools/checks/count_tests.py`.
-- **Android Lint (Baseline):** 939 issues catalogadas em `app/lint-baseline.xml` com **0 erros bloqueantes** e paridade completa de internacionalização (`MissingTranslation`: 0). Principais categorias: `HardcodedText` (286), `UnsafeOptInUsageError` (180), `UnusedResources` (178), `SetTextI18n` (102), `NewApi` (20). Verificação: `python tools/checks/count_lint_categories.py`.
+- **Testes Unitários:** 519 anotações `@Test` no código-fonte gerando **526 execuções** registradas no relatório JUnit XML (0 falhas, 0 erros). A contagem superior (+7 execuções) decorre da herança de testes de contrato: `BasePlayerEngineContractTest` define 7 métodos de teste executados para os motores Media3 e MPV. Verificação: `python tools/checks/count_tests.py`.
+- **Android Lint (Baseline):** 739 issues catalogadas em `app/lint-baseline.xml` com **0 erros bloqueantes** e paridade completa de internacionalização (`MissingTranslation`: 0). Principais categorias: `HardcodedText` (286), `UnusedResources` (178), `SetTextI18n` (102), `InconsistentLayout` (18), `UnusedAttribute` (15). Verificação: `python tools/checks/count_lint_categories.py`.
 - **Ferramentas de Verificação Contínua (`tools/checks/`):**
   - `check_strings.py`: Validação de paridade estrita de strings (390 tags `<string>` no total em `values/strings.xml`, sendo 387 traduzíveis validadas contra `values-pt/strings.xml` e 3 não-traduzíveis técnicas marcadas com `translatable="false"`).
   - `check_contrast.py`: Validação de conformidade WCAG AAA/AA para todas as paletas de cores.
   - `check_layout_colors.py` & `check_typography.py`: Auditoria de uso de tokens semânticos e tipografia.
+  - `check_no_direct_log.py`: Guarda contra chamadas diretas a `android.util.Log` fora de `AppLog.kt`.
+  - `check_readme_claims.py`: Validação contínua de paridade entre as afirmações do README e os valores reais do código.
   - `count_tests.py` & `count_lint_categories.py`: Auditoria automatizada de testes e baseline do Lint.
 
-
----
+-----
 
 ## 🏛️ Arquitetura
 
