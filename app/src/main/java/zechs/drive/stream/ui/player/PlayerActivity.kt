@@ -1986,6 +1986,7 @@ class PlayerActivity : BasePlayerActivity() {
 
         MediaImageLoader.card(card.ivNextEpisodeThumb, ThumbnailUrl.medium(next.thumbnailLink))
 
+        card.root.animate().cancel()
         card.root.alpha = 0f
         card.root.visibility = View.VISIBLE
         val motionCardDuration = resources.getInteger(R.integer.motion_card).toLong()
@@ -2032,10 +2033,13 @@ class PlayerActivity : BasePlayerActivity() {
         }
         isNextEpisodeCardShowing = false
         val card = binding.nextEpisodeCard.root
+        card.animate().cancel()
         val motionCardDuration = resources.getInteger(R.integer.motion_card).toLong()
         card.animate().alpha(0f).setDuration(motionCardDuration).withEndAction {
-            card.visibility = View.GONE
-            card.translationY = 0f
+            if (!isNextEpisodeCardShowing) {
+                card.visibility = View.GONE
+                card.translationY = 0f
+            }
         }.start()
         if (::player.isInitialized) {
             updateIntroButtonVisibility(player.currentPosition)

@@ -83,7 +83,7 @@ object FocusEngine {
 
         view.setOnFocusChangeListener { v, hasFocus ->
             val context = v.context
-            val isReduced = MotionPolicy.isReducedMotion() || isLowRam(context)
+            val isReduced = MotionPolicy.isReduced(context) || isLowRam(context)
             val target = targetFor(kind, hasFocus, isReduced)
 
             // Cancel any pending animations to prevent frame thrashing
