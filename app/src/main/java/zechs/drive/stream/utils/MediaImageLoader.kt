@@ -9,12 +9,19 @@ import zechs.drive.stream.R
 
 /** Shared image policy for predictable TV memory and fast perceived loading. */
 object MediaImageLoader {
+    const val CARD_WIDTH = 640
+    const val CARD_HEIGHT = 400
+    const val POSTER_WIDTH = 640
+    const val POSTER_HEIGHT = 960
+    const val BACKDROP_WIDTH = 1440
+    const val BACKDROP_HEIGHT = 810
+
     fun card(view: ImageView, url: String?) {
-        load(view, url, 640, 400, R.drawable.glass_card_bg)
+        load(view, url, CARD_WIDTH, CARD_HEIGHT, R.drawable.glass_card_bg)
     }
 
     fun poster(view: ImageView, url: String?) {
-        load(view, url, 640, 960, R.drawable.glass_card_bg)
+        load(view, url, POSTER_WIDTH, POSTER_HEIGHT, R.drawable.glass_card_bg)
     }
 
     fun backdrop(view: ImageView, url: String?) {
@@ -25,11 +32,46 @@ object MediaImageLoader {
         }
         Glide.with(view)
             .load(url)
-            .override(1440, 810)
+            .override(BACKDROP_WIDTH, BACKDROP_HEIGHT)
             .centerCrop()
             .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
             .dontAnimate()
             .into(view)
+    }
+
+    /**
+     * Preloads a horizontal shelf card image (`640x400`) into Glide's cache
+     * ahead of D-pad scrolling (T-804).
+     */
+    fun preloadCard(context: Context, url: String?) {
+        if (url.isNullOrBlank()) return
+        try {
+            Glide.with(context.applicationContext)
+                .load(url)
+                .override(CARD_WIDTH, CARD_HEIGHT)
+                .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
+                .preload(CARD_WIDTH, CARD_HEIGHT)
+        } catch (e: Exception) {
+            AppLog.logSwallowed("MediaImageLoader", "preloading card", e)
+        }
+    }
+
+    /**
+     * Pure policy selecting non-blank neighbor URLs within `[focusedIndex - radius .. focusedIndex + radius]`
+     * (excluding `focusedIndex` itself, which is already bound) for Glide prefetching (T-804).
+     */
+    fun selectNeighborPreloadUrls(
+        urls: List<String?>,
+        focusedIndex: Int,
+        radius: Int = 2
+    ): List<String> {
+        if (urls.isEmpty() || focusedIndex !in urls.indices || radius <= 0) return emptyList()
+        val start = (focusedIndex - radius).coerceAtLeast(0)
+        val end = (focusedIndex + radius).coerceAtMost(urls.lastIndex)
+        return (start..end)
+            .filter { it != focusedIndex }
+            .mapNotNull { index -> urls[index]?.trim()?.takeIf { it.isNotEmpty() } }
+            .distinct()
     }
 
     fun preloadPoster(context: Context, url: String?) {
@@ -37,9 +79,9 @@ object MediaImageLoader {
         try {
             Glide.with(context.applicationContext)
                 .load(url)
-                .override(640, 960)
+                .override(POSTER_WIDTH, POSTER_HEIGHT)
                 .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
-                .preload(640, 960)
+                .preload(POSTER_WIDTH, POSTER_HEIGHT)
         } catch (e: Exception) {
             AppLog.logSwallowed("MediaImageLoader", "preloading poster", e)
         }
@@ -50,9 +92,9 @@ object MediaImageLoader {
         try {
             Glide.with(context.applicationContext)
                 .load(url)
-                .override(1440, 810)
+                .override(BACKDROP_WIDTH, BACKDROP_HEIGHT)
                 .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
-                .preload(1440, 810)
+                .preload(BACKDROP_WIDTH, BACKDROP_HEIGHT)
         } catch (e: Exception) {
             AppLog.logSwallowed("MediaImageLoader", "preloading backdrop", e)
         }

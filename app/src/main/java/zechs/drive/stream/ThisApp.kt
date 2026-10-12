@@ -32,7 +32,32 @@ class ThisApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        if (BuildConfig.DEBUG) {
+            configureDebugStrictMode()
+        }
         scheduleEpisodeCheck()
+    }
+
+    /**
+     * Enables [android.os.StrictMode] in debug builds so any accidental main-thread
+     * disk write, network read, or leaked SQLite cursor is logged immediately (T-806).
+     */
+    private fun configureDebugStrictMode() {
+        android.os.StrictMode.setThreadPolicy(
+            android.os.StrictMode.ThreadPolicy.Builder()
+                .detectDiskWrites()
+                .detectNetwork()
+                .detectCustomSlowCalls()
+                .penaltyLog()
+                .build()
+        )
+        android.os.StrictMode.setVmPolicy(
+            android.os.StrictMode.VmPolicy.Builder()
+                .detectLeakedSqlLiteObjects()
+                .detectLeakedClosableObjects()
+                .penaltyLog()
+                .build()
+        )
     }
 
     private fun scheduleEpisodeCheck() {

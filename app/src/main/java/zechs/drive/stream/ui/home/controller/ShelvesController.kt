@@ -91,7 +91,14 @@ class ShelvesController(
             val position = binding.rvContinueWatchingShelf.getChildAdapterPosition(v)
             if (position != RecyclerView.NO_POSITION) {
                 viewModel.onEvent(HomeEvent.SaveFocus(0, position))
-                continueWatchingAdapter.currentList.getOrNull(position)?.let { item ->
+                val list = continueWatchingAdapter.currentList
+                zechs.drive.stream.utils.MediaImageLoader.selectNeighborPreloadUrls(
+                    urls = list.map { it.thumbnailLink },
+                    focusedIndex = position
+                ).forEach { url ->
+                    zechs.drive.stream.utils.MediaImageLoader.preloadCard(context, url)
+                }
+                list.getOrNull(position)?.let { item ->
                     FocusMemory.remember("home.continue_watching", item.videoId)
                     heroController.findLibraryFolderForTitle(item.name, viewModel.animeLibrary.value)?.let { folder ->
                         heroController.scheduleFeaturedPreview(folder, v) { railController.currentTab }
