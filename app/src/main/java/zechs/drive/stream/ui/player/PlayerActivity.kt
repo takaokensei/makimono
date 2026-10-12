@@ -127,7 +127,13 @@ import kotlin.math.roundToInt
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @AndroidEntryPoint
-class PlayerActivity : AppCompatActivity(), PlayerModalHost {
+class PlayerActivity : BasePlayerActivity() {
+
+    override val isGesturesEnabled: Boolean
+        get() = malSessionManager.get().isGesturesEnabled()
+    override val isGestureHelperInitialized: Boolean
+        get() = ::gestureHelper.isInitialized
+    override fun onGestureTouchEvent(ev: MotionEvent): Boolean = gestureHelper.onTouchEvent(ev)
 
     companion object {
         const val TAG = "PlayerActivity"
@@ -262,7 +268,6 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     private val playbackCoordinator = PlaybackCoordinator()
     private val skipController = zechs.drive.stream.playback.session.SkipController()
     private lateinit var playbackSession: zechs.drive.stream.playback.session.PlaybackSession
-    private lateinit var osdController: OsdController
     private var countdownJob: Job? = null
     private var progressTrackerJob: Job? = null
     private var folderSubtitles = mutableListOf<SubtitleItem>()
@@ -1161,13 +1166,6 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
 
     }
 
-    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        if (malSessionManager.get().isGesturesEnabled() && ::gestureHelper.isInitialized && gestureHelper.onTouchEvent(ev)) {
-            return true
-        }
-        return super.dispatchTouchEvent(ev)
-    }
-
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         // Modal pickers own D-pad and BACK while open; do not let the player
         // shortcuts change tracks or leave playback behind the dialog.
@@ -1242,7 +1240,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                 zechs.drive.stream.utils.PlayerDpadFocus.next(
                     direction = it,
                     controlsVisible = isControlsShowing(),
-                    controlsTransitioning = if (::osdController.isInitialized) osdController.isHiding else false,
+                    controlsTransitioning = if (isOsdInitialized) osdController.isHiding else false,
                     blockingOverlayVisible = binding.nextEpisodeCard.root.isVisible ||
                         binding.netflixSkipRow.isVisible,
                     focusedItem = focusedItem
@@ -1418,11 +1416,6 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         return super.dispatchKeyEvent(event)
     }
 
-    private fun isControlsShowing(): Boolean {
-        if (!::osdController.isInitialized) return false
-        return osdController.isVisible
-    }
-
     override fun onPlayerModalVisibilityChanged(isVisible: Boolean) {
         val transition = if (isVisible) {
             playerModalVisibilityState.onModalOpened(osdWasVisible = isControlsShowing())
@@ -1463,7 +1456,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             binding.netflixSkipRow.visibility = View.GONE
             return true
         }
-        if (::osdController.isInitialized && osdController.shouldConsumeBack) {
+        if (isOsdInitialized && osdController.shouldConsumeBack) {
             if (osdController.isVisible) {
                 osdController.hide()
                 gestureHelper.showNotification(getString(R.string.player_back_again_to_exit))
@@ -1476,12 +1469,12 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     private var controllerVisible = false
 
     private fun animateHideController(onComplete: (() -> Unit)? = null) {
-        if (!::osdController.isInitialized) return
+        if (!isOsdInitialized) return
         osdController.hide(onComplete)
     }
 
     private fun animateShowController() {
-        if (!::osdController.isInitialized) return
+        if (!isOsdInitialized) return
         osdController.show()
     }
 
@@ -2110,17 +2103,14 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
     }
 
     private fun showEpisodesDrawer() {
-        val seriesFromIntent = intent.getStringExtra("seriesTitle")?.takeIf { it.isNotBlank() }
-        val showName = seriesFromIntent ?: EpisodeParser.parse(currentTitle).showTitle.ifBlank { currentTitle }
-        PlayerEpisodeDrawerDialog(
-            activity = this,
-            showTitle = showName,
-            currentPlayingFileId = currentFileId,
+        showEpisodesDrawer(
+            currentTitle = currentTitle,
+            currentFileId = currentFileId,
             playlist = playlist,
             tenraiService = tenraiService.get()
         ) { selectedEpisode ->
             playPlaylistItemDirectly(selectedEpisode)
-        }.show()
+        }
     }
 
     private fun playPlaylistItemDirectly(item: PlaylistItem) {
@@ -2328,7 +2318,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         return uri
     }
 
-    private fun updateOrientation(newConfig: Configuration) {
+    override fun updateOrientation(newConfig: Configuration) {
         when (newConfig.orientation) {
             Configuration.ORIENTATION_PORTRAIT -> {
                 orientation = Orientation.PORTRAIT
@@ -2972,14 +2962,6 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         dialog.show()
     }
 
-    private fun hideSystemUI() {
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        WindowInsetsControllerCompat(window, window.decorView).let { controller ->
-            controller.hide(WindowInsetsCompat.Type.systemBars())
-            controller.systemBarsBehavior = BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        }
-    }
-
     private fun speedSnackbar(speedIndex: Int) {
         Snackbar.make(
             binding.playerView,
@@ -3184,7 +3166,7 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
                 } catch (e: Exception) {
                     AppLog.e(TAG, "Failed to recover from 401 mid-stream", e)
                 }
-                errorSnackbar(errorGeneral, errorDetailed, canOpenMpv = true)
+                showPlaybackFailureDialog(errorDetailed ?: errorGeneral)
             }
             return
         }
@@ -3317,20 +3299,8 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
         }
     }
 
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-        updateOrientation(newConfig)
-    }
-
-    override fun onUserInteraction() {
-        super.onUserInteraction()
-        if (::osdController.isInitialized && osdController.isVisible) {
-            osdController.resetInactivityTimer()
-        }
-    }
-
     override fun onPause() {
-        if (::osdController.isInitialized) {
+        if (isOsdInitialized) {
             osdController.cancelInactivityTimer()
         }
         saveProgress()

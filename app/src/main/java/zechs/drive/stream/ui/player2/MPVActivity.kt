@@ -105,9 +105,17 @@ import zechs.mpv.utils.Utils
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+import zechs.drive.stream.ui.player.BasePlayerActivity
+
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @AndroidEntryPoint
-class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
+class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
+
+    override val isGesturesEnabled: Boolean
+        get() = malSessionManager.get().isGesturesEnabled()
+    override val isGestureHelperInitialized: Boolean
+        get() = ::gestureHelper.isInitialized
+    override fun onGestureTouchEvent(ev: MotionEvent): Boolean = gestureHelper.onTouchEvent(ev)
 
     companion object {
         const val TAG = "MPVActivity"
@@ -124,7 +132,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
     private lateinit var binding: ActivityMpvBinding
     private lateinit var player: MPVView
     private lateinit var controller: PlayerControlViewBinding
-    private lateinit var osdController: OsdController
 
     // ViewModel
     private val viewModel by viewModels<PlayerViewModel>()
@@ -734,13 +741,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         AppLog.d(TAG, "updateNextEpisode: prevEpisode=${prevEpisode?.title}, nextEpisode=${nextEpisode?.title}")
     }
 
-    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        if (malSessionManager.get().isGesturesEnabled() && ::gestureHelper.isInitialized && gestureHelper.onTouchEvent(ev)) {
-            return true
-        }
-        return super.dispatchTouchEvent(ev)
-    }
-
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         // Modal pickers own D-pad and BACK while open; do not let the player
         // shortcuts change tracks or leave playback behind the dialog.
@@ -814,7 +814,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                 zechs.drive.stream.utils.PlayerDpadFocus.next(
                     direction = it,
                     controlsVisible = isControlsShowing(),
-                    controlsTransitioning = if (::osdController.isInitialized) osdController.isHiding else false,
+                    controlsTransitioning = if (isOsdInitialized) osdController.isHiding else false,
                     blockingOverlayVisible = binding.nextEpisodeCard.root.isVisible ||
                         binding.netflixSkipRow.isVisible,
                     focusedItem = focusedItem
@@ -995,7 +995,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
             binding.netflixSkipRow.visibility = View.GONE
             return true
         }
-        if (::osdController.isInitialized && osdController.shouldConsumeBack) {
+        if (isOsdInitialized && osdController.shouldConsumeBack) {
             if (osdController.isVisible) {
                 hideControls()
                 gestureHelper.showNotification(getString(R.string.player_back_again_to_exit))
@@ -1005,13 +1005,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         return false
     }
 
-    private fun isControlsShowing(): Boolean {
-        if (!::osdController.isInitialized) return false
-        return osdController.isVisible
-    }
 
     private fun showControlsWithFocus() {
-        if (!::osdController.isInitialized) return
+        if (!isOsdInitialized) return
         if (osdController.isVisible) {
             if (!controller.root.hasFocus()) controller.btnPlayPause.requestFocus()
             return
@@ -1020,7 +1016,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
     }
 
     private fun hideControls() {
-        if (!::osdController.isInitialized) return
+        if (!isOsdInitialized) return
         osdController.hide()
     }
 
@@ -1552,13 +1548,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
         return streamUrl
     }
 
-    private fun hideSystemUI() {
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        WindowInsetsControllerCompat(window, window.decorView).let { controller ->
-            controller.hide(WindowInsetsCompat.Type.systemBars())
-            controller.systemBarsBehavior = BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        }
-    }
 
     private fun updatePlaybackPos(position: Int) {
         controller.exoPosition.text = Utils.prettyTime(position)
@@ -2163,7 +2152,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
     }
 
 
-    private fun updateOrientation(newConfig: Configuration) {
+    override fun updateOrientation(newConfig: Configuration) {
         when (newConfig.orientation) {
             Configuration.ORIENTATION_PORTRAIT -> {
                 orientation = Orientation.PORTRAIT
@@ -2432,17 +2421,14 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
     }
 
     private fun showEpisodesDrawer() {
-        val seriesFromIntent = intent.getStringExtra("seriesTitle")?.takeIf { it.isNotBlank() }
-        val showName = seriesFromIntent ?: EpisodeParser.parse(currentTitle).showTitle.ifBlank { currentTitle }
-        PlayerEpisodeDrawerDialog(
-            activity = this,
-            showTitle = showName,
-            currentPlayingFileId = currentFileId,
+        showEpisodesDrawer(
+            currentTitle = currentTitle,
+            currentFileId = currentFileId,
             playlist = playlist,
             tenraiService = tenraiService.get()
         ) { selectedEpisode ->
             playPlaylistItemDirectly(selectedEpisode)
-        }.show()
+        }
     }
 
     private fun playPlaylistItemDirectly(item: PlaylistItem) {
@@ -2735,6 +2721,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                                 }
                             }
                         }
+                    }
+                }
                 MPV_EVENT_END_FILE -> {
                     runOnUiThread {
                         if (!isFileLoaded && activityIsForeground && !isFinishing) {
@@ -2778,21 +2766,22 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                 return
             }
             val currentPos = ((MPVLib.getPropertyDouble("time-pos") ?: 0.0) * 1000.0).toLong()
+            val themeIndex = intent.getIntExtra("theme", AppTheme.OBSIDIAN.value)
             val exoIntent = PlayerLauncher.createIntent(
                 context = this,
                 playerType = VideoPlayer.EXO_PLAYER,
                 fileId = fileId,
                 title = title,
-                accessToken = intent.getStringExtra("accessToken"),
                 seriesTitle = intent.getStringExtra("seriesTitle"),
+                accessToken = intent.getStringExtra("accessToken"),
                 thumbnailLink = intent.getStringExtra("thumbnailLink"),
-                theme = intent.getStringExtra("theme")?.let { AppTheme.valueOf(it) } ?: AppTheme.DARK,
-                playlist = intent.getParcelableArrayListExtra("playlist"),
-                subtitles = intent.getParcelableArrayListExtra("subtitles"),
-                startPosition = zechs.drive.stream.playback.session.PlaybackProfileSessionPolicy.explicitPositionForHandoff(currentPos),
+                themeIndex = themeIndex,
+                playlist = ArrayList(playlist),
+                subtitles = ArrayList(folderSubtitles),
                 siblingFolderId = intent.getStringExtra("siblingFolderId"),
-                playbackProfileId = intent.getStringExtra("playbackProfileId"),
+                startPosition = currentPos,
                 isMovie = intent.getBooleanExtra("isMovie", false),
+                autoRouting = false,
                 localUri = intent.getStringExtra("localUri")
             ).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -2809,15 +2798,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
     ////////////////    END OF MPV EVENTS    ////////////////
 
 
-    override fun onUserInteraction() {
-        super.onUserInteraction()
-        if (::osdController.isInitialized && osdController.isVisible) {
-            osdController.resetInactivityTimer()
-        }
-    }
-
     override fun onPause() {
-        if (::osdController.isInitialized) {
+        if (isOsdInitialized) {
             osdController.cancelInactivityTimer()
         }
         saveProgress()
@@ -2840,11 +2822,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
 
         activityIsForeground = true
         super.onResume()
-    }
-
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-        updateOrientation(newConfig)
     }
 
     override fun onDestroy() {
