@@ -24,7 +24,8 @@ sealed interface FilesUiState {
 
     data class Error(
         val error: AppError,
-        val partialFiles: List<FilesDataModel> = emptyList()
+        val partialFiles: List<FilesDataModel> = emptyList(),
+        val uiError: zechs.drive.stream.ui.common.UiError = zechs.drive.stream.ui.common.UiError.fromAppError(error)
     ) : FilesUiState
 }
 

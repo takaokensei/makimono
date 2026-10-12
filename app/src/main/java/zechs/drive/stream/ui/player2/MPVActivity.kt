@@ -94,7 +94,10 @@ import zechs.drive.stream.utils.util.Constants.Companion.DRIVE_API
 import zechs.drive.stream.utils.util.Orientation
 import zechs.drive.stream.utils.util.getNextOrientation
 import zechs.drive.stream.utils.util.setOrientation
+import zechs.drive.stream.utils.AppTheme
+import zechs.drive.stream.utils.VideoPlayer
 import zechs.mpv.MPVLib
+import zechs.mpv.MPVLib.mpvEventId.MPV_EVENT_END_FILE
 import zechs.mpv.MPVLib.mpvEventId.MPV_EVENT_FILE_LOADED
 import zechs.mpv.MPVLib.mpvEventId.MPV_EVENT_PLAYBACK_RESTART
 import zechs.mpv.MPVView
@@ -2732,9 +2735,74 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, PlayerModalHost {
                                 }
                             }
                         }
+                MPV_EVENT_END_FILE -> {
+                    runOnUiThread {
+                        if (!isFileLoaded && activityIsForeground && !isFinishing) {
+                            showPlaybackFailureDialog("Não foi possível carregar a mídia no MPV.")
+                        }
                     }
                 }
             }
+        }
+    }
+
+    private fun showPlaybackFailureDialog(errorMessage: String? = null) {
+        if (isFinishing || isDestroyed) return
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.state_error_playback_title)
+            .setMessage(errorMessage ?: getString(R.string.state_error_playback_message))
+            .setPositiveButton(R.string.state_error_network_action) { d, _ ->
+                d.dismiss()
+                playMedia()
+            }
+            .setNeutralButton(R.string.state_error_playback_action) { d, _ ->
+                d.dismiss()
+                launchExoFallback()
+            }
+            .setNegativeButton(R.string.state_error_go_back_action) { d, _ ->
+                d.dismiss()
+                finish()
+            }
+            .create()
+        dialog.setOnDismissListener { onPlayerModalVisibilityChanged(false) }
+        onPlayerModalVisibilityChanged(true)
+        dialog.show()
+    }
+
+    private fun launchExoFallback() {
+        try {
+            val fileId = intent.getStringExtra("fileId") ?: ""
+            val title = intent.getStringExtra("title") ?: ""
+            if (fileId.isEmpty()) {
+                finish()
+                return
+            }
+            val currentPos = ((MPVLib.getPropertyDouble("time-pos") ?: 0.0) * 1000.0).toLong()
+            val exoIntent = PlayerLauncher.createIntent(
+                context = this,
+                playerType = VideoPlayer.EXO_PLAYER,
+                fileId = fileId,
+                title = title,
+                accessToken = intent.getStringExtra("accessToken"),
+                seriesTitle = intent.getStringExtra("seriesTitle"),
+                thumbnailLink = intent.getStringExtra("thumbnailLink"),
+                theme = intent.getStringExtra("theme")?.let { AppTheme.valueOf(it) } ?: AppTheme.DARK,
+                playlist = intent.getParcelableArrayListExtra("playlist"),
+                subtitles = intent.getParcelableArrayListExtra("subtitles"),
+                startPosition = zechs.drive.stream.playback.session.PlaybackProfileSessionPolicy.explicitPositionForHandoff(currentPos),
+                siblingFolderId = intent.getStringExtra("siblingFolderId"),
+                playbackProfileId = intent.getStringExtra("playbackProfileId"),
+                isMovie = intent.getBooleanExtra("isMovie", false),
+                localUri = intent.getStringExtra("localUri")
+            ).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            startActivity(exoIntent)
+            Toast.makeText(this, "Alternando para ExoPlayer...", Toast.LENGTH_SHORT).show()
+            finish()
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Error launching Exo fallback", e)
+            finish()
         }
     }
 

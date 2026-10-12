@@ -3252,37 +3252,31 @@ class PlayerActivity : AppCompatActivity(), PlayerModalHost {
             launchMpvFallback()
             return
         } else {
-            errorSnackbar(
-                errorGeneral,
-                errorDetailed,
-                canOpenMpv = PlaybackFallbackPolicy.shouldOfferMpv(error.errorCode)
-            )
+            showPlaybackFailureDialog(errorDetailed ?: errorGeneral)
         }
     }
 
-    private fun errorSnackbar(textPrimary: String, textSecondary: String?, canOpenMpv: Boolean = false) {
-        Snackbar.make(playerView, textPrimary, Snackbar.LENGTH_LONG).apply {
-            anchorView = progressViewGroup
-
-            if (canOpenMpv) {
-                setAction("Abrir no MPV") {
-                    launchMpvFallback()
-                }
-            } else if (textSecondary != null) {
-                setAction(getString(R.string.details)) {
-                    val dialog = MaterialAlertDialogBuilder(
-                        this@PlayerActivity
-                    ).apply {
-                        setMessage(textSecondary)
-                        setPositiveButton(R.string.ok) { dialog, _ -> dialog.dismiss() }
-                    }.create()
-                    dialog.setOnDismissListener { onPlayerModalVisibilityChanged(false) }
-                    onPlayerModalVisibilityChanged(true)
-                    dialog.show()
-                }
+    private fun showPlaybackFailureDialog(errorMessage: String? = null) {
+        if (isFinishing || isDestroyed) return
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.state_error_playback_title)
+            .setMessage(errorMessage ?: getString(R.string.state_error_playback_message))
+            .setPositiveButton(R.string.state_error_network_action) { d, _ ->
+                d.dismiss()
+                playMedia()
             }
-
-        }.also { it.show() }
+            .setNeutralButton(R.string.state_error_playback_action) { d, _ ->
+                d.dismiss()
+                launchMpvFallback()
+            }
+            .setNegativeButton(R.string.state_error_go_back_action) { d, _ ->
+                d.dismiss()
+                finish()
+            }
+            .create()
+        dialog.setOnDismissListener { onPlayerModalVisibilityChanged(false) }
+        onPlayerModalVisibilityChanged(true)
+        dialog.show()
     }
 
     private fun saveProgress() {

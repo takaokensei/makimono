@@ -17,11 +17,15 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
+import zechs.drive.stream.ui.common.UiError
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zechs.drive.stream.data.local.CatalogEntry
@@ -150,6 +154,9 @@ class HomeViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading(isFirstLoad = true))
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    private val _uiErrorEvents = MutableSharedFlow<UiError>()
+    val uiErrorEvents: SharedFlow<UiError> = _uiErrorEvents.asSharedFlow()
 
     private fun updateUnifiedUiState() {
         val currentHomeState = _homeState.value
@@ -315,6 +322,7 @@ class HomeViewModel @Inject constructor(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             AppLog.e(TAG, "Error removing watch item", e)
+            _uiErrorEvents.emit(UiError.fromThrowable(e))
         }
     }
 
@@ -325,6 +333,7 @@ class HomeViewModel @Inject constructor(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             AppLog.e(TAG, "Error restoring watch item", e)
+            _uiErrorEvents.emit(UiError.fromThrowable(e))
         }
     }
 
@@ -341,6 +350,7 @@ class HomeViewModel @Inject constructor(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             AppLog.e(TAG, "Error marking watch item finished", e)
+            _uiErrorEvents.emit(UiError.fromThrowable(e))
         }
     }
 
@@ -487,6 +497,7 @@ class HomeViewModel @Inject constructor(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             AppLog.e(TAG, "Error fetching starred files", e)
+            _uiErrorEvents.emit(UiError.fromThrowable(e))
         }
     }
 

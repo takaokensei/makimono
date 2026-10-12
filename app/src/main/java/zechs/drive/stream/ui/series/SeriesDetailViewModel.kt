@@ -66,7 +66,8 @@ sealed class SeriesDetailUiState {
     ) : SeriesDetailUiState()
     data class Error(
         val error: AppError,
-        val message: String = error.displayMessage
+        val message: String = error.displayMessage,
+        val uiError: zechs.drive.stream.ui.common.UiError = zechs.drive.stream.ui.common.UiError.fromAppError(error)
     ) : SeriesDetailUiState()
 }
 

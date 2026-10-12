@@ -379,6 +379,9 @@
     <string name="state_error_generic_title">Não foi possível carregar</string>
     <string name="state_error_generic_message">Ocorreu um problema ao carregar esta pasta. Tente novamente.</string>
     <string name="state_error_go_back_action">Voltar</string>
+    <string name="state_error_playback_title">Erro de reprodução</string>
+    <string name="state_error_playback_message">Não foi possível reproduzir este vídeo com o motor atual.</string>
+    <string name="state_error_playback_action">Trocar de motor</string>
     <string name="files_folder_cycle_error">Este atalho leva a uma pasta que já está aberta.</string>
     <string name="state_partial_folder_notice">Mostrando parte da pasta.</string>
     <string name="state_partial_folder_action">Carregar mais</string>

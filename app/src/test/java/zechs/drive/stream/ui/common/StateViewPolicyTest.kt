@@ -70,6 +70,16 @@ class StateViewPolicyTest {
     }
 
     @Test
+    fun playbackErrorState_hasSwitchEngineAction() {
+        val config = StateView.configFor(StateView.StateType.ERROR_PLAYBACK)
+        assertNotNull(config)
+        assertEquals(R.drawable.ic_error_72, config!!.iconRes)
+        assertEquals(R.string.state_error_playback_title, config.titleRes)
+        assertEquals(R.string.state_error_playback_message, config.messageRes)
+        assertEquals(R.string.state_error_playback_action, config.actionRes)
+    }
+
+    @Test
     fun sanitizeErrorMessage_removesTechnicalGarbage() {
         val rawException = "java.net.SocketTimeoutException: failed to connect after 10000ms HTTP 500"
         val sanitized = StateView.sanitizeErrorMessage(rawException)

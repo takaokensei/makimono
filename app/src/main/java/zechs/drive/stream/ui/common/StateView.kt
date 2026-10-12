@@ -32,6 +32,7 @@ class StateView @JvmOverloads constructor(
         ERROR_RATE_LIMITED,
         ERROR_NOT_FOUND,
         ERROR_SERVER,
+        ERROR_PLAYBACK,
         ERROR_GENERIC,
         CUSTOM
     }
@@ -93,6 +94,12 @@ class StateView @JvmOverloads constructor(
                     titleRes = R.string.state_error_server_title,
                     messageRes = R.string.state_error_server_message,
                     actionRes = R.string.state_error_network_action
+                )
+                StateType.ERROR_PLAYBACK -> StateConfig(
+                    iconRes = R.drawable.ic_error_72,
+                    titleRes = R.string.state_error_playback_title,
+                    messageRes = R.string.state_error_playback_message,
+                    actionRes = R.string.state_error_playback_action
                 )
                 StateType.ERROR_GENERIC -> StateConfig(
                     iconRes = R.drawable.ic_error_72,
@@ -159,8 +166,24 @@ class StateView @JvmOverloads constructor(
             binding.btnStateAction.isVisible = true
             binding.btnStateAction.text = actionText
             binding.btnStateAction.setOnClickListener { onActionClick() }
+            binding.btnStateAction.post {
+                if (binding.btnStateAction.isVisible && isAttachedToWindow) {
+                    binding.btnStateAction.requestFocus()
+                }
+            }
         } else {
             binding.btnStateAction.isVisible = false
+        }
+    }
+
+    /**
+     * Requisita foco imediato no botão primário de ação (T-126, HIG tvOS).
+     */
+    fun requestActionFocus(): Boolean {
+        return if (binding.btnStateAction.isVisible) {
+            binding.btnStateAction.requestFocus()
+        } else {
+            false
         }
     }
 }
