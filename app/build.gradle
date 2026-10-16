@@ -183,7 +183,7 @@ kapt {
 dependencies {
     implementation project(path: ":mpv")
 
-    def media3_version = "1.4.1"
+    def media3_version = "1.11.1"
     def moshi_version = "1.15.0"
     def retrofit_version = "2.9.0"
     def room_version = "2.6.1"
