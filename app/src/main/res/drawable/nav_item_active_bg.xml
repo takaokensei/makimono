@@ -1,40 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Focused (and active): same glass pill + ring as the rail, plus the accent indicator -->
+    <!-- Focused: Apple tvOS / Swiss Pure Optical White Pill -->
     <item android:state_focused="true">
-        <layer-list>
-            <item>
-                <shape android:shape="rectangle">
-                    <solid android:color="#2EFFFFFF"/>
-                    <corners android:radius="10dp"/>
-                    <stroke android:width="2dp" android:color="#FFFFFFFF"/>
-                </shape>
-            </item>
-            <item android:gravity="start|center_vertical" android:left="6dp">
-                <shape android:shape="rectangle">
-                    <size android:width="3dp" android:height="20dp"/>
-                    <solid android:color="#22D3EE"/>
-                    <corners android:radius="2dp"/>
-                </shape>
-            </item>
-        </layer-list>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/swiss_focus_white" />
+            <corners android:radius="14dp" />
+        </shape>
     </item>
-    <!-- Active (not focused): quiet fill + slim accent indicator -->
+    <!-- Expanded & Active (unfocused): Frosted Glass Pill with Specular Border -->
+    <item android:state_selected="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/swiss_glass_regular" />
+            <corners android:radius="14dp" />
+            <stroke
+                android:width="1dp"
+                android:color="@color/swiss_border_specular_bright" />
+        </shape>
+    </item>
+    <!-- Collapsed & Active (unfocused): Subtle Translucent Glass Indicator -->
     <item>
-        <layer-list>
-            <item>
-                <shape android:shape="rectangle">
-                    <solid android:color="#1AFFFFFF"/>
-                    <corners android:radius="10dp"/>
-                </shape>
-            </item>
-            <item android:gravity="start|center_vertical" android:left="6dp">
-                <shape android:shape="rectangle">
-                    <size android:width="3dp" android:height="20dp"/>
-                    <solid android:color="#22D3EE"/>
-                    <corners android:radius="2dp"/>
-                </shape>
-            </item>
-        </layer-list>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/swiss_glass_thin" />
+            <corners android:radius="14dp" />
+            <stroke
+                android:width="1dp"
+                android:color="@color/swiss_border_specular_subtle" />
+        </shape>
     </item>
 </selector>

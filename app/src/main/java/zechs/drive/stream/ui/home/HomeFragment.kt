@@ -36,6 +36,7 @@ import zechs.drive.stream.ui.home.controller.RailController
 import zechs.drive.stream.ui.home.controller.ShelvesController
 import zechs.drive.stream.ui.player.PlayerLauncher
 import zechs.drive.stream.utils.AppSettings
+import zechs.drive.stream.utils.DeviceUi
 import zechs.drive.stream.utils.FocusMemory
 import zechs.drive.stream.utils.MotionPolicy
 import zechs.drive.stream.utils.ProfileManager
@@ -138,6 +139,9 @@ class HomeFragment : BaseFragment() {
             navController = findNavController(),
             animateFocus = { v, focus, scale, elev -> catalogController.animateFocus(v, focus, scale, elev) },
             onContentFocusRequested = {
+                if (DeviceUi.isTenFootExperience(requireContext())) {
+                    railController.collapseTvRail()
+                }
                 focusCoordinator.focusContent(
                     continueWatchingCount = shelvesController.continueWatchingAdapter.itemCount,
                     watchQueueCount = shelvesController.watchQueueAdapter.itemCount,
@@ -282,7 +286,7 @@ class HomeFragment : BaseFragment() {
                 val item = animeAdapter.currentList[pos]
                 if (item is FilesDataModel.File) {
                     lastFocusedItemId = item.driveFile.id
-                    FocusMemory.remember("home.catalog", item.driveFile.id)
+                    FocusMemory.remember("home.catalog", pos, item.driveFile.id)
                     if (item.driveFile.isFolder || item.driveFile.isShortcutFolder) {
                         heroController.scheduleFeaturedPreview(item.driveFile, v) { railController.currentTab }
                     }
@@ -361,7 +365,36 @@ class HomeFragment : BaseFragment() {
         )
     }
 
+    private var exitDialog: androidx.appcompat.app.AlertDialog? = null
+
+    private fun showExitConfirmationDialog() {
+        if (exitDialog?.isShowing == true) return
+        val builder = com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.exit_dialog_title)
+            .setMessage(R.string.exit_dialog_message)
+            .setPositiveButton(R.string.exit_dialog_confirm) { _, _ ->
+                activity?.finish()
+            }
+            .setNegativeButton(R.string.exit_dialog_cancel) { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setOnDismissListener {
+                exitDialog = null
+                railController.focusCurrentNavItem()
+            }
+
+        exitDialog = builder.create().apply {
+            show()
+            // Gate G1 & Q01.1: Foco inicial em "Cancelar" para evitar encerramento acidental da aplicação
+            getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE)?.requestFocus()
+        }
+    }
+
     private fun handleBackPressed() {
+        if (exitDialog?.isShowing == true) {
+            exitDialog?.dismiss()
+            return
+        }
         if (railController.handleBackPressed()) return
         if (railController.currentTab != "Início") {
             railController.selectTab("Início")
@@ -371,7 +404,7 @@ class HomeFragment : BaseFragment() {
             railController.focusCurrentNavItem()
             return
         }
-        activity?.finish()
+        showExitConfirmationDialog()
     }
 
     private fun observeAnimeLibrary() {
@@ -546,6 +579,8 @@ class HomeFragment : BaseFragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        exitDialog?.dismiss()
+        exitDialog = null
         _binding = null
     }
 }

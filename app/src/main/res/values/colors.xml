@@ -1,23 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Obsidian: default premium TV palette. Keep semantic roles opaque and theme-scoped. -->
-    <color name="obsidian_bg_base">#070B11</color>
-    <color name="obsidian_bg_surface">#111925</color>
-    <color name="obsidian_bg_glass">#0F111925</color>
-    <color name="obsidian_border_glass">#1AFFFFFF</color>
-    <color name="obsidian_text_primary">#F5F7FA</color>
-    <color name="obsidian_text_secondary">#B0B8C4</color>
-    <color name="obsidian_text_tertiary">#7C8696</color>
-    <color name="obsidian_accent_primary">#22D3EE</color>
-    <color name="obsidian_accent_secondary">#4F8CFF</color>
-    <color name="obsidian_on_primary">#0A0E14</color>
-    <color name="obsidian_focus_fill">#2622D3EE</color>
-    <color name="obsidian_hairline">#1AFFFFFF</color>
-    <color name="obsidian_success">#54D18A</color>
-    <color name="obsidian_warning">#F6C76A</color>
-    <color name="obsidian_danger">#FF6B78</color>
-    <color name="obsidian_scrim">#99000000</color>
-    <color name="obsidian_media_scrim">#CC000000</color>
+    <!-- Obsidian / Swiss Glass TV: Apple tvOS/visionOS Glassmorphism + Swiss International Style -->
+    <color name="obsidian_bg_base">#07080B</color>
+    <color name="obsidian_bg_surface">#101218</color>
+    <color name="obsidian_bg_glass">#8810131C</color>
+    <color name="obsidian_border_glass">#28FFFFFF</color>
+    <color name="obsidian_text_primary">#F8FAFC</color>
+    <color name="obsidian_text_secondary">#94A3B8</color>
+    <color name="obsidian_text_tertiary">#64748B</color>
+    <color name="obsidian_accent_primary">#FFFFFF</color>
+    <color name="obsidian_accent_secondary">#FF3B30</color>
+    <color name="obsidian_on_primary">#07080B</color>
+    <color name="obsidian_focus_fill">#24FFFFFF</color>
+    <color name="obsidian_hairline">#24FFFFFF</color>
+    <color name="obsidian_success">#34C759</color>
+    <color name="obsidian_warning">#FF9F0A</color>
+    <color name="obsidian_danger">#FF3B30</color>
+    <color name="obsidian_scrim">#99050608</color>
+    <color name="obsidian_media_scrim">#CC050608</color>
+
+    <!-- Swiss Glass TV Explicit Tokens -->
+    <color name="swiss_canvas_base">#07080B</color>
+    <color name="swiss_glass_thin">#14FFFFFF</color>
+    <color name="swiss_glass_regular">#22FFFFFF</color>
+    <color name="swiss_glass_thick">#990D1017</color>
+    <color name="swiss_glass_card_footer">#D90B0E14</color>
+    <color name="swiss_glass_rail_collapsed">#800B0E15</color>
+    <color name="swiss_glass_rail_expanded">#E60B0E15</color>
+    <color name="swiss_border_specular_bright">#45FFFFFF</color>
+    <color name="swiss_border_specular_subtle">#22FFFFFF</color>
+    <color name="swiss_focus_white">#F7FFFFFF</color>
+    <color name="swiss_focus_ink">#07080B</color>
+    <color name="swiss_accent_red">#FF3B30</color>
 
     <!-- Tokyo Night (Default) -->
     <color name="tn_bg_base">#1A1B26</color>

@@ -82,6 +82,9 @@ class CatalogPresentationController(
         }
 
         binding.btnClearSearch.setOnClickListener { binding.etSearchAnime.text?.clear() }
+        binding.etSearchAnime.setOnFocusChangeListener { _, hasFocus ->
+            binding.searchPillContainer?.isSelected = hasFocus
+        }
         binding.etSearchAnime.setOnKeyListener { _, keyCode, event ->
             if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
                 if (binding.etSearchAnime.selectionStart == 0) {

@@ -104,8 +104,9 @@
                     android:layout_height="20dp"
                     android:layout_gravity="center"
                     android:contentDescription="@string/back"
+                    android:duplicateParentState="true"
                     android:src="@drawable/ic_back_24"
-                    app:tint="@color/obsidian_text_primary" />
+                    app:tint="@color/btn_secondary_action_foreground" />
             </FrameLayout>
 
             <View
@@ -124,6 +125,8 @@
                     android:id="@+id/tvBreadcrumbRoot"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:fontFeatureSettings="tnum"
+                    android:letterSpacing="0.06"
                     android:text="@string/series_breadcrumb_library"
                     android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
                     android:textColor="@color/obsidian_text_secondary" />
@@ -133,14 +136,16 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:layout_marginEnd="8dp"
-                    android:text="›"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Body"
+                    android:text="//"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
                     android:textColor="@color/obsidian_text_tertiary" />
 
                 <TextView
                     android:id="@+id/tvBreadcrumbCurrent"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:fontFeatureSettings="tnum"
+                    android:letterSpacing="0.06"
                     android:text="@string/series_breadcrumb_titles"
                     android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
                     android:textColor="@color/obsidian_text_secondary" />
@@ -165,8 +170,9 @@
                     android:layout_height="20dp"
                     android:layout_gravity="center"
                     android:contentDescription="@string/search"
+                    android:duplicateParentState="true"
                     android:src="@drawable/ic_search_24"
-                    app:tint="@color/obsidian_text_primary" />
+                    app:tint="@color/btn_secondary_action_foreground" />
             </FrameLayout>
 
         </LinearLayout>
@@ -562,7 +568,7 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Ver Trailer -->
+            <!-- Ver Trailer -->
                 <LinearLayout
                     android:id="@+id/btnTrailer"
                     android:layout_width="wrap_content"
@@ -582,17 +588,19 @@
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:contentDescription="@null"
+                        android:duplicateParentState="true"
                         android:src="@drawable/ic_trailer_24"
-                        app:tint="@color/obsidian_text_primary" />
+                        app:tint="@color/btn_secondary_action_foreground" />
 
                     <TextView
                         style="@style/TextAppearance.Makimono.TV.Callout"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
+                        android:duplicateParentState="true"
                         android:fontFamily="sans-serif-medium"
                         android:text="@string/series_action_trailer"
-                        android:textColor="@color/obsidian_text_primary" />
+                        android:textColor="@color/btn_secondary_action_foreground" />
                 </LinearLayout>
 
                 <!-- Favoritar -->
@@ -615,8 +623,9 @@
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:contentDescription="@null"
+                        android:duplicateParentState="true"
                         android:src="@drawable/ic_star_outline_24"
-                        app:tint="@color/obsidian_text_primary" />
+                        app:tint="@color/btn_secondary_action_foreground" />
 
                     <TextView
                         android:id="@+id/tvFavoriteText"
@@ -624,9 +633,10 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
+                        android:duplicateParentState="true"
                         android:fontFamily="sans-serif-medium"
                         android:text="@string/series_action_favorite"
-                        android:textColor="@color/obsidian_text_primary" />
+                        android:textColor="@color/btn_secondary_action_foreground" />
                 </LinearLayout>
 
                 <ImageButton
@@ -638,7 +648,7 @@
                     android:contentDescription="@string/series_more_actions"
                     android:padding="13dp"
                     android:src="@drawable/ic_more_vert_24"
-                    app:tint="@color/obsidian_text_primary"
+                    app:tint="@color/btn_secondary_action_foreground"
                     android:clickable="true"
                     android:focusable="true"
                     android:focusableInTouchMode="true" />
@@ -664,8 +674,9 @@
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:contentDescription="@null"
+                        android:duplicateParentState="true"
                         android:src="@drawable/ic_notification_24"
-                        app:tint="@color/obsidian_text_primary" />
+                        app:tint="@color/btn_secondary_action_foreground" />
 
                     <TextView
                         android:id="@+id/tvFollowText"
@@ -673,9 +684,10 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
+                        android:duplicateParentState="true"
                         android:fontFamily="sans-serif-medium"
                         android:text="@string/series_action_follow"
-                        android:textColor="@color/obsidian_text_primary" />
+                        android:textColor="@color/btn_secondary_action_foreground" />
                 </LinearLayout>
 
                 <!-- Marcar como Assistido -->
@@ -699,6 +711,7 @@
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:contentDescription="@null"
+                        android:duplicateParentState="true"
                         android:src="@drawable/ic_check_cyan_circle" />
 
                     <TextView
@@ -707,9 +720,10 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
+                        android:duplicateParentState="true"
                         android:fontFamily="sans-serif-medium"
                         android:text="@string/series_action_mark_watched"
-                        android:textColor="@color/obsidian_text_primary" />
+                        android:textColor="@color/btn_secondary_action_foreground" />
                 </LinearLayout>
 
             </LinearLayout>

@@ -11,11 +11,11 @@
     android:focusable="true"
     android:focusableInTouchMode="true"
     android:foreground="@drawable/item_series_episode_focus_border"
-    app:cardBackgroundColor="?attr/colorBgSurface"
-    app:cardCornerRadius="8dp"
+    app:cardBackgroundColor="@color/swiss_glass_card_footer"
+    app:cardCornerRadius="12dp"
     app:cardElevation="0dp"
-    app:strokeColor="?attr/colorBorderGlass"
-    app:strokeWidth="0dp">
+    app:strokeColor="@color/swiss_border_specular_subtle"
+    app:strokeWidth="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -30,7 +30,8 @@
         app:cardBackgroundColor="@color/obsidian_bg_base"
         app:cardCornerRadius="8dp"
         app:cardElevation="0dp"
-        app:strokeWidth="0dp">
+        app:strokeColor="@color/swiss_border_specular_subtle"
+        app:strokeWidth="1dp">
 
         <FrameLayout
             android:layout_width="match_parent"
