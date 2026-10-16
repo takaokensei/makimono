@@ -19,7 +19,8 @@ def verify_tag_immutability(
     clean_existing = (existing_sha or "").strip().lower()
     if not clean_current:
         return False, f"Tag '{tag}': current SHA is empty."
-    if not clean_existing:
+    # If existing_sha is empty, null, or a GitHub API error payload (404 Not Found), no prior release exists.
+    if not clean_existing or clean_existing == "null" or clean_existing.startswith("{") or "not found" in clean_existing:
         return True, f"Tag '{tag}' has no prior release SHA; proceeding with {clean_current[:7]}."
 
     if clean_current.startswith(clean_existing) or clean_existing.startswith(clean_current):
@@ -37,6 +38,15 @@ def run_self_test() -> int:
     ok_new, _ = verify_tag_immutability("v1.8.0", "ca26827f4421d9d9bfcfca6fa5fd788a0bb5108c", None)
     if not ok_new:
         print("[FAIL] Self-test failed on new tag case.", file=sys.stderr)
+        return 1
+
+    ok_404, _ = verify_tag_immutability(
+        "v1.8.0",
+        "ca26827f4421d9d9bfcfca6fa5fd788a0bb5108c",
+        '{"message":"Not Found","documentation_url":"https://docs.github.com","status":"404"}',
+    )
+    if not ok_404:
+        print("[FAIL] Self-test failed on 404 response case.", file=sys.stderr)
         return 1
 
     ok_same, _ = verify_tag_immutability("v1.8.0", "ca26827f4421d9d9bfcfca6fa5fd788a0bb5108c", "ca26827")
