@@ -62,6 +62,39 @@
                 android:textStyle="bold"
                 tools:text="EP 04" />
 
+            <!-- Watched badge overlay on top-right (Crunchyroll TV style) -->
+            <LinearLayout
+                android:id="@+id/badgeWatched"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|end"
+                android:layout_margin="6dp"
+                android:background="@drawable/glass_meta_pill_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="6dp"
+                android:paddingTop="2dp"
+                android:paddingEnd="6dp"
+                android:paddingBottom="2dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+                <ImageView
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"
+                    android:src="@drawable/ic_check_cyan_circle"
+                    android:contentDescription="@null" />
+                <TextView
+                    android:id="@+id/tvWatchedBadgeLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:fontFamily="@font/inter"
+                    android:text="@string/series_episode_watched_badge"
+                    android:textColor="@color/cyan_400"
+                    style="@style/TextAppearance.Makimono.TV.Badge"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
             <!-- Play icon overlay on focus / hover -->
             <ImageView
                 android:id="@+id/ivPlayOverlay"

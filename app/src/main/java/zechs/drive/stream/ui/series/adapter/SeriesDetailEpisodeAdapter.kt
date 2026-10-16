@@ -111,6 +111,9 @@ class SeriesDetailEpisodeAdapter(
                 binding.tvEpNumberBadge.visibility = View.GONE
             }
 
+            val isWatched = item.progressPercent >= 90
+            binding.badgeWatched?.visibility = if (isWatched) View.VISIBLE else View.GONE
+
             if (item.progressPercent > 0) {
                 binding.pbEpisodeProgress.visibility = View.VISIBLE
                 binding.pbEpisodeProgress.progress = item.progressPercent

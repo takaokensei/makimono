@@ -445,4 +445,21 @@
     <string name="exit_dialog_message">Deseja realmente sair do aplicativo?</string>
     <string name="exit_dialog_confirm">Sair</string>
     <string name="exit_dialog_cancel">Cancelar</string>
+    <string name="series_episode_watched_badge">ASSISTIDO</string>
+    <string name="player_skip_intro">Pular abertura</string>
+    <string name="player_skip_outro">Pular encerramento</string>
+    <string name="player_next_episode_countdown">A SEGUIR • %1$ds</string>
+    <string name="player_next_episode_play_now">Assistir agora</string>
+    <string name="genre_all">Todos</string>
+    <string name="genre_action">Ação</string>
+    <string name="genre_adventure">Aventura</string>
+    <string name="genre_comedy">Comédia</string>
+    <string name="genre_drama">Drama</string>
+    <string name="genre_fantasy">Fantasia</string>
+    <string name="genre_romance">Romance</string>
+    <string name="genre_scifi">Ficção Científica</string>
+    <string name="genre_shonen">Shonen</string>
+    <string name="genre_isekai">Isekai</string>
+    <string name="genre_slice_of_life">Slice of Life</string>
+    <string name="genre_supernatural">Sobrenatural</string>
 </resources>
