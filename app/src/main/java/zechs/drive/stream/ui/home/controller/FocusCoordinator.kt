@@ -34,13 +34,14 @@ class FocusCoordinator(
         val catalog = binding.rvAnimeLibrary
 
         val railItems = listOfNotNull(
-            binding.btnBrandLogo,
+            binding.btnBrandLogo.takeIf { it.visibility != View.GONE },
+            binding.userProfilePill,
+            binding.btnNavBusca,
             binding.btnNavInicio,
+            binding.btnNavFavoritos,
             binding.btnNavAnimes,
             binding.btnNavFilmes,
             binding.btnNavPastas,
-            binding.btnNavFavoritos,
-            binding.userProfilePill,
             binding.btnNavConfig
         )
         val initialTarget = play?.takeIf { it.isShown } ?: search.takeIf { it.isShown } ?: catalog

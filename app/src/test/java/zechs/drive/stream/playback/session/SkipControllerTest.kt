@@ -105,6 +105,36 @@ class SkipControllerTest {
     }
 
     @Test
+    fun `auto-skips ending when autoSkipEnabled and within grace period`() {
+        skipController.setChapters(listOf(sampleEnding))
+        val (_, action) = skipController.onPlaybackTick(
+            positionMs = 1_201_000L,
+            autoSkipEnabled = true,
+            controllerVisible = false
+        )
+
+        assertTrue(action is SkipController.SkipAction.AutoSkip)
+        val autoSkip = action as SkipController.SkipAction.AutoSkip
+        assertEquals(1_290_000L, autoSkip.targetPositionMs)
+        assertTrue(autoSkip.message.contains("Encerramento"))
+    }
+
+    @Test
+    fun `auto-skips recap when autoSkipEnabled and within grace period`() {
+        skipController.setChapters(listOf(sampleRecap))
+        val (_, action) = skipController.onPlaybackTick(
+            positionMs = 1_000L,
+            autoSkipEnabled = true,
+            controllerVisible = false
+        )
+
+        assertTrue(action is SkipController.SkipAction.AutoSkip)
+        val autoSkip = action as SkipController.SkipAction.AutoSkip
+        assertEquals(30_000L, autoSkip.targetPositionMs)
+        assertTrue(autoSkip.message.contains("Recap"))
+    }
+
+    @Test
     fun `does not auto-skip twice in same chapter interval`() {
         skipController.setChapters(listOf(sampleOpening))
         // First tick triggers auto-skip
@@ -192,5 +222,38 @@ class SkipControllerTest {
         skipController.setChapters(emptyList())
         skipController.onPlaybackTick(20_000L, controllerVisible = true)
         assertEquals(110_000L, skipController.performSkip(20_000L))
+    }
+
+    @Test
+    fun `an accepted skip does not reappear on a stale position before seek completes`() {
+        skipController.setChapters(listOf(sampleOpening))
+        // 1. Tick during opening shows skip button
+        val (initialState, _) = skipController.onPlaybackTick(positionMs = 80_000L)
+        assertTrue(initialState.buttonUi is SkipController.SkipButtonUi.Visible)
+
+        // 2. User performs skip
+        val target = skipController.performSkip(80_000L)
+        assertEquals(150_000L, target)
+
+        // 3. Stale tick arrives before seek completion (same or slight advance inside interval)
+        val (staleState, _) = skipController.onPlaybackTick(positionMs = 80_050L)
+        assertEquals(SkipController.SkipButtonUi.Hidden, staleState.buttonUi)
+
+        // 4. Seek completes (position past opening)
+        val (completedState, _) = skipController.onPlaybackTick(positionMs = 150_500L)
+        assertEquals(SkipController.SkipButtonUi.Hidden, completedState.buttonUi)
+    }
+
+    @Test
+    fun `an accepted fallback intro skip does not reappear on stale tick`() {
+        skipController.setChapters(emptyList())
+        val (initialState, _) = skipController.onPlaybackTick(positionMs = 20_000L, controllerVisible = true)
+        assertTrue(initialState.buttonUi is SkipController.SkipButtonUi.Visible)
+
+        val target = skipController.performSkip(20_000L)
+        assertEquals(110_000L, target)
+
+        val (staleState, _) = skipController.onPlaybackTick(positionMs = 20_050L, controllerVisible = true)
+        assertEquals(SkipController.SkipButtonUi.Hidden, staleState.buttonUi)
     }
 }

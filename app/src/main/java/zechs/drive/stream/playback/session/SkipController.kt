@@ -38,6 +38,8 @@ class SkipController(
 
     private var parsedChapters: List<ParsedChapter> = emptyList()
     private var activeSkipChapter: ParsedChapter? = null
+    private var acknowledgedChapter: ParsedChapter? = null
+    private var acknowledgedFallbackIntro: Boolean = false
     private var hasAutoSkippedCurrentInterval: Boolean = false
     private var currentIntervalChapterId: Int? = null
 
@@ -47,6 +49,8 @@ class SkipController(
     fun setChapters(chapters: List<ParsedChapter>) {
         parsedChapters = chapters.sortedBy { it.startTimeMs }
         activeSkipChapter = null
+        acknowledgedChapter = null
+        acknowledgedFallbackIntro = false
         hasAutoSkippedCurrentInterval = false
         currentIntervalChapterId = null
     }
@@ -88,9 +92,18 @@ class SkipController(
         controllerVisible: Boolean = false,
         controlsLocked: Boolean = false
     ): Pair<SkipState, SkipAction> {
+        val ack = acknowledgedChapter
+        if (ack != null && positionMs !in ack.startTimeMs until ack.endTimeMs) {
+            acknowledgedChapter = null
+        }
+        if (acknowledgedFallbackIntro && positionMs !in 0L..fallbackIntroWindowMs) {
+            acknowledgedFallbackIntro = false
+        }
+
         val specialChapter = if (parsedChapters.isNotEmpty()) {
             parsedChapters.firstOrNull { chapter ->
                 chapter.type != ChapterType.OTHER &&
+                        chapter != acknowledgedChapter &&
                         positionMs in chapter.startTimeMs until chapter.endTimeMs
             }
         } else null
@@ -113,10 +126,12 @@ class SkipController(
             if (autoSkipEnabled && (isOpOrRecap || isEnding) && !hasAutoSkippedCurrentInterval) {
                 if (positionMs in specialChapter.startTimeMs..(specialChapter.startTimeMs + autoSkipGracePeriodMs)) {
                     hasAutoSkippedCurrentInterval = true
-                    val notifyText = if (isEnding) {
-                        "⏩ Encerramento pulado automaticamente (AniSkip)"
-                    } else {
-                        "⏩ Abertura pulada automaticamente (AniSkip)"
+                    acknowledgedChapter = specialChapter
+                    activeSkipChapter = null
+                    val notifyText = when (specialChapter.type) {
+                        ChapterType.ENDING -> "⏩ Encerramento pulado automaticamente (AniSkip)"
+                        ChapterType.RECAP -> "⏩ Recap pulado automaticamente (AniSkip)"
+                        else -> "⏩ Abertura pulada automaticamente (AniSkip)"
                     }
                     action = SkipAction.AutoSkip(
                         targetPositionMs = specialChapter.endTimeMs,
@@ -133,7 +148,7 @@ class SkipController(
             }
 
             // Visible as overlay if controls are hidden and not locked, or inside controls
-            val buttonUi = if (!controlsLocked) {
+            val buttonUi = if (!controlsLocked && action !is SkipAction.AutoSkip) {
                 SkipButtonUi.Visible(
                     label = label,
                     targetPositionMs = specialChapter.endTimeMs,
@@ -154,7 +169,7 @@ class SkipController(
 
         // Fallback: If no recognized chapters in the file, allow 90s intro skip in the first 140s
         val hasRecognizedChapters = parsedChapters.any { it.type != ChapterType.OTHER }
-        val buttonUi = if (!hasRecognizedChapters && positionMs in 0L..fallbackIntroWindowMs && !controlsLocked && controllerVisible) {
+        val buttonUi = if (!hasRecognizedChapters && !acknowledgedFallbackIntro && positionMs in 0L..fallbackIntroWindowMs && !controlsLocked && controllerVisible) {
             SkipButtonUi.Visible(
                 label = "Pular Abertura (+90s)",
                 targetPositionMs = positionMs + fallbackIntroSkipDeltaMs,
@@ -180,19 +195,22 @@ class SkipController(
     fun performSkip(currentPositionMs: Long): Long? {
         val chapter = activeSkipChapter
         if (chapter != null) {
+            acknowledgedChapter = chapter
+            activeSkipChapter = null
             return chapter.endTimeMs
         }
         val hasRecognizedChapters = parsedChapters.any { it.type != ChapterType.OTHER }
         if (!hasRecognizedChapters && currentPositionMs in 0L..fallbackIntroWindowMs) {
+            acknowledgedFallbackIntro = true
             return currentPositionMs + fallbackIntroSkipDeltaMs
         }
         return null
     }
 
     /**
-     * Returns the active special chapter if currently inside one.
+     * Returns the active special chapter if currently inside one (or just skipped).
      */
-    fun getActiveChapter(): ParsedChapter? = activeSkipChapter
+    fun getActiveChapter(): ParsedChapter? = activeSkipChapter ?: acknowledgedChapter
 
     /**
      * Returns all currently loaded chapters.
