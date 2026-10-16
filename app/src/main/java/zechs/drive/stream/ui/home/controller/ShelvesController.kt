@@ -99,7 +99,7 @@ class ShelvesController(
                     zechs.drive.stream.utils.MediaImageLoader.preloadCard(context, url)
                 }
                 list.getOrNull(position)?.let { item ->
-                    FocusMemory.remember("home.continue_watching", item.videoId)
+                    FocusMemory.remember("home.continue_watching", position, item.videoId)
                     heroController.findLibraryFolderForTitle(item.name, viewModel.animeLibrary.value)?.let { folder ->
                         heroController.scheduleFeaturedPreview(folder, v) { railController.currentTab }
                     }
@@ -123,6 +123,7 @@ class ShelvesController(
             if (position != RecyclerView.NO_POSITION) {
                 viewModel.onEvent(HomeEvent.SaveFocus(1, position))
                 watchQueueAdapter.currentList.getOrNull(position)?.let { item ->
+                    FocusMemory.remember("home.watch_queue", position, item.fileId)
                     heroController.findLibraryFolderForTitle(item.name, viewModel.animeLibrary.value)?.let { folder ->
                         heroController.scheduleFeaturedPreview(folder, v) { railController.currentTab }
                     }
@@ -148,6 +149,7 @@ class ShelvesController(
             if (position != RecyclerView.NO_POSITION) {
                 viewModel.onEvent(HomeEvent.SaveFocus(3, position))
                 starredShelfAdapter.currentList.getOrNull(position)?.let { folder ->
+                    FocusMemory.remember("home.starred", position, folder.id)
                     heroController.scheduleFeaturedPreview(folder, v) { railController.currentTab }
                 }
             }
@@ -169,6 +171,7 @@ class ShelvesController(
             if (position != RecyclerView.NO_POSITION) {
                 viewModel.onEvent(HomeEvent.SaveFocus(4, position))
                 recentlyAddedAdapter.currentList.getOrNull(position)?.let { folder ->
+                    FocusMemory.remember("home.recently_added", position, folder.id)
                     heroController.scheduleFeaturedPreview(folder, v) { railController.currentTab }
                 }
             }
@@ -190,6 +193,7 @@ class ShelvesController(
             if (position != RecyclerView.NO_POSITION) {
                 viewModel.onEvent(HomeEvent.SaveFocus(2, position))
                 followedEpisodesAdapter.currentList.getOrNull(position)?.let { folder ->
+                    FocusMemory.remember("home.new_episodes", position, folder.id)
                     heroController.scheduleFeaturedPreview(folder, v) { railController.currentTab }
                 }
             }

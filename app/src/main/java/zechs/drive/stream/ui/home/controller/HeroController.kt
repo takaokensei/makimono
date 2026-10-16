@@ -56,7 +56,7 @@ class HeroController(
         }
 
         binding.btnFeaturedPlay?.setOnFocusChangeListener { v, hasFocus ->
-            animateFocus(v, hasFocus, 1.05f, 8f)
+            animateFocus(v, hasFocus, 1.03f, 6f)
         }
 
         binding.btnFeaturedPlay?.setOnKeyListener { _, keyCode, event ->
@@ -67,11 +67,7 @@ class HeroController(
         }
 
         binding.btnFeaturedInfo?.setOnFocusChangeListener { v, hasFocus ->
-            animateFocus(v, hasFocus, 1.05f, 8f)
-        }
-
-        binding.userProfilePill?.setOnFocusChangeListener { v, hasFocus ->
-            animateFocus(v, hasFocus, 1.05f, 6f)
+            animateFocus(v, hasFocus, 1.03f, 6f)
         }
 
         binding.userProfilePill?.setOnClickListener {

@@ -150,13 +150,13 @@ class SeriesDetailFragment : BaseFragment() {
             onEpisodeClick = { episodeItem ->
                 val pos = episodeAdapter.currentList.indexOfFirst { it.file.id == episodeItem.file.id }
                 if (pos >= 0) viewModel.onEvent(SeriesDetailEvent.SaveFocus(pos))
-                FocusMemory.remember("details.episodes.${args.folderId}", episodeItem.file.id)
+                FocusMemory.remember("details.episodes.${args.folderId}", pos.coerceAtLeast(0), episodeItem.file.id)
                 playEpisode(episodeItem)
             },
             onEpisodeLongClick = { episodeItem, focusAnchor ->
                 val pos = episodeAdapter.currentList.indexOfFirst { it.file.id == episodeItem.file.id }
                 if (pos >= 0) viewModel.onEvent(SeriesDetailEvent.SaveFocus(pos))
-                FocusMemory.remember("details.episodes.${args.folderId}", episodeItem.file.id)
+                FocusMemory.remember("details.episodes.${args.folderId}", pos.coerceAtLeast(0), episodeItem.file.id)
                 showEpisodeContextMenu(episodeItem, focusAnchor)
             }
         )
@@ -623,7 +623,8 @@ class SeriesDetailFragment : BaseFragment() {
         startFromBeginning: Boolean = false,
         standalone: Boolean = false
     ) {
-        FocusMemory.remember("details.episodes.${args.folderId}", item.file.id)
+        val pos = episodeAdapter.currentList.indexOfFirst { it.file.id == item.file.id }.coerceAtLeast(0)
+        FocusMemory.remember("details.episodes.${args.folderId}", pos, item.file.id)
         val currentState = viewModel.uiState.value as? SeriesDetailUiState.Success ?: return
 
         // A trailer must not inherit the narrative playlist or autoplay into an episode.

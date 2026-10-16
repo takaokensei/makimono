@@ -517,7 +517,8 @@ class FilesFragment : BaseFragment() {
             val position = binding.rvList.getChildAdapterPosition(focusedView)
             if (position != RecyclerView.NO_POSITION) {
                 (filesAdapter.currentList.getOrNull(position) as? FilesDataModel.File)?.let { fileModel ->
-                    FocusMemory.remember("files.folder.${args.name}", fileModel.driveFile.id)
+                    val folderKey = args.folderPath?.lastOrNull() ?: args.name
+                    FocusMemory.remember("files.folder.$folderKey", position, fileModel.driveFile.id)
                 }
                 paginationHandler.handleDpadFocusNearEnd(position)
             }
@@ -542,7 +543,8 @@ class FilesFragment : BaseFragment() {
     override fun onResume() {
         super.onResume()
         if (_binding != null) {
-            FocusMemory.restore(binding.rvList, "files.folder.${args.name}") { pos ->
+            val folderKey = args.folderPath?.lastOrNull() ?: args.name
+            FocusMemory.restore(binding.rvList, "files.folder.$folderKey") { pos ->
                 (filesAdapter.currentList.getOrNull(pos) as? FilesDataModel.File)?.driveFile?.id
             }
         }

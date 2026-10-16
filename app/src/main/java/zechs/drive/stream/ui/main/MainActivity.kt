@@ -632,19 +632,33 @@ class MainActivity : AppCompatActivity() {
                 var resolvedFolderId = configuredId
 
                 if (resolvedFolderId.isNullOrBlank()) {
-                    val searchName = configuredName?.trimEnd('/')?.trim() ?: "oneblacki"
-                    val escapedName = searchName.replace("'", "\\'")
-                    val resp = driveRepository.get().getAllFilesDetailed(
-                        query = "name = '$escapedName' and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut') and trashed=false",
-                        pageSize = 25
-                    )
-                    val folder = when (resp) {
-                        is Resource.Success -> resp.data?.files?.firstOrNull()
-                        is Resource.Error -> resp.data?.files?.firstOrNull()
-                        is Resource.Loading -> null
+                    val searchCandidates = if (!configuredName.isNullOrBlank()) {
+                        listOf(configuredName.trimEnd('/').trim())
+                    } else {
+                        listOf("oneblacki", "Animes", "Anime", "Séries", "Series", "Filmes", "Movies")
                     }
-                    if (folder != null) {
-                        resolvedFolderId = folder.shortcutDetails.targetId ?: folder.id
+                    var matchedFolder: zechs.drive.stream.data.model.File? = null
+                    for (candidate in searchCandidates) {
+                        val escapedName = candidate.replace("'", "\\'")
+                        val resp = driveRepository.get().getAllFilesDetailed(
+                            query = "name = '$escapedName' and 'root' in parents and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut') and trashed=false",
+                            pageSize = 10
+                        )
+                        val folder = when (resp) {
+                            is Resource.Success -> resp.data?.files?.firstOrNull()
+                            is Resource.Error -> resp.data?.files?.firstOrNull()
+                            is Resource.Loading -> null
+                        }
+                        if (folder != null) {
+                            matchedFolder = folder
+                            break
+                        }
+                    }
+                    if (matchedFolder != null) {
+                        resolvedFolderId = matchedFolder.shortcutDetails.targetId ?: matchedFolder.id
+                        if (configuredId.isNullOrBlank() && configuredName.isNullOrBlank()) {
+                            profileManager.setLibraryRoot(resolvedFolderId, matchedFolder.name)
+                        }
                     } else if (configuredName.isNullOrBlank()) {
                         resolvedFolderId = "root"
                     }

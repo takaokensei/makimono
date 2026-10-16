@@ -80,6 +80,18 @@ class RailController(
             setNavItemsFocusable(true)
         }
 
+        if (DeviceUi.isTenFootExperience(binding.root.context)) {
+            binding.root.viewTreeObserver.addOnGlobalFocusChangeListener { oldFocus, newFocus ->
+                val wasInRail = isFocusInRail(oldFocus)
+                val isInRail = isFocusInRail(newFocus)
+                if (!wasInRail && isInRail) {
+                    expandTvRail()
+                } else if (wasInRail && !isInRail) {
+                    collapseTvRail()
+                }
+            }
+        }
+
         binding.apply {
             btnHamburgerMenu?.setOnClickListener { toggleSidebar() }
 
@@ -91,6 +103,24 @@ class RailController(
                     if (hasOverlay) expandSidebar() else focusCurrentNavItem()
                     true
                 } else false
+            }
+
+            btnNavBusca?.setOnClickListener {
+                if (currentTab != "Buscar") {
+                    previousTabBeforeSearch = currentTab
+                }
+                selectTab("Buscar")
+                viewModel.filterMovies(false)
+                viewModel.filterStarred(false)
+                if (viewModel.animeLibrary.value.isEmpty()) {
+                    viewModel.loadAnimeLibrary(forceRefresh = true)
+                }
+                contentScrollView.scrollTo(0, 0)
+                if (hasOverlay) collapseSidebar()
+                if (DeviceUi.isTenFootExperience(binding.root.context)) {
+                    collapseTvRail()
+                }
+                etSearchAnime.requestFocus()
             }
 
             btnNavAnimes.setOnClickListener {
@@ -152,23 +182,34 @@ class RailController(
             }
 
             val navItems = listOfNotNull(
+                btnBrandLogo.takeIf { it.visibility != View.GONE },
+                userProfilePill,
+                btnNavBusca,
                 btnNavInicio,
+                btnNavFavoritos,
                 btnNavAnimes,
                 btnNavFilmes,
                 btnNavPastas,
-                btnNavFavoritos,
                 btnNavConfig
             )
 
             navItems.forEach { item ->
                 SingleTapActivation.install(item)
                 item.setOnFocusChangeListener { v, hasFocus ->
-                    animateFocus(v, hasFocus, 1.04f, 6f)
+                    if (!DeviceUi.isTenFootExperience(v.context)) {
+                        animateFocus(v, hasFocus, 1.04f, 6f)
+                    } else if (hasFocus) {
+                        expandTvRail()
+                    }
+                    updateRailItemColors()
                 }
 
                 item.setOnKeyListener { _, keyCode, event ->
                     if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
                         if (hasOverlay) collapseSidebar()
+                        if (DeviceUi.isTenFootExperience(binding.root.context)) {
+                            collapseTvRail()
+                        }
                         onContentFocusRequested()
                         true
                     } else false
@@ -189,9 +230,15 @@ class RailController(
         if (tab != "Início") onCancelFeaturedPreview()
         currentTab = tab
 
-        if (tab == "Início" || tab == "Animes" || tab == "Filmes" || tab == "Favoritos") {
-            binding.root.findViewById<View>(R.id.topHeaderBar)?.visibility = View.VISIBLE
+        val isTenFoot = DeviceUi.isTenFootExperience(binding.root.context)
+        val showHeaderBar = if (isTenFoot) {
+            tab == "Buscar" || tab == "Animes" || tab == "Filmes" || tab == "Favoritos"
+        } else {
+            tab == "Início" || tab == "Buscar" || tab == "Animes" || tab == "Filmes" || tab == "Favoritos"
         }
+        binding.root.findViewById<View>(R.id.topHeaderBar)?.visibility =
+            if (showHeaderBar) View.VISIBLE else View.GONE
+
         binding.root.findViewById<View>(R.id.tvHomeCatalogTitle)?.visibility =
             if (tab == "Início") View.VISIBLE else View.GONE
         val hasRecent = viewModel.recentWatches.value.isNotEmpty()
@@ -209,7 +256,7 @@ class RailController(
                     val hasQueue = viewModel.watchQueue.value.isNotEmpty()
                     layoutHomeEmpty?.visibility = if (!hasRecent && !hasFeatured && !hasQueue && viewModel.animeLibrary.value.isEmpty() && !viewModel.isLoadingAnime.value) View.VISIBLE else View.GONE
                 }
-                "Animes" -> {
+                "Buscar", "Animes" -> {
                     featuredHeroContainer?.visibility = View.GONE
                     shelfHeaderRow?.visibility = View.GONE
                     rvContinueWatchingShelf.visibility = View.GONE
@@ -292,33 +339,9 @@ class RailController(
                 }
             }
 
-            val normalBg = R.drawable.rail_item_focus_bg
-            val activeBg = R.drawable.nav_item_active_bg
+            updateRailItemColors()
+
             val context = root.context
-            val normalTextColor = context.resolveThemeColor(R.attr.colorTextSecondary)
-            val activeTextColor = Color.WHITE
-            val normalIconColor = context.resolveThemeColor(R.attr.colorTextSecondary)
-            val activeIconColor = Color.WHITE
-
-            btnNavInicio.setBackgroundResource(if (tab == "Início") activeBg else normalBg)
-            tvNavInicio.setTextColor(if (tab == "Início") activeTextColor else normalTextColor)
-            ivNavInicioIcon?.imageTintList = ColorStateList.valueOf(if (tab == "Início") activeIconColor else normalIconColor)
-
-            btnNavAnimes.setBackgroundResource(if (tab == "Animes") activeBg else normalBg)
-            tvNavAnimes.setTextColor(if (tab == "Animes") activeTextColor else normalTextColor)
-            ivNavAnimesIcon.imageTintList = ColorStateList.valueOf(if (tab == "Animes") activeIconColor else normalIconColor)
-
-            btnNavFilmes?.setBackgroundResource(if (tab == "Filmes") activeBg else normalBg)
-            tvNavFilmes?.setTextColor(if (tab == "Filmes") activeTextColor else normalTextColor)
-            ivNavFilmesIcon?.imageTintList = ColorStateList.valueOf(if (tab == "Filmes") activeIconColor else normalIconColor)
-
-            btnNavPastas.setBackgroundResource(if (tab == "Pastas") activeBg else normalBg)
-            tvNavPastas.setTextColor(if (tab == "Pastas") activeTextColor else normalTextColor)
-
-            btnNavFavoritos.setBackgroundResource(if (tab == "Favoritos") activeBg else normalBg)
-            tvNavFavoritos.setTextColor(if (tab == "Favoritos") activeTextColor else normalTextColor)
-            ivNavFavoritosIcon.imageTintList = ColorStateList.valueOf(if (tab == "Favoritos") activeIconColor else normalIconColor)
-
             val bottomActiveColor = context.resolveThemeColor(R.attr.colorAccentPrimary)
             val bottomInactiveColor = context.resolveThemeColor(R.attr.colorTextSecondary)
 
@@ -339,8 +362,63 @@ class RailController(
         }
     }
 
+    private fun updateRailItemColors() {
+        binding.apply {
+            val normalBg = R.drawable.rail_item_focus_bg
+            val activeBg = R.drawable.nav_item_active_bg
+            val context = root.context
+            val normalTextColor = context.resolveThemeColor(R.attr.colorTextSecondary)
+            val activeTextColor = Color.WHITE
+            val normalIconColor = context.resolveThemeColor(R.attr.colorTextSecondary)
+            val activeIconColor = Color.WHITE
+            val focusedDarkColor = Color.parseColor("#070A10")
+            val focusedDarkSubtitleColor = Color.parseColor("#1E293B")
+            val tab = currentTab
+
+            val profileFocused = userProfilePill?.hasFocus() == true
+            tvUserName?.setTextColor(if (profileFocused) focusedDarkColor else activeTextColor)
+            tvSwitchProfileSubtitle?.setTextColor(if (profileFocused) focusedDarkSubtitleColor else normalTextColor)
+
+            fun styleNavItem(
+                container: View?,
+                label: android.widget.TextView?,
+                icon: android.widget.ImageView?,
+                isActive: Boolean
+            ) {
+                if (container == null) return
+                container.setBackgroundResource(if (isActive) activeBg else normalBg)
+                container.isSelected = isActive && isTvRailExpanded
+                val isFocused = container.hasFocus()
+                val textColor = when {
+                    isFocused -> focusedDarkColor
+                    isActive -> activeTextColor
+                    else -> normalTextColor
+                }
+                val iconColor = when {
+                    isFocused -> focusedDarkColor
+                    isActive -> activeIconColor
+                    else -> normalIconColor
+                }
+                label?.setTextColor(textColor)
+                icon?.imageTintList = ColorStateList.valueOf(iconColor)
+            }
+
+            styleNavItem(btnNavBusca, tvNavBusca, ivNavBuscaIcon, tab == "Buscar")
+            styleNavItem(btnNavInicio, tvNavInicio, ivNavInicioIcon, tab == "Início")
+            styleNavItem(btnNavFavoritos, tvNavFavoritos, ivNavFavoritosIcon, tab == "Favoritos")
+            styleNavItem(btnNavAnimes, tvNavAnimes, ivNavAnimesIcon, tab == "Animes")
+            styleNavItem(btnNavFilmes, tvNavFilmes, ivNavFilmesIcon, tab == "Filmes")
+            styleNavItem(btnNavPastas, tvNavPastas, ivNavPastasIcon, tab == "Pastas")
+            styleNavItem(btnNavConfig, tvNavConfig, ivNavConfigIcon, tab == "Configurações")
+        }
+    }
+
     fun focusCurrentNavItem() {
+        if (DeviceUi.isTenFootExperience(binding.root.context)) {
+            expandTvRail()
+        }
         val target = when (currentTab) {
+            "Buscar" -> binding.btnNavBusca ?: binding.btnNavInicio
             "Animes" -> binding.btnNavAnimes
             "Filmes" -> binding.btnNavFilmes
             "Pastas" -> binding.btnNavPastas
@@ -353,11 +431,14 @@ class RailController(
 
     fun setNavItemsFocusable(enabled: Boolean) {
         val navItems = listOfNotNull(
+            binding.btnBrandLogo.takeIf { it.visibility != View.GONE },
+            binding.userProfilePill,
+            binding.btnNavBusca,
             binding.btnNavInicio,
+            binding.btnNavFavoritos,
             binding.btnNavAnimes,
             binding.btnNavFilmes,
             binding.btnNavPastas,
-            binding.btnNavFavoritos,
             binding.btnNavConfig
         )
         navItems.forEach { item ->
@@ -451,4 +532,92 @@ class RailController(
         }
         return false
     }
+
+    var isTvRailExpanded: Boolean = false
+        private set
+
+    private var tvRailAnimator: android.animation.ValueAnimator? = null
+
+    fun expandTvRail() {
+        val context = binding.root.context
+        if (!DeviceUi.isTenFootExperience(context) || isTvRailExpanded) return
+        isTvRailExpanded = true
+
+        binding.navRail.setBackgroundResource(R.drawable.bg_sidebar_panel_expanded)
+
+        val collapsedPx = binding.root.resources.getDimensionPixelSize(R.dimen.tv_nav_rail_width)
+        val expandedPx = binding.root.resources.getDimensionPixelSize(R.dimen.tv_nav_rail_expanded_width)
+
+        tvRailAnimator?.cancel()
+        val currentWidth = binding.navRail.layoutParams.width.takeIf { it > 0 } ?: collapsedPx
+        tvRailAnimator = android.animation.ValueAnimator.ofInt(currentWidth, expandedPx).apply {
+            duration = 220L
+            interpolator = android.view.animation.DecelerateInterpolator()
+            addUpdateListener { anim ->
+                binding.navRail.layoutParams.width = anim.animatedValue as Int
+                binding.navRail.requestLayout()
+            }
+            addListener(object : android.animation.AnimatorListenerAdapter() {
+                override fun onAnimationStart(animation: android.animation.Animator) {
+                    setTvLabelsVisible(true)
+                }
+                override fun onAnimationEnd(animation: android.animation.Animator) {
+                    binding.navRail.layoutParams.width = expandedPx
+                    binding.navRail.requestLayout()
+                }
+            })
+            start()
+        }
+    }
+
+    fun collapseTvRail() {
+        val context = binding.root.context
+        if (!DeviceUi.isTenFootExperience(context) || !isTvRailExpanded) return
+        isTvRailExpanded = false
+
+        val collapsedPx = binding.root.resources.getDimensionPixelSize(R.dimen.tv_nav_rail_width)
+        val expandedPx = binding.root.resources.getDimensionPixelSize(R.dimen.tv_nav_rail_expanded_width)
+
+        tvRailAnimator?.cancel()
+        val currentWidth = binding.navRail.layoutParams.width.takeIf { it > 0 } ?: expandedPx
+        tvRailAnimator = android.animation.ValueAnimator.ofInt(currentWidth, collapsedPx).apply {
+            duration = 200L
+            interpolator = android.view.animation.AccelerateInterpolator()
+            addUpdateListener { anim ->
+                binding.navRail.layoutParams.width = anim.animatedValue as Int
+                binding.navRail.requestLayout()
+            }
+            addListener(object : android.animation.AnimatorListenerAdapter() {
+                override fun onAnimationStart(animation: android.animation.Animator) {
+                    setTvLabelsVisible(false)
+                }
+                override fun onAnimationEnd(animation: android.animation.Animator) {
+                    binding.navRail.layoutParams.width = collapsedPx
+                    binding.navRail.requestLayout()
+                    if (!isTvRailExpanded) {
+                        binding.navRail.setBackgroundResource(R.drawable.bg_sidebar_panel)
+                    }
+                }
+            })
+            start()
+        }
+    }
+
+    private fun setTvLabelsVisible(visible: Boolean) {
+        val visibility = if (visible) View.VISIBLE else View.GONE
+        binding.apply {
+            tvBrandLogoText?.visibility = visibility
+            tvNavBusca?.visibility = visibility
+            tvNavInicio.visibility = visibility
+            tvNavAnimes.visibility = visibility
+            tvNavFilmes?.visibility = visibility
+            tvNavPastas.visibility = visibility
+            tvNavFavoritos.visibility = visibility
+            tvNavConfig.visibility = visibility
+            tvUserName?.visibility = visibility
+            tvSwitchProfileSubtitle?.visibility = visibility
+        }
+        updateRailItemColors()
+    }
 }
+

@@ -214,9 +214,9 @@ class PlayerActivity : BasePlayerActivity() {
     private lateinit var btnInfo: View
     private lateinit var btnPip: MaterialButton
     private lateinit var btnSpeed: View
-    private lateinit var btnRotate: View
-    private lateinit var ivRotate: ImageView
-    private lateinit var tvRotate: TextView
+    private var btnRotate: View? = null
+    private var ivRotate: ImageView? = null
+    private var tvRotate: TextView? = null
     private lateinit var btnLock: MaterialButton
     private lateinit var btnUnlock: MaterialButton
     private lateinit var btnSkipIntro: TextView
@@ -362,9 +362,9 @@ class PlayerActivity : BasePlayerActivity() {
         btnInfo = playerView.findViewById(R.id.btnInfo)
         btnPip = playerView.findViewById(R.id.btnPip)
         btnSpeed = playerView.findViewById(R.id.btnSpeed)
-        btnRotate = playerView.findViewById(R.id.btnRotate)
-        ivRotate = playerView.findViewById(R.id.ivRotate)
-        tvRotate = playerView.findViewById(R.id.tvRotate)
+        btnRotate = runCatching { playerView.findViewById<View>(R.id.btnRotate) }.getOrNull()
+        ivRotate = runCatching { playerView.findViewById<ImageView>(R.id.ivRotate) }.getOrNull()
+        tvRotate = runCatching { playerView.findViewById<TextView>(R.id.tvRotate) }.getOrNull()
         btnLock = playerView.findViewById(R.id.btnLock)
         btnUnlock = playerView.findViewById(R.id.btnUnlock)
         btnSkipIntro = playerView.findViewById(R.id.btnSkipIntro)
@@ -592,9 +592,9 @@ class PlayerActivity : BasePlayerActivity() {
         }
 
         val isTvDevice = DeviceUi.isTenFootExperience(this)
-        btnRotate.visibility = if (isTvDevice) View.GONE else View.VISIBLE
+        btnRotate?.visibility = if (isTvDevice) View.GONE else View.VISIBLE
 
-        btnRotate.setOnClickListener {
+        btnRotate?.setOnClickListener {
             orientation = getNextOrientation(orientation)
             AppLog.d(TAG, "orientation=${orientation}")
             setOrientation(this@PlayerActivity, orientation)
@@ -2187,10 +2187,10 @@ class PlayerActivity : BasePlayerActivity() {
         if (skipAction is zechs.drive.stream.playback.session.SkipController.SkipAction.AutoSkip) {
             player.seekTo(skipAction.targetPositionMs)
             gestureHelper.showNotification(skipAction.message)
-            val pillText = if (activeSkipChapter?.type == MatroskaChapterParser.ChapterType.ENDING) {
-                "Encerramento pulado (AniSkip)"
-            } else {
-                "Abertura pulada (AniSkip)"
+            val pillText = when (activeSkipChapter?.type) {
+                MatroskaChapterParser.ChapterType.ENDING -> "Encerramento pulado (AniSkip)"
+                MatroskaChapterParser.ChapterType.RECAP -> "Recap pulado (AniSkip)"
+                else -> "Abertura pulada (AniSkip)"
             }
             showAniSkipPill(pillText)
             return
@@ -2314,31 +2314,23 @@ class PlayerActivity : BasePlayerActivity() {
         when (newConfig.orientation) {
             Configuration.ORIENTATION_PORTRAIT -> {
                 orientation = Orientation.PORTRAIT
-                if (::tvRotate.isInitialized) {
-                    tvRotate.text = "Paisagem"
+                tvRotate?.text = "Paisagem"
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    btnRotate?.tooltipText = getString(R.string.landscape)
                 }
-                if (::btnRotate.isInitialized && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    btnRotate.tooltipText = getString(R.string.landscape)
-                }
-                if (::ivRotate.isInitialized) {
-                    ivRotate.setImageDrawable(
-                        ContextCompat.getDrawable(this@PlayerActivity, R.drawable.ic_landscape_24)
-                    )
-                }
+                ivRotate?.setImageDrawable(
+                    ContextCompat.getDrawable(this@PlayerActivity, R.drawable.ic_landscape_24)
+                )
             }
             else -> {
                 orientation = Orientation.LANDSCAPE
-                if (::tvRotate.isInitialized) {
-                    tvRotate.text = "Girar"
+                tvRotate?.text = "Girar"
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    btnRotate?.tooltipText = getString(R.string.portrait)
                 }
-                if (::btnRotate.isInitialized && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    btnRotate.tooltipText = getString(R.string.portrait)
-                }
-                if (::ivRotate.isInitialized) {
-                    ivRotate.setImageDrawable(
-                        ContextCompat.getDrawable(this@PlayerActivity, R.drawable.ic_portrait_24)
-                    )
-                }
+                ivRotate?.setImageDrawable(
+                    ContextCompat.getDrawable(this@PlayerActivity, R.drawable.ic_portrait_24)
+                )
             }
         }
     }

@@ -265,6 +265,7 @@ class SettingsFragment : BaseFragment() {
         categoryBar.removeAllViews()
         categoryButtons.clear()
 
+        val isVerticalMenu = categoryBar.orientation == LinearLayout.VERTICAL
         categories.forEachIndexed { index, category ->
             val button = MaterialButton(
                 requireContext(),
@@ -285,17 +286,37 @@ class SettingsFragment : BaseFragment() {
                 setOnClickListener { selectSettingsCategory(index, categories) }
                 SingleTapActivation.install(this, disallowParentIntercept = false)
                 setOnFocusChangeListener { view, hasFocus ->
-                    if (hasFocus && !reduceMotionEnabled) {
-                        view.animate().scaleX(1.025f).scaleY(1.025f).setDuration(view.resources.getInteger(R.integer.motion_focus).toLong()).start()
+                    if (hasFocus) {
+                        if (isVerticalMenu && selectedSettingsCategory != index) {
+                            selectedSettingsCategory = index
+                            viewModel.onEvent(SettingsEvent.SelectCategory(index))
+                            applySettingsCategory(categories)
+                            binding.settingsScroll.scrollTo(0, 0)
+                            updateSettingsFocusOrder()
+                        }
+                        if (!reduceMotionEnabled) {
+                            view.animate().scaleX(1.025f).scaleY(1.025f).setDuration(view.resources.getInteger(R.integer.motion_focus).toLong()).start()
+                        }
                     } else {
                         view.animate().cancel()
                         view.scaleX = 1f
                         view.scaleY = 1f
                     }
                 }
+                setOnKeyListener { _, keyCode, event ->
+                    if (isVerticalMenu && event.action == android.view.KeyEvent.ACTION_DOWN && keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) {
+                        val firstRow = categories[index].rowIds.firstOrNull()?.let { id ->
+                            binding.root.findViewById<View>(id)
+                        }
+                        if (firstRow != null && firstRow.isShown && firstRow.isFocusable) {
+                            firstRow.requestFocus()
+                            return@setOnKeyListener true
+                        }
+                    }
+                    false
+                }
             }
             val margin = resources.getDimensionPixelSize(R.dimen.settings_category_spacing)
-            val isVerticalMenu = categoryBar.orientation == LinearLayout.VERTICAL
             categoryBar.addView(button, LinearLayout.LayoutParams(
                 if (isVerticalMenu) ViewGroup.LayoutParams.MATCH_PARENT else ViewGroup.LayoutParams.WRAP_CONTENT,
                 resources.getDimensionPixelSize(R.dimen.settings_category_min_height)

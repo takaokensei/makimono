@@ -412,13 +412,34 @@ class HomeViewModel @Inject constructor(
                 val error = (response as? Resource.Error)?.message
                 AppLog.w(TAG, error ?: "Configured library folder not found: $configuredName")
                 // An explicitly configured folder must never silently widen the library
-                // to the entire Drive when lookup fails or returns an incomplete page.
                 withContext(Dispatchers.Main) { onResult(null, configuredName) }
                 return@launch
             }
 
-            // An unset profile uses Drive root. The user can choose a narrower
-            // folder from Settings without recompiling the app.
+            // Discovery candidates for library root when not explicitly configured
+            val presetCandidates = listOf("oneblacki", "Animes", "Anime", "Séries", "Series", "Filmes", "Movies")
+            for (candidate in presetCandidates) {
+                val escapedCandidate = candidate.replace("'", "\\'")
+                val response = driveRepository.get().getAllFilesDetailed(
+                    query = "name = '$escapedCandidate' and 'root' in parents and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut') and trashed=false",
+                    pageSize = 10
+                )
+                val folder = when (response) {
+                    is Resource.Success -> response.data?.files?.firstOrNull()
+                    is Resource.Error -> response.data?.files?.firstOrNull()
+                    is Resource.Loading -> null
+                }
+                if (folder != null) {
+                    val resolvedId = folder.shortcutDetails.targetId ?: folder.id
+                    profileManager.setLibraryRoot(resolvedId, folder.name)
+                    cachedLibraryRootId = resolvedId
+                    cachedLibraryRootProfileId = activeProfileId
+                    withContext(Dispatchers.Main) { onResult(resolvedId, folder.name) }
+                    return@launch
+                }
+            }
+
+            // An unset profile uses Drive root as fallback.
             cachedLibraryRootId = "root"
             cachedLibraryRootProfileId = activeProfileId
             withContext(Dispatchers.Main) { onResult("root", "Meu Drive") }
