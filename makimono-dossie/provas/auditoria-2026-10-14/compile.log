@@ -1,0 +1,3 @@
+makimono-dossie\provas\prova_01_rail_sidebar_back\MakimonoRailCoordinator.kt:48:26: warning: variable 'current' is never used
+        return when (val current = state) {
+                         ^

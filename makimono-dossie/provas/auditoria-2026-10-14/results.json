@@ -1,0 +1,40 @@
+﻿{
+    "recordedAt":  "2026-10-14T22:13:46.8576073-03:00",
+    "javaExecutable":  "C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.7.6-hotspot\\bin\\java.exe",
+    "compilerVersion":  "1.9.24",
+    "junitVersion":  "4.13.2",
+    "compilationExitCode":  0,
+    "originalTestsExitCode":  0,
+    "contractTestsExitCode":  0,
+    "scope":  "JVM prototypes only; no Android app build, UI, emulator or playback validation",
+    "inputs":  [
+                   {
+                       "sha256":  "692DB04CEF1D6909F4A2AB41DE42B27B640FF0D577B8E0B2D1491FB5288439FB",
+                       "file":  "X:\\makimono-dossie\\provas\\prova_01_rail_sidebar_back\\MakimonoRailCoordinator.kt"
+                   },
+                   {
+                       "sha256":  "FBAE0FAD73E92131989A51AAD4DCD5ACBF5081B128431FDF371A81ED934303B6",
+                       "file":  "X:\\makimono-dossie\\provas\\prova_01_rail_sidebar_back\\MakimonoRailCoordinatorTest.kt"
+                   },
+                   {
+                       "sha256":  "B5ADE23F3197B6EB16F5A77D69A582DE29476C9B78E8F7D26DE6E5B581649E71",
+                       "file":  "X:\\makimono-dossie\\provas\\prova_02_hero_shelves_focus_memory\\MakimonoFocusMemoryManager.kt"
+                   },
+                   {
+                       "sha256":  "8E187C8A6A830B8E438066DF4441E8739D65870E033108A963D8FB2A0F24A728",
+                       "file":  "X:\\makimono-dossie\\provas\\prova_02_hero_shelves_focus_memory\\MakimonoFocusMemoryManagerTest.kt"
+                   },
+                   {
+                       "sha256":  "EEFB307CAA90DBA446A22ED79F7A5C09606147CF3A071A6A6D47E73C446736E6",
+                       "file":  "X:\\makimono-dossie\\provas\\prova_03_player_osd_skip_statemachine\\MakimonoPlayerOsdSkipCoordinator.kt"
+                   },
+                   {
+                       "sha256":  "B06C337AD0E0EA54539A0B7131C778F47D7325B9E7A84DE471019AA407333469",
+                       "file":  "X:\\makimono-dossie\\provas\\prova_03_player_osd_skip_statemachine\\MakimonoPlayerOsdSkipCoordinatorTest.kt"
+                   },
+                   {
+                       "sha256":  "A5DE24917749D57C8E41C5450265691EED7394A0C93EE8A8B21977EF6E20F168",
+                       "file":  "X:\\makimono-dossie\\provas\\auditoria-2026-10-14\\ContractRegressionAuditTest.kt"
+                   }
+               ]
+}

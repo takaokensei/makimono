@@ -1,0 +1,105 @@
+﻿{
+    "generatedAt":  "2026-10-15T22:27:16.1929826-03:00",
+    "phase":  "R00 — Baseline Confiável e Resolução dos 4 Bloqueios Prioritários",
+    "targetDevice":  "emulator-5554 (Android TV 1080p)",
+    "packageName":  "zechs.drive.stream.visualreview",
+    "referencePdfSha256":  "230C9BF3C4C8DE5A6BC250E368C6BA4AF2ED2B4F0C14DC2890299F94BE8F1C3A",
+    "artifacts":  [
+                      {
+                          "path":  "X:\\app\\build\\outputs\\apk\\debug\\makimono-v1.8.0-x86_64-debug.apk",
+                          "sha256":  "77C8B4501B6CD6697EFD37354EA5FCAB7D68CBB0CBEF9AC44A6487200415B812",
+                          "sizeBytes":  40403847,
+                          "lastModified":  "2026-10-15T22:19:26.2230593-03:00"
+                      },
+                      {
+                          "path":  "X:\\app\\src\\main\\java\\zechs\\drive\\stream\\ui\\home\\controller\\RailController.kt",
+                          "sha256":  "27742BFC59C0906CC48669A7083C0F35E929333C274C528629847DB9A0ADE3D9",
+                          "sizeBytes":  26220,
+                          "lastModified":  "2026-10-15T19:42:55.3110803-03:00"
+                      },
+                      {
+                          "path":  "X:\\app\\src\\main\\java\\zechs\\drive\\stream\\ui\\home\\controller\\FocusCoordinator.kt",
+                          "sha256":  "F2E9474A2179286D82075737B72FFF04B4EF4A3429AF632D6CD72CC86AB5EB85",
+                          "sizeBytes":  8554,
+                          "lastModified":  "2026-10-15T19:43:34.6113527-03:00"
+                      },
+                      {
+                          "path":  "X:\\app\\src\\main\\java\\zechs\\drive\\stream\\ui\\home\\controller\\ShelvesController.kt",
+                          "sha256":  "D4F5BE30FC0F5E8D2379C684164190C8AC2C9FA8BF0742E8FE6A3E72C0EB362E",
+                          "sizeBytes":  13335,
+                          "lastModified":  "2026-10-15T22:17:30.7044864-03:00"
+                      },
+                      {
+                          "path":  "X:\\app\\src\\main\\java\\zechs\\drive\\stream\\utils\\FocusMemory.kt",
+                          "sha256":  "8BD99D61904330DB97D5257E28CD06C9C6B2921A4298860CE98151307D29F80F",
+                          "sizeBytes":  3578,
+                          "lastModified":  "2026-10-15T21:58:10.3322296-03:00"
+                      },
+                      {
+                          "path":  "X:\\app\\src\\main\\java\\zechs\\drive\\stream\\ui\\main\\MainActivity.kt",
+                          "sha256":  "7B9C45FF99325E4EBD35CFB2C73653F0D6726C102BA8CB8F748661527093BA54",
+                          "sizeBytes":  34678,
+                          "lastModified":  "2026-10-15T22:00:30.7645513-03:00"
+                      },
+                      {
+                          "path":  "X:\\app\\src\\main\\java\\zechs\\drive\\stream\\ui\\home\\HomeViewModel.kt",
+                          "sha256":  "F09954CB2AC5B753C1BE2740BEBD718CD1581EF52A0B47516B036123B12B3F87",
+                          "sizeBytes":  63730,
+                          "lastModified":  "2026-10-15T22:02:39.1419428-03:00"
+                      },
+                      {
+                          "path":  "X:\\app\\src\\main\\res\\layout-television\\fragment_home.xml",
+                          "sha256":  "EC8A3039F7A8F44E57F4C1C2EF2DB5FE9241FC82B191BBD5D5809F30A1E82219",
+                          "sizeBytes":  39879,
+                          "lastModified":  "2026-10-15T19:44:17.5007303-03:00"
+                      },
+                      {
+                          "path":  "X:\\app\\src\\main\\res\\layout-land\\fragment_home.xml",
+                          "sha256":  "D0FBBF3412C9418D56AED91EA7377BEACAAAD4B2388BAB6684DC42576D008DCD",
+                          "sizeBytes":  39669,
+                          "lastModified":  "2026-10-15T19:44:40.0357776-03:00"
+                      },
+                      {
+                          "path":  "X:\\app\\src\\main\\res\\layout-sw720dp-land\\fragment_home.xml",
+                          "sha256":  "480314DD063E4CD2A96D5F893416E6337595981571CA56E7754A728858F7D0A2",
+                          "sizeBytes":  39467,
+                          "lastModified":  "2026-10-15T22:11:49.1694221-03:00"
+                      },
+                      {
+                          "path":  "X:\\makimono-dossie\\provas\\prova_02_hero_shelves_focus_memory\\MakimonoFocusMemoryManager.kt",
+                          "sha256":  "6AAE48F1796CE078AC68EC7106A7E199BAA9218BC092EEBDDAB035624FEA944C",
+                          "sizeBytes":  2445,
+                          "lastModified":  "2026-10-15T21:38:50.8384820-03:00"
+                      },
+                      {
+                          "path":  "X:\\makimono-dossie\\provas\\auditoria-2026-10-14\\ContractRegressionAuditTest.kt",
+                          "sha256":  "F94EA6A7769404CBD0E201BE2BA23333B4D12DD1B5DC200884D1FB1F09983030",
+                          "sizeBytes":  3249,
+                          "lastModified":  "2026-10-15T21:41:02.6182019-03:00"
+                      },
+                      {
+                          "path":  "X:\\makimono-dossie\\provas\\auditoria-2026-10-15-r00\\results.json",
+                          "sha256":  "8635771C8C8FCA3E467CACCB5A6A965C2C4C75F0C8D81CFB3362598BB8DA6D05",
+                          "sizeBytes":  2618,
+                          "lastModified":  "2026-10-15T22:13:43.4675507-03:00"
+                      },
+                      {
+                          "path":  "X:\\makimono-dossie\\capturas\\r00_profile_selection.png",
+                          "sha256":  "BE5E19CFCF98C9029B5151A4631B65A7577093B879D342B7469FB5086207554A",
+                          "sizeBytes":  1010282,
+                          "lastModified":  "2026-10-15T22:25:13.5470545-03:00"
+                      },
+                      {
+                          "path":  "X:\\makimono-dossie\\capturas\\r00_verified_home_56dp.png",
+                          "sha256":  "F08CBF7B7F147FA1183FFF76C99CDEDF55EAED030C8342373BF6ADD646B697E6",
+                          "sizeBytes":  971831,
+                          "lastModified":  "2026-10-15T22:25:55.9846926-03:00"
+                      },
+                      {
+                          "path":  "X:\\makimono-dossie\\capturas\\r00_verified_rail_240dp.png",
+                          "sha256":  "A10A20395A5BB8CB49D11009211FB633E187E15E6280A1B55184E48BFE216C3D",
+                          "sizeBytes":  896549,
+                          "lastModified":  "2026-10-15T22:25:57.1437259-03:00"
+                      }
+                  ]
+}
