@@ -420,8 +420,9 @@ class HomeViewModel @Inject constructor(
             val presetCandidates = listOf("oneblacki", "Animes", "Anime", "Séries", "Series", "Filmes", "Movies")
             for (candidate in presetCandidates) {
                 val escapedCandidate = candidate.replace("'", "\\'")
+                val folderMimes = "(mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut')"
                 val response = driveRepository.get().getAllFilesDetailed(
-                    query = "name = '$escapedCandidate' and 'root' in parents and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut') and trashed=false",
+                    query = "name = '$escapedCandidate' and 'root' in parents and $folderMimes and trashed=false",
                     pageSize = 10
                 )
                 val folder = when (response) {
@@ -730,7 +731,11 @@ class HomeViewModel @Inject constructor(
                                     file.shortcutDetails.targetId
                                 } else file.id
                                 val meta = allMeta[targetId] ?: allMeta[file.id]
-                                (file.isFolder || file.isShortcutFolder) && (meta?.posterUrl.isNullOrBlank() || meta?.bannerUrl.isNullOrBlank() || meta?.synopsis.isNullOrBlank())
+                                val isFolderType = file.isFolder || file.isShortcutFolder
+                                val isMissingMeta = meta?.posterUrl.isNullOrBlank() ||
+                                    meta?.bannerUrl.isNullOrBlank() ||
+                                    meta?.synopsis.isNullOrBlank()
+                                isFolderType && isMissingMeta
                             }
 
                             unresolvedIndices.chunked(6).forEach { chunk ->
@@ -952,7 +957,9 @@ class HomeViewModel @Inject constructor(
 
             // 2. Global Google Drive search with pagination
             val sanitized = trimmed.replace("'", "\\'")
-            val driveQuery = "name contains '$sanitized' and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut' or mimeType contains 'video/') and trashed=false"
+            val searchMimes = "(mimeType = 'application/vnd.google-apps.folder' or " +
+                "mimeType = 'application/vnd.google-apps.shortcut' or mimeType contains 'video/')"
+            val driveQuery = "name contains '$sanitized' and $searchMimes and trashed=false"
             val response = driveRepository.get().getAllFilesDetailed(
                 query = driveQuery,
                 pageSize = 50
@@ -1142,7 +1149,10 @@ class HomeViewModel @Inject constructor(
             }
 
             if (matchedWatch != null && !matchedWatch.hasFinished()) {
-                AppLog.d(TAG, "Resuming in-progress episode for ${folder.name}: ${matchedWatch.name} (id: ${matchedWatch.videoId}, pos: ${matchedWatch.watchedDuration})")
+                AppLog.d(
+                    TAG,
+                    "Resuming in-progress episode for ${folder.name}: ${matchedWatch.name} (id: ${matchedWatch.videoId})"
+                )
                 val resumeFile = DriveFile(
                     id = matchedWatch.videoId,
                     name = matchedWatch.name,
@@ -1177,15 +1187,16 @@ class HomeViewModel @Inject constructor(
                 if (videos.isNotEmpty()) {
                     val watchMap = recentWatches.associateBy { it.videoId }
 
-                    // A: Video currently in progress
                     val inProgressVideo = videos.firstOrNull { v ->
-                        val targetId = if (v.isShortcut && v.shortcutDetails.targetId != null) v.shortcutDetails.targetId else v.id
+                        val targetId = if (v.isShortcut) v.shortcutDetails.targetId ?: v.id else v.id
                         val w = watchMap[targetId]
                         w != null && !w.hasFinished()
                     }
 
                     if (inProgressVideo != null) {
-                        val targetId = if (inProgressVideo.isShortcut && inProgressVideo.shortcutDetails.targetId != null) inProgressVideo.shortcutDetails.targetId else inProgressVideo.id
+                        val targetId = if (inProgressVideo.isShortcut) {
+                            inProgressVideo.shortcutDetails.targetId ?: inProgressVideo.id
+                        } else inProgressVideo.id
                         val resumeMs = watchMap[targetId]?.watchedDuration ?: 0L
                         val targetVideo = if (inProgressVideo.isShortcut && inProgressVideo.shortcutDetails.targetId != null) {
                             inProgressVideo.copy(id = inProgressVideo.shortcutDetails.targetId)
@@ -1249,13 +1260,15 @@ class HomeViewModel @Inject constructor(
                             val watchMap = recentWatches.associateBy { it.videoId }
 
                             val inProgressSub = subVideos.firstOrNull { v ->
-                                val targetId = if (v.isShortcut && v.shortcutDetails.targetId != null) v.shortcutDetails.targetId else v.id
+                                val targetId = if (v.isShortcut) v.shortcutDetails.targetId ?: v.id else v.id
                                 val w = watchMap[targetId]
                                 w != null && !w.hasFinished()
                             }
 
                             if (inProgressSub != null) {
-                                val targetId = if (inProgressSub.isShortcut && inProgressSub.shortcutDetails.targetId != null) inProgressSub.shortcutDetails.targetId else inProgressSub.id
+                                val targetId = if (inProgressSub.isShortcut) {
+                                    inProgressSub.shortcutDetails.targetId ?: inProgressSub.id
+                                } else inProgressSub.id
                                 val resumeMs = watchMap[targetId]?.watchedDuration ?: 0L
                                 val targetVideo = if (inProgressSub.isShortcut && inProgressSub.shortcutDetails.targetId != null) {
                                     inProgressSub.copy(id = inProgressSub.shortcutDetails.targetId)

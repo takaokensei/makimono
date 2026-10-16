@@ -431,7 +431,9 @@ class HomeFragment : BaseFragment() {
                             val hasQueue = viewModel.watchQueue.value.isNotEmpty()
                             val hasMyList = shelvesController.starredShelfAdapter.itemCount > 0
                             val hasRecentlyAdded = shelvesController.recentlyAddedAdapter.itemCount > 0
-                            binding.layoutHomeEmpty?.visibility = if (!hasRecent && !hasFeatured && !hasQueue && !hasMyList && !hasRecentlyAdded && viewModel.animeLibrary.value.isEmpty() && !viewModel.isLoadingAnime.value) View.VISIBLE else View.GONE
+                            val isLibraryEmpty = viewModel.animeLibrary.value.isEmpty() && !viewModel.isLoadingAnime.value
+                            val isHomeEmpty = !hasRecent && !hasFeatured && !hasQueue && !hasMyList && !hasRecentlyAdded && isLibraryEmpty
+                            binding.layoutHomeEmpty?.visibility = if (isHomeEmpty) View.VISIBLE else View.GONE
                         }
                     }
                 }

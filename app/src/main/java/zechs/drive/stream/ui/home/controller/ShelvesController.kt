@@ -211,7 +211,9 @@ class ShelvesController(
                             val hasRecent = items.isNotEmpty()
                             val hasFeatured = viewModel.featuredAnime.value != null
                             val hasQueue = viewModel.watchQueue.value.isNotEmpty()
-                            binding.layoutHomeEmpty?.visibility = if (!hasRecent && !hasFeatured && !hasQueue && viewModel.animeLibrary.value.isEmpty() && !viewModel.isLoadingAnime.value) View.VISIBLE else View.GONE
+                            val isLibraryEmpty = viewModel.animeLibrary.value.isEmpty() && !viewModel.isLoadingAnime.value
+                            val isHomeEmpty = !hasRecent && !hasFeatured && !hasQueue && isLibraryEmpty
+                            binding.layoutHomeEmpty?.visibility = if (isHomeEmpty) View.VISIBLE else View.GONE
                             binding.containerItemCount.visibility = View.GONE
                         }
                     }

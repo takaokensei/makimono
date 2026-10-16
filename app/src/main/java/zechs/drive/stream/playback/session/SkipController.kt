@@ -169,7 +169,9 @@ class SkipController(
 
         // Fallback: If no recognized chapters in the file, allow 90s intro skip in the first 140s
         val hasRecognizedChapters = parsedChapters.any { it.type != ChapterType.OTHER }
-        val buttonUi = if (!hasRecognizedChapters && !acknowledgedFallbackIntro && positionMs in 0L..fallbackIntroWindowMs && !controlsLocked && controllerVisible) {
+        val isFallbackWindow = !hasRecognizedChapters && !acknowledgedFallbackIntro &&
+            positionMs in 0L..fallbackIntroWindowMs && !controlsLocked && controllerVisible
+        val buttonUi = if (isFallbackWindow) {
             SkipButtonUi.Visible(
                 label = "Pular Abertura (+90s)",
                 targetPositionMs = positionMs + fallbackIntroSkipDeltaMs,

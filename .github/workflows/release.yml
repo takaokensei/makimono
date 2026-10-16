@@ -1,9 +1,6 @@
 name: Makimono Release
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 jobs:

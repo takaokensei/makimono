@@ -254,7 +254,9 @@ class RailController(
                     containerViewToggle?.visibility = View.GONE
                     containerItemCount.visibility = View.GONE
                     val hasQueue = viewModel.watchQueue.value.isNotEmpty()
-                    layoutHomeEmpty?.visibility = if (!hasRecent && !hasFeatured && !hasQueue && viewModel.animeLibrary.value.isEmpty() && !viewModel.isLoadingAnime.value) View.VISIBLE else View.GONE
+                    val isLibraryEmpty = viewModel.animeLibrary.value.isEmpty() && !viewModel.isLoadingAnime.value
+                    val isHomeEmpty = !hasRecent && !hasFeatured && !hasQueue && isLibraryEmpty
+                    layoutHomeEmpty?.visibility = if (isHomeEmpty) View.VISIBLE else View.GONE
                 }
                 "Buscar", "Animes" -> {
                     featuredHeroContainer?.visibility = View.GONE

@@ -640,8 +640,9 @@ class MainActivity : AppCompatActivity() {
                     var matchedFolder: zechs.drive.stream.data.model.File? = null
                     for (candidate in searchCandidates) {
                         val escapedName = candidate.replace("'", "\\'")
+                        val folderMimes = "(mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut')"
                         val resp = driveRepository.get().getAllFilesDetailed(
-                            query = "name = '$escapedName' and 'root' in parents and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut') and trashed=false",
+                            query = "name = '$escapedName' and 'root' in parents and $folderMimes and trashed=false",
                             pageSize = 10
                         )
                         val folder = when (resp) {
