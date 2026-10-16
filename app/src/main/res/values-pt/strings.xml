@@ -343,6 +343,7 @@
     <string name="home_featured_play">Assistir agora</string>
     <string name="home_featured_open">Abrir</string>
     <string name="home_featured_info">Detalhes</string>
+    <string name="nav_switch_profile_subtitle">Trocar perfil</string>
     <plurals name="home_featured_episode_count">
         <item quantity="one">%1$d episódio</item>
         <item quantity="many">%1$d episódios</item>
@@ -428,4 +429,8 @@
     <string name="settings_mal_disconnect_message">O scrobble automático de episódios será desativado.</string>
     <string name="settings_mal_configure_title">Configurar MyAnimeList</string>
     <string name="settings_mal_configure_message">Crie uma aplicação OAuth no MyAnimeList e informe as credenciais. Elas serão armazenadas criptografadas.</string>
+    <string name="exit_dialog_title">Sair do Makimono</string>
+    <string name="exit_dialog_message">Deseja realmente sair do aplicativo?</string>
+    <string name="exit_dialog_confirm">Sair</string>
+    <string name="exit_dialog_cancel">Cancelar</string>
 </resources>
