@@ -16,6 +16,9 @@ captures/
 *.jks
 *.keystore
 
+# Scratch screenshots in root
+/*.png
+
 # OS / editor cruft
 .DS_Store
 *.swp
