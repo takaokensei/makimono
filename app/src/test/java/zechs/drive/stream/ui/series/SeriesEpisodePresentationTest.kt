@@ -26,4 +26,18 @@ class SeriesEpisodePresentationTest {
         assertEquals("Episódio 01 - Hitagi Crab, Part One", presentation.displayTitle)
         assertEquals(1, presentation.episodeNumber)
     }
+
+    @Test
+    fun regularEpisodeWithoutCanonicalTitleUsesCleanEpisodeNumber() {
+        val presentation = presentSeriesEpisode("Bakemonogatari - 01 (1080p).mkv")
+        assertEquals("Episódio 01", presentation.displayTitle)
+        assertEquals(1, presentation.episodeNumber)
+    }
+
+    @Test
+    fun regularEpisodeWithParsedSubtitleUsesEpisodeNumberAndSubtitle() {
+        val presentation = presentSeriesEpisode("Bakemonogatari - 02 - Mayoi Snail.mkv")
+        assertEquals("Episódio 02 - Mayoi Snail", presentation.displayTitle)
+        assertEquals(2, presentation.episodeNumber)
+    }
 }

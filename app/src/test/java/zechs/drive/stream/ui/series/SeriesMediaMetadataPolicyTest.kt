@@ -85,5 +85,7 @@ class SeriesMediaMetadataPolicyTest {
         assertEquals("Dual Áudio", SeriesMediaMetadataPolicy.audioLabelForFile("Show - 02 Dual-Audio.mkv"))
         assertEquals("Dual Áudio", SeriesMediaMetadataPolicy.audioLabelForFile("Show - 03 Dual Áudio.mkv"))
         assertEquals("PT-BR", SeriesMediaMetadataPolicy.audioLabelForFile("Show - 04 PT-BR.mkv"))
+        assertEquals("Dublado", SeriesMediaMetadataPolicy.audioLabelForFile("Show - 05 Dublado.mkv"))
+        assertEquals("Dublado", SeriesMediaMetadataPolicy.audioLabelForFile("Show - 06 [Dub].mkv"))
     }
 }

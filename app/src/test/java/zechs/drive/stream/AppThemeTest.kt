@@ -23,9 +23,10 @@ class AppThemeTest {
     }
 
     @Test
-    fun `Estuary preview colors match its XML palette`() {
-        assertEquals("#030B14", AppTheme.KODI_ESTUARY.bgBaseHex)
-        assertEquals("#0B1928", AppTheme.KODI_ESTUARY.bgSurfaceHex)
-        assertEquals("#22D3EE", AppTheme.KODI_ESTUARY.accentPrimaryHex)
+    fun `Crunchyroll theme is value 6 with signature orange accent`() {
+        assertEquals(AppTheme.CRUNCHYROLL, AppTheme.fromValue(6))
+        assertEquals(AppTheme.CRUNCHYROLL, AppTheme.fromText("Crunchyroll"))
+        assertEquals("#0C0D10", AppTheme.CRUNCHYROLL.bgBaseHex)
+        assertEquals("#FF640A", AppTheme.CRUNCHYROLL.accentPrimaryHex)
     }
 }
