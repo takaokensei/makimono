@@ -129,9 +129,9 @@ class SkipController(
                     acknowledgedChapter = specialChapter
                     activeSkipChapter = null
                     val notifyText = when (specialChapter.type) {
-                        ChapterType.ENDING -> "⏩ Encerramento pulado automaticamente (AniSkip)"
-                        ChapterType.RECAP -> "⏩ Recap pulado automaticamente (AniSkip)"
-                        else -> "⏩ Abertura pulada automaticamente (AniSkip)"
+                        ChapterType.ENDING -> "Encerramento pulado"
+                        ChapterType.RECAP -> "Recap pulado"
+                        else -> "Abertura pulada"
                     }
                     action = SkipAction.AutoSkip(
                         targetPositionMs = specialChapter.endTimeMs,
