@@ -77,9 +77,18 @@ class ProfileArtCatalog @Inject constructor(@ApplicationContext context: Context
             return@withContext parse(cached)
         }
         val query = """query (${'$'}search: String) {
-            Media(search: ${'$'}search, type: ANIME, isAdult: false) {
-                title { romaji } bannerImage
-                characters(perPage: 12) { nodes { name { full } image { large } } }
+            Page(page: 1, perPage: 8) {
+                media(search: ${'$'}search, type: ANIME, isAdult: false) {
+                    id
+                    title { romaji english }
+                    bannerImage
+                    characters(perPage: 6) {
+                        nodes {
+                            name { full }
+                            image { large }
+                        }
+                    }
+                }
             }
         }"""
         try {
@@ -99,16 +108,50 @@ class ProfileArtCatalog @Inject constructor(@ApplicationContext context: Context
     }
 
     internal fun parse(raw: String): List<ProfileArt> {
-        val media = JSONObject(raw).optJSONObject("data")?.optJSONObject("Media") ?: return emptyList()
-        return buildList {
-            val characters = media.optJSONObject("characters")?.optJSONArray("nodes")
-            for (i in 0 until (characters?.length() ?: 0)) {
-                val character = characters?.optJSONObject(i) ?: continue
-                val url = character.optJSONObject("image")?.optString("large").orEmpty()
-                if (url.startsWith("https://")) add(ProfileArt(character.optJSONObject("name")?.optString("full") ?: "Personagem", url, false))
+        val data = JSONObject(raw).optJSONObject("data") ?: return emptyList()
+        val mediaList = mutableListOf<JSONObject>()
+        val pageMedia = data.optJSONObject("Page")?.optJSONArray("media")
+        if (pageMedia != null) {
+            for (i in 0 until pageMedia.length()) {
+                pageMedia.optJSONObject(i)?.let { mediaList.add(it) }
             }
-            val banner = media.optString("bannerImage")
-            if (banner.startsWith("https://")) add(ProfileArt("Wallpaper · ${media.optJSONObject("title")?.optString("romaji") ?: "Anime"}", banner, true))
+        } else {
+            data.optJSONObject("Media")?.let { mediaList.add(it) }
         }
+
+        if (mediaList.isEmpty()) return emptyList()
+
+        val avatars = mutableListOf<ProfileArt>()
+        val wallpapers = mutableListOf<ProfileArt>()
+        val seenUrls = mutableSetOf<String>()
+
+        for (media in mediaList) {
+            val titleObj = media.optJSONObject("title")
+            val animeTitle = titleObj?.optString("romaji")
+                ?.takeIf { it.isNotBlank() }
+                ?: titleObj?.optString("english")
+                ?: "Anime"
+
+            // 1. Wallpaper banner
+            val banner = media.optString("bannerImage")
+            if (banner.startsWith("https://") && seenUrls.add(banner)) {
+                wallpapers.add(ProfileArt("Wallpaper · $animeTitle", banner, true))
+            }
+
+            // 2. Character portraits
+            val characters = media.optJSONObject("characters")?.optJSONArray("nodes")
+            if (characters != null) {
+                for (j in 0 until characters.length()) {
+                    val character = characters.optJSONObject(j) ?: continue
+                    val url = character.optJSONObject("image")?.optString("large").orEmpty()
+                    val charName = character.optJSONObject("name")?.optString("full") ?: "Personagem"
+                    if (url.startsWith("https://") && seenUrls.add(url)) {
+                        avatars.add(ProfileArt("$charName ($animeTitle)", url, false))
+                    }
+                }
+            }
+        }
+
+        return avatars + wallpapers
     }
 }

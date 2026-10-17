@@ -47,6 +47,65 @@ class ProfileEditorDialog(
         var search: Job? = null
         val catalogFocusTargets = mutableListOf<android.view.View>()
 
+        var currentTab = CatalogTab.AVATARS
+        var activeSearchQuery: String? = null
+        var lastSearchResults: List<ProfileArt>? = null
+
+        fun refreshPreview() {
+            val name = b.profileName.text.toString().trim()
+            b.tvPreviewName.text = name.ifBlank { context.getString(R.string.profile_name_hint) }
+            val roleText = when {
+                b.isAdmin.isChecked -> "Administrador"
+                b.isKids.isChecked -> "Modo Infantil"
+                else -> "Perfil Padrão"
+            }
+            b.tvPreviewRoleBadge.text = roleText
+
+            Glide.with(context)
+                .load(selectedAvatarUrl.takeIf { it.isNotBlank() } ?: R.drawable.ic_image_placeholder_24)
+                .placeholder(R.drawable.ic_image_placeholder_24)
+                .error(R.drawable.ic_image_placeholder_24)
+                .override(180, 180)
+                .circleCrop()
+                .into(b.ivPreviewAvatar)
+
+            Glide.with(context)
+                .load(selectedBackgroundUrl.takeIf { it.isNotBlank() } ?: R.drawable.bg_profile_fantasy)
+                .placeholder(R.drawable.bg_profile_fantasy)
+                .error(R.drawable.bg_profile_fantasy)
+                .override(480, 270)
+                .centerCrop()
+                .into(b.ivPreviewBg)
+        }
+
+        b.profileName.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) { refreshPreview() }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+
+        b.avatarUrl.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
+                selectedAvatarUrl = s?.toString().orEmpty().trim()
+                refreshPreview()
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+
+        b.backgroundUrl.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
+                selectedBackgroundUrl = s?.toString().orEmpty().trim()
+                refreshPreview()
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+
+        b.isAdmin.setOnCheckedChangeListener { _, _ -> refreshPreview() }
+        b.isKids.setOnCheckedChangeListener { _, _ -> refreshPreview() }
+        refreshPreview()
+
         val dialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
             .setBackground(ContextCompat.getDrawable(context, R.drawable.bg_profile_editor_dialog))
             .setTitle(if (profile == null) R.string.profile_editor_new_title else R.string.profile_editor_edit_title)
@@ -153,6 +212,7 @@ class ProfileEditorDialog(
                             b.avatarUrl.setText(art.url)
                             b.catalogStatus.text = context.getString(R.string.profile_avatar_selected, art.label)
                         }
+                        refreshPreview()
                         catalogSelectionTargets.forEach { (targetArt, card, indicator) ->
                             updateSelection(targetArt, card, indicator)
                         }
@@ -237,20 +297,45 @@ class ProfileEditorDialog(
         }
 
         fun switchTab(tab: CatalogTab) {
+            currentTab = tab
             if (tab == CatalogTab.AVATARS) {
                 b.btnTabAvatars.setBackgroundResource(R.drawable.glass_pill_accent_bg)
                 b.btnTabAvatars.setTextColor(android.graphics.Color.parseColor("#040C16"))
                 b.btnTabWallpapers.setBackgroundResource(R.drawable.glass_pill_button_bg)
                 b.btnTabWallpapers.setTextColor(android.graphics.Color.parseColor("#CBD5E1"))
-                b.catalogStatus.setText(R.string.profile_avatar_catalog_hint)
-                populateArtGrid(resolver.getPresetAvatars())
+
+                val query = activeSearchQuery
+                if (query != null && lastSearchResults != null) {
+                    val avatars = lastSearchResults!!.filter { !it.isWallpaper }
+                    if (avatars.isEmpty()) {
+                        b.catalogStatus.text = "Nenhum avatar encontrado para '$query'"
+                    } else {
+                        b.catalogStatus.text = "${avatars.size} avatares encontrados para '$query'"
+                    }
+                    populateArtGrid(avatars)
+                } else {
+                    b.catalogStatus.setText(R.string.profile_avatar_catalog_hint)
+                    populateArtGrid(resolver.getPresetAvatars())
+                }
             } else {
                 b.btnTabAvatars.setBackgroundResource(R.drawable.glass_pill_button_bg)
                 b.btnTabAvatars.setTextColor(android.graphics.Color.parseColor("#CBD5E1"))
                 b.btnTabWallpapers.setBackgroundResource(R.drawable.glass_pill_accent_bg)
                 b.btnTabWallpapers.setTextColor(android.graphics.Color.parseColor("#040C16"))
-                b.catalogStatus.setText(R.string.profile_wallpaper_catalog_hint)
-                populateArtGrid(resolver.getPresetWallpapers())
+
+                val query = activeSearchQuery
+                if (query != null && lastSearchResults != null) {
+                    val wallpapers = lastSearchResults!!.filter { it.isWallpaper }
+                    if (wallpapers.isEmpty()) {
+                        b.catalogStatus.text = "Nenhum papel de parede encontrado para '$query'"
+                    } else {
+                        b.catalogStatus.text = "${wallpapers.size} papéis de parede encontrados para '$query'"
+                    }
+                    populateArtGrid(wallpapers)
+                } else {
+                    b.catalogStatus.setText(R.string.profile_wallpaper_catalog_hint)
+                    populateArtGrid(resolver.getPresetWallpapers())
+                }
             }
         }
 
@@ -272,30 +357,44 @@ class ProfileEditorDialog(
             )
         }
 
-        b.searchCatalog.setOnClickListener {
+        fun executeSearch() {
             val query = b.catalogQuery.text.toString().trim()
             if (query.isBlank()) {
                 b.catalogQuery.error = context.getString(R.string.profile_catalog_query_required)
-                return@setOnClickListener
+                return
             }
             search?.cancel()
+            activeSearchQuery = query
+            b.btnClearSearch.isVisible = true
             search = fragment.viewLifecycleOwner.lifecycleScope.launch {
-                b.catalogStatus.setText(R.string.profile_catalog_loading)
+                b.catalogStatus.text = "Buscando personagens e papéis de parede de '$query' na web..."
                 b.catalogImages.removeAllViews()
                 try {
                     val choices = resolver.search(query)
-                    b.catalogStatus.text = if (choices.isEmpty()) {
-                        context.getString(R.string.profile_catalog_empty)
-                    } else {
-                        context.getString(R.string.profile_catalog_results, query)
-                    }
-                    populateArtGrid(choices)
+                    lastSearchResults = choices
+                    switchTab(currentTab)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (_: Exception) {
                     b.catalogStatus.setText(R.string.profile_catalog_error)
                 }
             }
+        }
+
+        b.searchCatalog.setOnClickListener { executeSearch() }
+        b.catalogQuery.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
+                executeSearch()
+                true
+            } else false
+        }
+
+        b.btnClearSearch.setOnClickListener {
+            activeSearchQuery = null
+            lastSearchResults = null
+            b.catalogQuery.setText("")
+            b.btnClearSearch.isVisible = false
+            switchTab(currentTab)
         }
 
         dialog.setOnShowListener {

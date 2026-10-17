@@ -39,6 +39,87 @@
                 android:textColor="@color/obsidian_text_primary"
                 android:textColorHint="@color/obsidian_text_tertiary" />
 
+            <!-- Live Profile Preview Card (Crunchyroll TV reference) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardProfilePreview"
+                android:layout_width="match_parent"
+                android:layout_height="110dp"
+                android:layout_marginTop="10dp"
+                app:cardCornerRadius="14dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/obsidian_border_glass"
+                app:cardBackgroundColor="@color/obsidian_bg_surface">
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+
+                    <ImageView
+                        android:id="@+id/ivPreviewBg"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerCrop"
+                        android:contentDescription="@null"
+                        android:src="@drawable/bg_profile_fantasy" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bg_surface_overlay" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="16dp">
+
+                        <com.google.android.material.imageview.ShapeableImageView
+                            android:id="@+id/ivPreviewAvatar"
+                            android:layout_width="64dp"
+                            android:layout_height="64dp"
+                            android:contentDescription="@null"
+                            android:scaleType="centerCrop"
+                            android:src="@drawable/ic_image_placeholder_24"
+                            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
+                            app:strokeColor="?attr/colorAccentPrimary"
+                            app:strokeWidth="2dp" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="14dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvPreviewName"
+                                style="@style/TextAppearance.Makimono.TV.Title3"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:ellipsize="end"
+                                android:maxLines="1"
+                                android:text="@string/profile_name_hint"
+                                android:textColor="@color/obsidian_text_primary"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvPreviewRoleBadge"
+                                style="@style/TextAppearance.Makimono.TV.Badge"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:background="@drawable/glass_meta_pill_bg"
+                                android:paddingHorizontal="8dp"
+                                android:paddingVertical="2dp"
+                                android:text="Perfil Padrão"
+                                android:textColor="@color/obsidian_text_secondary" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </FrameLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- Role Checkboxes -->
             <LinearLayout
                 android:id="@+id/profileRolesRow"
@@ -166,6 +247,7 @@
                     android:layout_weight="1"
                     android:background="@drawable/glass_input_bg"
                     android:hint="@string/profile_catalog_query_hint"
+                    android:imeOptions="actionSearch"
                     android:inputType="text"
                     android:paddingHorizontal="12dp"
                     android:singleLine="true"
@@ -182,6 +264,18 @@
                     android:paddingHorizontal="14dp"
                     android:text="@string/profile_catalog_search_action"
                     android:textColor="@color/obsidian_accent_primary" />
+
+                <Button
+                    android:id="@+id/btnClearSearch"
+                    style="@style/TextAppearance.Makimono.TV.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="42dp"
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/bg_player_action_vertical"
+                    android:paddingHorizontal="10dp"
+                    android:text="Padrão"
+                    android:visibility="gone"
+                    android:textColor="@color/obsidian_text_tertiary" />
             </LinearLayout>
 
             <!-- Direct image URLs are an advanced override; keep the art picker in view by default. -->
