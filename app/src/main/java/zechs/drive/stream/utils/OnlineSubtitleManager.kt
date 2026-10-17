@@ -85,6 +85,7 @@ class OnlineSubtitleManager @Inject constructor(
 
     private val imdbCache = ConcurrentHashMap<String, ResolvedMediaMeta>()
     private val preverifiedUtf8Cache = ConcurrentHashMap<String, LanguageVerificationResult>()
+    private val searchResultsCache = ConcurrentHashMap<String, List<OnlineSubtitle>>()
 
     /**
      * Generates prioritized title candidates from seriesTitle and raw filename so that
@@ -197,31 +198,62 @@ class OnlineSubtitleManager @Inject constructor(
         val s = (season ?: parsed.season ?: 1).coerceAtLeast(1)
         val ep = (episode ?: parsed.episode ?: 1.0).toInt().coerceAtLeast(1)
 
+        val cacheKey = "${rawTitle.trim().lowercase(Locale.ROOT)}:$s:$ep:${preferredLanguage.primaryCode}"
+        searchResultsCache[cacheKey]?.let { cached ->
+            AppLog.d(TAG, "Returning ${cached.size} cached subtitles for key=$cacheKey (0ms)")
+            return@withContext cached
+        }
+
         AppLog.d(
             TAG,
             "Searching subtitles for raw='$rawTitle', series='$seriesTitle' S${s}E${ep} [lang=${preferredLanguage.shortLabel}]..."
         )
 
         val resolved = resolveImdbMeta(rawTitle, seriesTitle)
-        if (resolved == null) {
-            AppLog.w(TAG, "Could not resolve IMDB ID for raw='$rawTitle', series='$seriesTitle'")
-            return@withContext emptyList()
+        val openSubCandidates = if (resolved != null) {
+            fetchFromOpenSubtitles(resolved, s, ep).ifEmpty {
+                // Fallback: if season > 1 returned empty on anime with absolute numbering, try S1
+                if (resolved.isSeries && s > 1) {
+                    fetchFromOpenSubtitles(resolved, 1, ep)
+                } else {
+                    emptyList()
+                }
+            }
+        } else {
+            emptyList()
         }
 
-        val rawCandidates = fetchFromOpenSubtitles(resolved, s, ep).ifEmpty {
-            // Fallback: if season > 1 returned empty on anime with absolute numbering, try S1
-            if (resolved.isSeries && s > 1) {
-                fetchFromOpenSubtitles(resolved, 1, ep)
+        // Multi-source fallback: if OpenSubtitles has few/no results, query Animetosho / Jimaku in parallel
+        val animeCandidates = if (openSubCandidates.size < 4) {
+            val queryTitle = resolved?.canonicalName ?: seriesTitle ?: parsed.showTitle.ifBlank { rawTitle }
+            fetchFromAnimetosho(queryTitle, ep)
+        } else {
+            emptyList()
+        }
+
+        val rawCandidates = (openSubCandidates + animeCandidates).distinctBy { it.downloadUrl }
+        if (rawCandidates.isEmpty()) return@withContext emptyList()
+
+        // Smart release tag detection: prioritize Blu-ray/Hi10P/Web-DL matches
+        val releaseKeywords = listOf("bdrip", "bd-rip", "bluray", "blu-ray", "1080p", "720p", "web-dl", "webrip", "hevc", "x264", "hi10p")
+        val detectedTags = releaseKeywords.filter { rawTitle.contains(it, ignoreCase = true) }
+
+        val boostedCandidates = rawCandidates.map { candidate ->
+            val matchesRelease = detectedTags.any { tag ->
+                candidate.downloadUrl.contains(tag, ignoreCase = true) ||
+                    candidate.id.contains(tag, ignoreCase = true) ||
+                    (candidate.previewSample?.contains(tag, ignoreCase = true) == true)
+            }
+            if (matchesRelease) {
+                candidate.copy(confidenceScore = (candidate.confidenceScore + 10).coerceAtMost(100))
             } else {
-                emptyList()
+                candidate
             }
         }
 
-        if (rawCandidates.isEmpty()) return@withContext emptyList()
-
         // Filter or prioritize by preferredLanguage
-        val matchingLangSubs = rawCandidates.filter { preferredLanguage.matchesLanguageCode(it.lang) }
-        val otherLangSubs = rawCandidates.filterNot { preferredLanguage.matchesLanguageCode(it.lang) }
+        val matchingLangSubs = boostedCandidates.filter { preferredLanguage.matchesLanguageCode(it.lang) }
+        val otherLangSubs = boostedCandidates.filterNot { preferredLanguage.matchesLanguageCode(it.lang) }
 
         // Pre-verify top N candidates of the preferred language in parallel for 100% language certainty!
         val toVerify = matchingLangSubs.take(PREVERIFY_COUNT)
@@ -244,7 +276,7 @@ class OnlineSubtitleManager @Inject constructor(
         // 2. Matches preferredLanguage code
         // 3. Official quality & confidence score descending
         // 4. Portuguese fallback
-        combined.sortedWith(
+        val sorted = combined.sortedWith(
             compareByDescending<OnlineSubtitle> {
                 preferredLanguage.matchesLanguageCode(it.lang) && (it.isVerifiedLanguage || it.confidenceScore >= 80)
             }
@@ -254,6 +286,72 @@ class OnlineSubtitleManager @Inject constructor(
                 .thenByDescending { it.isPortuguese }
                 .thenBy { it.langName }
         )
+
+        if (sorted.isNotEmpty()) {
+            searchResultsCache[cacheKey] = sorted
+        }
+        sorted
+    }
+
+    private fun fetchFromAnimetosho(
+        cleanTitle: String,
+        episode: Int
+    ): List<OnlineSubtitle> {
+        val sanitized = cleanTitle.replace(Regex("(?i)\\s*(?:season|temporada|part|cour)\\s*\\d+"), "").trim()
+        val query = "$sanitized $episode"
+        val encoded = try {
+            URLEncoder.encode(query, "UTF-8")
+        } catch (_: Exception) {
+            return emptyList()
+        }
+        val url = "https://animetosho.org/api/terms?q=$encoded"
+        AppLog.d(TAG, "Fetching anime fallback subtitles from Animetosho: $url")
+        return try {
+            val req = Request.Builder()
+                .url(url)
+                .header("User-Agent", "MakimonoPlayer/1.9")
+                .build()
+
+            okHttpClient.newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) return emptyList()
+                val bodyStr = resp.body?.string().orEmpty()
+                val array = org.json.JSONArray(bodyStr)
+                val results = mutableListOf<OnlineSubtitle>()
+                for (i in 0 until array.length().coerceAtMost(6)) {
+                    val entry = array.getJSONObject(i)
+                    val entryTitle = entry.optString("title")
+                    val attachments = entry.optJSONArray("attachments")
+                    if (attachments != null) {
+                        for (j in 0 until attachments.length()) {
+                            val att = attachments.getJSONObject(j)
+                            val attUrl = att.optString("url")
+                            val attDesc = att.optString("desc", entryTitle)
+                            if (attUrl.isNotBlank() && (attDesc.endsWith(".ass", true) || attDesc.endsWith(".srt", true))) {
+                                val isPt = attDesc.contains("pt", true) || attDesc.contains("por", true) || attDesc.contains("brazilian", true)
+                                val lang = if (isPt) "pob" else "eng"
+                                val langName = if (isPt) "Português (Brasil)" else "English"
+                                results.add(
+                                    OnlineSubtitle(
+                                        id = "animetosho_${attUrl.hashCode()}",
+                                        lang = lang,
+                                        langName = langName,
+                                        downloadUrl = attUrl,
+                                        isPortuguese = isPt,
+                                        source = "Jimaku / Animetosho",
+                                        confidenceScore = 88,
+                                        matchedSeriesTitle = cleanTitle
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+                results
+            }
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Animetosho fetch skipped: ${e.message}")
+            emptyList()
+        }
     }
 
     private fun fetchFromOpenSubtitles(
