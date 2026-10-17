@@ -2,12 +2,12 @@ package zechs.drive.stream.ui.home
 
 import android.content.Context
 import android.view.View
-import androidx.core.widget.TextViewCompat
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import zechs.drive.stream.R
 import zechs.drive.stream.databinding.FragmentHomeBinding
+import zechs.drive.stream.utils.ext.resolveThemeColor
 
 /** Shared visual binding for the production Home hero and its local QA fixture. */
 internal class FeaturedHeroBinder(
@@ -32,38 +32,22 @@ internal class FeaturedHeroBinder(
             binding.tvFeaturedTitle?.visibility = View.VISIBLE
         }
         binding.tvFeaturedTitle?.text = featured.title
-        binding.tvFeaturedOverline?.setText(R.string.home_featured_overline)
-        if (featured.genres.isNotEmpty()) {
-            binding.layoutFeaturedGenres?.let { container ->
-                container.removeAllViews()
-                container.visibility = View.VISIBLE
-                val density = context.resources.displayMetrics.density
-                featured.genres.take(3).forEach { genreName ->
-                    val pill = android.widget.TextView(context).apply {
-                        text = genreName
-                        TextViewCompat.setTextAppearance(this, R.style.TextAppearance_Makimono_TV_Caption)
-                        setBackgroundResource(R.drawable.glass_meta_pill_bg)
-                        setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.obsidian_text_secondary))
-                        val padH = (8 * density).toInt()
-                        val padV = (2 * density).toInt()
-                        setPadding(padH, padV, padH, padV)
-                        val lp = android.widget.LinearLayout.LayoutParams(
-                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-                        ).apply {
-                            marginEnd = (6 * density).toInt()
-                        }
-                        layoutParams = lp
-                    }
-                    container.addView(pill)
-                }
+        val isTenFoot = zechs.drive.stream.utils.DeviceUi.isTenFootExperience(context)
+        binding.tvFeaturedOverline?.let { overline ->
+            if (isTenFoot) {
+                overline.visibility = View.GONE
+            } else {
+                overline.visibility = View.VISIBLE
+                overline.setText(R.string.home_featured_overline)
+                overline.setTextColor(context.resolveThemeColor(R.attr.colorAccentPrimary))
             }
-        } else {
-            binding.layoutFeaturedGenres?.visibility = View.GONE
         }
+        binding.layoutFeaturedGenres?.visibility = View.GONE
 
         val separator = context.getString(R.string.home_featured_separator)
-        val metadata = buildList {
+        val badgeLabel = featured.ageRating?.takeIf { it.isNotBlank() } ?: if (isTenFoot) "A14" else null
+        val metadataItems = buildList {
+            if (isTenFoot) add("Legendado")
             featured.year?.let { add(it.toString()) }
             featured.episodeCount?.let {
                 add(context.resources.getQuantityString(R.plurals.home_featured_episode_count, it, it))
@@ -71,11 +55,17 @@ internal class FeaturedHeroBinder(
             featured.score?.let {
                 add(context.getString(R.string.home_featured_score, it))
             }
-            featured.ageRating?.takeIf { it.isNotBlank() }?.let(::add)
+            if (featured.genres.isNotEmpty()) {
+                add(featured.genres.take(3).joinToString(", "))
+            }
         }.joinToString(separator)
         binding.tvFeaturedMetadata?.apply {
-            text = metadata
-            visibility = if (metadata.isBlank()) View.GONE else View.VISIBLE
+            if (badgeLabel == null && metadataItems.isBlank()) {
+                visibility = View.GONE
+            } else {
+                visibility = View.VISIBLE
+                text = buildMetadataSpannable(context, badgeLabel, separator, metadataItems)
+            }
         }
 
         val cleanSynopsis = featured.synopsis
@@ -120,5 +110,77 @@ internal class FeaturedHeroBinder(
             if (featured.isFocusedPreview) R.string.home_featured_open
             else R.string.home_featured_play
         )
+    }
+
+    private fun buildMetadataSpannable(
+        context: Context,
+        badgeLabel: String?,
+        separator: String,
+        metadataItems: String
+    ): CharSequence {
+        if (badgeLabel == null) return metadataItems
+        val fullText = if (metadataItems.isNotBlank()) {
+            "$badgeLabel$separator$metadataItems"
+        } else {
+            badgeLabel
+        }
+        val spannable = android.text.SpannableString(fullText)
+        val density = context.resources.displayMetrics.density
+        val bgColor = context.resolveThemeColor(R.attr.colorAccentPrimary)
+        val fgColor = context.resolveThemeColor(R.attr.colorOnPrimary)
+        spannable.setSpan(
+            AgeBadgeSpan(bgColor = bgColor, fgColor = fgColor, density = density),
+            0,
+            badgeLabel.length,
+            android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+        return spannable
+    }
+
+    private class AgeBadgeSpan(
+        private val bgColor: Int,
+        private val fgColor: Int,
+        private val density: Float
+    ) : android.text.style.ReplacementSpan() {
+        private val padH = 5f * density
+        private val cornerRadius = 2f * density
+        private val rect = android.graphics.RectF()
+
+        override fun getSize(
+            paint: android.graphics.Paint,
+            text: CharSequence,
+            start: Int,
+            end: Int,
+            fm: android.graphics.Paint.FontMetricsInt?
+        ): Int {
+            return (paint.measureText(text, start, end) + padH * 2).toInt()
+        }
+
+        override fun draw(
+            canvas: android.graphics.Canvas,
+            text: CharSequence,
+            start: Int,
+            end: Int,
+            x: Float,
+            top: Int,
+            y: Int,
+            bottom: Int,
+            paint: android.graphics.Paint
+        ) {
+            val width = paint.measureText(text, start, end) + padH * 2
+            val fm = paint.fontMetrics
+            val boxTop = y + fm.ascent - 1f * density
+            val boxBottom = y + fm.descent + 1f * density
+            rect.set(x, boxTop, x + width, boxBottom)
+            val prevColor = paint.color
+            val prevFakeBold = paint.isFakeBoldText
+            paint.color = bgColor
+            canvas.drawRoundRect(rect, cornerRadius, cornerRadius, paint)
+            paint.color = fgColor
+            paint.isFakeBoldText = true
+            canvas.drawText(text, start, end, x + padH, y.toFloat(), paint)
+            paint.color = prevColor
+            paint.isFakeBoldText = prevFakeBold
+        }
     }
 }

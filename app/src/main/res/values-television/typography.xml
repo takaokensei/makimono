@@ -2,12 +2,14 @@
     <!-- TV 10-foot UI scale adjustments -->
     <style name="TextAppearance.Makimono.TV.Display" parent="TextAppearance.Makimono.TV">
         <item name="android:textSize">40sp</item>
+        <item name="lineHeight">46sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:letterSpacing">-0.01</item>
         <item name="android:lineSpacingMultiplier">1.12</item>
     </style>
     <style name="TextAppearance.Makimono.TV.Title1" parent="TextAppearance.Makimono.TV">
         <item name="android:textSize">32sp</item>
+        <item name="lineHeight">38sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:letterSpacing">-0.005</item>
         <item name="android:lineSpacingExtra">0dp</item>

@@ -227,7 +227,9 @@ class HomeFragment : BaseFragment() {
 
         railController.selectTab("Início")
 
-        viewModel.loadAnimeLibrary()
+        if (viewModel.animeLibrary.value.isEmpty()) {
+            viewModel.loadAnimeLibrary()
+        }
         viewModel.getStarredFiles()
         viewModel.getRecentWatches()
         viewModel.getWatchHistory()
@@ -583,6 +585,7 @@ class HomeFragment : BaseFragment() {
         super.onDestroyView()
         exitDialog?.dismiss()
         exitDialog = null
+        lastFocusedAnimeView = null
         _binding = null
     }
 }

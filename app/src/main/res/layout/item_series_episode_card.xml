@@ -12,26 +12,26 @@
     android:focusableInTouchMode="true"
     android:foreground="@drawable/item_series_episode_focus_border"
     app:cardBackgroundColor="@color/swiss_glass_card_footer"
-    app:cardCornerRadius="12dp"
+    app:cardCornerRadius="2dp"
     app:cardElevation="0dp"
-    app:strokeColor="@color/swiss_border_specular_subtle"
-    app:strokeWidth="1dp">
+    app:strokeColor="?attr/colorBorderGlass"
+    app:strokeWidth="0dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="8dp">
+        android:padding="0dp">
 
     <!-- 16:9 Thumbnail Container -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
-        android:layout_height="126dp"
+        android:layout_height="135dp"
         app:cardBackgroundColor="@color/obsidian_bg_base"
-        app:cardCornerRadius="8dp"
+        app:cardCornerRadius="0dp"
         app:cardElevation="0dp"
         app:strokeColor="@color/swiss_border_specular_subtle"
-        app:strokeWidth="1dp">
+        app:strokeWidth="0dp">
 
         <FrameLayout
             android:layout_width="match_parent"
@@ -62,12 +62,12 @@
                 android:textStyle="bold"
                 tools:text="EP 04" />
 
-            <!-- Watched badge overlay on top-right (Crunchyroll TV style) -->
+            <!-- Watched badge overlay on bottom-right (Crunchyroll TV style) -->
             <LinearLayout
                 android:id="@+id/badgeWatched"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="top|end"
+                android:layout_gravity="bottom|end"
                 android:layout_margin="6dp"
                 android:background="@drawable/glass_meta_pill_bg"
                 android:gravity="center_vertical"
@@ -81,7 +81,8 @@
                 <ImageView
                     android:layout_width="12dp"
                     android:layout_height="12dp"
-                    android:src="@drawable/ic_check_cyan_circle"
+                    android:src="@drawable/ic_check_24"
+                    app:tint="?attr/colorAccentPrimary"
                     android:contentDescription="@null" />
                 <TextView
                     android:id="@+id/tvWatchedBadgeLabel"
@@ -90,7 +91,7 @@
                     android:layout_marginStart="4dp"
                     android:fontFamily="@font/inter"
                     android:text="@string/series_episode_watched_badge"
-                    android:textColor="@color/cyan_400"
+                    android:textColor="@color/obsidian_text_primary"
                     style="@style/TextAppearance.Makimono.TV.Badge"
                     android:textStyle="bold" />
             </LinearLayout>
@@ -104,10 +105,10 @@
                 android:contentDescription="@null"
                 android:src="@drawable/ic_play_24"
                 android:visibility="gone"
-                app:tint="@color/obsidian_accent_primary"
+                app:tint="?attr/colorAccentPrimary"
                 tools:visibility="visible" />
 
-            <!-- Progress bar red pinned to bottom of thumbnail -->
+            <!-- Progress bar pinned to bottom of thumbnail -->
             <ProgressBar
                 android:id="@+id/pbEpisodeProgress"
                 style="?android:attr/progressBarStyleHorizontal"
@@ -116,7 +117,8 @@
                 android:layout_gravity="bottom"
                 android:max="100"
                 android:progress="65"
-                android:progressDrawable="@drawable/progress_drawable_red"
+                android:progressTint="?attr/colorAccentPrimary"
+                android:progressBackgroundTint="@color/obsidian_border_glass"
                 tools:progress="65" />
 
         </FrameLayout>
@@ -127,11 +129,12 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="0dp"
         android:orientation="vertical"
-        android:paddingStart="2dp"
-        android:paddingEnd="2dp"
-        android:paddingBottom="2dp">
+        android:paddingStart="10dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="10dp"
+        android:paddingBottom="10dp">
 
         <!-- Title -->
         <TextView
@@ -195,7 +198,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:fontFamily="sans-serif-medium"
-                android:textColor="@color/obsidian_danger"
+                android:textColor="?attr/colorAccentPrimary"
                 style="@style/TextAppearance.Makimono.TV.Caption"
                 tools:text="65%" />
 

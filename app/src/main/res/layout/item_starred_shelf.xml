@@ -9,10 +9,10 @@
     android:clickable="true"
     android:focusable="true"
     app:cardBackgroundColor="@color/swiss_glass_card_footer"
-    app:cardCornerRadius="12dp"
+    app:cardCornerRadius="2dp"
     app:cardElevation="0dp"
     app:strokeColor="@color/shelf_card_stroke_color"
-    app:strokeWidth="1.5dp">
+    app:strokeWidth="3dp">
 
     <FrameLayout
         android:layout_width="match_parent"

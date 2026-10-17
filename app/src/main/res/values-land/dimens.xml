@@ -2,7 +2,9 @@
 <resources>
     <dimen name="tv_overscan_margin">48dp</dimen>
     <dimen name="tv_overscan_margin_vertical">30dp</dimen>
-    <dimen name="tv_nav_rail_width">56dp</dimen>
+    <dimen name="tv_nav_rail_width">72dp</dimen>
+    <dimen name="tv_nav_rail_expanded_width">312dp</dimen>
+    <dimen name="home_content_margin">96dp</dimen>
     <dimen name="tv_shelf_card_width">232dp</dimen>
     <dimen name="tv_shelf_card_height">131dp</dimen>
     <dimen name="profile_avatar_size">76dp</dimen>

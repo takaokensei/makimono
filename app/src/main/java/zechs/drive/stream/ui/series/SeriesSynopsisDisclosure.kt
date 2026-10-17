@@ -55,18 +55,26 @@ internal class SeriesSynopsisDisclosure(
         synopsis.ellipsize = TextUtils.TruncateAt.END
         synopsis.text = content
         toggle.visibility = View.GONE
-        synopsis.doOnNextLayout { inspectCollapsedLayout() }
+        synopsis.post { inspectCollapsedLayout() }
     }
 
     private fun inspectCollapsedLayout() {
-        val layout = synopsis.layout ?: return
+        val layout = synopsis.layout ?: run {
+            synopsis.doOnNextLayout { synopsis.post { inspectCollapsedLayout() } }
+            return
+        }
         val lastVisibleLine = (layout.lineCount - 1).coerceAtLeast(0)
         isTruncated = SynopsisDisclosurePolicy.isTruncated(
             lineCount = layout.lineCount,
             ellipsisCount = layout.getEllipsisCount(lastVisibleLine),
             maxLines = collapsedMaxLines
         )
-        toggle.visibility = if (isTruncated) View.VISIBLE else View.GONE
+        val newVisibility = if (isTruncated) View.VISIBLE else View.GONE
+        if (toggle.visibility != newVisibility) {
+            toggle.visibility = newVisibility
+            (toggle.parent as? View)?.requestLayout()
+            scrollView.requestLayout()
+        }
         toggle.text = expandLabel
         toggle.contentDescription = expandLabel
         onAvailabilityChanged(isTruncated)
@@ -78,10 +86,12 @@ internal class SeriesSynopsisDisclosure(
         toggle.text = if (expanded) collapseLabel else expandLabel
         toggle.contentDescription = toggle.text
         synopsis.requestLayout()
+        (synopsis.parent as? View)?.requestLayout()
+        scrollView.requestLayout()
         if (expanded) {
-            toggle.doOnNextLayout { scrollToggleIntoViewport() }
+            toggle.post { scrollToggleIntoViewport() }
         } else {
-            toggle.doOnNextLayout {
+            toggle.post {
                 scrollYBeforeExpansion?.let { scrollView.smoothScrollTo(0, it) }
                 scrollYBeforeExpansion = null
             }

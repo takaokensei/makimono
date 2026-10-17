@@ -35,7 +35,8 @@ class FilesSearchFilterHandler(
     private val tenraiService: dagger.Lazy<TenraiAnimeService>,
     private val lifecycleScope: LifecycleCoroutineScope,
     private val isFragmentAdded: () -> Boolean,
-    private val isLoadingProvider: () -> Boolean
+    private val isLoadingProvider: () -> Boolean,
+    private val onListSubmitted: () -> Unit = {}
 ) {
 
     companion object {
@@ -68,6 +69,10 @@ class FilesSearchFilterHandler(
             updateLayoutMode()
         }
 
+        binding.etSearch.setOnFocusChangeListener { _, hasFocus ->
+            binding.searchContainer.isSelected = hasFocus
+        }
+
         binding.etSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
@@ -87,7 +92,9 @@ class FilesSearchFilterHandler(
 
     fun onFilesLoaded(files: List<FilesDataModel>) {
         allFilesList = files
-        availableSeasons = SeasonEpisodeGrouper.groupFiles(folderName, files)
+        updateLayoutMode()
+        val rawSeasons = SeasonEpisodeGrouper.groupFiles(folderName, files)
+        availableSeasons = if (rawSeasons.all { it.folderId != null }) emptyList() else rawSeasons
         if (availableSeasons.size > 1) {
             binding.seasonSelectorRow.isVisible = true
             selectedSeason = availableSeasons.firstOrNull()
@@ -244,7 +251,9 @@ class FilesSearchFilterHandler(
             binding.etSearch.nextFocusDownId = binding.rvList.id
             binding.btnClearSearch.nextFocusDownId = binding.rvList.id
         }
-        filesAdapter.submitList(listToSubmit)
+        filesAdapter.submitList(listToSubmit) {
+            onListSubmitted()
+        }
     }
 
     private fun showSeasonSelectionDialog() {

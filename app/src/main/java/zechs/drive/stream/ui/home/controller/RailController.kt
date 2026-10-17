@@ -81,7 +81,8 @@ class RailController(
         }
 
         if (DeviceUi.isTenFootExperience(binding.root.context)) {
-            binding.root.viewTreeObserver.addOnGlobalFocusChangeListener { oldFocus, newFocus ->
+            val focusListener = android.view.ViewTreeObserver.OnGlobalFocusChangeListener { oldFocus, newFocus ->
+                if (!binding.root.isAttachedToWindow) return@OnGlobalFocusChangeListener
                 val wasInRail = isFocusInRail(oldFocus)
                 val isInRail = isFocusInRail(newFocus)
                 if (!wasInRail && isInRail) {
@@ -90,6 +91,16 @@ class RailController(
                     collapseTvRail()
                 }
             }
+            binding.root.viewTreeObserver.addOnGlobalFocusChangeListener(focusListener)
+            binding.root.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+                override fun onViewAttachedToWindow(v: View) = Unit
+                override fun onViewDetachedFromWindow(v: View) {
+                    if (v.viewTreeObserver.isAlive) {
+                        v.viewTreeObserver.removeOnGlobalFocusChangeListener(focusListener)
+                    }
+                    v.removeOnAttachStateChangeListener(this)
+                }
+            })
         }
 
         binding.apply {
@@ -181,6 +192,16 @@ class RailController(
                 navController.navigateSafe(R.id.action_homeFragment_to_settingsFragment)
             }
 
+            userProfilePill?.contentDescription = tvUserName?.text?.takeIf { it.isNotBlank() }
+                ?: root.context.getString(R.string.nav_switch_profile_subtitle)
+            btnNavBusca?.contentDescription = tvNavBusca?.text ?: root.context.getString(R.string.search_button)
+            btnNavInicio.contentDescription = tvNavInicio.text
+            btnNavFavoritos.contentDescription = tvNavFavoritos.text
+            btnNavAnimes.contentDescription = tvNavAnimes.text
+            btnNavFilmes?.contentDescription = tvNavFilmes?.text
+            btnNavPastas.contentDescription = tvNavPastas.text
+            btnNavConfig.contentDescription = tvNavConfig.text
+
             val navItems = listOfNotNull(
                 btnBrandLogo.takeIf { it.visibility != View.GONE },
                 userProfilePill,
@@ -193,7 +214,10 @@ class RailController(
                 btnNavConfig
             )
 
-            navItems.forEach { item ->
+            navItems.forEachIndexed { index, item ->
+                item.nextFocusUpId = navItems.getOrNull(index - 1)?.id ?: item.id
+                item.nextFocusDownId = navItems.getOrNull(index + 1)?.id ?: item.id
+                item.nextFocusLeftId = item.id
                 SingleTapActivation.install(item)
                 item.setOnFocusChangeListener { v, hasFocus ->
                     if (!DeviceUi.isTenFootExperience(v.context)) {
@@ -369,17 +393,19 @@ class RailController(
             val normalBg = R.drawable.rail_item_focus_bg
             val activeBg = R.drawable.nav_item_active_bg
             val context = root.context
-            val normalTextColor = context.resolveThemeColor(R.attr.colorTextSecondary)
-            val activeTextColor = Color.WHITE
+            val normalTextColor = context.resolveThemeColor(R.attr.colorTextPrimary)
+            val activeTextColor = context.resolveThemeColor(R.attr.colorAccentPrimary)
             val normalIconColor = context.resolveThemeColor(R.attr.colorTextSecondary)
-            val activeIconColor = Color.WHITE
-            val focusedDarkColor = Color.parseColor("#070A10")
+            val activeIconColor = context.resolveThemeColor(R.attr.colorAccentPrimary)
+            val focusedDarkColor = context.resolveThemeColor(R.attr.colorOnPrimary)
             val focusedDarkSubtitleColor = Color.parseColor("#1E293B")
             val tab = currentTab
 
             val profileFocused = userProfilePill?.hasFocus() == true
-            tvUserName?.setTextColor(if (profileFocused) focusedDarkColor else activeTextColor)
-            tvSwitchProfileSubtitle?.setTextColor(if (profileFocused) focusedDarkSubtitleColor else normalTextColor)
+            tvUserName?.setTextColor(if (profileFocused) focusedDarkColor else Color.WHITE)
+            tvSwitchProfileSubtitle?.setTextColor(
+                if (profileFocused) focusedDarkSubtitleColor else context.resolveThemeColor(R.attr.colorTextSecondary)
+            )
 
             fun styleNavItem(
                 container: View?,
@@ -388,9 +414,14 @@ class RailController(
                 isActive: Boolean
             ) {
                 if (container == null) return
-                container.setBackgroundResource(if (isActive) activeBg else normalBg)
-                container.isSelected = isActive && isTvRailExpanded
                 val isFocused = container.hasFocus()
+                val bg = when {
+                    isFocused -> normalBg
+                    isActive -> activeBg
+                    else -> normalBg
+                }
+                container.setBackgroundResource(bg)
+                container.isSelected = isActive
                 val textColor = when {
                     isFocused -> focusedDarkColor
                     isActive -> activeTextColor
@@ -546,6 +577,15 @@ class RailController(
         isTvRailExpanded = true
 
         binding.navRail.setBackgroundResource(R.drawable.bg_sidebar_panel_expanded)
+        binding.sidebarDimOverlay?.apply {
+            animate().cancel()
+            visibility = View.VISIBLE
+            animate()
+                .alpha(1f)
+                .setDuration(220L)
+                .setInterpolator(DecelerateInterpolator())
+                .start()
+        }
 
         val collapsedPx = binding.root.resources.getDimensionPixelSize(R.dimen.tv_nav_rail_width)
         val expandedPx = binding.root.resources.getDimensionPixelSize(R.dimen.tv_nav_rail_expanded_width)
@@ -576,6 +616,16 @@ class RailController(
         val context = binding.root.context
         if (!DeviceUi.isTenFootExperience(context) || !isTvRailExpanded) return
         isTvRailExpanded = false
+
+        binding.sidebarDimOverlay?.apply {
+            animate().cancel()
+            animate()
+                .alpha(0f)
+                .setDuration(200L)
+                .setInterpolator(AccelerateInterpolator())
+                .withEndAction { visibility = View.GONE }
+                .start()
+        }
 
         val collapsedPx = binding.root.resources.getDimensionPixelSize(R.dimen.tv_nav_rail_width)
         val expandedPx = binding.root.resources.getDimensionPixelSize(R.dimen.tv_nav_rail_expanded_width)

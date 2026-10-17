@@ -146,7 +146,7 @@
                     android:paddingEnd="16dp"
                     android:paddingBottom="0dp"
                     android:text="Assistir Agora"
-                    android:textColor="@color/obsidian_text_primary"
+                    android:textColor="@color/swiss_focus_ink"
                     style="@style/TextAppearance.Makimono.TV.Caption"
                     android:textStyle="bold"
                     app:backgroundTint="@null"
@@ -154,7 +154,7 @@
                     app:iconGravity="textStart"
                     app:iconPadding="6dp"
                     app:iconSize="14dp"
-                    app:iconTint="@color/obsidian_text_primary" />
+                    app:iconTint="@color/swiss_focus_ink" />
 
             </LinearLayout>
         </LinearLayout>

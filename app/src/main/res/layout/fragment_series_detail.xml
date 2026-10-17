@@ -67,7 +67,7 @@
             android:id="@+id/viewSeriesBodySurface"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:background="@color/obsidian_bg_base"
+            android:background="?attr/colorBgBase"
             android:clickable="false"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -198,7 +198,7 @@
                 android:layout_height="285dp"
                 android:clickable="false"
                 android:focusable="false"
-                app:cardBackgroundColor="@color/obsidian_bg_surface"
+                app:cardBackgroundColor="?attr/colorBgSurface"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="10dp"
                 app:strokeColor="@color/obsidian_focus_fill"
@@ -264,7 +264,7 @@
                 android:letterSpacing="0.08"
                 android:textAllCaps="true"
                 android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                android:textColor="@color/obsidian_accent_primary"
+                android:textColor="?attr/colorAccentPrimary"
                 tools:text="THE EDEN OF GRISAIA" />
 
             <!-- Meta Row 1: Age Rating | Year | Status | MAL Rating -->
@@ -286,7 +286,7 @@
                     android:paddingTop="2dp"
                     android:paddingEnd="7dp"
                     android:paddingBottom="2dp"
-                    android:textColor="@color/obsidian_text_primary"
+                    android:textColor="?attr/colorOnPrimary"
                     android:textStyle="bold"
                     tools:text="16+" />
 
@@ -497,7 +497,7 @@
                 android:paddingStart="12dp"
                 android:paddingEnd="12dp"
                 android:text="@string/series_synopsis_expand"
-                android:textColor="@color/obsidian_accent_primary"
+                android:textColor="?attr/colorAccentPrimary"
                 android:textStyle="bold"
                 android:visibility="gone" />
 
@@ -787,7 +787,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:indeterminate="true"
-            android:indeterminateTint="@color/obsidian_accent_primary"
+            android:indeterminateTint="?attr/colorAccentPrimary"
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"

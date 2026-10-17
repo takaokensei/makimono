@@ -96,14 +96,13 @@ class ProfilesAdapter(
             zechs.drive.stream.utils.FocusEngine.attach(
                 binding.cardProfileRoot,
                 zechs.drive.stream.utils.FocusEngine.FocusKind.CARD
-            ) { view, hasFocus ->
+            ) { _, hasFocus ->
                 val focusedItem = currentList.getOrNull(bindingAdapterPosition) as? ProfileUiModel.ProfileItem
-                binding.avatarContainer.isSelected = hasFocus || focusedItem?.isActive == true
-                val nameHighlighted = hasFocus || focusedItem?.isActive == true
-                binding.tvProfileName.isSelected = nameHighlighted
+                binding.avatarContainer.isSelected = hasFocus
+                binding.tvProfileName.isSelected = hasFocus
                 binding.tvProfileName.setTypeface(
                     binding.tvProfileName.typeface,
-                    if (nameHighlighted) Typeface.BOLD else Typeface.NORMAL
+                    if (hasFocus) Typeface.BOLD else Typeface.NORMAL
                 )
                 if (hasFocus) {
                     focusedItem?.profile?.let(onProfileFocused)
@@ -134,18 +133,17 @@ class ProfilesAdapter(
                     binding.ivProfileAvatar.isVisible = true
                     binding.ivAddIcon.isVisible = false
                     binding.avatarContainer.setBackgroundResource(R.drawable.item_profile_avatar_ring)
-                    // Let the portrait fill the circular focus ring; the picker follows the
-                    // clean, avatar-first layout from the reference instead of a backing tile.
-                    val ringInset = (1 * itemView.resources.displayMetrics.density).toInt()
+                    val ringInset = (3 * itemView.resources.displayMetrics.density).toInt()
                     binding.avatarContainer.setPadding(ringInset, ringInset, ringInset, ringInset)
 
+                    val isFocused = binding.cardProfileRoot.hasFocus()
                     binding.cardProfileRoot.background = null
-                    binding.cardProfileRoot.isSelected = item.isActive
-                    binding.avatarContainer.isSelected = item.isActive
-                    binding.tvProfileName.isSelected = item.isActive
+                    binding.cardProfileRoot.isSelected = isFocused
+                    binding.avatarContainer.isSelected = isFocused
+                    binding.tvProfileName.isSelected = isFocused
                     binding.tvProfileName.setTypeface(
                         binding.tvProfileName.typeface,
-                        if (item.isActive) Typeface.BOLD else Typeface.NORMAL
+                        if (isFocused) Typeface.BOLD else Typeface.NORMAL
                     )
 
                     // Tick indicator

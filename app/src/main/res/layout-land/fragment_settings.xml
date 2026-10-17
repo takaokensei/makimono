@@ -1,936 +1,1209 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_anime_library">
 
-    <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/appBarLayout"
+    <!-- Dark obsidian glass backdrop overlay -->
+    <View
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@android:color/transparent"
-        android:elevation="0dp">
+        android:layout_height="match_parent"
+        android:background="?attr/colorBgBase" />
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Top Navigation Bar -->
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:background="?attr/colorBgBase"
-            android:paddingStart="28dp"
-            android:paddingEnd="28dp"
+            android:background="@android:color/transparent"
+            android:elevation="0dp"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
             app:navigationIcon="@drawable/ic_back_24"
             app:navigationIconTint="?attr/colorTextPrimary"
             app:title="@string/app_settings"
             app:titleTextColor="?attr/colorTextPrimary" />
 
-    </com.google.android.material.appbar.AppBarLayout>
-
-    <LinearLayout
-        android:id="@+id/settingsWorkspace"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="horizontal"
-        app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior">
-
+        <!-- 3-Column Balanced Layout: Categories (220dp) | Settings List (Weight 1, ~420dp) | Live Preview (260dp) -->
         <LinearLayout
-            android:layout_width="240dp"
-            android:layout_height="match_parent"
-            android:background="@color/obsidian_bg_surface"
-            android:orientation="vertical"
-            android:paddingStart="12dp"
-            android:paddingTop="24dp"
-            android:paddingEnd="12dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:layout_marginBottom="12dp"
-                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                android:text="@string/settings_categories_heading"
-                android:textColor="?attr/colorTextSecondary"
-                android:textStyle="bold" />
-
-            <LinearLayout
-                android:id="@+id/settingsCategoryBar"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical" />
-        </LinearLayout>
-
-        <androidx.core.widget.NestedScrollView
-            android:id="@+id/settingsScroll"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:clipToPadding="false"
-            android:fillViewport="true"
-            android:paddingBottom="28dp">
-
-        <LinearLayout
+            android:id="@+id/settingsWorkspace"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingStart="28dp"
-            android:paddingTop="20dp"
-            android:paddingEnd="28dp">
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="24dp">
 
-            <TextView
-                android:id="@+id/settingsSectionProfile"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                android:text="PERSONALIZAÇÃO E CONTROLE"
-                android:textColor="?attr/colorAccentPrimary"
-                android:textStyle="bold" />
-
+            <!-- 1. Left Master Column: Categories Menu -->
             <LinearLayout
-                android:id="@+id/settingSelectProfile"
-                android:layout_width="match_parent"
-                android:layout_height="72dp"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:focusedByDefault="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp">
+                android:layout_width="220dp"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:paddingEnd="12dp">
 
-                <ImageView
-                    android:id="@+id/ivSettingProfileAvatar"
-                    android:layout_width="42dp"
-                    android:layout_height="42dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/avatar_caua" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginBottom="12dp"
+                    android:letterSpacing="0.12"
+                    android:text="@string/settings_categories_heading"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                    android:textColor="?attr/colorTextSecondary"
+                    android:textStyle="bold" />
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:id="@+id/settingsCategoryBar"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="14dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:orientation="vertical" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <!-- System Info Pill -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginBottom="8dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:alpha="0.7">
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_makimono_torii"
+                        app:tint="?attr/colorTextSecondary" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textAppearance="@style/TextAppearance.Makimono.TV.Headline"
-                        android:text="Perfil de usuário"
-                        android:textColor="?attr/colorTextPrimary" />
-
-                    <TextView
-                        android:id="@+id/tvCurrentProfileName"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                        android:text="Perfil ativo"
+                        android:layout_marginStart="8dp"
+                        android:fontFamily="@font/inter"
+                        android:letterSpacing="0.08"
+                        android:text="MAKIMONO v1.9.0 • TV"
+                        style="@style/TextAppearance.Makimono.TV.Badge"
                         android:textColor="?attr/colorTextSecondary" />
                 </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Trocar perfil  ›"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                    android:textColor="?attr/colorAccentPrimary"
-                    android:textStyle="bold" />
             </LinearLayout>
 
-            <LinearLayout
-                android:id="@+id/settingLibraryRoot"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_folder_24"
-                    app:tint="?attr/colorAccentPrimary" />
+            <!-- 2. Middle Column: Settings Rows -->
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/settingsScroll"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:fillViewport="true"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:paddingBottom="28dp">
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="14dp"
-                    android:layout_weight="1"
                     android:orientation="vertical">
 
-                    <com.google.android.material.textview.MaterialTextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Pasta da biblioteca"
-                        android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/tvLibraryRootValue"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Meu Drive"
-                        android:textAppearance="?attr/textAppearanceBodySmall" />
-                </LinearLayout>
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/settingSelectTheme"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_theme_24"
-                    app:tint="?attr/colorAccentPrimary" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="14dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/select_theme"
-                        android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/tvThemeCurrentValue"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/light_dark_and_system"
-                        android:textAppearance="?attr/textAppearanceBodySmall" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Editar  ›"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                    android:textColor="?attr/colorAccentPrimary" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/settingReduceMotion"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp"
-                android:importantForAccessibility="yes">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_settings_24"
-                    app:tint="?attr/colorAccentPrimary" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="14dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/reduce_motion"
-                        android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/tvMotionPreferenceValue"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/motion_follows_device"
-                        android:textAppearance="?attr/textAppearanceBodySmall" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Editar  ›"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                    android:textColor="?attr/colorAccentPrimary" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/settingDefaultPlayer"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_player_24"
-                    app:tint="?attr/colorAccentPrimary" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="14dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/default_player"
-                        android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/tvPlayerCurrentValue"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/select_default_video_player"
-                        android:textAppearance="?attr/textAppearanceBodySmall" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Selecionar  ›"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                    android:textColor="?attr/colorAccentPrimary" />
-            </LinearLayout>
-
-            <!-- Subtitle Size Setting -->
-            <LinearLayout
-                android:id="@+id/settingSubtitleSize"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_subtitles_24"
-                    app:tint="?attr/colorAccentPrimary" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="14dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Legendas"
-                        android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/tvSubtitleSizeValue"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Médio (20sp - Padrão)"
-                        android:textAppearance="?attr/textAppearanceBodySmall" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Ajustar  ›"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                    android:textColor="?attr/colorAccentPrimary" />
-            </LinearLayout>
-
-            <!-- Storage & Cache Management -->
-            <LinearLayout
-                android:id="@+id/settingClearCache"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_delete_24"
-                    app:tint="?attr/colorAccentPrimary" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="14dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Armazenamento &amp; Cache"
-                        android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/tvCacheSizeValue"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Calculando espaço em cache..."
-                        android:textAppearance="?attr/textAppearanceBodySmall" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Limpar  ›"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                    android:textColor="?attr/colorAccentPrimary" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/settingCheckForUpdate"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp">
-
-                <ProgressBar
-                    android:id="@+id/progressBarChecking"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:indeterminateTint="?attr/colorAccentPrimary"
-                    android:visibility="invisible"
-                    tools:visibility="visible" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="14dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/check_for_updates"
-                        android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/lastCheckedLabel"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textAppearance="?attr/textAppearanceBodySmall"
-                        tools:text="Última verificação: hoje, 16:21" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Verificar  ›"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                    android:textColor="?attr/colorAccentPrimary" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/settingsSectionIntegrations"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="28dp"
-                android:letterSpacing="0.16"
-                android:text="INTEGRAÇÕES"
-                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                android:textColor="@color/obsidian_text_secondary"
-                android:textStyle="bold" />
-
-            <LinearLayout
-                android:id="@+id/settingMalAccount"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp">
-
-                <ImageView
-                    android:id="@+id/ivMalIcon"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_mal_24"
-                    app:tint="?attr/colorAccentPrimary" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="14dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/tvMalTitle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="MyAnimeList"
-                        android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/tvMalSubtitle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Conectar conta para scrobble automático"
-                        android:textAppearance="?attr/textAppearanceBodySmall" />
-                </LinearLayout>
-
-                <ImageView
-                    android:id="@+id/ivMalChevron"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_external_24"
-                    app:tint="?attr/colorTextSecondary" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/settingMalTransferToTv"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp"
-                android:visibility="gone">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_player_24"
-                    app:tint="?attr/colorAccentPrimary" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="14dp"
-                    android:layout_weight="1"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
-                    android:text="Enviar login do MAL para a TV"
-                    android:textColor="?attr/colorTextPrimary"
-                    android:textStyle="normal" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/settingMalSyncToggle"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
-                    android:text="Sincronizar episódios com o MAL"
-                    android:textColor="?attr/colorTextPrimary"
-                    android:textStyle="normal" />
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switchMalSync"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:checked="true" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/settingsSectionPlayback"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="28dp"
-                android:letterSpacing="0.16"
-                android:text="REPRODUÇÃO E GESTOS"
-                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                android:textColor="@color/obsidian_text_secondary"
-                android:textStyle="bold" />
-
-            <LinearLayout
-                android:id="@+id/settingAutoSkipToggle"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
-                    android:text="Pular aberturas automaticamente"
-                    android:textColor="?attr/colorTextPrimary"
-                    android:textStyle="normal" />
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switchAutoSkip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:checked="true" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/settingGesturesToggle"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
-                    android:text="Gestos no player mobile"
-                    android:textColor="?attr/colorTextPrimary"
-                    android:textStyle="normal" />
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switchGestures"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:checked="true" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/settingAutoFrameRateToggle"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
-                    android:text="Taxa de Quadros Automática (AFR)"
-                    android:textColor="?attr/colorTextPrimary"
-                    android:textStyle="normal" />
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switchAutoFrameRate"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:checked="true" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/settingMatchDynamicRangeToggle"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
-                    android:text="Alcance Dinâmico HDR Automático"
-                    android:textColor="?attr/colorTextPrimary"
-                    android:textStyle="normal" />
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switchMatchDynamicRange"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:checked="true" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/settingPredictiveBufferingToggle"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
-                    android:text="Buffer Preditivo (Binge-Watch)"
-                    android:textColor="?attr/colorTextPrimary"
-                    android:textStyle="normal" />
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switchPredictiveBuffering"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:checked="true" />
-            </LinearLayout>
-
-            <!-- BACKUP & RESTAURAÇÃO (FEAT-07) -->
-            <TextView
-                android:id="@+id/settingsSectionData"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:letterSpacing="0.16"
-                android:text="BACKUP &amp; DADOS"
-                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                android:textColor="@color/obsidian_text_secondary"
-                android:textStyle="bold" />
-
-            <!-- Exportar Backup -->
-            <LinearLayout
-                android:id="@+id/settingExportBackup"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
+                    <!-- Section Header: Profile & Appearance -->
                     <TextView
+                        android:id="@+id/settingsSectionProfile"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
-                        android:text="Exportar Backup dos Perfis"
-                        android:textColor="?attr/colorTextPrimary"
-                        android:textStyle="normal" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginBottom="8dp"
+                        android:letterSpacing="0.12"
+                        android:text="PERFIL E BIBLIOTECA"
                         android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                        android:text="Salva histórico, favoritos e fila sem dados confidenciais"
-                        android:textColor="?attr/colorTextSecondary" />
-                </LinearLayout>
+                        android:textColor="?attr/colorAccentPrimary"
+                        android:textStyle="bold" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Exportar ›"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                    android:textColor="?attr/colorAccentPrimary"
-                    android:textStyle="bold" />
-            </LinearLayout>
+                    <!-- User Profile Row -->
+                    <LinearLayout
+                        android:id="@+id/settingSelectProfile"
+                        android:layout_width="match_parent"
+                        android:layout_height="72dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:focusedByDefault="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp">
 
-            <!-- Importar Backup -->
-            <LinearLayout
-                android:id="@+id/settingImportBackup"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="24dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp">
+                        <ImageView
+                            android:id="@+id/ivSettingProfileAvatar"
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/avatar_caua" />
 
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
 
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Headline"
+                                android:text="Perfil de usuário"
+                                android:textColor="?attr/colorTextPrimary" />
+
+                            <TextView
+                                android:id="@+id/tvCurrentProfileName"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                                android:text="Perfil ativo"
+                                android:textColor="?attr/colorTextSecondary" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Trocar perfil  ›"
+                            android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                            android:textColor="?attr/colorAccentPrimary"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <!-- Library Root Folder Row -->
+                    <LinearLayout
+                        android:id="@+id/settingLibraryRoot"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_folder_24"
+                            app:tint="?attr/colorAccentPrimary" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Pasta da biblioteca"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                                android:textColor="?attr/colorTextPrimary" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/tvLibraryRootValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Animes"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                                android:textColor="?attr/colorTextSecondary" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Alterar  ›"
+                            android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                            android:textColor="?attr/colorAccentPrimary" />
+                    </LinearLayout>
+
+                    <!-- Theme Selector Row -->
+                    <LinearLayout
+                        android:id="@+id/settingSelectTheme"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_theme_24"
+                            app:tint="?attr/colorAccentPrimary" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/select_theme"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                                android:textColor="?attr/colorTextPrimary" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/tvThemeCurrentValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/light_dark_and_system"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                                android:textColor="?attr/colorTextSecondary" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Editar  ›"
+                            android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                            android:textColor="?attr/colorAccentPrimary" />
+                    </LinearLayout>
+
+                    <!-- Reduce Motion Row -->
+                    <LinearLayout
+                        android:id="@+id/settingReduceMotion"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_settings_24"
+                            app:tint="?attr/colorAccentPrimary" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/reduce_motion"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                                android:textColor="?attr/colorTextPrimary" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/tvMotionPreferenceValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/motion_follows_device"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                                android:textColor="?attr/colorTextSecondary" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Editar  ›"
+                            android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                            android:textColor="?attr/colorAccentPrimary" />
+                    </LinearLayout>
+
+                    <!-- Section Header: Playback -->
                     <TextView
+                        android:id="@+id/settingsSectionPlayback"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
-                        android:text="Restaurar Backup"
-                        android:textColor="?attr/colorTextPrimary"
-                        android:textStyle="normal" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginTop="20dp"
+                        android:layout_marginBottom="8dp"
+                        android:letterSpacing="0.12"
+                        android:text="REPRODUÇÃO E GESTOS"
                         android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                        android:text="Restaura histórico e favoritos a partir de um backup JSON"
-                        android:textColor="?attr/colorTextSecondary" />
+                        android:textColor="?attr/colorAccentPrimary"
+                        android:textStyle="bold" />
+
+                    <!-- Default Player Row -->
+                    <LinearLayout
+                        android:id="@+id/settingDefaultPlayer"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_player_24"
+                            app:tint="?attr/colorAccentPrimary" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/default_player"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                                android:textColor="?attr/colorTextPrimary" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/tvPlayerCurrentValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/select_default_video_player"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                                android:textColor="?attr/colorTextSecondary" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Selecionar  ›"
+                            android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                            android:textColor="?attr/colorAccentPrimary" />
+                    </LinearLayout>
+
+                    <!-- Subtitle Size Row -->
+                    <LinearLayout
+                        android:id="@+id/settingSubtitleSize"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_subtitles_24"
+                            app:tint="?attr/colorAccentPrimary" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Legendas"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                                android:textColor="?attr/colorTextPrimary" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/tvSubtitleSizeValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Médio (20sp - Padrão)"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                                android:textColor="?attr/colorTextSecondary" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Ajustar  ›"
+                            android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                            android:textColor="?attr/colorAccentPrimary" />
+                    </LinearLayout>
+
+                    <!-- Auto Skip Toggle -->
+                    <LinearLayout
+                        android:id="@+id/settingAutoSkipToggle"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Pular aberturas automaticamente"
+                            android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                            android:textColor="?attr/colorTextPrimary" />
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/switchAutoSkip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true" />
+                    </LinearLayout>
+
+                    <!-- Gestures Toggle -->
+                    <LinearLayout
+                        android:id="@+id/settingGesturesToggle"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Gestos no player mobile"
+                            android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                            android:textColor="?attr/colorTextPrimary" />
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/switchGestures"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true" />
+                    </LinearLayout>
+
+                    <!-- Auto Frame Rate Toggle -->
+                    <LinearLayout
+                        android:id="@+id/settingAutoFrameRateToggle"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Taxa de Quadros Automática (AFR)"
+                            android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                            android:textColor="?attr/colorTextPrimary" />
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/switchAutoFrameRate"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true" />
+                    </LinearLayout>
+
+                    <!-- HDR Dynamic Range Toggle -->
+                    <LinearLayout
+                        android:id="@+id/settingMatchDynamicRangeToggle"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Alcance Dinâmico HDR Automático"
+                            android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                            android:textColor="?attr/colorTextPrimary" />
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/switchMatchDynamicRange"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true" />
+                    </LinearLayout>
+
+                    <!-- Predictive Buffering Toggle -->
+                    <LinearLayout
+                        android:id="@+id/settingPredictiveBufferingToggle"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Buffer Preditivo (Binge-Watch)"
+                            android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                            android:textColor="?attr/colorTextPrimary" />
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/switchPredictiveBuffering"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true" />
+                    </LinearLayout>
+
+                    <!-- Section Header: Integrations -->
+                    <TextView
+                        android:id="@+id/settingsSectionIntegrations"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginTop="20dp"
+                        android:layout_marginBottom="8dp"
+                        android:letterSpacing="0.12"
+                        android:text="INTEGRAÇÕES"
+                        android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                        android:textColor="?attr/colorAccentPrimary"
+                        android:textStyle="bold" />
+
+                    <!-- MAL Account Row -->
+                    <LinearLayout
+                        android:id="@+id/settingMalAccount"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp">
+
+                        <ImageView
+                            android:id="@+id/ivMalIcon"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_mal_24"
+                            app:tint="?attr/colorAccentPrimary" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/tvMalTitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="MyAnimeList"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                                android:textColor="?attr/colorTextPrimary" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/tvMalSubtitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Conectar conta para scrobble automático"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                                android:textColor="?attr/colorTextSecondary" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:id="@+id/ivMalChevron"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_external_24"
+                            app:tint="?attr/colorTextSecondary" />
+                    </LinearLayout>
+
+                    <!-- MAL Transfer to TV Row -->
+                    <LinearLayout
+                        android:id="@+id/settingMalTransferToTv"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp"
+                        android:visibility="gone">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_player_24"
+                            app:tint="?attr/colorAccentPrimary" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:layout_weight="1"
+                            android:text="Enviar login do MAL para a TV"
+                            android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                            android:textColor="?attr/colorTextPrimary" />
+                    </LinearLayout>
+
+                    <!-- MAL Sync Toggle -->
+                    <LinearLayout
+                        android:id="@+id/settingMalSyncToggle"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Sincronizar episódios com o MAL"
+                            android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                            android:textColor="?attr/colorTextPrimary" />
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/switchMalSync"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true" />
+                    </LinearLayout>
+
+                    <!-- Section Header: Data & System -->
+                    <TextView
+                        android:id="@+id/settingsSectionData"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginTop="20dp"
+                        android:layout_marginBottom="8dp"
+                        android:letterSpacing="0.12"
+                        android:text="ARMAZENAMENTO &amp; DADOS"
+                        android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                        android:textColor="?attr/colorAccentPrimary"
+                        android:textStyle="bold" />
+
+                    <!-- Clear Cache Row -->
+                    <LinearLayout
+                        android:id="@+id/settingClearCache"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_delete_24"
+                            app:tint="?attr/colorAccentPrimary" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Armazenamento &amp; Cache"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                                android:textColor="?attr/colorTextPrimary" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/tvCacheSizeValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Calculando espaço em cache..."
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                                android:textColor="?attr/colorTextSecondary" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Limpar  ›"
+                            android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                            android:textColor="?attr/colorAccentPrimary" />
+                    </LinearLayout>
+
+                    <!-- Check for Updates Row -->
+                    <LinearLayout
+                        android:id="@+id/settingCheckForUpdate"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp">
+
+                        <ProgressBar
+                            android:id="@+id/progressBarChecking"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:indeterminateTint="?attr/colorAccentPrimary"
+                            android:visibility="invisible"
+                            tools:visibility="visible" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/check_for_updates"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                                android:textColor="?attr/colorTextPrimary" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/lastCheckedLabel"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                                android:textColor="?attr/colorTextSecondary"
+                                tools:text="Última verificação: hoje, 16:21" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Verificar  ›"
+                            android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                            android:textColor="?attr/colorAccentPrimary" />
+                    </LinearLayout>
+
+                    <!-- Export Backup Row -->
+                    <LinearLayout
+                        android:id="@+id/settingExportBackup"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Exportar Backup dos Perfis"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                                android:textColor="?attr/colorTextPrimary" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Salva histórico e favoritos sem dados confidenciais"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                                android:textColor="?attr/colorTextSecondary" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Exportar ›"
+                            android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                            android:textColor="?attr/colorAccentPrimary"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <!-- Import Backup Row -->
+                    <LinearLayout
+                        android:id="@+id/settingImportBackup"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Restaurar Backup"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                                android:textColor="?attr/colorTextPrimary" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Restaura histórico e favoritos a partir de JSON"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                                android:textColor="?attr/colorTextSecondary" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Restaurar ›"
+                            android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                            android:textColor="?attr/colorAccentPrimary"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <!-- Section Header: Session -->
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/settingsSectionSession"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginTop="20dp"
+                        android:layout_marginBottom="8dp"
+                        android:letterSpacing="0.12"
+                        android:text="CONTA &amp; SESSÃO"
+                        android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                        android:textColor="?attr/colorAccentPrimary"
+                        android:textStyle="bold" />
+
+                    <!-- Log Out Row -->
+                    <LinearLayout
+                        android:id="@+id/settingLogOut"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginBottom="32dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:contentDescription="Sair"
+                            android:src="@drawable/ic_logout_24"
+                            app:tint="?attr/colorError" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Sair da Conta Google"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                                android:textColor="?attr/colorError" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Encerra a sessão e remove os tokens deste aparelho"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                                android:textColor="?attr/colorTextSecondary" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Sair ›"
+                            android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                            android:textColor="?attr/colorError"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
                 </LinearLayout>
+            </androidx.core.widget.NestedScrollView>
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Restaurar ›"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
-                    android:textColor="?attr/colorAccentPrimary"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <!-- Seção Conta & Sessão -->
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/settingsSectionSession"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="24dp"
-                android:layout_marginTop="16dp"
-                android:layout_marginEnd="24dp"
-                android:layout_marginBottom="8dp"
-                android:text="Conta &amp; Sessão"
-                android:textAppearance="?attr/textAppearanceLabelLarge"
-                android:textColor="?attr/colorAccentPrimary" />
-
-            <!-- Sair da Conta -->
+            <!-- 3. Right Column: Apple TV Style Live Contextual Preview Card -->
             <LinearLayout
-                android:id="@+id/settingLogOut"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginTop="6dp"
-                android:layout_marginEnd="16dp"
-                android:layout_marginBottom="32dp"
-                android:background="@drawable/glass_action_item_bg"
-                android:clickable="true"
-                android:focusable="true"
+                android:layout_width="260dp"
+                android:layout_height="match_parent"
                 android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="16dp">
-
-                <ImageView
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:layout_marginEnd="16dp"
-                    android:contentDescription="Sair"
-                    android:src="@drawable/ic_logout_24"
-                    app:tint="?attr/colorError" />
+                android:orientation="vertical"
+                android:paddingStart="8dp">
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="16dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:background="@drawable/glass_card_bg"
+                    android:elevation="8dp"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical"
+                    android:paddingStart="16dp"
+                    android:paddingTop="20dp"
+                    android:paddingEnd="16dp"
+                    android:paddingBottom="20dp">
 
-                    <com.google.android.material.textview.MaterialTextView
+                    <!-- Avatar with Glowing Ring -->
+                    <FrameLayout
+                        android:layout_width="76dp"
+                        android:layout_height="76dp">
+
+                        <ImageView
+                            android:id="@+id/ivPreviewAvatar"
+                            android:layout_width="72dp"
+                            android:layout_height="72dp"
+                            android:layout_gravity="center"
+                            android:contentDescription="@null"
+                            android:src="@drawable/avatar_caua" />
+
+                        <View
+                            android:layout_width="76dp"
+                            android:layout_height="76dp"
+                            android:background="@drawable/item_profile_avatar_ring"
+                            android:alpha="0.4" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:id="@+id/tvPreviewProfileName"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Sair da Conta Google"
-                        android:textAppearance="?attr/textAppearanceTitleMedium"
-                        android:textColor="?attr/colorError" />
+                        android:layout_marginTop="14dp"
+                        android:fontFamily="@font/inter"
+                        android:text="Main profile"
+                        android:textAppearance="@style/TextAppearance.Makimono.TV.Title2"
+                        android:textColor="@color/obsidian_text_primary"
+                        android:textStyle="bold" />
 
-                    <com.google.android.material.textview.MaterialTextView
+                    <!-- Badge Pill -->
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Encerra a sessão atual e remove os tokens salvos deste dispositivo"
-                        android:textAppearance="?attr/textAppearanceBodySmall" />
+                        android:layout_marginTop="6dp"
+                        android:background="@drawable/glass_pill_bg"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="10dp"
+                        android:paddingTop="4dp"
+                        android:paddingEnd="10dp"
+                        android:paddingBottom="4dp">
+
+                        <View
+                            android:layout_width="6dp"
+                            android:layout_height="6dp"
+                            android:layout_marginEnd="6dp"
+                            android:background="@drawable/cyan_dot_drawable" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/inter"
+                            android:letterSpacing="0.06"
+                            android:text="PERFIL ATIVO"
+                            style="@style/TextAppearance.Makimono.TV.Badge"
+                            android:textColor="?attr/colorAccentPrimary" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="20dp"
+                        android:layout_marginBottom="16dp"
+                        android:background="@color/swiss_border_specular_subtle" />
+
+                    <!-- Status Rows -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Biblioteca Drive:"
+                                style="@style/TextAppearance.Makimono.TV.Caption"
+                                android:textColor="@color/obsidian_text_secondary" />
+
+                            <TextView
+                                android:id="@+id/tvPreviewLibrary"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Animes"
+                                style="@style/TextAppearance.Makimono.TV.Caption"
+                                android:textColor="@color/obsidian_text_primary"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Motor Player:"
+                                style="@style/TextAppearance.Makimono.TV.Caption"
+                                android:textColor="@color/obsidian_text_secondary" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="ExoPlayer / MPV"
+                                style="@style/TextAppearance.Makimono.TV.Caption"
+                                android:textColor="@color/obsidian_text_primary"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Formatos:"
+                                style="@style/TextAppearance.Makimono.TV.Caption"
+                                android:textColor="@color/obsidian_text_secondary" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="4K • HDR10 • AFR"
+                                style="@style/TextAppearance.Makimono.TV.Caption"
+                                android:textColor="@color/obsidian_text_primary"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Status da Nuvem:"
+                                style="@style/TextAppearance.Makimono.TV.Caption"
+                                android:textColor="@color/obsidian_text_secondary" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Conectado"
+                                style="@style/TextAppearance.Makimono.TV.Caption"
+                                android:textColor="@color/obsidian_success"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                    </LinearLayout>
                 </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Sair ›"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
-                    android:textColor="?attr/colorError"
-                    android:textStyle="bold" />
             </LinearLayout>
 
         </LinearLayout>
-        </androidx.core.widget.NestedScrollView>
     </LinearLayout>
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
-
+</FrameLayout>

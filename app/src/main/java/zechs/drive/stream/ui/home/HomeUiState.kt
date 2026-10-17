@@ -34,7 +34,7 @@ sealed interface HomeUiState {
 }
 
 sealed interface HomeEvent {
-    data class SaveFocus(val shelfIndex: Int, val itemIndex: Int) : HomeEvent
+    data class SaveFocus(val shelfIndex: Int?, val itemIndex: Int?) : HomeEvent
     data class Search(val query: String) : HomeEvent
     object Refresh : HomeEvent
     data class RemoveWatchItem(val item: WatchList) : HomeEvent

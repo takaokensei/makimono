@@ -12,7 +12,7 @@
     android:focusableInTouchMode="true"
     android:foreground="@drawable/item_series_episode_focus_border"
     app:cardBackgroundColor="?attr/colorBgSurface"
-    app:cardCornerRadius="8dp"
+    app:cardCornerRadius="2dp"
     app:cardElevation="0dp"
     app:strokeColor="?attr/colorBorderGlass"
     app:strokeWidth="0dp">
@@ -28,7 +28,7 @@
         android:layout_width="match_parent"
         android:layout_height="110dp"
         app:cardBackgroundColor="@color/obsidian_bg_base"
-        app:cardCornerRadius="8dp"
+        app:cardCornerRadius="2dp"
         app:cardElevation="0dp"
         app:strokeWidth="0dp">
 
@@ -61,6 +61,40 @@
                 android:textStyle="bold"
                 tools:text="EP 04" />
 
+            <!-- Watched badge overlay on bottom-right (Crunchyroll TV style) -->
+            <LinearLayout
+                android:id="@+id/badgeWatched"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|end"
+                android:layout_margin="6dp"
+                android:background="@drawable/glass_meta_pill_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="6dp"
+                android:paddingTop="2dp"
+                android:paddingEnd="6dp"
+                android:paddingBottom="2dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+                <ImageView
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"
+                    android:src="@drawable/ic_check_24"
+                    app:tint="?attr/colorAccentPrimary"
+                    android:contentDescription="@null" />
+                <TextView
+                    android:id="@+id/tvWatchedBadgeLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:fontFamily="@font/inter"
+                    android:text="@string/series_episode_watched_badge"
+                    android:textColor="@color/obsidian_text_primary"
+                    style="@style/TextAppearance.Makimono.TV.Badge"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
             <!-- Play icon overlay on focus / hover -->
             <ImageView
                 android:id="@+id/ivPlayOverlay"
@@ -70,10 +104,10 @@
                 android:contentDescription="@null"
                 android:src="@drawable/ic_play_24"
                 android:visibility="gone"
-                app:tint="@color/obsidian_accent_primary"
+                app:tint="?attr/colorAccentPrimary"
                 tools:visibility="visible" />
 
-            <!-- Progress bar red pinned to bottom of thumbnail -->
+            <!-- Progress bar pinned to bottom of thumbnail with theme accent tint (Crunchyroll style) -->
             <ProgressBar
                 android:id="@+id/pbEpisodeProgress"
                 style="?android:attr/progressBarStyleHorizontal"
@@ -82,7 +116,8 @@
                 android:layout_gravity="bottom"
                 android:max="100"
                 android:progress="65"
-                android:progressDrawable="@drawable/progress_drawable_red"
+                android:progressTint="?attr/colorAccentPrimary"
+                android:progressBackgroundTint="@color/obsidian_border_glass"
                 tools:progress="65" />
 
         </FrameLayout>
@@ -161,7 +196,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:fontFamily="sans-serif-medium"
-                android:textColor="@color/obsidian_danger"
+                android:textColor="?attr/colorAccentPrimary"
                 style="@style/TextAppearance.Makimono.TV.Caption"
                 tools:text="65%" />
 

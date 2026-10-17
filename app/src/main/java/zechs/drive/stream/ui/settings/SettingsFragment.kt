@@ -8,6 +8,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import android.widget.ImageView
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.isVisible
 import androidx.fragment.app.activityViewModels
@@ -16,6 +18,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
+import com.bumptech.glide.Glide
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
@@ -33,6 +36,7 @@ import zechs.drive.stream.utils.DeviceUi
 import zechs.drive.stream.utils.SingleTapActivation
 import zechs.drive.stream.utils.TvAccessibilityLayout
 import zechs.drive.stream.utils.TvFocusRing
+import zechs.drive.stream.utils.ext.resolveThemeColor
 
 @AndroidEntryPoint
 class SettingsFragment : BaseFragment() {
@@ -198,6 +202,32 @@ class SettingsFragment : BaseFragment() {
         playbackDelegate.render(state)
         integrationsDelegate.render(state)
         dataSessionDelegate.render(state)
+
+        val previewAvatar = binding.root.findViewById<ImageView>(R.id.ivPreviewAvatar)
+        val previewName = binding.root.findViewById<TextView>(R.id.tvPreviewProfileName)
+        val previewLibrary = binding.root.findViewById<TextView>(R.id.tvPreviewLibrary)
+        state.activeProfile?.let { profile ->
+            previewName?.text = profile.name
+            if (previewAvatar != null) {
+                val avatarRes = viewModel.getAvatarDrawableRes(profile.avatarResName)
+                val avatarSource: Any? = profile.avatarUrl
+                    ?: if (profile.avatarResName == "avatar_caua") avatarRes
+                    else viewModel.profileArtCatalog.defaultAvatarForProfile(profile.id)?.url
+                Glide.with(previewAvatar)
+                    .load(avatarSource)
+                    .placeholder(
+                        avatarRes.takeIf { profile.avatarResName == "avatar_caua" }
+                            ?: R.drawable.avatar_caua
+                    )
+                    .error(R.drawable.avatar_caua)
+                    .circleCrop()
+                    .into(previewAvatar)
+            }
+        }
+        val effectiveLibrary = state.libraryRootName
+            ?: if (state.libraryRootId.isNullOrBlank()) getString(R.string.my_drive)
+            else state.libraryRootId
+        previewLibrary?.text = effectiveLibrary
     }
 
     private fun handleEffect(effect: SettingsUiEffect) {
@@ -286,6 +316,7 @@ class SettingsFragment : BaseFragment() {
                 setOnClickListener { selectSettingsCategory(index, categories) }
                 SingleTapActivation.install(this, disallowParentIntercept = false)
                 setOnFocusChangeListener { view, hasFocus ->
+                    updateCategoryButtonStyles(categories)
                     if (hasFocus) {
                         if (isVerticalMenu && selectedSettingsCategory != index) {
                             selectedSettingsCategory = index
@@ -295,7 +326,11 @@ class SettingsFragment : BaseFragment() {
                             updateSettingsFocusOrder()
                         }
                         if (!reduceMotionEnabled) {
-                            view.animate().scaleX(1.025f).scaleY(1.025f).setDuration(view.resources.getInteger(R.integer.motion_focus).toLong()).start()
+                            view.animate()
+                                .scaleX(1.025f)
+                                .scaleY(1.025f)
+                                .setDuration(view.resources.getInteger(R.integer.motion_focus).toLong())
+                                .start()
                         }
                     } else {
                         view.animate().cancel()
@@ -367,15 +402,34 @@ class SettingsFragment : BaseFragment() {
             if (selectedSettingsCategory == 1) R.string.settings_section_appearance
             else R.string.settings_section_profile
         )
+        updateCategoryButtonStyles(categories)
+    }
+
+    private fun updateCategoryButtonStyles(categories: List<SettingsCategory>) {
+        val ctx = requireContext()
+        val accentPrimary = ctx.resolveThemeColor(R.attr.colorAccentPrimary)
+        val onPrimary = ctx.resolveThemeColor(R.attr.colorOnPrimary)
+        val focusFill = ctx.resolveThemeColor(R.attr.colorFocusFill)
+        val bgGlass = ctx.resolveThemeColor(R.attr.colorBgGlass)
+        val borderGlass = ctx.resolveThemeColor(R.attr.colorBorderGlass)
+        val textPrimary = ctx.resolveThemeColor(R.attr.colorTextPrimary)
+
         categoryButtons.forEachIndexed { index, button ->
             val selected = index == selectedSettingsCategory
-            button.backgroundTintList = ColorStateList.valueOf(
-                Color.parseColor(if (selected) "#2630D5E8" else "#121A2633")
-            )
-            button.strokeColor = ColorStateList.valueOf(
-                Color.parseColor(if (selected) "#7430D5E8" else "#3B71849A")
-            )
-            button.setTextColor(Color.parseColor(if (selected) "#FF45DDF0" else "#FFE2EAF2"))
+            val isFocused = button.hasFocus()
+            if (isFocused) {
+                button.backgroundTintList = ColorStateList.valueOf(accentPrimary)
+                button.strokeColor = ColorStateList.valueOf(Color.WHITE)
+                button.setTextColor(onPrimary)
+            } else {
+                button.backgroundTintList = ColorStateList.valueOf(
+                    if (selected) focusFill else bgGlass
+                )
+                button.strokeColor = ColorStateList.valueOf(
+                    if (selected) accentPrimary else borderGlass
+                )
+                button.setTextColor(if (selected) accentPrimary else textPrimary)
+            }
             button.contentDescription = getString(
                 R.string.settings_category_accessibility,
                 getString(categories[index].labelRes),

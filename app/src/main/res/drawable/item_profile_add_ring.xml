@@ -2,32 +2,26 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_selected="true">
         <shape android:shape="oval">
-            <solid android:color="#2600C0FF" />
+            <solid android:color="?attr/colorBgSurface" />
             <stroke
-                android:width="3dp"
-                android:color="#00C0FF"
-                android:dashWidth="8dp"
-                android:dashGap="5dp" />
+                android:width="4dp"
+                android:color="?attr/colorAccentPrimary" />
         </shape>
     </item>
     <item android:state_focused="true">
         <shape android:shape="oval">
-            <solid android:color="#2600C0FF" />
+            <solid android:color="?attr/colorBgSurface" />
             <stroke
-                android:width="3dp"
-                android:color="#00C0FF"
-                android:dashWidth="8dp"
-                android:dashGap="5dp" />
+                android:width="4dp"
+                android:color="?attr/colorAccentPrimary" />
         </shape>
     </item>
     <item>
         <shape android:shape="oval">
-            <solid android:color="#0D00C0FF" />
+            <solid android:color="?attr/colorBgSurface" />
             <stroke
                 android:width="2dp"
-                android:color="#4D00C0FF"
-                android:dashWidth="8dp"
-                android:dashGap="5dp" />
+                android:color="#33FFFFFF" />
         </shape>
     </item>
 </selector>

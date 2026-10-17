@@ -36,6 +36,7 @@ import zechs.drive.stream.utils.FocusMemory
 import zechs.drive.stream.utils.SeasonEpisodeGrouper
 import zechs.drive.stream.utils.TvAccessibilityLayout
 import zechs.drive.stream.utils.VideoPlayer
+import zechs.drive.stream.utils.ext.navigateSafe
 import zechs.drive.stream.utils.state.Resource
 import zechs.drive.stream.utils.state.ResourceErrorKind
 
@@ -58,6 +59,12 @@ class FilesFragment : BaseFragment() {
 
     @javax.inject.Inject
     lateinit var tenraiService: dagger.Lazy<zechs.drive.stream.data.remote.TenraiAnimeService>
+
+    @javax.inject.Inject
+    lateinit var profileManager: zechs.drive.stream.utils.ProfileManager
+
+    @javax.inject.Inject
+    lateinit var profileArtCatalog: zechs.drive.stream.data.remote.ProfileArtCatalog
 
     private lateinit var stateHandler: FilesStateHandler
     private lateinit var paginationHandler: FilesPaginationHandler
@@ -169,7 +176,8 @@ class FilesFragment : BaseFragment() {
             tenraiService = tenraiService,
             lifecycleScope = viewLifecycleOwner.lifecycleScope,
             isFragmentAdded = { isAdded },
-            isLoadingProvider = { paginationHandler.isLoading }
+            isLoadingProvider = { paginationHandler.isLoading },
+            onListSubmitted = { focusFilesContent(forceToList = false) }
         )
 
         stateHandler = FilesStateHandler(
@@ -182,43 +190,317 @@ class FilesFragment : BaseFragment() {
         )
     }
 
+    private var isFilesRailExpanded = false
+    private var filesRailAnimator: android.animation.ValueAnimator? = null
+    private var filesRailFocusListener: android.view.ViewTreeObserver.OnGlobalFocusChangeListener? = null
+    private var hasRestoredInitialFocus = false
+
+    private fun focusFilesContent(forceToList: Boolean) {
+        if (_binding == null || !isAdded) return
+        val folderKey = args.folderPath?.lastOrNull() ?: args.name
+        val restored = FocusMemory.restore(binding.rvList, "files.folder.$folderKey") { pos ->
+            (filesAdapter.currentList.getOrNull(pos) as? FilesDataModel.File)?.driveFile?.id
+        }
+        if (restored) {
+            hasRestoredInitialFocus = true
+            return
+        }
+        val canAutoFocusList = !hasRestoredInitialFocus &&
+            (binding.etSearch.hasFocus() || binding.root.findFocus() == null) &&
+            binding.etSearch.text.isNullOrEmpty()
+        if (filesAdapter.currentList.isNotEmpty() && (forceToList || canAutoFocusList)) {
+            hasRestoredInitialFocus = true
+            val targetPos = (viewModel.lastFocusedPosition ?: 0).coerceIn(0, filesAdapter.currentList.size - 1)
+            binding.rvList.scrollToPosition(targetPos)
+            binding.rvList.post {
+                if (_binding == null) return@post
+                (binding.rvList.findViewHolderForAdapterPosition(targetPos)?.itemView
+                    ?: binding.rvList.getChildAt(0))?.requestFocus()
+            }
+        } else if (forceToList) {
+            binding.etSearch.requestFocus()
+        }
+    }
+
+    private fun isFocusInRail(currentFocus: View?): Boolean {
+        if (currentFocus == null) return false
+        val root = _binding?.root ?: return false
+        val rail = root.findViewById<View>(R.id.filesNavRail) ?: return false
+        var view: View? = currentFocus
+        while (view != null) {
+            if (view === rail) return true
+            view = view.parent as? View
+        }
+        return false
+    }
+
     private fun setupNavRail() {
+        val rail = binding.root.findViewById<View>(R.id.filesNavRail) ?: return
+        val dimOverlay = binding.root.findViewById<View>(R.id.filesSidebarDimOverlay)
+        val isTenFoot = zechs.drive.stream.utils.DeviceUi.isTenFootExperience(requireContext())
+
         fun returnHome(tab: String) {
             val nav = findNavController()
             nav.getBackStackEntry(R.id.homeFragment).savedStateHandle["homeTab"] = tab
             nav.popBackStack(R.id.homeFragment, false)
         }
+
+        val collapsedPx = resources.getDimensionPixelSize(R.dimen.tv_nav_rail_width)
+        val expandedPx = resources.getDimensionPixelSize(R.dimen.tv_nav_rail_expanded_width)
+
+        val normalTextColor = androidx.core.content.ContextCompat.getColor(requireContext(), R.color.obsidian_text_secondary)
+        val activeTextColor = androidx.core.content.ContextCompat.getColor(requireContext(), R.color.obsidian_text_primary)
+        val typedValue = android.util.TypedValue()
+        val activeAccentColor = if (requireContext().theme.resolveAttribute(R.attr.colorAccentPrimary, typedValue, true)) {
+            typedValue.data
+        } else {
+            androidx.core.content.ContextCompat.getColor(requireContext(), R.color.crunchyroll_accent_primary)
+        }
+        val focusedDarkColor = if (requireContext().theme.resolveAttribute(R.attr.colorOnPrimary, typedValue, true)) {
+            typedValue.data
+        } else {
+            android.graphics.Color.parseColor("#07080B")
+        }
+        val focusedDarkSubtitleColor = android.graphics.Color.parseColor("#1E293B")
+
+        fun updateFilesRailStyles() {
+            val root = _binding?.root ?: return
+            val userProfilePill = root.findViewById<View>(R.id.userProfilePill)
+            val profileFocused = userProfilePill?.hasFocus() == true
+            root.findViewById<TextView>(R.id.tvUserName)?.setTextColor(
+                if (profileFocused) focusedDarkColor else activeTextColor
+            )
+            root.findViewById<TextView>(R.id.tvSwitchProfileSubtitle)?.setTextColor(
+                if (profileFocused) focusedDarkSubtitleColor else normalTextColor
+            )
+            userProfilePill?.setBackgroundResource(
+                if (profileFocused) R.drawable.rail_item_focus_bg else android.R.color.transparent
+            )
+
+            fun styleItem(containerId: Int, labelId: Int, iconId: Int, isActive: Boolean) {
+                val container = root.findViewById<View>(containerId) ?: return
+                val label = root.findViewById<TextView>(labelId)
+                val icon = root.findViewById<android.widget.ImageView>(iconId)
+                val isFocused = container.hasFocus()
+
+                container.isSelected = isActive
+                container.setBackgroundResource(
+                    when {
+                        isFocused -> R.drawable.rail_item_focus_bg
+                        isActive -> R.drawable.nav_item_active_bg
+                        else -> R.drawable.rail_item_focus_bg
+                    }
+                )
+
+                val textColor = when {
+                    isFocused -> focusedDarkColor
+                    isActive -> activeTextColor
+                    else -> normalTextColor
+                }
+                val iconColor = when {
+                    isFocused -> focusedDarkColor
+                    isActive -> activeAccentColor
+                    else -> normalTextColor
+                }
+                label?.setTextColor(textColor)
+                icon?.imageTintList = android.content.res.ColorStateList.valueOf(iconColor)
+            }
+
+            styleItem(R.id.filesHome, R.id.tvFilesHome, R.id.ivFilesHomeIcon, false)
+            styleItem(R.id.filesFavorites, R.id.tvFilesFavorites, R.id.ivFilesFavoritesIcon, false)
+            styleItem(R.id.filesCatalog, R.id.tvFilesCatalog, R.id.ivFilesCatalogIcon, false)
+            styleItem(R.id.filesFilmes, R.id.tvFilesFilmes, R.id.ivFilesFilmesIcon, false)
+            styleItem(R.id.filesFolders, R.id.tvFilesFolders, R.id.ivFilesFoldersIcon, true)
+            styleItem(R.id.filesSettings, R.id.tvFilesSettings, R.id.ivFilesSettingsIcon, false)
+        }
+
+        fun setLabelsVisible(visible: Boolean) {
+            val root = _binding?.root ?: return
+            val v = if (visible) View.VISIBLE else View.GONE
+            listOf(
+                R.id.tvBrandLogoText,
+                R.id.tvUserName,
+                R.id.tvSwitchProfileSubtitle,
+                R.id.tvFilesHome,
+                R.id.tvFilesFavorites,
+                R.id.tvFilesCatalog,
+                R.id.tvFilesFilmes,
+                R.id.tvFilesFolders,
+                R.id.tvFilesSettings
+            ).forEach { id ->
+                root.findViewById<View>(id)?.visibility = v
+            }
+            updateFilesRailStyles()
+        }
+
+        fun expandRail() {
+            if (!isTenFoot || isFilesRailExpanded) return
+            isFilesRailExpanded = true
+            rail.setBackgroundResource(R.drawable.bg_sidebar_panel_expanded)
+            dimOverlay?.apply {
+                animate().cancel()
+                visibility = View.VISIBLE
+                animate()
+                    .alpha(1f)
+                    .setDuration(220L)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator())
+                    .start()
+            }
+            filesRailAnimator?.cancel()
+            val currentWidth = rail.layoutParams.width.takeIf { it > 0 } ?: collapsedPx
+            filesRailAnimator = android.animation.ValueAnimator.ofInt(currentWidth, expandedPx).apply {
+                duration = 220L
+                interpolator = android.view.animation.DecelerateInterpolator()
+                addUpdateListener { anim ->
+                    rail.layoutParams.width = anim.animatedValue as Int
+                    rail.requestLayout()
+                }
+                addListener(object : android.animation.AnimatorListenerAdapter() {
+                    override fun onAnimationStart(animation: android.animation.Animator) {
+                        setLabelsVisible(true)
+                    }
+                    override fun onAnimationEnd(animation: android.animation.Animator) {
+                        rail.layoutParams.width = expandedPx
+                        rail.requestLayout()
+                    }
+                })
+                start()
+            }
+        }
+
+        fun collapseRail() {
+            if (!isTenFoot || !isFilesRailExpanded) return
+            isFilesRailExpanded = false
+            dimOverlay?.apply {
+                animate().cancel()
+                animate()
+                    .alpha(0f)
+                    .setDuration(200L)
+                    .setInterpolator(android.view.animation.AccelerateInterpolator())
+                    .withEndAction { visibility = View.GONE }
+                    .start()
+            }
+            filesRailAnimator?.cancel()
+            val currentWidth = rail.layoutParams.width.takeIf { it > 0 } ?: expandedPx
+            filesRailAnimator = android.animation.ValueAnimator.ofInt(currentWidth, collapsedPx).apply {
+                duration = 200L
+                interpolator = android.view.animation.AccelerateInterpolator()
+                addUpdateListener { anim ->
+                    rail.layoutParams.width = anim.animatedValue as Int
+                    rail.requestLayout()
+                }
+                addListener(object : android.animation.AnimatorListenerAdapter() {
+                    override fun onAnimationStart(animation: android.animation.Animator) {
+                        setLabelsVisible(false)
+                    }
+                    override fun onAnimationEnd(animation: android.animation.Animator) {
+                        rail.layoutParams.width = collapsedPx
+                        rail.requestLayout()
+                        if (!isFilesRailExpanded) {
+                            rail.setBackgroundResource(R.drawable.bg_sidebar_panel)
+                        }
+                    }
+                })
+                start()
+            }
+        }
+
+        dimOverlay?.setOnClickListener { collapseRail() }
+
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (isFilesRailExpanded) {
+                    collapseRail()
+                    binding.rvList.requestFocus()
+                } else {
+                    isEnabled = false
+                    requireActivity().onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
+
         binding.root.findViewById<View>(R.id.filesHome)?.setOnClickListener { returnHome("Início") }
-        binding.root.findViewById<View>(R.id.filesBrand)?.setOnClickListener { returnHome("Início") }
         binding.root.findViewById<View>(R.id.filesCatalog)?.setOnClickListener { returnHome("Animes") }
         binding.root.findViewById<View>(R.id.filesFilmes)?.setOnClickListener { returnHome("Filmes") }
         binding.root.findViewById<View>(R.id.filesFavorites)?.setOnClickListener { returnHome("Favoritos") }
-        binding.root.findViewById<View>(R.id.filesFolders)?.setOnClickListener { binding.etSearch.requestFocus() }
+        binding.root.findViewById<View>(R.id.filesFolders)?.setOnClickListener {
+            collapseRail()
+            focusFilesContent(forceToList = true)
+        }
         binding.root.findViewById<View>(R.id.userProfilePill)?.setOnClickListener {
-            findNavController().navigate(R.id.profileSelectionFragment)
+            findNavController().navigateSafe(R.id.action_filesFragment_to_profileSelectionFragment)
         }
         binding.root.findViewById<View>(R.id.filesSettings)?.setOnClickListener {
-            findNavController().navigate(R.id.settingsFragment)
+            findNavController().navigateSafe(R.id.action_filesFragment_to_settingsFragment)
         }
 
         val navItems = listOfNotNull(
-            binding.root.findViewById<View>(R.id.filesBrand),
+            binding.root.findViewById<View>(R.id.userProfilePill),
             binding.root.findViewById<View>(R.id.filesHome),
+            binding.root.findViewById<View>(R.id.filesFavorites),
             binding.root.findViewById<View>(R.id.filesCatalog),
             binding.root.findViewById<View>(R.id.filesFilmes),
             binding.root.findViewById<View>(R.id.filesFolders),
-            binding.root.findViewById<View>(R.id.filesFavorites),
-            binding.root.findViewById<View>(R.id.userProfilePill),
             binding.root.findViewById<View>(R.id.filesSettings)
         )
-        navItems.forEach { item ->
+        navItems.forEachIndexed { index, item ->
+            item.nextFocusUpId = navItems.getOrNull(index - 1)?.id ?: item.id
+            item.nextFocusDownId = navItems.getOrNull(index + 1)?.id ?: item.id
+            item.nextFocusLeftId = item.id
+            item.setOnFocusChangeListener { _, _ ->
+                updateFilesRailStyles()
+            }
             item.setOnKeyListener { _, keyCode, event ->
                 if (event.action == android.view.KeyEvent.ACTION_DOWN && keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) {
-                    binding.etSearch.requestFocus()
+                    collapseRail()
+                    focusFilesContent(forceToList = true)
                     true
                 } else false
             }
         }
+
+        if (isTenFoot) {
+            val listener = android.view.ViewTreeObserver.OnGlobalFocusChangeListener { oldFocus, newFocus ->
+                if (_binding == null) return@OnGlobalFocusChangeListener
+                val wasInRail = isFocusInRail(oldFocus)
+                val isInRail = isFocusInRail(newFocus)
+                if (!wasInRail && isInRail) {
+                    expandRail()
+                } else if (wasInRail && !isInRail) {
+                    collapseRail()
+                }
+                updateFilesRailStyles()
+            }
+            filesRailFocusListener = listener
+            binding.root.viewTreeObserver.addOnGlobalFocusChangeListener(listener)
+        }
+
+        // Observe active profile for avatar & name
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                profileManager.activeProfileFlow.collect { profile ->
+                    binding.root.findViewById<TextView>(R.id.tvUserName)?.text = profile.name
+                    val avatarRes = profileManager.getAvatarDrawableRes(profile.avatarResName)
+                    val avatarSource: Any? = profile.avatarUrl
+                        ?: if (profile.avatarResName == "avatar_caua") avatarRes
+                        else profileArtCatalog.defaultAvatarForProfile(profile.id)?.url
+                    binding.root.findViewById<android.widget.ImageView>(R.id.ivUserAvatar)?.let { avatar ->
+                        avatar.imageTintList = null
+                        avatar.clearColorFilter()
+                        com.bumptech.glide.Glide.with(this@FilesFragment)
+                            .load(avatarSource)
+                            .placeholder(R.drawable.avatar_caua)
+                            .error(R.drawable.avatar_caua)
+                            .circleCrop()
+                            .into(avatar)
+                    }
+                }
+            }
+        }
+
+        updateFilesRailStyles()
     }
 
     override fun onStart() {
@@ -249,25 +531,24 @@ class FilesFragment : BaseFragment() {
     }
 
     private fun setupFilesFocusNavigation() {
+        val filesFolders = binding.root.findViewById<View>(R.id.filesFolders)
         binding.rvList.isFocusable = true
         binding.etSearch.nextFocusDownId = binding.rvList.id
+        if (filesFolders != null) {
+            binding.etSearch.nextFocusLeftId = filesFolders.id
+        }
         binding.btnClearSearch.nextFocusDownId = binding.rvList.id
         binding.btnToggleGrid.nextFocusDownId = binding.rvList.id
         binding.rvList.addOnChildAttachStateChangeListener(object : RecyclerView.OnChildAttachStateChangeListener {
             override fun onChildViewAttachedToWindow(view: View) {
                 val position = binding.rvList.getChildAdapterPosition(view)
-                val firstRowSize = (binding.rvList.layoutManager as? androidx.recyclerview.widget.GridLayoutManager)
+                val spanCount = (binding.rvList.layoutManager as? androidx.recyclerview.widget.GridLayoutManager)
                     ?.spanCount ?: 1
-                if (position in 0 until firstRowSize) {
+                if (position in 0 until spanCount) {
                     view.nextFocusUpId = binding.etSearch.id
                 }
-                view.setOnFocusChangeListener { _, hasFocus ->
-                    if (hasFocus) {
-                        val pos = binding.rvList.getChildAdapterPosition(view)
-                        if (pos != RecyclerView.NO_POSITION) {
-                            viewModel.onEvent(FilesEvent.SaveFocus(pos))
-                        }
-                    }
+                if (filesFolders != null && position >= 0 && position % spanCount == 0) {
+                    view.nextFocusLeftId = filesFolders.id
                 }
             }
 
@@ -516,12 +797,22 @@ class FilesFragment : BaseFragment() {
         filesAdapter.onFocusItemListener = { focusedView ->
             val position = binding.rvList.getChildAdapterPosition(focusedView)
             if (position != RecyclerView.NO_POSITION) {
+                viewModel.onEvent(FilesEvent.SaveFocus(position))
                 (filesAdapter.currentList.getOrNull(position) as? FilesDataModel.File)?.let { fileModel ->
                     val folderKey = args.folderPath?.lastOrNull() ?: args.name
                     FocusMemory.remember("files.folder.$folderKey", position, fileModel.driveFile.id)
                 }
                 paginationHandler.handleDpadFocusNearEnd(position)
             }
+        }
+        filesAdapter.onDpadLeftListener = { itemView ->
+            val pos = binding.rvList.getChildAdapterPosition(itemView)
+            val span = (binding.rvList.layoutManager as? androidx.recyclerview.widget.GridLayoutManager)?.spanCount ?: 1
+            val filesFolders = _binding?.root?.findViewById<View>(R.id.filesFolders)
+            if (filesFolders != null && pos != RecyclerView.NO_POSITION && pos % span == 0) {
+                filesFolders.requestFocus()
+                true
+            } else false
         }
         searchFilterHandler.updateLayoutMode()
     }
@@ -543,15 +834,21 @@ class FilesFragment : BaseFragment() {
     override fun onResume() {
         super.onResume()
         if (_binding != null) {
-            val folderKey = args.folderPath?.lastOrNull() ?: args.name
-            FocusMemory.restore(binding.rvList, "files.folder.$folderKey") { pos ->
-                (filesAdapter.currentList.getOrNull(pos) as? FilesDataModel.File)?.driveFile?.id
-            }
+            focusFilesContent(forceToList = false)
         }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        filesRailFocusListener?.let { listener ->
+            if (binding.root.viewTreeObserver.isAlive) {
+                binding.root.viewTreeObserver.removeOnGlobalFocusChangeListener(listener)
+            }
+        }
+        filesRailFocusListener = null
+        filesRailAnimator?.cancel()
+        filesRailAnimator = null
+        hasRestoredInitialFocus = false
         stateHandler.destroy()
         binding.rvList.adapter = null
         _binding = null

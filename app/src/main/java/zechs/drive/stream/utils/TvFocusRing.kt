@@ -68,7 +68,7 @@ object TvFocusRing {
             ) {
                 return false
             }
-            if (v.id == R.id.player_view || v.id == R.id.etSearchAnime) return false
+            if (v.id == R.id.player_view || v.id == R.id.etSearchAnime || v.id == R.id.etSearch) return false
             // FocusEngine provides motion/depth, not a visible outline. Keep the shared ring for
             // its targets unless their own background already declares a focused state.
             // Profile cards are excluded above because their circular avatar owns the indicator.

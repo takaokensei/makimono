@@ -7,6 +7,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavController
 import com.bumptech.glide.Glide
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import zechs.drive.stream.R
 import zechs.drive.stream.data.model.DriveFile
@@ -43,6 +46,9 @@ class HeroController(
     private var featuredPreviewScheduler: FeaturedPreviewScheduler? = null
     private var featuredHeroBinder: FeaturedHeroBinder? = null
 
+    private var heroAutoCycleJob: Job? = null
+    private var activeTabProvider: (() -> String)? = null
+
     fun setup(hasOverlay: Boolean) {
         featuredHeroBinder = FeaturedHeroBinder(
             binding = binding,
@@ -57,6 +63,12 @@ class HeroController(
 
         binding.btnFeaturedPlay?.setOnFocusChangeListener { v, hasFocus ->
             animateFocus(v, hasFocus, 1.03f, 6f)
+            if (hasFocus) {
+                viewModel.clearFocusedFeaturedFolder()
+                viewModel.clearSavedShelfFocus()
+                binding.contentScrollView.smoothScrollTo(0, 0)
+                activeTabProvider?.let { startHeroAutoCycle(it) }
+            }
         }
 
         binding.btnFeaturedPlay?.setOnKeyListener { _, keyCode, event ->
@@ -68,6 +80,12 @@ class HeroController(
 
         binding.btnFeaturedInfo?.setOnFocusChangeListener { v, hasFocus ->
             animateFocus(v, hasFocus, 1.03f, 6f)
+            if (hasFocus) {
+                viewModel.clearFocusedFeaturedFolder()
+                viewModel.clearSavedShelfFocus()
+                binding.contentScrollView.smoothScrollTo(0, 0)
+                activeTabProvider?.let { startHeroAutoCycle(it) }
+            }
         }
 
         binding.userProfilePill?.setOnClickListener {
@@ -97,6 +115,8 @@ class HeroController(
         }
     }
 
+    private var hadSavedFocusOnCreate: Boolean = false
+
     fun focusHeroOnFirstShow(isCollapsible: Boolean) {
         if (heroAutoFocused || isCollapsible) return
         heroAutoFocused = true
@@ -109,7 +129,13 @@ class HeroController(
                 if (currentParent === rail) insideRail = true
                 currentParent = currentParent.parent
             }
-            if (insideRail) binding.btnFeaturedPlay?.requestFocus()
+            if (insideRail || !hadSavedFocusOnCreate) {
+                if (!hadSavedFocusOnCreate) {
+                    viewModel.onEvent(zechs.drive.stream.ui.home.HomeEvent.SaveFocus(null, null))
+                }
+                binding.contentScrollView.scrollTo(0, 0)
+                binding.btnFeaturedPlay?.requestFocus()
+            }
         }
     }
 
@@ -118,6 +144,18 @@ class HeroController(
         reduceMotionEnabled: Boolean,
         isCollapsible: Boolean
     ) {
+        this.activeTabProvider = currentTabProvider
+        val initialState = viewModel.uiState.value
+        hadSavedFocusOnCreate = initialState is zechs.drive.stream.ui.home.HomeUiState.Content &&
+            initialState.lastFocusedShelfIndex != null
+        // Synchronously restore Hero visibility if featuredAnime is already in memory (e.g. when returning from SeriesDetailFragment)
+        val initialFeatured = viewModel.featuredAnime.value
+        if (initialFeatured != null && currentTabProvider() == "Início") {
+            binding.featuredHeroContainer?.visibility = View.VISIBLE
+            binding.layoutHomeEmpty?.visibility = View.GONE
+            featuredHeroBinder?.bind(initialFeatured, reduceMotionEnabled)
+        }
+        startHeroAutoCycle(currentTabProvider)
         lifecycleOwner.lifecycleScope.launch {
             lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.featuredAnime.collect { featured ->
@@ -172,6 +210,36 @@ class HeroController(
                             val hasLibrary = viewModel.animeLibrary.value.isNotEmpty()
                             binding.layoutHomeEmpty?.visibility = if (!hasRecent && !hasLibrary) View.VISIBLE else View.GONE
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    fun startHeroAutoCycle(currentTabProvider: () -> String) {
+        heroAutoCycleJob?.cancel()
+        heroAutoCycleJob = lifecycleOwner.lifecycleScope.launch {
+            lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                while (isActive) {
+                    delay(8500L)
+                    val focused = binding.root.findFocus()
+                    val isHeroFocused = focused === binding.btnFeaturedPlay || focused === binding.btnFeaturedInfo
+                    val rail = binding.root.findViewById<View>(R.id.navRail)
+                    val isRailFocused = focused != null && rail != null && run {
+                        var p: android.view.ViewParent? = focused.parent
+                        var inside = false
+                        while (p != null) {
+                            if (p === rail) {
+                                inside = true
+                                break
+                            }
+                            p = p.parent
+                        }
+                        inside
+                    }
+
+                    if (currentTabProvider() == "Início" && (isHeroFocused || isRailFocused) && !viewModel.isFocusPreviewActive) {
+                        viewModel.cycleNextFeaturedSpotlight()
                     }
                 }
             }

@@ -350,7 +350,7 @@
         <item quantity="other">%1$d episódios</item>
     </plurals>
     <string name="home_featured_score">★ %1$.1f</string>
-    <string name="home_featured_separator"> · </string>
+    <string name="home_featured_separator">&#160;♦&#160;</string>
     <string name="home_continue_at">Continuar de %1$s</string>
     <string name="home_restart_at_zero">Recomeçar do início (0:00)</string>
     <string name="home_open_series">Ir para a série</string>

@@ -164,61 +164,100 @@ class SeriesDetailFragment : BaseFragment() {
     }
 
     private fun setupFocusAnimations() {
-        val actionButtons = listOf(
+        val heroButtons = listOf(
             binding.btnPrimaryAction,
             binding.btnFavorite,
             binding.btnMoreActions,
+            binding.btnMarkWatched
+        )
+        val headerButtons = listOf(
             binding.btnBack,
             binding.btnSearch
         )
 
-        for (btn in actionButtons) {
+        for (btn in heroButtons + headerButtons) {
             FocusEngine.attach(btn, FocusEngine.FocusKind.BUTTON)
+            btn.setOnFocusChangeListener { _, hasFocus ->
+                if (hasFocus && binding.tvSynopsis.maxLines <= 8 && binding.scrollView.scrollY > 0) {
+                    binding.scrollView.smoothScrollTo(0, 0)
+                }
+            }
         }
     }
 
     private fun setupFocusChain() {
         if (!DeviceUi.isTenFootExperience(requireContext())) return
+        val hasTopHeader = binding.topHeaderBar.visibility == View.VISIBLE
 
         // Define focus chain for action buttons
-        binding.btnBack.nextFocusRightId = binding.btnSearch.id
-        binding.btnSearch.nextFocusRightId = binding.btnPrimaryAction.id
+        if (hasTopHeader) {
+            binding.btnBack.nextFocusRightId = binding.btnSearch.id
+            binding.btnSearch.nextFocusRightId = binding.btnPrimaryAction.id
+            binding.btnSearch.nextFocusLeftId = binding.btnBack.id
+        }
         binding.btnPrimaryAction.nextFocusRightId = binding.btnFavorite.id
         binding.btnFavorite.nextFocusRightId = binding.btnMoreActions.id
+        binding.btnMoreActions.nextFocusRightId = binding.btnMarkWatched.id
 
         // Reverse direction
+        binding.btnMarkWatched.nextFocusLeftId = binding.btnMoreActions.id
         binding.btnMoreActions.nextFocusLeftId = binding.btnFavorite.id
         binding.btnFavorite.nextFocusLeftId = binding.btnPrimaryAction.id
-        binding.btnPrimaryAction.nextFocusLeftId = binding.btnSearch.id
-        binding.btnSearch.nextFocusLeftId = binding.btnBack.id
+        binding.btnPrimaryAction.nextFocusLeftId =
+            if (hasTopHeader) binding.btnSearch.id else binding.btnPrimaryAction.id
 
         updateFocusChain(isMovie = false, hasSeasonTabs = true)
     }
 
     private fun updateFocusChain(isMovie: Boolean, hasSeasonTabs: Boolean) {
         if (!DeviceUi.isTenFootExperience(requireContext())) return
+        val hasTopHeader = binding.topHeaderBar.visibility == View.VISIBLE
         val downTarget = when {
             isMovie -> View.NO_ID
             hasSeasonTabs -> binding.rvSeasonTabs.id
             else -> binding.rvEpisodes.id
         }
-        listOf(binding.btnPrimaryAction, binding.btnFavorite, binding.btnMoreActions).forEach {
+        val upTarget = when {
+            binding.tvSynopsisMore.visibility == View.VISIBLE -> binding.tvSynopsisMore.id
+            hasTopHeader -> binding.btnBack.id
+            else -> View.NO_ID
+        }
+        listOf(
+            binding.btnPrimaryAction,
+            binding.btnFavorite,
+            binding.btnMoreActions,
+            binding.btnMarkWatched
+        ).forEach {
             it.nextFocusDownId = downTarget
-            it.nextFocusUpId = binding.btnBack.id
+            it.nextFocusUpId = upTarget
         }
         if (!isMovie) {
-            binding.rvSeasonTabs.nextFocusUpId = binding.btnMoreActions.id
+            binding.rvSeasonTabs.nextFocusUpId = binding.btnPrimaryAction.id
             binding.rvSeasonTabs.nextFocusDownId = binding.rvEpisodes.id
             binding.rvEpisodes.nextFocusUpId = downTarget
         }
     }
 
     private fun updateSynopsisFocusChain(hasDisclosure: Boolean) {
-        val upTarget = if (hasDisclosure) binding.tvSynopsisMore.id else binding.btnBack.id
-        listOf(binding.btnPrimaryAction, binding.btnFavorite, binding.btnMoreActions)
-            .forEach { it.nextFocusUpId = upTarget }
-        binding.tvSynopsisMore.nextFocusUpId = binding.btnBack.id
-        binding.tvSynopsisMore.nextFocusDownId = binding.btnPrimaryAction.id
+        val b = _binding ?: return
+        val hasTopHeader = b.topHeaderBar.visibility == View.VISIBLE
+        val headerTarget = if (hasTopHeader) b.btnBack.id else View.NO_ID
+        val upTarget = if (hasDisclosure) b.tvSynopsisMore.id else headerTarget
+        listOf(
+            b.btnPrimaryAction,
+            b.btnFavorite,
+            b.btnMoreActions,
+            b.btnMarkWatched
+        ).forEach { it.nextFocusUpId = upTarget }
+        b.tvSynopsisMore.nextFocusUpId = headerTarget
+        b.tvSynopsisMore.nextFocusDownId = b.btnPrimaryAction.id
+        b.btnPrimaryAction.post {
+            val currentBinding = _binding ?: return@post
+            if (currentBinding.root.findFocus() == null) {
+                currentBinding.scrollView.scrollTo(0, 0)
+                currentBinding.btnPrimaryAction.requestFocus()
+            }
+        }
     }
 
     private fun observeUiState() {
@@ -300,8 +339,10 @@ class SeriesDetailFragment : BaseFragment() {
             MediaImageLoader.poster(binding.ivSeriesPosterCard, sharpPoster)
         }
 
-        // Ambient Backdrop (Banner only, avoid stretching sharp vertical poster as backdrop)
-        val bannerOrBackdrop = state.aniListMetadata?.bannerUrl ?: state.fallbackPosterUrl
+        // Ambient Backdrop (use banner first, fallback to poster so TV backdrop is never empty)
+        val bannerOrBackdrop = state.aniListMetadata?.bannerUrl
+            ?: state.fallbackPosterUrl
+            ?: sharpPoster
         if (!bannerOrBackdrop.isNullOrBlank()) {
             MediaImageLoader.backdrop(binding.ivHeroBackdrop, bannerOrBackdrop)
         } else {
@@ -332,6 +373,7 @@ class SeriesDetailFragment : BaseFragment() {
         }
 
         val isMovie = state.isMovie
+        val isTenFoot = DeviceUi.isTenFootExperience(requireContext())
         binding.tvBreadcrumbRoot.text = if (isMovie) {
             getString(R.string.movies)
         } else {
@@ -340,8 +382,12 @@ class SeriesDetailFragment : BaseFragment() {
 
         // 2. Titles Block
         val isMovieOrNonAnime = isMovie || state.aniListMetadata?.isAnime == false
-        val japaneseTitle = if (isMovieOrNonAnime) null else (state.aniListMetadata?.titleNative ?: state.animeEntry?.titleJapanese)
-        if (!japaneseTitle.isNullOrBlank()) {
+        val japaneseTitle = if (isMovieOrNonAnime) {
+            null
+        } else {
+            state.aniListMetadata?.titleNative ?: state.animeEntry?.titleJapanese
+        }
+        if (!isTenFoot && !japaneseTitle.isNullOrBlank()) {
             binding.tvJapaneseTitle.visibility = View.VISIBLE
             binding.tvJapaneseTitle.text = japaneseTitle
         } else {
@@ -358,10 +404,13 @@ class SeriesDetailFragment : BaseFragment() {
             ?: state.animeEntry?.titleEnglish
             ?: canonicalTitle
         binding.tvEnglishSubtitle.text = englishSubtitle
-        binding.tvEnglishSubtitle.visibility = if (englishSubtitle.isNotBlank() && !englishSubtitle.equals(canonicalTitle, true) && !englishSubtitle.equals(japaneseTitle, true)) View.VISIBLE else View.GONE
+        val showEnglishSubtitle = !isTenFoot && englishSubtitle.isNotBlank() &&
+            !englishSubtitle.equals(canonicalTitle, true) &&
+            !englishSubtitle.equals(japaneseTitle, true)
+        binding.tvEnglishSubtitle.visibility = if (showEnglishSubtitle) View.VISIBLE else View.GONE
 
         // 3. Meta Row 1
-        val ageRating = formatRating(state.animeEntry?.rating)
+        val ageRating = formatRating(state.animeEntry?.rating) ?: if (isTenFoot && !isMovie) "A14" else null
         if (ageRating != null) {
             binding.tvAgeRating.visibility = View.VISIBLE
             binding.tvAgeRating.text = ageRating
@@ -391,7 +440,10 @@ class SeriesDetailFragment : BaseFragment() {
 
         val scoreVal = state.aniListMetadata?.score ?: state.animeEntry?.score
         binding.layoutRating.visibility = if (scoreVal != null) View.VISIBLE else View.GONE
-        binding.metaRow1.visibility = if (ageRating != null || releaseYear != null || airingStatusLabel != null || scoreVal != null) View.VISIBLE else View.GONE
+        val genres = state.aniListMetadata?.genres ?: state.animeEntry?.genres.orEmpty()
+        val hasMetaRow1 = ageRating != null || releaseYear != null ||
+            airingStatusLabel != null || scoreVal != null || genres.isNotEmpty()
+        binding.metaRow1.visibility = if (hasMetaRow1) View.VISIBLE else View.GONE
         if (scoreVal != null) {
             binding.tvMalScore.visibility = View.VISIBLE
             binding.tvMalScore.text = String.format(Locale.US, "%.1f", scoreVal)
@@ -427,10 +479,10 @@ class SeriesDetailFragment : BaseFragment() {
         ) View.VISIBLE else View.GONE
 
         // Genres Row
-        val genres = state.aniListMetadata?.genres ?: state.animeEntry?.genres.orEmpty()
         if (genres.isNotEmpty()) {
             binding.tvGenres?.visibility = View.VISIBLE
-            binding.tvGenres?.text = genres.take(4).joinToString(" • ")
+            val joinedGenres = genres.take(4).joinToString(if (isTenFoot) ", " else " • ")
+            binding.tvGenres?.text = if (isTenFoot) "♦  Legendado  ♦  $joinedGenres" else joinedGenres
         } else {
             binding.tvGenres?.visibility = View.GONE
         }
@@ -522,7 +574,7 @@ class SeriesDetailFragment : BaseFragment() {
 
         updateFocusChain(isMovie, hasSeasonTabs = !isMovie && state.seasonTabs.isNotEmpty())
 
-        // Do not steal focus again when the metadata enrichment state arrives.
+        // Do not steal focus again when the metadata enrichment state arrives, unless focus was lost.
         if (!hasRestoredInitialFocus) {
             hasRestoredInitialFocus = true
             val viewModelFocusRestored = viewModel.lastFocusedPosition?.let { pos ->
@@ -535,7 +587,19 @@ class SeriesDetailFragment : BaseFragment() {
                 episodeAdapter.currentList.getOrNull(pos)?.file?.id
             }
             if (!restored) {
-                binding.btnPrimaryAction.post { binding.btnPrimaryAction.requestFocus() }
+                binding.btnPrimaryAction.post {
+                    val currentBinding = _binding ?: return@post
+                    currentBinding.scrollView.scrollTo(0, 0)
+                    currentBinding.btnPrimaryAction.requestFocus()
+                }
+            }
+        } else if (binding.root.findFocus() == null) {
+            binding.btnPrimaryAction.post {
+                val currentBinding = _binding ?: return@post
+                if (currentBinding.root.findFocus() == null) {
+                    currentBinding.scrollView.scrollTo(0, 0)
+                    currentBinding.btnPrimaryAction.requestFocus()
+                }
             }
         }
     }
@@ -560,12 +624,7 @@ class SeriesDetailFragment : BaseFragment() {
         binding.tvFollowText.setText(
             if (isFollowed) R.string.series_action_following else R.string.series_action_follow
         )
-        binding.ivFollowIcon.setColorFilter(
-            ContextCompat.getColor(
-                requireContext(),
-                if (isFollowed) R.color.cyan_400 else R.color.textColor
-            )
-        )
+        binding.ivFollowIcon.clearColorFilter()
     }
 
     private fun showEpisodeContextMenu(item: SeriesEpisodeItem, focusAnchor: View) {

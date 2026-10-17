@@ -77,6 +77,8 @@ object FocusMemory {
         idOf: (position: Int) -> String?
     ): Boolean {
         val lastId = get(key)
+        val lastIndex = getRememberedIndex(key)
+        if (lastId == null && lastIndex == null) return false
         val adapter = recycler.adapter ?: return false
         val itemCount = adapter.itemCount
         if (itemCount <= 0) return false

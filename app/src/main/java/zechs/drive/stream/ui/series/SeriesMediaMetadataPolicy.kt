@@ -32,6 +32,7 @@ internal object SeriesMediaMetadataPolicy {
     )
     private val dualAudioTag = Regex("(?iu)(?<![a-z0-9])dual[ ._-]?(?:audio|áudio)(?![a-z0-9])")
     private val ptBrAudioTag = Regex("(?i)(?<![a-z0-9])pt[ ._-]?br(?![a-z0-9])")
+    private val dubladoTag = Regex("(?iu)(?<![a-z0-9])(?:dublado|dub)(?![a-z0-9])")
     private val subtitleTag = Regex("(?i)(?<![a-z0-9])(?:multi[ ._-]?subs?|subtitles?|legendado|legendas)(?![a-z0-9])")
 
     fun quality(fileNames: List<String>, listingComplete: Boolean): MediaFact? {
@@ -68,6 +69,7 @@ internal object SeriesMediaMetadataPolicy {
     fun audioLabelForFile(fileName: String): String? = when {
         dualAudioTag.containsMatchIn(fileName) -> "Dual Áudio"
         ptBrAudioTag.containsMatchIn(fileName) -> "PT-BR"
+        dubladoTag.containsMatchIn(fileName) -> "Dublado"
         else -> null
     }
 

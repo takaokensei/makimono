@@ -1,6 +1,7 @@
 package zechs.drive.stream.ui.files
 
 import android.animation.ValueAnimator
+import android.view.ViewGroup
 import androidx.core.view.isGone
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
@@ -58,7 +59,7 @@ class FilesStateHandler(
                 binding.stateView.isGone = true
                 binding.error.root.isGone = true
                 if (!viewModel.hasLoaded) {
-                    TransitionManager.beginDelayedTransition(binding.root, MaterialFadeThrough())
+                    (binding.root as? ViewGroup)?.let { TransitionManager.beginDelayedTransition(it, MaterialFadeThrough()) }
                 }
                 setLoading(false)
                 viewModel.hasLoaded = true

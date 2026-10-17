@@ -508,7 +508,11 @@ class AnimePosterResolver @Inject constructor() {
     }
 
     private fun fetchFromTmdb(query: String): AnimeMetadata? {
-        val apiKey = BuildConfig.TMDB_API_KEY.ifBlank { "15d2ea6d0dc1d476efbca3eba2b9bbfb" }
+        val apiKey = BuildConfig.TMDB_API_KEY
+        if (apiKey.isBlank()) {
+            // Sem chave configurada (local.properties / TMDB_API_KEY), TMDB é ignorado e AniList/Kitsu continuam como fontes.
+            return null
+        }
         return try {
             val encodedQuery = URLEncoder.encode(query, "UTF-8")
             val url = "$TMDB_BASE_URL/search/multi?api_key=$apiKey&query=$encodedQuery&language=pt-BR&include_adult=false"

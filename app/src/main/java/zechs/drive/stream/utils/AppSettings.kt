@@ -57,12 +57,12 @@ class AppSettings @Inject constructor(
             val profileKey = profileThemeKey(profileId)
             val preferences = sessionStore.data.first()
             val themeText = preferences[profileKey] ?: preferences[stringPreferencesKey(APP_THEME)]
-            val appTheme = themeText?.let(AppTheme::fromText) ?: AppTheme.OBSIDIAN
+            val appTheme = themeText?.let(AppTheme::fromText) ?: AppTheme.CRUNCHYROLL
             AppLog.d(TAG, "fetchTheme [profile=$profileId]: $appTheme")
             appTheme
         } catch (e: Exception) {
-            AppLog.e(TAG, "fetchTheme error, fallback to Obsidian", e)
-            AppTheme.OBSIDIAN
+            AppLog.e(TAG, "fetchTheme error, fallback to Crunchyroll", e)
+            AppTheme.CRUNCHYROLL
         }
     }
 
@@ -285,11 +285,23 @@ enum class AppTheme(
         bgSurfaceHex = "#111925",
         accentPrimaryHex = "#22D3EE",
         accentSecondaryHex = "#4F8CFF"
+    ),
+    CRUNCHYROLL(
+        text = "Crunchyroll",
+        value = 6,
+        displayName = "Crunchyroll",
+        subtitle = "Laranja vibrante & preto puro anime",
+        bgBaseHex = "#0C0D10",
+        bgSurfaceHex = "#16181F",
+        accentPrimaryHex = "#FF640A",
+        accentSecondaryHex = "#F47521"
     );
 
     companion object {
         fun fromValue(value: Int): AppTheme = entries.find { it.value == value } ?: OBSIDIAN
-        fun fromText(text: String?): AppTheme = entries.find { it.text.equals(text, ignoreCase = true) } ?: OBSIDIAN
+        fun fromText(text: String?): AppTheme =
+            if (text.equals("Amber", ignoreCase = true)) CRUNCHYROLL
+            else entries.find { it.text.equals(text, ignoreCase = true) } ?: OBSIDIAN
     }
 }
 

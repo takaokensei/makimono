@@ -10,6 +10,7 @@
     <color name="obsidian_text_tertiary">#64748B</color>
     <color name="obsidian_accent_primary">#FFFFFF</color>
     <color name="obsidian_accent_secondary">#FF3B30</color>
+    <color name="obsidian_accent_cyan">#30D5E8</color>
     <color name="obsidian_on_primary">#07080B</color>
     <color name="obsidian_focus_fill">#24FFFFFF</color>
     <color name="obsidian_hairline">#24FFFFFF</color>
@@ -25,8 +26,8 @@
     <color name="swiss_glass_regular">#22FFFFFF</color>
     <color name="swiss_glass_thick">#990D1017</color>
     <color name="swiss_glass_card_footer">#D90B0E14</color>
-    <color name="swiss_glass_rail_collapsed">#800B0E15</color>
-    <color name="swiss_glass_rail_expanded">#E60B0E15</color>
+    <color name="swiss_glass_rail_collapsed">#B30A0D14</color>
+    <color name="swiss_glass_rail_expanded">#F80A0D14</color>
     <color name="swiss_border_specular_bright">#45FFFFFF</color>
     <color name="swiss_border_specular_subtle">#22FFFFFF</color>
     <color name="swiss_focus_white">#F7FFFFFF</color>
@@ -107,6 +108,21 @@
     <color name="estuary_success">#4CBB6C</color>
     <color name="estuary_warning">#FFB70F</color>
     <color name="estuary_danger">#E85B5B</color>
+
+    <!-- Crunchyroll (Signature Orange & Deep Anime Dark) -->
+    <color name="crunchyroll_bg_base">#0C0D10</color>
+    <color name="crunchyroll_bg_surface">#16181F</color>
+    <color name="crunchyroll_bg_glass">#8816181F</color>
+    <color name="crunchyroll_border_glass">#25FFFFFF</color>
+    <color name="crunchyroll_text_primary">#FFFFFF</color>
+    <color name="crunchyroll_text_secondary">#A0A6B2</color>
+    <color name="crunchyroll_text_tertiary">#686E7B</color>
+    <color name="crunchyroll_accent_primary">#FF640A</color>
+    <color name="crunchyroll_accent_secondary">#F47521</color>
+    <color name="crunchyroll_focus_fill">#28FF640A</color>
+    <color name="crunchyroll_success">#2AB859</color>
+    <color name="crunchyroll_warning">#FFB800</color>
+    <color name="crunchyroll_danger">#FF3B30</color>
 
     <!-- Shared / Legacy Aliases (mapped to Tokyo Night defaults for backwards compatibility) -->
     <color name="colorPrimary">@color/obsidian_bg_base</color>

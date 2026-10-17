@@ -33,11 +33,12 @@ internal fun presentSeriesEpisode(
         !canonicalTitle.isNullOrBlank() && episodeNumber != null ->
             "Episódio ${String.format(Locale.ROOT, "%02d", episodeNumber)} - $canonicalTitle"
         episodeNumber != null -> {
-            val cleanName = fileName
-                .substringBeforeLast('.')
-                .replace(Regex("\\[.*?\\]|\\(.*?\\)"), "")
-                .trim()
-            "Episódio ${String.format(Locale.ROOT, "%02d", episodeNumber)} - $cleanName"
+            val epStr = String.format(Locale.ROOT, "%02d", episodeNumber)
+            if (!parsed.episodeTitle.isNullOrBlank()) {
+                "Episódio $epStr - ${parsed.episodeTitle}"
+            } else {
+                "Episódio $epStr"
+            }
         }
         else -> EpisodeParser.cleanEpisodeFileName(fileName)
     }

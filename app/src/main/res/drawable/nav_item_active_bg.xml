@@ -1,30 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Focused: Apple tvOS / Swiss Pure Optical White Pill -->
+    <!-- Focused: Crunchyroll TV Solid Accent Bar -->
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="@color/swiss_focus_white" />
-            <corners android:radius="14dp" />
+            <solid android:color="?attr/colorAccentPrimary" />
+            <corners android:radius="0dp" />
         </shape>
     </item>
-    <!-- Expanded & Active (unfocused): Frosted Glass Pill with Specular Border -->
-    <item android:state_selected="true">
-        <shape android:shape="rectangle">
-            <solid android:color="@color/swiss_glass_regular" />
-            <corners android:radius="14dp" />
-            <stroke
-                android:width="1dp"
-                android:color="@color/swiss_border_specular_bright" />
-        </shape>
-    </item>
-    <!-- Collapsed & Active (unfocused): Subtle Translucent Glass Indicator -->
+    <!-- Active (unfocused): Left Accent Indicator Bar -->
     <item>
-        <shape android:shape="rectangle">
-            <solid android:color="@color/swiss_glass_thin" />
-            <corners android:radius="14dp" />
-            <stroke
-                android:width="1dp"
-                android:color="@color/swiss_border_specular_subtle" />
-        </shape>
+        <layer-list>
+            <item>
+                <shape android:shape="rectangle">
+                    <solid android:color="?attr/colorFocusFill" />
+                </shape>
+            </item>
+            <item
+                android:width="3dp"
+                android:gravity="start">
+                <shape android:shape="rectangle">
+                    <solid android:color="?attr/colorAccentPrimary" />
+                </shape>
+            </item>
+        </layer-list>
     </item>
 </selector>

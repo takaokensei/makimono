@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/tabPillContainer"
     android:layout_width="wrap_content"
@@ -20,6 +21,8 @@
         android:layout_height="16dp"
         android:layout_marginEnd="8dp"
         android:contentDescription="@null"
+        android:duplicateParentState="true"
+        app:tint="@color/rail_item_icon_selector"
         android:visibility="gone"
         tools:src="@drawable/ic_play_24"
         tools:visibility="visible" />
@@ -28,9 +31,11 @@
         android:id="@+id/tvTabTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:duplicateParentState="true"
         android:fontFamily="sans-serif-medium"
         android:includeFontPadding="false"
-        android:textColor="@color/obsidian_text_primary"
+        android:textColor="@color/rail_item_text_selector"
+        android:textStyle="bold"
         style="@style/TextAppearance.Makimono.TV.Callout"
         tools:text="Temporada 2: Rakuen" />
 
