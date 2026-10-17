@@ -70,8 +70,8 @@ android {
         applicationId "zechs.drive.stream"
         minSdk 21
         targetSdk 33
-        versionCode 70
-        versionName "1.9.0"
+        versionCode 71
+        versionName "1.9.1"
         archivesBaseName = "makimono-v${versionName}"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -88,7 +88,10 @@ android {
                 .replace("\"", "\\\"")
                 .replace("\r", "")
                 .replace("\n", "")
-        def tmdbApiKey = (localProperties.getProperty("tmdb.apiKey", "") ?: (System.getenv("TMDB_API_KEY") ?: "15d2ea6d0dc1d476efbca3eba2b9bbfb")).trim()
+        def tmdbApiKey = (localProperties.getProperty("tmdb.apiKey", "").trim() ?: "")
+        if (tmdbApiKey.isEmpty()) {
+            tmdbApiKey = (System.getenv("TMDB_API_KEY") ?: "").trim()
+        }
 
         buildConfigField "String", "DRIVE_CLIENT_ID", "\"${driveClientId}\""
         buildConfigField "String", "DRIVE_CLIENT_SECRET", "\"${driveClientSecret}\""
