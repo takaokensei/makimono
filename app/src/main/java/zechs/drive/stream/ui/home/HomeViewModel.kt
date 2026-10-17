@@ -595,11 +595,13 @@ class HomeViewModel @Inject constructor(
         if (forceRefresh) {
             cachedLibraryRootId = null
             cachedLibraryRootProfileId = null
+            _featuredAnime.value = null
         }
         _isLoadingAnime.value = true
         _libraryLoadError.value = null
-        _homeState.value = HomeState.Loading
-        _featuredAnime.value = null
+        if (_animeLibrary.value.isEmpty()) {
+            _homeState.value = HomeState.Loading
+        }
         getLibraryRootFolder { folderId, folderName ->
             viewModelScope.launch(Dispatchers.IO) loadLibrary@{
                 try {
@@ -705,7 +707,9 @@ class HomeViewModel @Inject constructor(
                             _animeLibrary.value = displayFiles
                             _filteredAnimes.value = displayFiles
                             _isLoadingAnime.value = false
-                            resolveFeaturedSpotlight(displayFiles)
+                            if (_featuredAnime.value == null) {
+                                resolveFeaturedSpotlight(displayFiles)
+                            }
 
                             // Never replace a complete offline snapshot with a truncated response.
                             if (listing.isComplete) {
@@ -768,6 +772,7 @@ class HomeViewModel @Inject constructor(
                                 _animeLibrary.value = updatedList.toList()
                                 applyCurrentFilter()
                             }
+                            cachedFolderMetaMap = folderMetadataRepository.getAllMetadata().associateBy { it.folderId }
                             _homeState.value = HomeState.Content
                             if (listingWarning != null) _libraryLoadError.value = listingWarning
                 } else {
@@ -788,6 +793,38 @@ class HomeViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    val isFocusPreviewActive: Boolean
+        get() = focusedFeaturedFolderId != null
+
+    fun clearFocusedFeaturedFolder() {
+        focusedFeaturedFolderId = null
+    }
+
+    fun clearSavedShelfFocus() {
+        lastFocusedShelfIndex = null
+        lastFocusedItemIndex = null
+        val current = _uiState.value
+        if (current is HomeUiState.Content) {
+            _uiState.value = current.copy(
+                lastFocusedShelfIndex = null,
+                lastFocusedItemIndex = null
+            )
+        }
+    }
+
+    private var featuredSpotlightIndex = 0
+
+    fun cycleNextFeaturedSpotlight() {
+        if (focusedFeaturedFolderId != null) return
+        val library = _animeLibrary.value
+        val folders = library.filter { it.isFolder || it.isShortcutFolder }
+        if (folders.size <= 1) return
+        val candidates = folders.filter { it.starred == zechs.drive.stream.data.model.Starred.STARRED }.ifEmpty { folders }
+        featuredSpotlightIndex = (featuredSpotlightIndex + 1) % candidates.size
+        val nextFolder = candidates[featuredSpotlightIndex]
+        resolveFeaturedSpotlight(listOf(nextFolder), isFocusedPreview = false)
     }
 
     fun previewFeatured(file: DriveFile) {
@@ -824,7 +861,7 @@ class HomeViewModel @Inject constructor(
         val cachedHero = cachedFolderMetaMap[targetId]
         val initialBackdrop = cachedHero?.bannerUrl ?: fallbackArtUrl
         val initialPoster = cachedHero?.posterUrl ?: fallbackArtUrl
-        val initialTitle = cachedHero?.titleEnglish ?: cachedHero?.titleRomaji ?: chosenFolder.name
+        val initialTitle = cachedHero?.titleEnglish ?: cachedHero?.titleRomaji ?: cleanTitle
 
         _featuredAnime.value = FeaturedAnime(
             title = initialTitle,
@@ -849,12 +886,19 @@ class HomeViewModel @Inject constructor(
                 } else {
                     animePosterResolver.resolveMetadata(cleanTitle)
                 }
-                val results = if (aniListMeta == null && dbMeta?.synopsis.isNullOrBlank()) tenraiAnimeService.searchAnime(cleanTitle) else emptyList()
+                val results = if (aniListMeta == null && dbMeta?.synopsis.isNullOrBlank() != false) {
+                    tenraiAnimeService.searchAnime(cleanTitle)
+                } else {
+                    emptyList()
+                }
                 val entry = results.firstOrNull()
                 if (requestId != featuredRequestId) return@launch
 
                 if (aniListMeta != null) {
                     folderMetadataRepository.saveAnimeMetadata(targetId, chosenFolder.name, aniListMeta)
+                    folderMetadataRepository.getMetadata(targetId)?.let { saved ->
+                        cachedFolderMetaMap = cachedFolderMetaMap + (targetId to saved)
+                    }
                     _featuredAnime.value = FeaturedAnime(
                         title = aniListMeta.titleEnglish ?: aniListMeta.titleRomaji ?: cleanTitle,
                         titleJapanese = aniListMeta.titleNative,
@@ -869,7 +913,7 @@ class HomeViewModel @Inject constructor(
                         isFocusedPreview = isFocusedPreview,
                         clearLogoUrl = aniListMeta.clearLogoUrl
                     )
-                } else if (entry != null && dbMeta?.synopsis.isNullOrBlank()) {
+                } else if (entry != null && dbMeta?.synopsis.isNullOrBlank() != false) {
                     _featuredAnime.value = FeaturedAnime(
                         title = entry.titleEnglish ?: entry.title,
                         titleJapanese = entry.titleJapanese,
@@ -884,9 +928,24 @@ class HomeViewModel @Inject constructor(
                         ageRating = entry.rating,
                         isFocusedPreview = isFocusedPreview
                     )
+                } else if (dbMeta != null) {
+                    _featuredAnime.value = FeaturedAnime(
+                        title = dbMeta.titleEnglish ?: dbMeta.titleRomaji ?: cleanTitle,
+                        titleJapanese = dbMeta.titleJapanese,
+                        synopsis = dbMeta.synopsis,
+                        genres = dbMeta.genres?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList(),
+                        backdropUrl = dbMeta.bannerUrl ?: dbMeta.posterUrl ?: fallbackArtUrl,
+                        folderId = targetId,
+                        posterUrl = dbMeta.posterUrl ?: fallbackArtUrl,
+                        year = dbMeta.year,
+                        episodeCount = dbMeta.episodeCount,
+                        score = dbMeta.score,
+                        isFocusedPreview = isFocusedPreview,
+                        clearLogoUrl = dbMeta.clearLogoUrl
+                    )
                 } else {
                     _featuredAnime.value = FeaturedAnime(
-                        title = chosenFolder.name,
+                        title = cleanTitle,
                         backdropUrl = fallbackArtUrl,
                         folderId = targetId,
                         posterUrl = fallbackArtUrl,
@@ -896,9 +955,9 @@ class HomeViewModel @Inject constructor(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 AppLog.e(TAG, "Error resolving featured spotlight", e)
-                if (requestId == featuredRequestId) {
+                if (requestId == featuredRequestId && _featuredAnime.value == null) {
                     _featuredAnime.value = FeaturedAnime(
-                        title = chosenFolder.name,
+                        title = cleanTitle,
                         backdropUrl = fallbackArtUrl,
                         folderId = targetId,
                         posterUrl = fallbackArtUrl,
@@ -958,7 +1017,9 @@ class HomeViewModel @Inject constructor(
             // 2. Global Google Drive search with pagination
             val sanitized = trimmed.replace("'", "\\'")
             val searchMimes = "(mimeType = 'application/vnd.google-apps.folder' or " +
-                "mimeType = 'application/vnd.google-apps.shortcut' or mimeType contains 'video/')"
+                "mimeType = 'application/vnd.google-apps.shortcut' or mimeType contains 'video/' or " +
+                "mimeType = 'application/x-matroska' or name contains '.ts' or name contains '.m2ts' or " +
+                "name contains '.mts' or name contains '.mkv' or name contains '.mp4')"
             val driveQuery = "name contains '$sanitized' and $searchMimes and trashed=false"
             val response = driveRepository.get().getAllFilesDetailed(
                 query = driveQuery,

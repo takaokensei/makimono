@@ -38,7 +38,7 @@
             android:paddingStart="18dp"
             android:paddingEnd="18dp"
             android:text="Pular Abertura"
-            android:textColor="@color/obsidian_text_primary"
+            android:textColor="@color/swiss_focus_ink"
             style="@style/TextAppearance.Makimono.TV.Callout"
             android:textStyle="bold"
             android:elevation="24dp"
@@ -47,7 +47,7 @@
             app:icon="@drawable/ic_skip_next_24"
             app:iconGravity="textStart"
             app:iconSize="18dp"
-            app:iconTint="@color/obsidian_text_primary" />
+            app:iconTint="@color/swiss_focus_ink" />
     </LinearLayout>
 
     <!-- Next Episode Countdown Card -->

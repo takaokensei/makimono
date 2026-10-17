@@ -27,15 +27,26 @@ data class DriveFile(
 ) {
     val humanSize = size?.let { Converter.toHumanSize(it) }
 
+    val isTransportStream = mimeType.equals("video/mp2t", ignoreCase = true) ||
+            mimeType.equals("video/vnd.dlna.mpeg-tts", ignoreCase = true) ||
+            name.endsWith(".ts", ignoreCase = true) ||
+            name.endsWith(".m2ts", ignoreCase = true) ||
+            name.endsWith(".mts", ignoreCase = true) ||
+            name.endsWith(".tp", ignoreCase = true) ||
+            shortcutDetails.targetMimeType.equals("video/mp2t", ignoreCase = true) ||
+            shortcutDetails.targetMimeType.equals("video/vnd.dlna.mpeg-tts", ignoreCase = true)
+
     val isVideoFile = mimeType.startsWith("video/") ||
             mimeType == "application/x-matroska" ||
+            isTransportStream ||
             name.endsWith(".mkv", ignoreCase = true) ||
             name.endsWith(".mp4", ignoreCase = true) ||
             name.endsWith(".webm", ignoreCase = true) ||
             name.endsWith(".avi", ignoreCase = true) ||
             name.endsWith(".mov", ignoreCase = true) ||
             name.endsWith(".m4v", ignoreCase = true) ||
-            name.endsWith(".ts", ignoreCase = true) ||
+            name.endsWith(".mpg", ignoreCase = true) ||
+            name.endsWith(".mpeg", ignoreCase = true) ||
             (shortcutDetails.targetMimeType?.startsWith("video/") == true) ||
             shortcutDetails.targetMimeType == "application/x-matroska"
 
@@ -57,8 +68,15 @@ data class DriveFile(
 
     val isShortcutVideo = (shortcutDetails.targetMimeType?.startsWith("video/") == true) ||
             shortcutDetails.targetMimeType == "application/x-matroska" ||
+            isTransportStream ||
             name.endsWith(".mkv", ignoreCase = true) ||
-            name.endsWith(".mp4", ignoreCase = true)
+            name.endsWith(".mp4", ignoreCase = true) ||
+            name.endsWith(".webm", ignoreCase = true) ||
+            name.endsWith(".avi", ignoreCase = true) ||
+            name.endsWith(".mov", ignoreCase = true) ||
+            name.endsWith(".m4v", ignoreCase = true) ||
+            name.endsWith(".mpg", ignoreCase = true) ||
+            name.endsWith(".mpeg", ignoreCase = true)
 
     val iconLink128 = iconLink?.replace("16", "128")
 

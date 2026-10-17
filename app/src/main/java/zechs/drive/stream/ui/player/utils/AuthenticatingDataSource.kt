@@ -39,10 +39,18 @@ class AuthenticatingDataSource(
     override fun open(dataSpec: DataSpec): Long {
         upstreamOpened = true
 
-        // Apply pre-warmed token non-blockingly before opening connection
-        val cachedToken = tokenProvider.getCachedToken()
-        if (!cachedToken.isNullOrEmpty()) {
-            wrappedDataSource.setRequestProperty("Authorization", "Bearer $cachedToken")
+        // Apply pre-warmed token; if cold (e.g. launching .ts or cached catalog item directly),
+        // resolve from SessionManager/TokenProvider on ExoPlayer's background Loader thread.
+        val token = tokenProvider.getCachedToken()?.takeIf { it.isNotEmpty() }
+            ?: try {
+                kotlinx.coroutines.runBlocking { tokenProvider.validToken() }
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to resolve token in AuthenticatingDataSource.open", e)
+                null
+            }
+
+        if (!token.isNullOrEmpty()) {
+            wrappedDataSource.setRequestProperty("Authorization", "Bearer $token")
         }
 
         return try {
@@ -50,12 +58,34 @@ class AuthenticatingDataSource(
         } catch (e: HttpDataSource.InvalidResponseCodeException) {
             when (e.responseCode) {
                 401 -> {
-                    // Token expired or invalid; invalidate cached token asynchronously without blocking
                     tokenProvider.invalidateToken()
-                    AppLog.w(TAG, "HTTP 401 in AuthenticatingDataSource.open: token invalidated asynchronously")
+                    AppLog.w(TAG, "HTTP 401 in AuthenticatingDataSource.open: refreshing token and retrying once")
+                    val refreshed = try {
+                        kotlinx.coroutines.runBlocking { tokenProvider.refresh() }
+                    } catch (_: Exception) {
+                        null
+                    }
+                    if (!refreshed.isNullOrEmpty()) {
+                        wrappedDataSource.setRequestProperty("Authorization", "Bearer $refreshed")
+                        return wrappedDataSource.open(dataSpec)
+                    }
                 }
                 403 -> {
-                    AppLog.w(TAG, "HTTP 403 Forbidden in AuthenticatingDataSource.open: request denied")
+                    AppLog.w(TAG, "HTTP 403 Forbidden in AuthenticatingDataSource.open: retrying with refreshed token and acknowledgeAbuse=True")
+                    val refreshed = try {
+                        kotlinx.coroutines.runBlocking { tokenProvider.validToken() ?: tokenProvider.refresh() }
+                    } catch (_: Exception) {
+                        null
+                    }
+                    if (!refreshed.isNullOrEmpty()) {
+                        wrappedDataSource.setRequestProperty("Authorization", "Bearer $refreshed")
+                    }
+                    val uriStr = dataSpec.uri.toString()
+                    if (uriStr.contains("googleapis.com/drive") && !uriStr.contains("acknowledgeAbuse")) {
+                        val fallbackUri = Uri.parse("$uriStr&acknowledgeAbuse=True")
+                        val fallbackSpec = dataSpec.buildUpon().setUri(fallbackUri).build()
+                        return wrappedDataSource.open(fallbackSpec)
+                    }
                 }
             }
             throw e

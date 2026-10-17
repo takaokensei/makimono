@@ -18,6 +18,9 @@ object PlayerQuickOptions {
         }
         listOf(R.id.btnSpeed, R.id.btnResize, R.id.btnChapter, R.id.btnInfo, R.id.btnRotate)
             .forEach { root.findViewById<View>(it).visibility = View.GONE }
+        root.findViewById<View>(R.id.btnAudio)?.nextFocusRightId = R.id.btnPrevEp
+        root.findViewById<View>(R.id.btnPrevEp)?.nextFocusLeftId = R.id.btnAudio
+        root.findViewById<View>(R.id.btnEpisodes)?.nextFocusRightId = R.id.btnEpisodes
         more.setOnClickListener {
             lateinit var menu: PlayerGlassMenuDialog
             menu = PlayerGlassMenuDialog(root.context, "Mais opções", actions.map { (id, title) ->

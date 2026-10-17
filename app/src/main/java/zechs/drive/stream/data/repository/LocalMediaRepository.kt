@@ -88,6 +88,34 @@ class LocalMediaRepository @Inject constructor(
                     }
                 }
             }
+
+            // Fallback scan on MediaStore.Files for .ts / .m2ts / .mts files that Android MediaScanner
+            // sometimes classifies as text/vnd.trolltech.linguist or generic files outside MediaStore.Video
+            val tsExtClause = listOf("ts", "m2ts", "mts", "tp").joinToString(" OR ") {
+                "${MediaStore.Files.FileColumns.DISPLAY_NAME} LIKE '%.$it'"
+            }
+            val filesUri = MediaStore.Files.getContentUri("external")
+            val filesProjection = arrayOf(
+                MediaStore.Files.FileColumns.BUCKET_ID,
+                MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME
+            )
+            context.contentResolver.query(
+                filesUri,
+                filesProjection,
+                tsExtClause,
+                null,
+                "${MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME} ASC"
+            )?.use { tsCursor ->
+                val bIdCol = tsCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.BUCKET_ID)
+                val bNameCol = tsCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME)
+                while (tsCursor.moveToNext()) {
+                    val bId = tsCursor.getString(bIdCol) ?: continue
+                    val bName = tsCursor.getString(bNameCol) ?: "Vídeos Locais"
+                    if (!folderMap.containsKey(bId)) {
+                        folderMap[bId] = bName
+                    }
+                }
+            }
         } catch (e: Exception) {
             AppLog.e(TAG, "Error querying local video folders", e)
         }
@@ -128,6 +156,7 @@ class LocalMediaRepository @Inject constructor(
         val sortOrder = "${MediaStore.Video.Media.DISPLAY_NAME} ASC"
 
         val videos = mutableListOf<DriveFile>()
+        val seenIds = mutableSetOf<Long>()
 
         try {
             val cursor = context.contentResolver.query(
@@ -153,12 +182,66 @@ class LocalMediaRepository @Inject constructor(
                     val dateModified = it.getLong(dateCol)
                     val contentUri = ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, mediaId).toString()
 
+                    seenIds.add(mediaId)
                     videos.add(
                         DriveFile(
                             id = "local:$mediaId",
                             name = name,
                             size = size,
                             mimeType = mime,
+                            iconLink = null,
+                            shortcutDetails = ShortcutDetails(null, null),
+                            starred = Starred.UNSTARRED,
+                            modifiedTime = dateModified.toString(),
+                            source = MediaSource.LOCAL,
+                            localUri = contentUri
+                        )
+                    )
+                }
+            }
+
+            // Fallback scan for .ts / .m2ts / .mts files in MediaStore.Files
+            val tsExtClause = listOf("ts", "m2ts", "mts", "tp").joinToString(" OR ") {
+                "${MediaStore.Files.FileColumns.DISPLAY_NAME} LIKE '%.$it'"
+            }
+            val tsSelection = if (bucketId != null) {
+                "(${MediaStore.Files.FileColumns.BUCKET_ID} = ?) AND ($tsExtClause)"
+            } else {
+                tsExtClause
+            }
+            val filesUri = MediaStore.Files.getContentUri("external")
+            val filesProjection = arrayOf(
+                MediaStore.Files.FileColumns._ID,
+                MediaStore.Files.FileColumns.DISPLAY_NAME,
+                MediaStore.Files.FileColumns.SIZE,
+                MediaStore.Files.FileColumns.DATE_MODIFIED
+            )
+            context.contentResolver.query(
+                filesUri,
+                filesProjection,
+                tsSelection,
+                selectionArgs,
+                "${MediaStore.Files.FileColumns.DISPLAY_NAME} ASC"
+            )?.use { tsCursor ->
+                val idCol = tsCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+                val nameCol = tsCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+                val sizeCol = tsCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)
+                val dateCol = tsCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED)
+
+                while (tsCursor.moveToNext()) {
+                    val fileId = tsCursor.getLong(idCol)
+                    if (!seenIds.add(fileId)) continue
+                    val name = tsCursor.getString(nameCol) ?: continue
+                    val size = tsCursor.getLong(sizeCol)
+                    val dateModified = tsCursor.getLong(dateCol)
+                    val contentUri = ContentUris.withAppendedId(filesUri, fileId).toString()
+
+                    videos.add(
+                        DriveFile(
+                            id = "local:$fileId",
+                            name = name,
+                            size = size,
+                            mimeType = "video/mp2t",
                             iconLink = null,
                             shortcutDetails = ShortcutDetails(null, null),
                             starred = Starred.UNSTARRED,

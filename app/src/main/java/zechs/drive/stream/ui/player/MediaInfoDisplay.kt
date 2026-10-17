@@ -8,6 +8,9 @@ internal object MediaInfoDisplay {
         mimeType.contains("avc", ignoreCase = true) -> "AVC (H.264)"
         mimeType.contains("vp9", ignoreCase = true) -> "VP9"
         mimeType.contains("av01", ignoreCase = true) -> "AV1"
+        mimeType.contains("mp2t", ignoreCase = true) -> "MPEG-2 TS"
+        mimeType.contains("mpeg2", ignoreCase = true) || mimeType.contains("mp2v", ignoreCase = true) -> "MPEG-2"
+        mimeType.contains("vc1", ignoreCase = true) || mimeType.contains("wvc1", ignoreCase = true) -> "VC-1"
         else -> mimeType.substringAfterLast('/').takeIf(String::isNotBlank) ?: "Codec desconhecido"
     }
 
@@ -33,6 +36,9 @@ internal object MediaInfoDisplay {
             mimeType.contains("flac", true) -> "FLAC"
             mimeType.contains("ac3", true) && !mimeType.contains("eac3", true) -> "Dolby Digital (AC-3)"
             mimeType.contains("eac3", true) -> "Dolby Digital Plus (E-AC-3)"
+            mimeType.contains("dts", true) -> "DTS"
+            mimeType.contains("mpeg-l2", true) || mimeType.endsWith("/mp2", true) -> "MP2"
+            mimeType.contains("mpeg", true) || mimeType.endsWith("/mp3", true) -> "MP3"
             else -> mimeType.substringAfterLast('/').takeIf(String::isNotBlank) ?: "Codec desconhecido"
         }
         val channels = when {
