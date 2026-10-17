@@ -40,14 +40,20 @@ object PlayerLauncher {
             return playerType
         }
         val hasAss = subtitles?.any { it.ext == "ass" || it.ext == "ssa" } == true
+        val isHi10pOr10bit = title.contains("hi10p", ignoreCase = true) ||
+            title.contains("10bit", ignoreCase = true) ||
+            title.contains("10-bit", ignoreCase = true) ||
+            title.contains("bdrip", ignoreCase = true) ||
+            title.contains("bluray", ignoreCase = true)
         val extension = title.substringAfterLast('.', "").lowercase().takeIf { it.isNotEmpty() }
         val media = MediaInfo(
             name = title,
             extension = extension,
             hasAssSubtitles = hasAss,
-            hasSrtSubtitles = subtitles?.any { it.ext == "srt" } == true
+            hasSrtSubtitles = subtitles?.any { it.ext == "srt" } == true,
+            isHi10pOrAnimeBd = isHi10pOr10bit
         )
-        val pref = if (hasAss) UserEnginePreference.AUTO else UserEnginePreference.FORCE_MEDIA3
+        val pref = if (hasAss || isHi10pOr10bit) UserEnginePreference.AUTO else UserEnginePreference.FORCE_MEDIA3
         return when (EngineSelector.selectEngine(media, deviceCaps, pref)) {
             is EngineChoice.Media3 -> VideoPlayer.EXO_PLAYER
             is EngineChoice.Mpv -> VideoPlayer.MPV

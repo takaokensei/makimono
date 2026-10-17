@@ -113,9 +113,17 @@ class EngineSelectorTest {
     }
 
     @Test
+    fun `Hi10P or anime BDRip 10-bit routes to MPV to eliminate color banding`() {
+        val hi10pMedia = standardMedia.copy(name = "[Coalgirls] Bakemonogatari - 02 (1920x1080 Blu-ray Hi10P).mkv")
+        val choice = EngineSelector.selectEngine(hi10pMedia, defaultDevice)
+        assertTrue(choice is EngineChoice.Mpv)
+        assertEquals("rule_hi10p_bdrip", choice.ruleId)
+    }
+
+    @Test
     fun `describeActiveRules returns human-readable rule summaries`() {
         val summaries = EngineSelector.describeActiveRules()
-        assertEquals(7, summaries.size)
+        assertEquals(8, summaries.size)
         assertTrue(summaries.first().contains("ASS/SSA"))
     }
 }

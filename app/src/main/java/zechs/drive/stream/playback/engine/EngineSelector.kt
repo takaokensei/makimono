@@ -12,7 +12,8 @@ data class MediaInfo(
     val hasAssSubtitles: Boolean = false,
     val hasPgsSubtitles: Boolean = false,
     val hasSrtSubtitles: Boolean = false,
-    val isHdr: Boolean = false
+    val isHdr: Boolean = false,
+    val isHi10pOrAnimeBd: Boolean = false
 )
 
 /**
@@ -136,6 +137,22 @@ object EngineSelector {
                 EngineChoice.Mpv(
                     reason = "Video codec '${media.videoCodec}' not supported by hardware/MediaCodec",
                     ruleId = "rule_video_codec"
+                )
+            }
+        ),
+        EngineRoutingRule(
+            id = "rule_hi10p_bdrip",
+            summary = "Anime Blu-ray 10-bit / Hi10P → MPV (FFmpeg + debanding)",
+            matches = { media, _ ->
+                media.isHi10pOrAnimeBd ||
+                    media.name.contains("hi10p", ignoreCase = true) ||
+                    media.name.contains("10bit", ignoreCase = true) ||
+                    media.name.contains("10-bit", ignoreCase = true)
+            },
+            resolve = { _, _ ->
+                EngineChoice.Mpv(
+                    reason = "Hi10P / 10-bit H.264 Blu-ray requires MPV FFmpeg decoder and debanding to eliminate color banding",
+                    ruleId = "rule_hi10p_bdrip"
                 )
             }
         ),

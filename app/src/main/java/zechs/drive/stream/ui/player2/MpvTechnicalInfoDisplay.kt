@@ -22,7 +22,9 @@ object MpvTechnicalInfoDisplay {
         cacheDurationSeconds: Double?,
         engineName: String? = null,
         hdrSummary: String? = null,
-        afrSummary: String? = null
+        afrSummary: String? = null,
+        colorSpaceAndPixelFormat: String? = null,
+        debandSummary: String? = null
     ): List<Row> = buildList {
         if (!engineName.isNullOrBlank()) {
             add(Row("engine", "Motor", engineName.trim()))
@@ -31,6 +33,12 @@ object MpvTechnicalInfoDisplay {
         add(Row("resolution", "Resolução", dimensions(width, height)))
         add(Row("fps", "FPS do contêiner", fps(containerFps)))
         add(Row("decoder", "Decodificador ativo", decoder(activeDecoder)))
+        if (!colorSpaceAndPixelFormat.isNullOrBlank()) {
+            add(Row("colorspace", "Formato e Cores", colorSpaceAndPixelFormat.trim()))
+        }
+        if (!debandSummary.isNullOrBlank()) {
+            add(Row("deband", "Deband / Dither", debandSummary.trim()))
+        }
         add(Row("audio", "Áudio", audio(audioCodec, channels, sampleRateHz)))
         add(Row("subtitle", "Legenda", subtitleTrack?.takeIf(String::isNotBlank) ?: "Indisponível"))
         add(Row("buffer", "Cache do demuxer", cache(cacheDurationSeconds)))

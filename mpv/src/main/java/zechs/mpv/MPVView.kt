@@ -1,6 +1,7 @@
 package zechs.mpv
 
 import android.content.Context
+import android.graphics.PixelFormat
 import android.os.Build
 import android.util.AttributeSet
 import android.util.Log
@@ -31,6 +32,7 @@ class MPVView(
         MPVLib.init()
         isInitialized = true
 
+        holder.setFormat(PixelFormat.RGBA_8888)
         holder.addCallback(this)
         observeProperties()
     }
@@ -53,12 +55,31 @@ class MPVView(
 
         // Preferred languages: Japanese audio first, Portuguese subtitles first
         MPVLib.setOptionString("alang", "ja,jpn,jp,Japanese,por,pt,pt-BR,pt_BR,pob,Portuguese,Português,en,eng")
-        MPVLib.setOptionString("profile", "fast")
         MPVLib.setOptionString("vo", "gpu")
         MPVLib.setOptionString("gpu-context", "android")
         MPVLib.setOptionString("opengl-es", "yes")
-        MPVLib.setOptionString("hwdec", "mediacodec,mediacodec-copy")
-        MPVLib.setOptionString("hwdec-codecs", "all")
+
+        // Hardware decoding configuration:
+        // Anime Blu-ray releases widely use H.264 Hi10P (High 10 Profile, 10-bit).
+        // Android TV MediaCodec decoders do NOT support H.264 10-bit, causing severe color banding
+        // or hardware decoder crashes when forced.
+        // Restricting hwdec-codecs to HEVC, VP9, AV1, and MPEG2 allows H.264 Hi10P to decode via
+        // multithreaded FFmpeg (libavcodec) with full 10-bit precision.
+        MPVLib.setOptionString("hwdec", "mediacodec-copy,mediacodec")
+        MPVLib.setOptionString("hwdec-codecs", "hevc,vp9,av1,mpeg2video")
+
+        // High-fidelity debanding and dithering pipeline:
+        // Eliminates color banding/posterization in 10-bit to 8-bit conversions, shadows, and anime gradients
+        MPVLib.setOptionString("deband", "yes")
+        MPVLib.setOptionString("deband-iterations", "2")
+        MPVLib.setOptionString("deband-threshold", "48")
+        MPVLib.setOptionString("deband-range", "16")
+        MPVLib.setOptionString("deband-grain", "24")
+        MPVLib.setOptionString("dither-depth", "8")
+        MPVLib.setOptionString("dither", "fruit")
+        MPVLib.setOptionString("target-colorspace-hint", "yes")
+        MPVLib.setOptionString("gamut-clipping", "yes")
+
         MPVLib.setOptionString("ao", "audiotrack")
         MPVLib.setOptionString("framedrop", "vo")
         MPVLib.setOptionString("video-sync", "audio")
@@ -78,7 +99,9 @@ class MPVView(
         MPVLib.setOptionString("demuxer-max-back-bytes", "${64 * 1024 * 1024}") // 64MB back buffer for rewinds
         MPVLib.setOptionString("demuxer-readahead-secs", "90") // 90 seconds forward lookahead buffer
 
-        // Subtitle typesetting (Unified PotPlayer style: crisp white text, thick black border, bold sans-serif, transparent box, natural 96% bottom height)
+        // Subtitle typesetting:
+        // 'scale' preserves authentic ASS/SSA positioning, styles, and typography
+        // while plain SRT/VTT format gets clean PotPlayer styling.
         MPVLib.setOptionString("sub-font", "sans-serif")
         MPVLib.setOptionString("sub-font-size", "48")
         MPVLib.setOptionString("sub-color", "#FFFFFFFF")
@@ -89,8 +112,7 @@ class MPVView(
         MPVLib.setOptionString("sub-bold", "yes")
         MPVLib.setOptionString("sub-pos", "96")
         MPVLib.setOptionString("sub-margin-y", "36")
-        MPVLib.setOptionString("sub-ass-override", "force")
-        MPVLib.setOptionString("sub-ass-style-overrides", "Fontname=sans-serif,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BackColour=&H00000000,BorderStyle=1,Outline=3.2,Shadow=0,Bold=1")
+        MPVLib.setOptionString("sub-ass-override", "scale")
         MPVLib.setOptionString("sub-fix-timing", "yes")
         MPVLib.setOptionString("sub-codepage", "utf-8,cp1252")
         MPVLib.setOptionString("slang", "pt,por,pt-BR,pt_BR,pob,Portuguese,Português,en,eng,ja,jpn")

@@ -515,6 +515,20 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
                     player.tracks["sub"]?.firstOrNull { it.mpvId == selectedId }
                 }
                     ?.let { track -> track.title?.takeIf(String::isNotBlank) ?: track.name }
+                val pixfmt = MPVLib.getPropertyString("video-params/pixelformat")
+                val colormatrix = MPVLib.getPropertyString("video-params/colormatrix")
+                val colorlevels = MPVLib.getPropertyString("video-params/colorlevels")
+                val colorInfo = listOfNotNull(
+                    pixfmt?.takeIf(String::isNotBlank),
+                    colormatrix?.takeIf(String::isNotBlank)?.uppercase(),
+                    colorlevels?.takeIf(String::isNotBlank)?.replaceFirstChar { it.uppercase() }
+                ).joinToString(" • ").takeIf(String::isNotBlank)
+
+                val debandState = MPVLib.getPropertyString("deband")
+                val debandLabel = if (debandState == "yes" || debandState == "true") {
+                    "Ativo (2 iterações • dither fruit)"
+                } else null
+
                 val properties = MpvTechnicalInfoDisplay.rows(
                     videoCodec = MPVLib.getPropertyString("video-codec"),
                     width = player.videoW,
@@ -529,7 +543,9 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
                     cacheDurationSeconds = MPVLib.getPropertyDouble("demuxer-cache-duration"),
                     engineName = "MPV (libmpv)",
                     hdrSummary = currentHdrStatus?.takeIf { it.isHdrActive }?.colorSpaceDesc,
-                    afrSummary = currentAfrState?.technicalSummary
+                    afrSummary = currentAfrState?.technicalSummary,
+                    colorSpaceAndPixelFormat = colorInfo,
+                    debandSummary = debandLabel
                 )
                 zechs.drive.stream.ui.player.PlayerGlassMenuDialog(this@MPVActivity, "Informações técnicas",
                     properties.map { row -> zechs.drive.stream.ui.player.GlassMenuItem(
@@ -1099,7 +1115,7 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
         if (skipAction is zechs.drive.stream.playback.session.SkipController.SkipAction.AutoSkip) {
             val seekSeconds = skipAction.targetPositionMs / 1000.0
             MPVLib.command(arrayOf("seek", seekSeconds.toString(), "absolute"))
-            gestureHelper.showNotification(skipAction.message)
+            showAniSkipPill(skipAction.message)
             return
         }
 
@@ -1166,6 +1182,46 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
         }
         binding.netflixSkipRow.visibility = View.GONE
         controller.skipIntroRow.visibility = View.GONE
+    }
+
+    private var aniskipPillJob: Job? = null
+
+    private fun showAniSkipPill(label: String = "Abertura pulada") {
+        val cleanLabel = label
+            .replace(Regex("\\s*\\(AniSkip\\)", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("^⏩\\s*"), "")
+            .replace("automaticamente", "")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+        controller.tvAniSkipLabel.text = cleanLabel.ifBlank { "Abertura pulada" }
+
+        val density = resources.displayMetrics.density
+        val motionEnter = resources.getInteger(R.integer.motion_pill_enter).toLong()
+        val motionExit = resources.getInteger(R.integer.motion_pill_exit).toLong()
+
+        controller.aniskipPill.animate().cancel()
+        controller.aniskipPill.translationX = 32f * density
+        controller.aniskipPill.alpha = 0f
+        controller.aniskipPill.visibility = View.VISIBLE
+        controller.aniskipPill.animate()
+            .translationX(0f)
+            .alpha(1f)
+            .setDuration(motionEnter)
+            .start()
+
+        aniskipPillJob?.cancel()
+        aniskipPillJob = lifecycleScope.launch {
+            delay(3200L)
+            controller.aniskipPill.animate()
+                .translationX(32f * density)
+                .alpha(0f)
+                .setDuration(motionExit)
+                .withEndAction {
+                    controller.aniskipPill.visibility = View.GONE
+                    controller.aniskipPill.translationX = 0f
+                }
+                .start()
+        }
     }
 
     private fun updateChapters() {

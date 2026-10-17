@@ -10,9 +10,11 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.graphics.Color
+import android.graphics.PixelFormat
 import android.graphics.Typeface
 import android.util.TypedValue
 import android.view.KeyEvent
+import android.view.SurfaceView
 import android.view.View
 import android.view.animation.AccelerateInterpolator
 import android.widget.HorizontalScrollView
@@ -339,6 +341,7 @@ class PlayerActivity : BasePlayerActivity() {
         hideSystemUI()
 
         playerView = binding.playerView
+        (playerView.videoSurfaceView as? SurfaceView)?.holder?.setFormat(PixelFormat.RGBA_8888)
 
         mainControlsRoot = playerView.findViewById(R.id.mainControls)
         controlsScrollView = playerView.findViewById(R.id.controlsScrollView)
@@ -2166,19 +2169,42 @@ class PlayerActivity : BasePlayerActivity() {
         }.show()
     }
 
-    private fun showAniSkipPill(label: String = "Abertura pulada (AniSkip)") {
+    private fun showAniSkipPill(label: String = "Abertura pulada") {
         if (!::aniskipPill.isInitialized) return
-        tvAniSkipLabel.text = label
+        val cleanLabel = label
+            .replace(Regex("\\s*\\(AniSkip\\)", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("^⏩\\s*"), "")
+            .replace("automaticamente", "")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+        tvAniSkipLabel.text = cleanLabel.ifBlank { "Abertura pulada" }
+
+        val density = resources.displayMetrics.density
+        val motionEnter = resources.getInteger(R.integer.motion_pill_enter).toLong()
+        val motionExit = resources.getInteger(R.integer.motion_pill_exit).toLong()
+
         aniskipPill.animate().cancel()
-        aniskipPill.alpha = 1f
+        aniskipPill.translationX = 32f * density
+        aniskipPill.alpha = 0f
         aniskipPill.visibility = View.VISIBLE
+        aniskipPill.animate()
+            .translationX(0f)
+            .alpha(1f)
+            .setDuration(motionEnter)
+            .start()
+
         aniskipPillJob?.cancel()
         aniskipPillJob = lifecycleScope.launch {
-            delay(3000L)
-            val motionExit = resources.getInteger(R.integer.motion_pill_exit).toLong()
-            aniskipPill.animate().alpha(0f).setDuration(motionExit).withEndAction {
-                aniskipPill.visibility = View.GONE
-            }.start()
+            delay(3200L)
+            aniskipPill.animate()
+                .translationX(32f * density)
+                .alpha(0f)
+                .setDuration(motionExit)
+                .withEndAction {
+                    aniskipPill.visibility = View.GONE
+                    aniskipPill.translationX = 0f
+                }
+                .start()
         }
     }
 
