@@ -350,54 +350,63 @@
 
                                 </LinearLayout>
 
-                                <!-- ClearLogo (Transparent title logo) -->
-                                <ImageView
-                                    android:id="@+id/ivFeaturedClearLogo"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="72dp"
-                                    android:layout_marginTop="4dp"
-                                    android:layout_marginBottom="4dp"
-                                    android:adjustViewBounds="true"
-                                    android:contentDescription="@null"
-                                    android:scaleType="fitStart"
-                                    android:visibility="gone"
-                                    tools:visibility="gone" />
-
-                                <!-- Main Title -->
-                                <TextView
-                                    android:id="@+id/tvFeaturedTitle"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="4dp"
-                                    android:ellipsize="end" android:lineSpacingExtra="6dp" android:maxLines="2"
-                                    android:textColor="@color/obsidian_text_primary"
-                                    tools:text="Classroom of the Elite" android:textAppearance="@style/TextAppearance.Makimono.TV.Display"/>
-
-                                <!-- Japanese Subtitle -->
-                                <TextView android:id="@+id/tvFeaturedMetadata"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
-                                    android:ellipsize="end" android:maxLines="1"
-                                    android:textColor="@color/obsidian_text_secondary" tools:text="2026 · 12 episódios · ★ 8,7 · 16+" android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"/>
-
-                                <!-- Genre Tags Row -->
+                                <!-- Text Block for Hero Details with synchronized transition -->
                                 <LinearLayout
-                                    android:id="@+id/layoutFeaturedGenres" android:visibility="gone"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="8dp"
-                                    android:orientation="horizontal" />
-
-                                <!-- Synopsis Description -->
-                                <TextView
-                                    android:id="@+id/tvFeaturedSynopsis"
+                                    android:id="@+id/layoutHeroTextContent"
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="8dp"
-                                    android:ellipsize="end" android:maxLines="3"
-                                    android:textColor="@color/obsidian_text_secondary"
-                                    tools:text="Kiyotaka Ayanokōji ingressa na prestigiosa Tokyo Metropolitan Advanced Nurturing High School..." android:textAppearance="@style/TextAppearance.Makimono.TV.Body"/>
+                                    android:orientation="vertical">
+
+                                    <!-- ClearLogo (Transparent title logo) -->
+                                    <ImageView
+                                        android:id="@+id/ivFeaturedClearLogo"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="72dp"
+                                        android:layout_marginTop="4dp"
+                                        android:layout_marginBottom="4dp"
+                                        android:adjustViewBounds="true"
+                                        android:contentDescription="@null"
+                                        android:scaleType="fitStart"
+                                        android:visibility="gone"
+                                        tools:visibility="gone" />
+
+                                    <!-- Main Title -->
+                                    <TextView
+                                        android:id="@+id/tvFeaturedTitle"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="4dp"
+                                        android:ellipsize="end" android:lineSpacingExtra="6dp" android:maxLines="2"
+                                        android:textColor="@color/obsidian_text_primary"
+                                        tools:text="Classroom of the Elite" android:textAppearance="@style/TextAppearance.Makimono.TV.Display"/>
+
+                                    <!-- Japanese Subtitle -->
+                                    <TextView android:id="@+id/tvFeaturedMetadata"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:ellipsize="end" android:maxLines="1"
+                                        android:textColor="@color/obsidian_text_secondary" tools:text="2026 · 12 episódios · ★ 8,7 · 16+" android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"/>
+
+                                    <!-- Genre Tags Row -->
+                                    <LinearLayout
+                                        android:id="@+id/layoutFeaturedGenres" android:visibility="gone"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="8dp"
+                                        android:orientation="horizontal" />
+
+                                    <!-- Synopsis Description -->
+                                    <TextView
+                                        android:id="@+id/tvFeaturedSynopsis"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="8dp"
+                                        android:ellipsize="end" android:maxLines="3"
+                                        android:textColor="@color/obsidian_text_secondary"
+                                        tools:text="Kiyotaka Ayanokōji ingressa na prestigiosa Tokyo Metropolitan Advanced Nurturing High School..." android:textAppearance="@style/TextAppearance.Makimono.TV.Body"/>
+
+                                </LinearLayout>
 
                                 <!-- CTAs: Assistir Agora + Mais Detalhes -->
                                 <LinearLayout

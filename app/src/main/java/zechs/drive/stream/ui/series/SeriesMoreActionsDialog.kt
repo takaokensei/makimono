@@ -25,15 +25,15 @@ object SeriesMoreActionsDialog {
     ) {
         val density = context.resources.displayMetrics.density
         fun dp(value: Int) = (value * density).toInt()
-        val panelWidth = dp(320)
-        val rowHeight = dp(64)
-        val panelHeight = dp(16) + (rowHeight * 3)
+        val panelWidth = dp(340)
+        val rowHeight = dp(56)
+        val panelHeight = dp(20) + ((rowHeight + dp(4)) * 3)
 
         val panel = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(8), dp(8), dp(8), dp(8))
+            setPadding(dp(10), dp(10), dp(10), dp(10))
             background = ContextCompat.getDrawable(context, R.drawable.bg_context_menu_surface)
-            elevation = dp(18).toFloat()
+            elevation = dp(20).toFloat()
             clipToPadding = false
             clipChildren = false
             isFocusable = true
@@ -42,19 +42,33 @@ object SeriesMoreActionsDialog {
         }
 
         var popup: PopupWindow? = null
-        fun addAction(label: String, action: () -> Unit) {
+        fun addAction(label: String, iconRes: Int, action: () -> Unit) {
             val item = TextView(context).apply {
                 text = label
-                textSize = 18f
+                setTextAppearance(R.style.TextAppearance_Makimono_TV_Body)
                 setTextColor(ContextCompat.getColor(context, R.color.obsidian_text_primary))
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(12), dp(8), dp(12), dp(8))
+                setPadding(dp(16), dp(8), dp(16), dp(8))
+                compoundDrawablePadding = dp(14)
+                val icon = ContextCompat.getDrawable(context, iconRes)?.mutate()?.apply {
+                    setBounds(0, 0, dp(22), dp(22))
+                    setTint(ContextCompat.getColor(context, R.color.obsidian_text_secondary))
+                }
+                setCompoundDrawables(icon, null, null, null)
                 minHeight = rowHeight
                 maxLines = 2
                 isFocusable = true
                 isFocusableInTouchMode = true
                 isClickable = true
                 background = ContextCompat.getDrawable(context, R.drawable.bg_context_menu_item)
+                setOnFocusChangeListener { _, hasFocus ->
+                    icon?.setTint(
+                        ContextCompat.getColor(
+                            context,
+                            if (hasFocus) R.color.obsidian_accent_primary else R.color.obsidian_text_secondary
+                        )
+                    )
+                }
                 setOnClickListener {
                     popup?.dismiss()
                     action()
@@ -62,16 +76,19 @@ object SeriesMoreActionsDialog {
             }
             panel.addView(
                 item,
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, rowHeight)
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, rowHeight).apply {
+                    bottomMargin = dp(4)
+                }
             )
         }
 
-        addAction(context.getString(R.string.series_action_trailer), onTrailer)
+        addAction(context.getString(R.string.series_action_trailer), R.drawable.ic_trailer_24, onTrailer)
         addAction(
             context.getString(if (isFollowed) R.string.action_unfollow else R.string.action_follow),
+            if (isFollowed) R.drawable.ic_star_filled_24 else R.drawable.ic_star_outline_24,
             onFollowToggle
         )
-        addAction(context.getString(R.string.series_action_mark_watched), onMarkWatched)
+        addAction(context.getString(R.string.series_action_mark_watched), R.drawable.ic_check_24, onMarkWatched)
 
         popup = PopupWindow(
             panel,

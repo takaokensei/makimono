@@ -14,9 +14,12 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DecodeFormat
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zechs.drive.stream.R
 import zechs.drive.stream.data.model.UserProfile
@@ -48,6 +51,7 @@ class ProfileSelectionFragment : BaseFragment() {
     lateinit var appSettings: AppSettings
 
     private var focusedProfileId: String? = null
+    private var bgDebounceJob: Job? = null
     private lateinit var profilesAdapter: ProfilesAdapter
 
     override fun onCreateView(
@@ -80,14 +84,27 @@ class ProfileSelectionFragment : BaseFragment() {
                 showEditProfileDialog(profile)
             },
             onProfileFocused = { profile ->
-                focusedProfileId = profile.id
-                Glide.with(this)
-                    .load(profile.backgroundUrl)
-                    .placeholder(R.drawable.bg_profile_fantasy)
-                    .error(R.drawable.bg_profile_fantasy)
-                    .format(DecodeFormat.PREFER_RGB_565)
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .into(binding.ivFantasyBg)
+                if (focusedProfileId != profile.id) {
+                    focusedProfileId = profile.id
+                    bgDebounceJob?.cancel()
+                    bgDebounceJob = viewLifecycleOwner.lifecycleScope.launch {
+                        delay(120L)
+                        if (!isAdded || _binding == null) return@launch
+                        val transition = if (profilesAdapter.reduceMotion) {
+                            DrawableTransitionOptions()
+                        } else {
+                            DrawableTransitionOptions.withCrossFade(350)
+                        }
+                        Glide.with(this@ProfileSelectionFragment)
+                            .load(profile.backgroundUrl)
+                            .placeholder(binding.ivFantasyBg.drawable ?: androidx.core.content.ContextCompat.getDrawable(requireContext(), R.drawable.bg_profile_fantasy))
+                            .error(R.drawable.bg_profile_fantasy)
+                            .format(DecodeFormat.PREFER_ARGB_8888)
+                            .transition(transition)
+                            .diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .into(binding.ivFantasyBg)
+                    }
+                }
             },
             profileArtCatalog = posterResolver
         )
@@ -228,6 +245,8 @@ class ProfileSelectionFragment : BaseFragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        bgDebounceJob?.cancel()
+        bgDebounceJob = null
         _binding = null
     }
 }

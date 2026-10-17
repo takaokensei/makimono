@@ -14,9 +14,67 @@ internal class FeaturedHeroBinder(
     private val binding: FragmentHomeBinding,
     private val context: Context
 ) {
+    private var displayedFeaturedId: String? = null
     private var displayedBackdropUrl: String? = null
 
     fun bind(featured: HomeViewModel.FeaturedAnime, reduceMotionEnabled: Boolean) {
+        val isDifferentAnime = displayedFeaturedId != null && displayedFeaturedId != featured.folderId
+        displayedFeaturedId = featured.folderId
+
+        if (isDifferentAnime && !reduceMotionEnabled && binding.layoutHeroTextContent != null) {
+            binding.layoutHeroTextContent?.animate()?.cancel()
+            binding.layoutHeroTextContent?.animate()
+                ?.alpha(0f)
+                ?.translationY(-6f)
+                ?.setDuration(140L)
+                ?.withEndAction {
+                    bindTextContent(featured)
+                    binding.layoutHeroTextContent?.translationY = 6f
+                    binding.layoutHeroTextContent?.animate()
+                        ?.alpha(1f)
+                        ?.translationY(0f)
+                        ?.setDuration(240L)
+                        ?.start()
+                }
+                ?.start()
+        } else {
+            binding.layoutHeroTextContent?.animate()?.cancel()
+            binding.layoutHeroTextContent?.alpha = 1f
+            binding.layoutHeroTextContent?.translationY = 0f
+            bindTextContent(featured)
+        }
+
+        val imageUrl = featured.backdropUrl ?: featured.posterUrl
+        binding.ivFeaturedBackdrop?.let { imageView ->
+            if (imageUrl.isNullOrBlank()) {
+                displayedBackdropUrl = null
+                Glide.with(imageView).clear(imageView)
+                imageView.setImageResource(R.drawable.kodi_primary_bg)
+            } else if (displayedBackdropUrl != imageUrl) {
+                displayedBackdropUrl = imageUrl
+                val currentDrawable = imageView.drawable
+                val baseRequest = Glide.with(imageView)
+                    .load(imageUrl)
+                    .override(1440, 810)
+                    .format(com.bumptech.glide.load.DecodeFormat.PREFER_ARGB_8888)
+                    .centerCrop()
+                    .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
+                val requestWithPlaceholder = if (currentDrawable != null) {
+                    baseRequest.placeholder(currentDrawable)
+                } else {
+                    baseRequest.placeholder(R.drawable.kodi_primary_bg)
+                }
+                val finalRequest = if (reduceMotionEnabled) {
+                    requestWithPlaceholder.dontAnimate()
+                } else {
+                    requestWithPlaceholder.transition(DrawableTransitionOptions.withCrossFade(400))
+                }
+                finalRequest.error(R.drawable.kodi_primary_bg).into(imageView)
+            }
+        }
+    }
+
+    private fun bindTextContent(featured: HomeViewModel.FeaturedAnime) {
         val clearLogo = featured.clearLogoUrl
         if (!clearLogo.isNullOrBlank()) {
             binding.ivFeaturedClearLogo?.let { logoView ->
@@ -79,30 +137,6 @@ internal class FeaturedHeroBinder(
                 visibility = View.VISIBLE
             } else {
                 visibility = View.GONE
-            }
-        }
-
-        val imageUrl = featured.backdropUrl ?: featured.posterUrl
-        binding.ivFeaturedBackdrop?.let { imageView ->
-            if (imageUrl.isNullOrBlank()) {
-                displayedBackdropUrl = null
-                Glide.with(imageView).clear(imageView)
-                imageView.setImageResource(R.drawable.kodi_primary_bg)
-            } else if (displayedBackdropUrl != imageUrl) {
-                displayedBackdropUrl = imageUrl
-                val baseRequest = Glide.with(imageView)
-                    .load(imageUrl)
-                    .override(1440, 810)
-                    .centerCrop()
-                    .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
-                    .placeholder(R.drawable.kodi_primary_bg)
-                    .error(R.drawable.kodi_primary_bg)
-                val finalRequest = if (reduceMotionEnabled) {
-                    baseRequest.dontAnimate()
-                } else {
-                    baseRequest.transition(DrawableTransitionOptions.withCrossFade(400))
-                }
-                finalRequest.into(imageView)
             }
         }
 
