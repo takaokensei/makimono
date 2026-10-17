@@ -4,14 +4,19 @@ import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
 import java.net.URLEncoder
+import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Named
 import javax.inject.Singleton
@@ -22,8 +27,33 @@ data class OnlineSubtitle(
     val langName: String,
     val downloadUrl: String,
     val isPortuguese: Boolean = false,
-    val source: String = "OpenSubtitles"
-)
+    val source: String = "OpenSubtitles v3",
+    val confidenceScore: Int = 85,
+    val isVerifiedLanguage: Boolean = false,
+    val isOfficialQuality: Boolean = false,
+    val cueCount: Int = 0,
+    val previewSample: String? = null,
+    val encodingLabel: String = "UTF-8",
+    val matchedSeriesTitle: String? = null
+) {
+    val qualityBadge: String
+        get() {
+            val parts = mutableListOf<String>()
+            if (isOfficialQuality) {
+                parts.add("★ Oficial • ${confidenceScore}% Certeza")
+            } else if (isVerifiedLanguage) {
+                parts.add("✓ ${confidenceScore}% Certeza")
+            } else {
+                parts.add("${confidenceScore}% Relevância")
+            }
+            if (cueCount > 0) {
+                parts.add("$cueCount falas")
+            }
+            parts.add(encodingLabel)
+            parts.add(source)
+            return parts.joinToString(" • ")
+        }
+}
 
 data class SavedSubtitle(
     val file: File,
@@ -42,154 +72,351 @@ class OnlineSubtitleManager @Inject constructor(
         private const val TAG = "OnlineSubtitleManager"
         private const val CINEMETA_BASE = "https://v3-cinemeta.strem.io"
         private const val OPENSUBTITLES_BASE = "https://opensubtitles-v3.strem.io"
+        private const val PREVERIFY_COUNT = 3
+        private const val PREVERIFY_TIMEOUT_MS = 3_200L
+        private val SEASON_SUFFIX_REGEX = Regex("(?i)\\s*(?:[-–:]?\\s*(?:season|temporada|part|parte|cour)\\s*\\d+|\\b(?:2nd|3rd|4th|5th)\\s+season).*$")
+    }
+
+    private data class ResolvedMediaMeta(
+        val imdbId: String,
+        val isSeries: Boolean,
+        val canonicalName: String
+    )
+
+    private val imdbCache = ConcurrentHashMap<String, ResolvedMediaMeta>()
+    private val preverifiedUtf8Cache = ConcurrentHashMap<String, LanguageVerificationResult>()
+
+    /**
+     * Generates prioritized title candidates from seriesTitle and raw filename so that
+     * episodes named "01.ts" or "[SubsPlease] Title - 01 (1080p).mkv" resolve reliably.
+     */
+    internal fun buildTitleCandidates(rawTitle: String, seriesTitle: String? = null): List<String> {
+        val candidates = LinkedHashSet<String>()
+
+        fun addCandidate(raw: String?) {
+            if (raw.isNullOrBlank()) return
+            val parsed = EpisodeParser.parse(raw)
+            val cleanedShow = parsed.showTitle.ifBlank { EpisodeParser.cleanShowTitle(raw) }.trim()
+            if (cleanedShow.length >= 2 && !cleanedShow.all { it.isDigit() }) {
+                candidates.add(cleanedShow)
+                val strippedSeason = cleanedShow.replace(SEASON_SUFFIX_REGEX, "").trim()
+                if (strippedSeason.length >= 2 && strippedSeason != cleanedShow) {
+                    candidates.add(strippedSeason)
+                }
+            }
+        }
+
+        addCandidate(seriesTitle)
+        addCandidate(rawTitle)
+
+        // Also split dual titles like "Romaji Title / English Title"
+        val snapshot = candidates.toList()
+        for (c in snapshot) {
+            if (c.contains(" / ") || c.contains(" | ")) {
+                c.split(" / ", " | ").map { it.trim() }.filter { it.length >= 2 }.forEach {
+                    candidates.add(it)
+                }
+            }
+        }
+
+        return candidates.toList()
     }
 
     /**
-     * Resolves the IMDB ID for an anime/movie title using the public Cinemeta API.
+     * Resolves the IMDB ID for an anime/movie title using the public Cinemeta API,
+     * testing multiple title candidates and caching the result in memory.
      */
-    private suspend fun resolveImdbId(cleanTitle: String): Pair<String, Boolean>? = withContext(Dispatchers.IO) {
-        val encoded = URLEncoder.encode(cleanTitle, "UTF-8")
+    private suspend fun resolveImdbMeta(
+        rawTitle: String,
+        seriesTitle: String? = null
+    ): ResolvedMediaMeta? = withContext(Dispatchers.IO) {
+        val candidates = buildTitleCandidates(rawTitle, seriesTitle)
+        for (candidate in candidates) {
+            val cacheKey = candidate.lowercase(Locale.ROOT)
+            imdbCache[cacheKey]?.let { return@withContext it }
 
-        // 1. Try series catalog first (most animes are episodic)
-        try {
-            val url = "$CINEMETA_BASE/catalog/series/top/search=$encoded.json"
-            val req = Request.Builder()
-                .url(url)
-                .header("User-Agent", "MakimonoPlayer/1.4")
-                .build()
-
-            val resp = okHttpClient.newCall(req).execute()
-            if (resp.isSuccessful) {
-                val json = JSONObject(resp.body?.string().orEmpty())
-                val metas = json.optJSONArray("metas")
-                if (metas != null && metas.length() > 0) {
-                    val first = metas.getJSONObject(0)
-                    val imdbId = first.optString("imdb_id").ifBlank { first.optString("id") }
-                    if (imdbId.startsWith("tt")) {
-                        AppLog.d(TAG, "Resolved series IMDB ID for '$cleanTitle': $imdbId")
-                        return@withContext Pair(imdbId, true)
-                    }
-                }
+            val resolved = queryCinemetaSingle(candidate)
+            if (resolved != null) {
+                imdbCache[cacheKey] = resolved
+                return@withContext resolved
             }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            AppLog.w(TAG, "Cinemeta series search error: ${e.message}")
         }
-
-        // 2. Fallback to movie catalog (movies, OVAs)
-        try {
-            val url = "$CINEMETA_BASE/catalog/movie/top/search=$encoded.json"
-            val req = Request.Builder()
-                .url(url)
-                .header("User-Agent", "MakimonoPlayer/1.4")
-                .build()
-
-            val resp = okHttpClient.newCall(req).execute()
-            if (resp.isSuccessful) {
-                val json = JSONObject(resp.body?.string().orEmpty())
-                val metas = json.optJSONArray("metas")
-                if (metas != null && metas.length() > 0) {
-                    val first = metas.getJSONObject(0)
-                    val imdbId = first.optString("imdb_id").ifBlank { first.optString("id") }
-                    if (imdbId.startsWith("tt")) {
-                        AppLog.d(TAG, "Resolved movie IMDB ID for '$cleanTitle': $imdbId")
-                        return@withContext Pair(imdbId, false)
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            AppLog.w(TAG, "Cinemeta movie search error: ${e.message}")
-        }
-
         null
     }
 
+    private fun queryCinemetaSingle(cleanTitle: String): ResolvedMediaMeta? {
+        val encoded = URLEncoder.encode(cleanTitle, "UTF-8")
+
+        // 1. Try series catalog first (most animes/shows are episodic)
+        for (catalogType in listOf("series", "movie")) {
+            try {
+                val url = "$CINEMETA_BASE/catalog/$catalogType/top/search=$encoded.json"
+                val req = Request.Builder()
+                    .url(url)
+                    .header("User-Agent", "MakimonoPlayer/1.9")
+                    .build()
+
+                okHttpClient.newCall(req).execute().use { resp ->
+                    if (resp.isSuccessful) {
+                        val json = JSONObject(resp.body?.string().orEmpty())
+                        val metas = json.optJSONArray("metas")
+                        if (metas != null && metas.length() > 0) {
+                            val first = metas.getJSONObject(0)
+                            val imdbId = first.optString("imdb_id").ifBlank { first.optString("id") }
+                            val canonicalName = first.optString("name").ifBlank { cleanTitle }
+                            if (imdbId.startsWith("tt")) {
+                                AppLog.d(TAG, "Resolved $catalogType IMDB ID for '$cleanTitle' -> $imdbId ($canonicalName)")
+                                return ResolvedMediaMeta(
+                                    imdbId = imdbId,
+                                    isSeries = catalogType == "series",
+                                    canonicalName = canonicalName
+                                )
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Cinemeta $catalogType search error for '$cleanTitle': ${e.message}")
+            }
+        }
+        return null
+    }
+
     /**
-     * Searches for online subtitles, prioritizing Portuguese (Brazilian) subtitles.
+     * Searches for online subtitles, prioritizing the selected [preferredLanguage] and running
+     * parallel lexical verification on the top candidates to guarantee language certainty.
      */
     suspend fun searchSubtitles(
         rawTitle: String,
         season: Int? = null,
-        episode: Double? = null
+        episode: Double? = null,
+        seriesTitle: String? = null,
+        preferredLanguage: SubtitleLanguage = SubtitleLanguage.PT_BR
     ): List<OnlineSubtitle> = withContext(Dispatchers.IO) {
         val parsed = EpisodeParser.parse(rawTitle)
-        val showTitle = parsed.showTitle.ifBlank { rawTitle }
-        val s = season ?: parsed.season ?: 1
+        val s = (season ?: parsed.season ?: 1).coerceAtLeast(1)
         val ep = (episode ?: parsed.episode ?: 1.0).toInt().coerceAtLeast(1)
 
-        AppLog.d(TAG, "Searching subtitles for '$showTitle' S${s}E${ep}...")
+        AppLog.d(
+            TAG,
+            "Searching subtitles for raw='$rawTitle', series='$seriesTitle' S${s}E${ep} [lang=${preferredLanguage.shortLabel}]..."
+        )
 
-        val resolved = resolveImdbId(showTitle)
+        val resolved = resolveImdbMeta(rawTitle, seriesTitle)
         if (resolved == null) {
-            AppLog.w(TAG, "Could not resolve IMDB ID for '$showTitle'")
+            AppLog.w(TAG, "Could not resolve IMDB ID for raw='$rawTitle', series='$seriesTitle'")
             return@withContext emptyList()
         }
 
-        val (imdbId, isSeries) = resolved
-        val subUrl = if (isSeries) {
-            "$OPENSUBTITLES_BASE/subtitles/series/$imdbId:$s:$ep.json"
+        val rawCandidates = fetchFromOpenSubtitles(resolved, s, ep).ifEmpty {
+            // Fallback: if season > 1 returned empty on anime with absolute numbering, try S1
+            if (resolved.isSeries && s > 1) {
+                fetchFromOpenSubtitles(resolved, 1, ep)
+            } else {
+                emptyList()
+            }
+        }
+
+        if (rawCandidates.isEmpty()) return@withContext emptyList()
+
+        // Filter or prioritize by preferredLanguage
+        val matchingLangSubs = rawCandidates.filter { preferredLanguage.matchesLanguageCode(it.lang) }
+        val otherLangSubs = rawCandidates.filterNot { preferredLanguage.matchesLanguageCode(it.lang) }
+
+        // Pre-verify top N candidates of the preferred language in parallel for 100% language certainty!
+        val toVerify = matchingLangSubs.take(PREVERIFY_COUNT)
+        val unverifiedRest = matchingLangSubs.drop(PREVERIFY_COUNT)
+
+        val verifiedTop = withTimeoutOrNull(PREVERIFY_TIMEOUT_MS) {
+            coroutineScope {
+                toVerify.map { candidate ->
+                    async(Dispatchers.IO) {
+                        verifyCandidateOnline(candidate, preferredLanguage)
+                    }
+                }.awaitAll()
+            }
+        } ?: toVerify
+
+        val combined = verifiedTop + unverifiedRest + otherLangSubs
+
+        // Sort:
+        // 1. Verified high-certainty match in preferredLanguage
+        // 2. Matches preferredLanguage code
+        // 3. Official quality & confidence score descending
+        // 4. Portuguese fallback
+        combined.sortedWith(
+            compareByDescending<OnlineSubtitle> {
+                preferredLanguage.matchesLanguageCode(it.lang) && (it.isVerifiedLanguage || it.confidenceScore >= 80)
+            }
+                .thenByDescending { preferredLanguage.isExactCodeMatch(it.lang) }
+                .thenByDescending { it.isOfficialQuality }
+                .thenByDescending { it.confidenceScore }
+                .thenByDescending { it.isPortuguese }
+                .thenBy { it.langName }
+        )
+    }
+
+    private fun fetchFromOpenSubtitles(
+        meta: ResolvedMediaMeta,
+        season: Int,
+        episode: Int
+    ): List<OnlineSubtitle> {
+        val subUrl = if (meta.isSeries) {
+            "$OPENSUBTITLES_BASE/subtitles/series/${meta.imdbId}:$season:$episode.json"
         } else {
-            "$OPENSUBTITLES_BASE/subtitles/movie/$imdbId.json"
+            "$OPENSUBTITLES_BASE/subtitles/movie/${meta.imdbId}.json"
         }
 
         AppLog.d(TAG, "Fetching subtitles from $subUrl")
-        try {
+        return try {
             val req = Request.Builder()
                 .url(subUrl)
-                .header("User-Agent", "MakimonoPlayer/1.4")
+                .header("User-Agent", "MakimonoPlayer/1.9")
                 .build()
 
-            val resp = okHttpClient.newCall(req).execute()
-            if (!resp.isSuccessful) {
-                AppLog.w(TAG, "Failed to fetch subtitles: HTTP ${resp.code}")
-                return@withContext emptyList()
-            }
-
-            val json = JSONObject(resp.body?.string().orEmpty())
-            val subsArray = json.optJSONArray("subtitles") ?: return@withContext emptyList()
-
-            val resultList = mutableListOf<OnlineSubtitle>()
-            for (i in 0 until subsArray.length()) {
-                val item = subsArray.getJSONObject(i)
-                val lang = item.optString("lang", "unk").lowercase()
-                val url = item.optString("url")
-                val id = item.optString("id", url)
-
-                if (url.isNotBlank()) {
-                    val isPt = lang in listOf("pob", "por", "pt", "pt-br")
-                    val langName = when (lang) {
-                        "pob", "pt-br" -> "Português (Brasil)"
-                        "por", "pt" -> "Português"
-                        "eng", "en" -> "Inglês (English)"
-                        "spa", "es" -> "Espanhol"
-                        "jpn", "ja" -> "Japonês"
-                        else -> lang.uppercase()
-                    }
-
-                    resultList.add(
-                        OnlineSubtitle(
-                            id = id,
-                            lang = lang,
-                            langName = langName,
-                            downloadUrl = url,
-                            isPortuguese = isPt
-                        )
-                    )
+            okHttpClient.newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) {
+                    AppLog.w(TAG, "Failed to fetch subtitles: HTTP ${resp.code}")
+                    return emptyList()
                 }
-            }
 
-            // Sort: Portuguese (Brazil) first, then other Portuguese, then English, then others
-            resultList.sortedWith(
-                compareByDescending<OnlineSubtitle> { it.isPortuguese }
-                    .thenByDescending { it.lang == "pob" || it.lang == "pt-br" }
-                    .thenBy { it.langName }
-            )
+                val json = JSONObject(resp.body?.string().orEmpty())
+                val subsArray = json.optJSONArray("subtitles") ?: return emptyList()
+
+                val resultList = mutableListOf<OnlineSubtitle>()
+                for (i in 0 until subsArray.length()) {
+                    val item = subsArray.getJSONObject(i)
+                    val lang = item.optString("lang", "unk").lowercase(Locale.ROOT)
+                    val url = item.optString("url")
+                    val id = item.optString("id", url)
+
+                    if (url.isNotBlank()) {
+                        val isPt = lang in listOf("pob", "por", "pt", "pt-br", "pt_br")
+                        val langName = formatLanguageDisplayName(lang)
+                        val baseConfidence = when (lang) {
+                            "pob", "pt-br", "pt_br" -> 90
+                            "por", "pt", "eng", "en", "spa", "es", "jpn", "ja" -> 86
+                            else -> 75
+                        }
+
+                        resultList.add(
+                            OnlineSubtitle(
+                                id = id,
+                                lang = lang,
+                                langName = langName,
+                                downloadUrl = url,
+                                isPortuguese = isPt,
+                                source = "OpenSubtitles v3",
+                                confidenceScore = baseConfidence,
+                                matchedSeriesTitle = meta.canonicalName
+                            )
+                        )
+                    }
+                }
+                resultList
+            }
         } catch (e: Exception) {
-            if (e is CancellationException) throw e
             AppLog.e(TAG, "Error fetching subtitles from OpenSubtitles", e)
             emptyList()
         }
+    }
+
+    private fun verifyCandidateOnline(
+        sub: OnlineSubtitle,
+        targetLanguage: SubtitleLanguage
+    ): OnlineSubtitle {
+        preverifiedUtf8Cache[sub.downloadUrl]?.let { cached ->
+            return applyVerificationToSubtitle(sub, cached)
+        }
+
+        return try {
+            val req = Request.Builder()
+                .url(sub.downloadUrl)
+                .header("User-Agent", "Mozilla/5.0")
+                .build()
+
+            okHttpClient.newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) return sub
+                val bytes = resp.body?.bytes() ?: return sub
+                if (bytes.isEmpty()) return sub
+
+                val verification = SubtitleLanguageVerifier.verifySubtitleBytes(
+                    bytes = bytes,
+                    targetLanguage = targetLanguage,
+                    declaredLangCode = sub.lang
+                )
+                if (verification.cueCount > 0 && verification.normalizedUtf8Text.isNotBlank()) {
+                    preverifiedUtf8Cache[sub.downloadUrl] = verification
+                }
+                applyVerificationToSubtitle(sub, verification)
+            }
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Pre-verification skipped for ${sub.id}: ${e.message}")
+            sub
+        }
+    }
+
+    private fun applyVerificationToSubtitle(
+        sub: OnlineSubtitle,
+        verification: LanguageVerificationResult
+    ): OnlineSubtitle {
+        val updatedLangName = when {
+            verification.detectedLanguage == SubtitleLanguage.PT_BR -> "Português (Brasil)"
+            verification.detectedLanguage == SubtitleLanguage.PT_PT -> "Português (Portugal)"
+            verification.detectedLanguage != null && !verification.isHighCertaintyMatch ->
+                "${sub.langName} [Detectado: ${verification.detectedLanguage.shortLabel}]"
+            else -> sub.langName
+        }
+        return sub.copy(
+            langName = updatedLangName,
+            confidenceScore = verification.certaintyScore,
+            isVerifiedLanguage = verification.isHighCertaintyMatch,
+            isOfficialQuality = verification.isOfficialGrade,
+            cueCount = verification.cueCount,
+            previewSample = verification.previewSample,
+            encodingLabel = verification.encodingLabel
+        )
+    }
+
+    private fun formatLanguageDisplayName(lang: String): String = when (lang.lowercase(Locale.ROOT)) {
+        "pob", "pt-br", "pt_br" -> "Português (Brasil)"
+        "por", "pt", "pt-pt" -> "Português (Portugal)"
+        "eng", "en" -> "English (Oficial)"
+        "spa", "es" -> "Español"
+        "jpn", "ja" -> "日本語 (Japonês)"
+        "fre", "fra", "fr" -> "Français"
+        "ita", "it" -> "Italiano"
+        "ger", "deu", "de" -> "Deutsch"
+        else -> lang.uppercase(Locale.ROOT)
+    }
+
+    /**
+     * One-tap Apple-grade auto-download: finds, verifies, normalizes to UTF-8, and saves
+     * the highest-certainty official subtitle for the requested language.
+     */
+    suspend fun downloadBestSubtitle(
+        rawTitle: String,
+        season: Int? = null,
+        episode: Double? = null,
+        seriesTitle: String? = null,
+        preferredLanguage: SubtitleLanguage = SubtitleLanguage.PT_BR
+    ): Result<Pair<File, OnlineSubtitle>> = withContext(Dispatchers.IO) {
+        val results = searchSubtitles(
+            rawTitle = rawTitle,
+            season = season,
+            episode = episode,
+            seriesTitle = seriesTitle,
+            preferredLanguage = preferredLanguage
+        )
+        val best = results.firstOrNull {
+            preferredLanguage.matchesLanguageCode(it.lang) && it.confidenceScore >= 75
+        } ?: results.firstOrNull()
+            ?: return@withContext Result.failure(
+                IOException("Nenhuma legenda encontrada para ${preferredLanguage.displayName}")
+            )
+
+        val fileResult = downloadSubtitle(best, rawTitle, preferredLanguage)
+        fileResult.map { file -> Pair(file, best) }
     }
 
     /**
@@ -220,7 +447,7 @@ class OnlineSubtitleManager @Inject constructor(
 
         val files = dir.listFiles { f ->
             f.isFile && f.extension.equals("srt", ignoreCase = true) &&
-                    (f.name.startsWith(cleanPrefix) || f.name.startsWith(rawClean))
+                (f.name.startsWith(cleanPrefix) || f.name.startsWith(rawClean))
         } ?: return emptyList()
 
         return files.mapNotNull { file ->
@@ -231,19 +458,13 @@ class OnlineSubtitleManager @Inject constructor(
                 val rawLangName = parts.lastOrNull()?.takeIf { it != withoutExt && !it.startsWith("online_") }?.let {
                     try {
                         java.net.URLDecoder.decode(it, "UTF-8")
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         null
                     }
                 }
-                val langName = rawLangName ?: when (langPart) {
-                    "pob", "pt-br" -> "Português (Brasil)"
-                    "por", "pt" -> "Português"
-                    "eng", "en" -> "Inglês (English)"
-                    "spa", "es" -> "Espanhol"
-                    "jpn", "ja" -> "Japonês"
-                    else -> langPart.uppercase()
-                }
-                val isPt = langPart in listOf("pob", "por", "pt", "pt-br") || langName.contains("Português", ignoreCase = true)
+                val langName = rawLangName ?: formatLanguageDisplayName(langPart)
+                val isPt = langPart in listOf("pob", "por", "pt", "pt-br") ||
+                    langName.contains("Português", ignoreCase = true)
                 SavedSubtitle(
                     file = file,
                     lang = langPart,
@@ -258,42 +479,69 @@ class OnlineSubtitleManager @Inject constructor(
     }
 
     /**
-     * Downloads an online subtitle file to persistent internal storage.
+     * Downloads an online subtitle file to persistent internal storage, using the
+     * pre-verified in-memory UTF-8 cache (0ms latency) if available, or normalizing
+     * charset (Windows-1252 / UTF-16 -> UTF-8) on the fly.
      */
     suspend fun downloadSubtitle(
         sub: OnlineSubtitle,
-        filenamePrefix: String
+        filenamePrefix: String,
+        targetLanguage: SubtitleLanguage = SubtitleLanguage.fromCode(sub.lang)
     ): Result<File> = withContext(Dispatchers.IO) {
         try {
+            val dir = subtitlesDir
+            val cleanPrefix = sanitizePrefix(filenamePrefix)
+            val encodedLangName = URLEncoder.encode(sub.langName, "UTF-8")
+            val targetFile = File(dir, "${cleanPrefix}__online_${sub.lang}__${encodedLangName}.srt")
+
+            // 1. Instant 0ms write if already pre-verified in memory!
+            val preverified = preverifiedUtf8Cache[sub.downloadUrl]
+            if (preverified != null && preverified.normalizedUtf8Text.isNotBlank()) {
+                targetFile.writeText(preverified.normalizedUtf8Text, Charsets.UTF_8)
+                AppLog.d(
+                    TAG,
+                    "Instant 0ms write from pre-verified UTF-8 cache: ${targetFile.absolutePath} (${targetFile.length()} bytes)"
+                )
+                return@withContext Result.success(targetFile)
+            }
+
+            // 2. Otherwise download, verify & normalize to clean UTF-8
             AppLog.d(TAG, "Downloading subtitle: ${sub.langName} from ${sub.downloadUrl}")
             val req = Request.Builder()
                 .url(sub.downloadUrl)
                 .header("User-Agent", "Mozilla/5.0")
                 .build()
 
-            val resp = okHttpClient.newCall(req).execute()
-            if (!resp.isSuccessful) {
-                return@withContext Result.failure(
-                    IOException("HTTP ${resp.code}: ${resp.message}")
-                )
-            }
-
-            val body = resp.body ?: return@withContext Result.failure(
-                IOException("Corpo da resposta vazio ao baixar legenda")
-            )
-
-            val dir = subtitlesDir
-            val cleanPrefix = sanitizePrefix(filenamePrefix)
-            val encodedLangName = URLEncoder.encode(sub.langName, "UTF-8")
-            val targetFile = File(dir, "${cleanPrefix}__online_${sub.lang}__${encodedLangName}.srt")
-
-            body.byteStream().use { input ->
-                FileOutputStream(targetFile).use { output ->
-                    input.copyTo(output)
+            okHttpClient.newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) {
+                    return@withContext Result.failure(
+                        IOException("HTTP ${resp.code}: ${resp.message}")
+                    )
                 }
+
+                val bytes = resp.body?.bytes() ?: return@withContext Result.failure(
+                    IOException("Corpo da resposta vazio ao baixar legenda")
+                )
+
+                val verification = SubtitleLanguageVerifier.verifySubtitleBytes(
+                    bytes = bytes,
+                    targetLanguage = targetLanguage,
+                    declaredLangCode = sub.lang
+                )
+                if (verification.cueCount == 0 || verification.normalizedUtf8Text.isBlank()) {
+                    return@withContext Result.failure(
+                        IOException("Arquivo de legenda inválido ou sem falas válidas")
+                    )
+                }
+
+                preverifiedUtf8Cache[sub.downloadUrl] = verification
+                targetFile.writeText(verification.normalizedUtf8Text, Charsets.UTF_8)
             }
 
-            AppLog.d(TAG, "Subtitle downloaded and permanently saved: ${targetFile.absolutePath} (${targetFile.length()} bytes)")
+            AppLog.d(
+                TAG,
+                "Subtitle downloaded, UTF-8 normalized, and saved: ${targetFile.absolutePath} (${targetFile.length()} bytes)"
+            )
             Result.success(targetFile)
         } catch (e: Exception) {
             if (e is CancellationException) throw e

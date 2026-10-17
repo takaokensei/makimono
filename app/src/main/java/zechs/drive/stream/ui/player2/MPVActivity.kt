@@ -242,6 +242,7 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
             zechs.drive.stream.utils.AppTheme.CATPPUCCIN_MOCHA -> R.style.Theme_Fullscreen_CatppuccinMocha
             zechs.drive.stream.utils.AppTheme.KODI_ESTUARY -> R.style.Theme_Fullscreen_KodiEstuary
             zechs.drive.stream.utils.AppTheme.OBSIDIAN -> R.style.Theme_Fullscreen_Obsidian
+            zechs.drive.stream.utils.AppTheme.CRUNCHYROLL -> R.style.Theme_Fullscreen_Crunchyroll
         }
         setTheme(themeRes)
         super.onCreate(savedInstanceState)
@@ -971,6 +972,11 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
 
                 KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
                     playPrevEpisodeDirectly()
+                    return true
+                }
+
+                KeyEvent.KEYCODE_CAPTIONS -> {
+                    pickSub()
                     return true
                 }
 
@@ -1857,7 +1863,11 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
                         }
                     } else {
                         withContext(Dispatchers.Main) {
-                            val errMsg = if (sub.source == zechs.drive.stream.data.model.MediaSource.LOCAL) "Erro ao carregar legenda local" else "Erro ao baixar legenda do Drive"
+                            val errMsg = if (sub.source == zechs.drive.stream.data.model.MediaSource.LOCAL) {
+                                "Erro ao carregar legenda local"
+                            } else {
+                                "Erro ao baixar legenda do Drive"
+                            }
                             configSnackbar(errMsg)
                         }
                     }
@@ -1881,34 +1891,15 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
             }
         }
 
-        glassDialog.setActionButton("🔍 Buscar Legendas Online (PT-BR)") { d ->
-            d.showLoading(true)
-            lifecycleScope.launch(Dispatchers.IO) {
-                val onlineResults = try {
-                    onlineSubtitleManager.get().searchSubtitles(videoTitle)
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Error searching online subtitles", e)
-                    emptyList()
-                }
+        glassDialog.setSubtitle("Faixas embutidas, salvas e na nuvem • Verificação de idioma ativa")
 
-                withContext(Dispatchers.Main) {
-                    d.showLoading(false)
-                    if (onlineResults.isEmpty()) {
-                        configSnackbar("Nenhuma legenda online encontrada")
-                        return@withContext
-                    }
+        glassDialog.setActionButton("✨ Central de Legendas Oficiais (Download Rápido)") { dialog ->
+            dialog.dismiss()
+            showOnlineSubtitleHubDialog(videoTitle)
+        }
 
-                    val updatedChoices = choices.toMutableList()
-                    onlineResults.forEach { os ->
-                        val flag = if (os.isPortuguese) "🇧🇷 " else "🌐 "
-                        val name = "$flag${os.langName}"
-                        val subText = "Online • ${os.source}"
-                        updatedChoices.add(SubChoice(null, null, os, null, name, subText, false))
-                    }
-                    d.updateItems(buildMenuItems(updatedChoices))
-                    configSnackbar("${onlineResults.size} legendas encontradas online!", 1500)
-                }
-            }
+        glassDialog.setFooterTertiary("Aparência") {
+            openSubtitleStyleDialog()
         }
 
         glassDialog.setFooterSecondary("Sincronia") {
@@ -1919,12 +1910,174 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
             showSubtitleSizeDialog()
         }
 
-        glassDialog.setActionButton("Personalizar aparência") { dialog ->
-            dialog.dismiss()
-            openSubtitleStyleDialog()
+        glassDialog.show()
+    }
+
+    private fun showOnlineSubtitleHubDialog(
+        videoTitle: String,
+        initialLanguage: zechs.drive.stream.utils.SubtitleLanguage = zechs.drive.stream.utils.SubtitleLanguage.PT_BR
+    ) {
+        val seriesTitleExtra = intent.getStringExtra(PlayerLauncher.EXTRA_SERIES_TITLE)
+        val parsed = EpisodeParser.parse(videoTitle)
+        val seasonNum = parsed.season
+        val epDouble = if (currentEpNumber > 0) currentEpNumber.toDouble() else parsed.episode
+
+        var activeLang = initialLanguage
+        var currentResults: List<OnlineSubtitle> = emptyList()
+
+        fun buildHubItems(subs: List<OnlineSubtitle>, lang: zechs.drive.stream.utils.SubtitleLanguage): List<GlassMenuItem> {
+            if (subs.isEmpty()) {
+                return listOf(
+                    GlassMenuItem(
+                        id = "empty_online",
+                        title = "Nenhuma legenda encontrada para ${lang.displayName}",
+                        subtitle = "Experimente alternar a pílula de idioma acima (PT-BR, PT-PT, EN, ES, JA)",
+                        isInteractive = false
+                    )
+                )
+            }
+            return subs.mapIndexed { idx, os ->
+                val flag = zechs.drive.stream.utils.SubtitleLanguage.flagForCode(os.lang)
+                val titleBadge = if (os.isOfficialQuality) {
+                    " • ★ Oficial (${os.confidenceScore}%)"
+                } else if (os.isVerifiedLanguage) {
+                    " • ✓ ${os.confidenceScore}% Certeza"
+                } else {
+                    " • ${os.confidenceScore}%"
+                }
+                val itemTitle = "$flag ${os.langName}$titleBadge"
+                val subLines = buildString {
+                    append(os.qualityBadge)
+                    if (!os.previewSample.isNullOrBlank()) {
+                        append("\n💬 \"")
+                        append(os.previewSample)
+                        append("\"")
+                    }
+                }
+                GlassMenuItem(
+                    id = "hub_sub_$idx",
+                    title = itemTitle,
+                    subtitle = subLines,
+                    isSelected = idx == 0 && lang.matchesLanguageCode(os.lang),
+                    tag = os
+                )
+            }
         }
 
-        glassDialog.show()
+        lateinit var hubDialog: PlayerGlassMenuDialog
+
+        fun triggerSearch(lang: zechs.drive.stream.utils.SubtitleLanguage) {
+            activeLang = lang
+            hubDialog.showLoading(true)
+            hubDialog.updateActionButtonText("⚡ Download Rápido • Melhor Oficial (${lang.shortLabel})")
+            hubDialog.updateSubtitle("Verificando certeza léxica (${lang.shortLabel}) e normalizando UTF-8...")
+
+            lifecycleScope.launch(Dispatchers.IO) {
+                val results = try {
+                    onlineSubtitleManager.get().searchSubtitles(
+                        rawTitle = videoTitle,
+                        season = seasonNum,
+                        episode = epDouble,
+                        seriesTitle = seriesTitleExtra,
+                        preferredLanguage = lang
+                    )
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "Error in MPV OnlineSubtitleHub search", e)
+                    emptyList()
+                }
+
+                withContext(Dispatchers.Main) {
+                    currentResults = results
+                    hubDialog.showLoading(false)
+                    val verifiedCount = results.count { it.isVerifiedLanguage }
+                    val matchedShow = results.firstOrNull()?.matchedSeriesTitle
+                    val statusPrefix = if (!matchedShow.isNullOrBlank()) "$matchedShow • " else ""
+                    hubDialog.updateSubtitle(
+                        "${statusPrefix}${results.size} opções • $verifiedCount verificadas com alta certeza (${lang.shortLabel})"
+                    )
+                    hubDialog.updateItems(buildHubItems(results, lang))
+                }
+            }
+        }
+
+        fun downloadAndActivate(os: OnlineSubtitle, lang: zechs.drive.stream.utils.SubtitleLanguage) {
+            configSnackbar("Baixando e verificando ${os.langName} (${os.confidenceScore}% certeza)...")
+            lifecycleScope.launch(Dispatchers.IO) {
+                val result = onlineSubtitleManager.get().downloadSubtitle(os, videoTitle, lang)
+                withContext(Dispatchers.Main) {
+                    result.onSuccess { cachedFile ->
+                        val trackTitle = "💾 [Oficial] ${os.langName}"
+                        MPVLib.command(arrayOf("sub-add", cachedFile.absolutePath, "select", trackTitle, os.lang))
+                        player.loadTracks()
+                        configSnackbar("✓ Legenda Oficial ativada: ${os.langName} (${os.confidenceScore}% certeza • UTF-8)", 1800)
+                    }.onFailure { err ->
+                        configSnackbar("Erro ao baixar legenda: ${err.message}")
+                    }
+                }
+            }
+        }
+
+        val initialLoadingItems = listOf(
+            GlassMenuItem(
+                id = "loading_hub",
+                title = "Buscando e verificando legendas oficiais...",
+                subtitle = "Analisando vocabulário, ortografia e sincronia para ${initialLanguage.displayName}",
+                isInteractive = false
+            )
+        )
+
+        hubDialog = PlayerGlassMenuDialog(
+            context = this,
+            title = "Central de Legendas Oficiais",
+            items = initialLoadingItems
+        ) { selected ->
+            val chosen = selected.tag as? OnlineSubtitle ?: return@PlayerGlassMenuDialog
+            downloadAndActivate(chosen, activeLang)
+        }
+            .setSubtitle("Verificação Léxica de Idioma • UTF-8 Automático")
+            .setLanguageSelector(initialLanguage) { _, newLang ->
+                triggerSearch(newLang)
+            }
+            .setActionButton("⚡ Download Rápido • Melhor Oficial (${initialLanguage.shortLabel})") { d ->
+                val best = currentResults.firstOrNull { activeLang.matchesLanguageCode(it.lang) }
+                    ?: currentResults.firstOrNull()
+                if (best != null) {
+                    d.dismiss()
+                    downloadAndActivate(best, activeLang)
+                } else {
+                    d.showLoading(true)
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        val fastRes = onlineSubtitleManager.get().downloadBestSubtitle(
+                            rawTitle = videoTitle,
+                            season = seasonNum,
+                            episode = epDouble,
+                            seriesTitle = seriesTitleExtra,
+                            preferredLanguage = activeLang
+                        )
+                        withContext(Dispatchers.Main) {
+                            d.showLoading(false)
+                            fastRes.onSuccess { (cachedFile, sub) ->
+                                d.dismiss()
+                                val trackTitle = "💾 [Oficial] ${sub.langName}"
+                                MPVLib.command(arrayOf("sub-add", cachedFile.absolutePath, "select", trackTitle, sub.lang))
+                                player.loadTracks()
+                                configSnackbar("⚡ Legenda Oficial ativada: ${sub.langName} (${sub.confidenceScore}% certeza)", 1800)
+                            }.onFailure { err ->
+                                configSnackbar(err.message ?: "Nenhuma legenda encontrada")
+                            }
+                        }
+                    }
+                }
+            }
+            .setFooterSecondary("← Voltar às Faixas") {
+                pickSub()
+            }
+            .setFooterPrimary("Aparência") {
+                openSubtitleStyleDialog()
+            }
+
+        hubDialog.show()
+        triggerSearch(initialLanguage)
     }
 
     private fun openSubtitleStyleDialog() {
@@ -2541,9 +2694,11 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
                             val res = malRepository.get().completeAnimeWithScore(anime.id, anime.numEpisodes, score)
                             withContext(Dispatchers.Main) {
                                 if (res is zechs.drive.stream.utils.state.Resource.Success) {
-                                    android.widget.Toast.makeText(this@MPVActivity, getString(R.string.mal_anime_completed, score), android.widget.Toast.LENGTH_LONG).show()
+                                    val msg = getString(R.string.mal_anime_completed, score)
+                                    android.widget.Toast.makeText(this@MPVActivity, msg, android.widget.Toast.LENGTH_LONG).show()
                                 } else {
-                                    android.widget.Toast.makeText(this@MPVActivity, getString(R.string.mal_save_score_error, res.message ?: ""), android.widget.Toast.LENGTH_SHORT).show()
+                                    val msg = getString(R.string.mal_save_score_error, res.message ?: "")
+                                    android.widget.Toast.makeText(this@MPVActivity, msg, android.widget.Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }

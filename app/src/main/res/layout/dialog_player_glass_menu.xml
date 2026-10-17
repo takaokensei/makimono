@@ -32,17 +32,36 @@
                 android:layout_height="18dp"
                 android:background="?attr/colorAccentPrimary" />
 
-            <TextView
-                android:id="@+id/tvDialogTitle"
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:layout_weight="1"
-                android:fontFamily="@font/inter"
-                android:textColor="@color/obsidian_text_primary"
-                style="@style/TextAppearance.Makimono.TV.Headline"
-                android:textStyle="bold"
-                tools:text="Faixas de Legenda" />
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvDialogTitle"
+                    style="@style/TextAppearance.Makimono.TV.Headline"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/inter"
+                    android:textColor="@color/obsidian_text_primary"
+                    android:textStyle="bold"
+                    tools:text="Central de Legendas Oficiais" />
+
+                <TextView
+                    android:id="@+id/tvDialogSubtitle"
+                    style="@style/TextAppearance.Makimono.TV.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="@font/inter"
+                    android:textColor="@color/obsidian_text_secondary"
+                    android:visibility="gone"
+                    tools:text="Verificação Léxica de Idioma • UTF-8 Automático"
+                    tools:visibility="visible" />
+
+            </LinearLayout>
 
             <ImageView
                 android:id="@+id/btnDialogClose"
@@ -58,15 +77,34 @@
 
         </LinearLayout>
 
-        <!-- Optional Action Button (e.g. "🔍 Buscar Legendas Online (PT-BR)") -->
+        <!-- Apple TV+ Grade Language Selector Pills -->
+        <HorizontalScrollView
+            android:id="@+id/scrollLanguagePills"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:clipToPadding="false"
+            android:scrollbars="none"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <LinearLayout
+                android:id="@+id/layoutLanguagePills"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal" />
+
+        </HorizontalScrollView>
+
+        <!-- Optional Action Button (e.g. "✨ Central de Legendas Oficiais") -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnDialogAction"
             android:layout_width="match_parent"
             android:layout_height="42dp"
-            android:layout_marginTop="14dp"
+            android:layout_marginTop="12dp"
             android:backgroundTint="?attr/colorBgGlass"
             android:fontFamily="@font/inter"
-            android:text="🔍 Buscar Legendas Online (PT-BR)"
             android:textColor="?attr/colorAccentPrimary"
             android:textAppearance="@style/TextAppearance.Makimono.TV.Body"
             android:textStyle="bold"
@@ -74,6 +112,7 @@
             app:cornerRadius="10dp"
             app:strokeColor="?attr/colorBorderGlass"
             app:strokeWidth="1dp"
+            tools:text="⚡ Download Rápido • Melhor Oficial (PT-BR)"
             tools:visibility="visible" />
 
         <!-- Loading indicator for online searches -->
@@ -91,16 +130,16 @@
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvDialogItems"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:layout_marginTop="12dp"
+            android:layout_weight="1"
             android:clipToPadding="false"
-            android:maxHeight="320dp"
             android:nestedScrollingEnabled="true"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
             tools:itemCount="5"
             tools:listitem="@layout/item_player_glass_menu" />
 
-        <!-- Footer Action Buttons (e.g. Tamanho, Sincronia) -->
+        <!-- Footer Action Buttons (e.g. Aparência, Sincronia, Tamanho) -->
         <LinearLayout
             android:id="@+id/layoutFooterActions"
             android:layout_width="match_parent"
@@ -110,6 +149,23 @@
             android:orientation="horizontal"
             android:visibility="gone"
             tools:visibility="visible">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnFooterTertiary"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:fontFamily="@font/inter"
+                android:textColor="@color/obsidian_text_secondary"
+                android:textAppearance="@style/TextAppearance.Makimono.TV.Body"
+                android:visibility="gone"
+                tools:text="Aparência"
+                tools:visibility="visible" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnFooterSecondary"
@@ -126,7 +182,7 @@
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="38dp"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="6dp"
                 android:fontFamily="@font/inter"
                 android:textColor="?attr/colorAccentPrimary"
                 android:textAppearance="@style/TextAppearance.Makimono.TV.Body"

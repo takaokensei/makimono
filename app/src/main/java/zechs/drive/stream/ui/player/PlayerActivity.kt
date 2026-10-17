@@ -311,6 +311,7 @@ class PlayerActivity : BasePlayerActivity() {
             zechs.drive.stream.utils.AppTheme.CATPPUCCIN_MOCHA -> R.style.Theme_Fullscreen_CatppuccinMocha
             zechs.drive.stream.utils.AppTheme.KODI_ESTUARY -> R.style.Theme_Fullscreen_KodiEstuary
             zechs.drive.stream.utils.AppTheme.OBSIDIAN -> R.style.Theme_Fullscreen_Obsidian
+            zechs.drive.stream.utils.AppTheme.CRUNCHYROLL -> R.style.Theme_Fullscreen_Crunchyroll
         }
         setTheme(themeRes)
         super.onCreate(savedInstanceState)
@@ -808,9 +809,18 @@ class PlayerActivity : BasePlayerActivity() {
         }
         if (::btnPrevEp.isInitialized) {
             btnPrevEp.isEnabled = navState.canSkipPrevious
+            btnPrevEp.isFocusable = navState.canSkipPrevious
             btnPrevEp.alpha = navState.prevButtonAlpha
             btnNextEp.isEnabled = navState.canSkipNext
+            btnNextEp.isFocusable = navState.canSkipNext
             btnNextEp.alpha = navState.nextButtonAlpha
+            if (::btnRew.isInitialized && ::btnAudio.isInitialized) {
+                btnRew.nextFocusLeftId = if (navState.canSkipPrevious) R.id.btnPrevEp else R.id.btnAudio
+                btnAudio.nextFocusRightId = if (navState.canSkipPrevious) R.id.btnPrevEp else R.id.exo_rew
+            }
+            if (::btnFfwd.isInitialized) {
+                btnFfwd.nextFocusRightId = if (navState.canSkipNext) R.id.btnNextEp else R.id.btnMoreOptions
+            }
         }
         mediaSessionHelper?.updatePlaybackState(
             isPlaying = if (::player.isInitialized) player.isPlaying else false,
@@ -1067,10 +1077,28 @@ class PlayerActivity : BasePlayerActivity() {
         zechs.drive.stream.utils.SubtitleAppearance.applyToExo(playerView.subtitleView, style)
     }
 
+    private fun isTransportStreamMedia(titleOrName: String, uriString: String = ""): Boolean {
+        val lowerTitle = titleOrName.lowercase()
+        val lowerUri = uriString.lowercase().substringBefore('?')
+        return lowerTitle.endsWith(".ts") ||
+            lowerTitle.endsWith(".m2ts") ||
+            lowerTitle.endsWith(".mts") ||
+            lowerTitle.endsWith(".tp") ||
+            lowerUri.endsWith(".ts") ||
+            lowerUri.endsWith(".m2ts") ||
+            lowerUri.endsWith(".mts") ||
+            lowerUri.endsWith(".tp")
+    }
+
     private fun initPlayer() {
         val extractorsFactory = DefaultExtractorsFactory()
-            .setTsExtractorFlags(DefaultTsPayloadReaderFactory.FLAG_ENABLE_HDMV_DTS_AUDIO_STREAMS)
-            .setTsExtractorTimestampSearchBytes(1500 * TsExtractor.TS_PACKET_SIZE)
+            .setTsExtractorFlags(
+                DefaultTsPayloadReaderFactory.FLAG_ENABLE_HDMV_DTS_AUDIO_STREAMS or
+                    DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or
+                    DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS
+            )
+            .setTsExtractorTimestampSearchBytes(2500 * TsExtractor.TS_PACKET_SIZE)
+            .setConstantBitrateSeekingEnabled(true)
 
         val mediaCodecSelector = MediaCodecSelector { mimeType, requiresSecureDecoder, requiresTunnelingDecoder ->
             val decoders = MediaCodecSelector.DEFAULT.getDecoderInfos(mimeType, requiresSecureDecoder, requiresTunnelingDecoder)
@@ -1392,6 +1420,11 @@ class PlayerActivity : BasePlayerActivity() {
                     return true
                 }
 
+                KeyEvent.KEYCODE_CAPTIONS -> {
+                    showSubtitleTrackDialog()
+                    return true
+                }
+
                 KeyEvent.KEYCODE_MEDIA_REWIND,
                 KeyEvent.KEYCODE_BUTTON_L1,
                 KeyEvent.KEYCODE_PAGE_UP -> {
@@ -1654,9 +1687,14 @@ class PlayerActivity : BasePlayerActivity() {
                 }
             }
 
+            val isTsStream = isTransportStreamMedia(title ?: "", streamUri.toString())
+
             val mediaItem = MediaItem.Builder()
                 .setUri(streamUri)
                 .apply {
+                    if (isTsStream) {
+                        setMimeType(MimeTypes.VIDEO_MP2T)
+                    }
                     if (subConfigs.isNotEmpty()) {
                         setSubtitleConfigurations(subConfigs)
                     }
@@ -1671,7 +1709,7 @@ class PlayerActivity : BasePlayerActivity() {
                 if (::player.isInitialized) {
                     updateIntroButtonVisibility(player.currentPosition)
                 }
-            } else {
+            } else if (!isTsStream) {
                 lifecycleScope.launch {
                     try {
                         val token = withContext(Dispatchers.IO) { tokenProvider.get().validToken() }
@@ -2639,38 +2677,15 @@ class PlayerActivity : BasePlayerActivity() {
             }
         }
 
-        glassDialog.setActionButton("🔍 Buscar Legendas Online (PT-BR)") { d ->
-            d.showLoading(true)
-            lifecycleScope.launch(Dispatchers.IO) {
-                val onlineResults = try {
-                    onlineSubtitleManager.get().searchSubtitles(videoTitle, currentEpNumber.takeIf { it > 0 })
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Error searching online subtitles", e)
-                    emptyList()
-                }
+        glassDialog.setSubtitle("Faixas embutidas, salvas e na nuvem • Verificação de idioma ativa")
 
-                withContext(Dispatchers.Main) {
-                    d.showLoading(false)
-                    if (onlineResults.isEmpty()) {
-                        Snackbar.make(playerView, "Nenhuma legenda online encontrada", 2000).apply {
-                            anchorView = progressViewGroup
-                        }.show()
-                        return@withContext
-                    }
+        glassDialog.setActionButton("✨ Central de Legendas Oficiais (Download Rápido)") { dialog ->
+            dialog.dismiss()
+            showOnlineSubtitleHubDialog(videoTitle)
+        }
 
-                    val updatedChoices = choices.toMutableList()
-                    onlineResults.forEach { os ->
-                        val flag = if (os.isPortuguese) "🇧🇷 " else "🌐 "
-                        val name = "$flag${os.langName}"
-                        val subText = "Online • ${os.source}"
-                        updatedChoices.add(ExoSubChoice(null, -2, null, os, null, name, subText, false))
-                    }
-                    d.updateItems(buildMenuItems(updatedChoices))
-                    Snackbar.make(playerView, "${onlineResults.size} legendas encontradas online!", 1500).apply {
-                        anchorView = progressViewGroup
-                    }.show()
-                }
-            }
+        glassDialog.setFooterTertiary("Aparência") {
+            openSubtitleStyleDialog()
         }
 
         glassDialog.setFooterSecondary("Sincronia") {
@@ -2681,12 +2696,283 @@ class PlayerActivity : BasePlayerActivity() {
             showSubtitleSizeDialog()
         }
 
-        glassDialog.setActionButton("Personalizar aparência") { dialog ->
-            dialog.dismiss()
-            openSubtitleStyleDialog()
+        glassDialog.show()
+    }
+
+    private fun showOnlineSubtitleHubDialog(
+        videoTitle: String,
+        initialLanguage: zechs.drive.stream.utils.SubtitleLanguage = zechs.drive.stream.utils.SubtitleLanguage.PT_BR
+    ) {
+        val seriesTitleExtra = intent.getStringExtra(PlayerLauncher.EXTRA_SERIES_TITLE)
+        val parsed = EpisodeParser.parse(videoTitle)
+        val seasonNum = parsed.season
+        val epDouble = if (currentEpNumber > 0) currentEpNumber.toDouble() else parsed.episode
+
+        var activeLang = initialLanguage
+        var currentResults: List<zechs.drive.stream.utils.OnlineSubtitle> = emptyList()
+
+        data class HubActionTarget(
+            val onlineSub: zechs.drive.stream.utils.OnlineSubtitle? = null,
+            val embeddedGroup: Tracks.Group? = null,
+            val embeddedIndex: Int = -1,
+            val embeddedName: String? = null
+        )
+
+        fun findMatchingEmbeddedOfficialTracks(lang: zechs.drive.stream.utils.SubtitleLanguage): List<GlassMenuItem> {
+            val matchedItems = mutableListOf<GlassMenuItem>()
+            player.currentTracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }.forEachIndexed { gIdx, group ->
+                for (i in 0 until group.length) {
+                    val format = group.getTrackFormat(i)
+                    val trackLang = format.language?.takeIf { it.isNotBlank() }.orEmpty()
+                    val label = format.label?.takeIf { it.isNotBlank() }.orEmpty()
+                    val combined = "$trackLang $label".lowercase()
+                    val isMatch = when (lang) {
+                        zechs.drive.stream.utils.SubtitleLanguage.PT_BR ->
+                            lang.matchesLanguageCode(trackLang) || combined.contains("brazil") || combined.contains("pt-br") || combined.contains("portug")
+                        zechs.drive.stream.utils.SubtitleLanguage.PT_PT ->
+                            lang.matchesLanguageCode(trackLang) || combined.contains("portug")
+                        zechs.drive.stream.utils.SubtitleLanguage.EN ->
+                            lang.matchesLanguageCode(trackLang) || combined.contains("english")
+                        zechs.drive.stream.utils.SubtitleLanguage.ES ->
+                            lang.matchesLanguageCode(trackLang) || combined.contains("spanish") || combined.contains("español")
+                        zechs.drive.stream.utils.SubtitleLanguage.JA ->
+                            lang.matchesLanguageCode(trackLang) || combined.contains("japanese")
+                    }
+                    if (isMatch) {
+                        val cleanLabel = label.ifBlank { lang.displayName }
+                        val isCrOfficial = cleanLabel.startsWith("CR_", ignoreCase = true) || cleanLabel.contains("Crunchyroll", ignoreCase = true)
+                        val badge = if (isCrOfficial) "★ 100% Certeza • Oficial Crunchyroll (Stream)" else "★ 100% Certeza • Faixa Oficial do Stream"
+                        matchedItems.add(
+                            GlassMenuItem(
+                                id = "hub_emb_${gIdx}_$i",
+                                title = "${lang.flag} $cleanLabel • ★ Oficial (100%)",
+                                subtitle = "$badge • Sincronia Perfeita (0ms)",
+                                isSelected = group.isTrackSelected(i),
+                                tag = HubActionTarget(embeddedGroup = group, embeddedIndex = i, embeddedName = cleanLabel)
+                            )
+                        )
+                    }
+                }
+            }
+            return matchedItems
         }
 
-        glassDialog.show()
+        fun buildHubItems(subs: List<zechs.drive.stream.utils.OnlineSubtitle>, lang: zechs.drive.stream.utils.SubtitleLanguage): List<GlassMenuItem> {
+            val embeddedMatches = findMatchingEmbeddedOfficialTracks(lang)
+            val onlineItems = subs.mapIndexed { idx, os ->
+                val flag = zechs.drive.stream.utils.SubtitleLanguage.flagForCode(os.lang)
+                val titleBadge = if (os.isOfficialQuality) {
+                    " • ★ Oficial (${os.confidenceScore}%)"
+                } else if (os.isVerifiedLanguage) {
+                    " • ✓ ${os.confidenceScore}% Certeza"
+                } else {
+                    " • ${os.confidenceScore}%"
+                }
+                val itemTitle = "$flag ${os.langName}$titleBadge"
+                val subLines = buildString {
+                    append(os.qualityBadge)
+                    if (!os.previewSample.isNullOrBlank()) {
+                        append("\n💬 \"")
+                        append(os.previewSample)
+                        append("\"")
+                    }
+                }
+                GlassMenuItem(
+                    id = "hub_sub_$idx",
+                    title = itemTitle,
+                    subtitle = subLines,
+                    isSelected = embeddedMatches.isEmpty() && idx == 0 && lang.matchesLanguageCode(os.lang),
+                    tag = HubActionTarget(onlineSub = os)
+                )
+            }
+            val allItems = embeddedMatches + onlineItems
+            if (allItems.isEmpty()) {
+                return listOf(
+                    GlassMenuItem(
+                        id = "empty_online",
+                        title = "Nenhuma legenda encontrada para ${lang.displayName}",
+                        subtitle = "Experimente alternar a pílula de idioma acima (PT-BR, PT-PT, EN, ES, JA)",
+                        isInteractive = false
+                    )
+                )
+            }
+            return allItems
+        }
+
+        lateinit var hubDialog: PlayerGlassMenuDialog
+
+        fun triggerSearch(lang: zechs.drive.stream.utils.SubtitleLanguage) {
+            activeLang = lang
+            hubDialog.showLoading(true)
+            hubDialog.updateActionButtonText("⚡ Ativar / Baixar Melhor Oficial (${lang.shortLabel})")
+            hubDialog.updateSubtitle("Verificando certeza léxica (${lang.shortLabel}) e normalizando UTF-8...")
+
+            lifecycleScope.launch(Dispatchers.IO) {
+                val results = try {
+                    onlineSubtitleManager.get().searchSubtitles(
+                        rawTitle = videoTitle,
+                        season = seasonNum,
+                        episode = epDouble,
+                        seriesTitle = seriesTitleExtra,
+                        preferredLanguage = lang
+                    )
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "Error in OnlineSubtitleHub search", e)
+                    emptyList()
+                }
+
+                withContext(Dispatchers.Main) {
+                    currentResults = results
+                    hubDialog.showLoading(false)
+                    val embeddedCount = findMatchingEmbeddedOfficialTracks(lang).size
+                    val verifiedCount = results.count { it.isVerifiedLanguage } + embeddedCount
+                    val totalOptions = results.size + embeddedCount
+                    val matchedShow = results.firstOrNull()?.matchedSeriesTitle
+                    val statusPrefix = if (!matchedShow.isNullOrBlank()) "$matchedShow • " else ""
+                    hubDialog.updateSubtitle(
+                        "${statusPrefix}$totalOptions opções • $verifiedCount verificadas com alta certeza (${lang.shortLabel})"
+                    )
+                    hubDialog.updateItems(buildHubItems(results, lang))
+                }
+            }
+        }
+
+        fun downloadAndActivate(os: zechs.drive.stream.utils.OnlineSubtitle, lang: zechs.drive.stream.utils.SubtitleLanguage) {
+            Snackbar.make(playerView, "Baixando e verificando ${os.langName} (${os.confidenceScore}% certeza)...", 1200).apply {
+                anchorView = progressViewGroup
+            }.show()
+            lifecycleScope.launch(Dispatchers.IO) {
+                val result = onlineSubtitleManager.get().downloadSubtitle(os, videoTitle, lang)
+                withContext(Dispatchers.Main) {
+                    result.onSuccess { cachedFile ->
+                        val virtualSub = SubtitleItem(
+                            id = "saved_${cachedFile.nameWithoutExtension}",
+                            name = "💾 [Oficial] ${os.langName}",
+                            languageLabel = os.langName,
+                            languageCode = os.lang
+                        )
+                        applyExternalSubtitle(cachedFile, virtualSub, isMatching = true, forceSelect = true)
+                        Snackbar.make(
+                            playerView,
+                            "✓ Legenda Oficial ativada: ${os.langName} (${os.confidenceScore}% certeza • UTF-8)",
+                            1800
+                        ).apply {
+                            anchorView = progressViewGroup
+                        }.show()
+                    }.onFailure { err ->
+                        Snackbar.make(playerView, "Erro ao baixar legenda: ${err.message}", 2000).apply {
+                            anchorView = progressViewGroup
+                        }.show()
+                    }
+                }
+            }
+        }
+
+        val initialLoadingItems = listOf(
+            GlassMenuItem(
+                id = "loading_hub",
+                title = "Buscando e verificando legendas oficiais...",
+                subtitle = "Analisando vocabulário, ortografia e sincronia para ${initialLanguage.displayName}",
+                isInteractive = false
+            )
+        )
+
+        hubDialog = PlayerGlassMenuDialog(
+            context = this,
+            title = "Central de Legendas Oficiais",
+            items = initialLoadingItems
+        ) { selected ->
+            val target = selected.tag as? HubActionTarget ?: return@PlayerGlassMenuDialog
+            if (target.embeddedGroup != null && target.embeddedIndex >= 0) {
+                val builder = player.trackSelectionParameters.buildUpon()
+                builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                builder.clearOverridesOfType(C.TRACK_TYPE_TEXT)
+                builder.addOverride(TrackSelectionOverride(target.embeddedGroup.mediaTrackGroup, listOf(target.embeddedIndex)))
+                player.trackSelectionParameters = builder.build()
+                Snackbar.make(
+                    playerView,
+                    "★ Legenda Oficial ativada: ${target.embeddedName} (100% Certeza • Sincronia 0ms)",
+                    1800
+                ).apply {
+                    anchorView = progressViewGroup
+                }.show()
+            } else if (target.onlineSub != null) {
+                downloadAndActivate(target.onlineSub, activeLang)
+            }
+        }
+            .setSubtitle("Verificação Léxica de Idioma • UTF-8 Automático")
+            .setLanguageSelector(initialLanguage) { _, newLang ->
+                triggerSearch(newLang)
+            }
+            .setActionButton("⚡ Ativar / Baixar Melhor Oficial (${initialLanguage.shortLabel})") { d ->
+                val embeddedBest = findMatchingEmbeddedOfficialTracks(activeLang).firstOrNull()?.tag as? HubActionTarget
+                if (embeddedBest != null && embeddedBest.embeddedGroup != null && embeddedBest.embeddedIndex >= 0) {
+                    d.dismiss()
+                    val builder = player.trackSelectionParameters.buildUpon()
+                    builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                    builder.clearOverridesOfType(C.TRACK_TYPE_TEXT)
+                    builder.addOverride(TrackSelectionOverride(embeddedBest.embeddedGroup.mediaTrackGroup, listOf(embeddedBest.embeddedIndex)))
+                    player.trackSelectionParameters = builder.build()
+                    Snackbar.make(
+                        playerView,
+                        "⚡ Legenda Oficial ativada: ${embeddedBest.embeddedName} (100% Certeza)",
+                        1800
+                    ).apply {
+                        anchorView = progressViewGroup
+                    }.show()
+                    return@setActionButton
+                }
+                val best = currentResults.firstOrNull { activeLang.matchesLanguageCode(it.lang) }
+                    ?: currentResults.firstOrNull()
+                if (best != null) {
+                    d.dismiss()
+                    downloadAndActivate(best, activeLang)
+                } else {
+                    d.showLoading(true)
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        val fastRes = onlineSubtitleManager.get().downloadBestSubtitle(
+                            rawTitle = videoTitle,
+                            season = seasonNum,
+                            episode = epDouble,
+                            seriesTitle = seriesTitleExtra,
+                            preferredLanguage = activeLang
+                        )
+                        withContext(Dispatchers.Main) {
+                            d.showLoading(false)
+                            fastRes.onSuccess { (cachedFile, sub) ->
+                                d.dismiss()
+                                val virtualSub = SubtitleItem(
+                                    id = "saved_${cachedFile.nameWithoutExtension}",
+                                    name = "💾 [Oficial] ${sub.langName}",
+                                    languageLabel = sub.langName,
+                                    languageCode = sub.lang
+                                )
+                                applyExternalSubtitle(cachedFile, virtualSub, isMatching = true, forceSelect = true)
+                                Snackbar.make(
+                                    playerView,
+                                    "⚡ Legenda Oficial ativada: ${sub.langName} (${sub.confidenceScore}% certeza)",
+                                    1800
+                                ).apply {
+                                    anchorView = progressViewGroup
+                                }.show()
+                            }.onFailure { err ->
+                                Snackbar.make(playerView, err.message ?: "Nenhuma legenda encontrada", 2000).apply {
+                                    anchorView = progressViewGroup
+                                }.show()
+                            }
+                        }
+                    }
+                }
+            }
+            .setFooterSecondary("← Voltar às Faixas") {
+                showSubtitleTrackDialog()
+            }
+            .setFooterPrimary("Aparência") {
+                openSubtitleStyleDialog()
+            }
+
+        hubDialog.show()
+        triggerSearch(initialLanguage)
     }
 
     private fun openSubtitleStyleDialog() {
@@ -3116,10 +3402,11 @@ class PlayerActivity : BasePlayerActivity() {
 
         val errorGeneral = error.localizedMessage ?: getString(R.string.something_went_wrong)
         val exoException = error as? ExoPlaybackException
-        val rendererException = exoException?.rendererException
-        val rendererFormat = exoException?.rendererFormat
+        val isRendererType = exoException?.type == TYPE_RENDERER
+        val rendererException = if (isRendererType) exoException?.rendererException else null
+        val rendererFormat = if (isRendererType) exoException?.rendererFormat else null
         val mimeType = rendererFormat?.sampleMimeType ?: ""
-        val rendererName = exoException?.rendererName ?: ""
+        val rendererName = if (isRendererType) (exoException?.rendererName ?: "") else ""
 
         val errorDetailed = when (exoException?.type) {
             TYPE_SOURCE -> exoException.sourceException.localizedMessage

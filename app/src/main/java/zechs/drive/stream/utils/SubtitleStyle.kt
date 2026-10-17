@@ -61,6 +61,30 @@ data class SubtitleStyle(
         }
         return Typeface.create(base, style)
     }
+
+    companion object {
+        val DEFAULT = SubtitleStyle()
+        val CRUNCHYROLL_YELLOW = SubtitleStyle(
+            fontFamily = SubtitleFontFamily.SANS,
+            sizeSp = 22f,
+            bold = true,
+            foregroundColor = Color.parseColor("#FFE600"),
+            edgeType = CaptionStyleCompat.EDGE_TYPE_OUTLINE,
+            edgeColor = Color.BLACK,
+            backgroundColor = Color.TRANSPARENT,
+            positionFraction = 0.95f
+        )
+        val CINEMA_BOX = SubtitleStyle(
+            fontFamily = SubtitleFontFamily.SANS,
+            sizeSp = 20f,
+            bold = false,
+            foregroundColor = Color.WHITE,
+            edgeType = CaptionStyleCompat.EDGE_TYPE_NONE,
+            edgeColor = Color.TRANSPARENT,
+            backgroundColor = Color.argb(180, 0, 0, 0),
+            positionFraction = 0.95f
+        )
+    }
 }
 
 enum class SubtitleFontFamily(val key: String, val displayName: String, val mpvFont: String) {

@@ -4,17 +4,23 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
 import android.util.TypedValue
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import zechs.drive.stream.R
 import zechs.drive.stream.databinding.DialogPlayerGlassMenuBinding
 import zechs.drive.stream.databinding.ItemPlayerGlassMenuBinding
+import zechs.drive.stream.utils.SubtitleLanguage
 
 data class GlassMenuItem(
     val id: String,
@@ -40,8 +46,13 @@ class PlayerGlassMenuDialog(
     private val onItemSelected: (GlassMenuItem) -> Unit
 ) {
 
+    private var subtitleText: String? = null
+
     private var actionButtonText: String? = null
     private var onActionClicked: ((PlayerGlassMenuDialog) -> Unit)? = null
+
+    private var footerTertiaryText: String? = null
+    private var onFooterTertiaryClicked: (() -> Unit)? = null
 
     private var footerSecondaryText: String? = null
     private var onFooterSecondaryClicked: (() -> Unit)? = null
@@ -49,16 +60,29 @@ class PlayerGlassMenuDialog(
     private var footerPrimaryText: String? = null
     private var onFooterPrimaryClicked: (() -> Unit)? = null
 
+    private var selectedLanguage: SubtitleLanguage? = null
+    private var onLanguageChanged: ((PlayerGlassMenuDialog, SubtitleLanguage) -> Unit)? = null
+
     private var dialog: AlertDialog? = null
     private var binding: DialogPlayerGlassMenuBinding? = null
     private var adapter: GlassMenuAdapter? = null
     private var onDismiss: (() -> Unit)? = null
+    private var accentColorResolved: Int = Color.parseColor("#22D3EE")
 
     fun setOnDismiss(action: () -> Unit) = apply { onDismiss = action }
+
+    fun setSubtitle(text: String?) = apply {
+        this.subtitleText = text
+    }
 
     fun setActionButton(text: String, onClick: (PlayerGlassMenuDialog) -> Unit) = apply {
         this.actionButtonText = text
         this.onActionClicked = onClick
+    }
+
+    fun setFooterTertiary(text: String, onClick: () -> Unit) = apply {
+        this.footerTertiaryText = text
+        this.onFooterTertiaryClicked = onClick
     }
 
     fun setFooterSecondary(text: String, onClick: () -> Unit) = apply {
@@ -71,6 +95,14 @@ class PlayerGlassMenuDialog(
         this.onFooterPrimaryClicked = onClick
     }
 
+    fun setLanguageSelector(
+        initialLanguage: SubtitleLanguage,
+        onLanguageSelected: (PlayerGlassMenuDialog, SubtitleLanguage) -> Unit
+    ) = apply {
+        this.selectedLanguage = initialLanguage
+        this.onLanguageChanged = onLanguageSelected
+    }
+
     fun show(): PlayerGlassMenuDialog {
         val previousFocus = (context as? android.app.Activity)?.currentFocus
         val inflater = LayoutInflater.from(context)
@@ -78,8 +110,31 @@ class PlayerGlassMenuDialog(
         binding = dialogBinding
 
         dialogBinding.tvDialogTitle.text = title
+        if (!subtitleText.isNullOrBlank()) {
+            dialogBinding.tvDialogSubtitle.text = subtitleText
+            dialogBinding.tvDialogSubtitle.visibility = View.VISIBLE
+        } else {
+            dialogBinding.tvDialogSubtitle.visibility = View.GONE
+        }
+
         dialogBinding.btnDialogClose.setOnClickListener {
             dismiss()
+        }
+
+        // Resolve accent color
+        val typedValue = TypedValue()
+        accentColorResolved = if (context.theme.resolveAttribute(R.attr.colorAccentPrimary, typedValue, true)) {
+            typedValue.data
+        } else {
+            Color.parseColor("#22D3EE")
+        }
+
+        // Language selector pills (Apple TV+ grade)
+        if (selectedLanguage != null && onLanguageChanged != null) {
+            dialogBinding.scrollLanguagePills.visibility = View.VISIBLE
+            renderLanguagePills(dialogBinding.layoutLanguagePills)
+        } else {
+            dialogBinding.scrollLanguagePills.visibility = View.GONE
         }
 
         // Action button
@@ -94,9 +149,22 @@ class PlayerGlassMenuDialog(
         }
 
         // Footer buttons
-        val hasFooter = !footerPrimaryText.isNullOrBlank() || !footerSecondaryText.isNullOrBlank()
+        val hasFooter = !footerPrimaryText.isNullOrBlank() ||
+            !footerSecondaryText.isNullOrBlank() ||
+            !footerTertiaryText.isNullOrBlank()
         if (hasFooter) {
             dialogBinding.layoutFooterActions.visibility = View.VISIBLE
+            if (!footerTertiaryText.isNullOrBlank()) {
+                dialogBinding.btnFooterTertiary.text = footerTertiaryText
+                dialogBinding.btnFooterTertiary.visibility = View.VISIBLE
+                dialogBinding.btnFooterTertiary.setOnClickListener {
+                    dismiss()
+                    onFooterTertiaryClicked?.invoke()
+                }
+            } else {
+                dialogBinding.btnFooterTertiary.visibility = View.GONE
+            }
+
             if (!footerSecondaryText.isNullOrBlank()) {
                 dialogBinding.btnFooterSecondary.text = footerSecondaryText
                 dialogBinding.btnFooterSecondary.visibility = View.VISIBLE
@@ -122,15 +190,7 @@ class PlayerGlassMenuDialog(
             dialogBinding.layoutFooterActions.visibility = View.GONE
         }
 
-        // Resolve accent color
-        val typedValue = TypedValue()
-        val accentColor = if (context.theme.resolveAttribute(R.attr.colorAccentPrimary, typedValue, true)) {
-            typedValue.data
-        } else {
-            Color.parseColor("#22D3EE")
-        }
-
-        adapter = GlassMenuAdapter(items.toMutableList(), accentColor) { selectedItem ->
+        adapter = GlassMenuAdapter(items.toMutableList(), accentColorResolved) { selectedItem ->
             onItemSelected(selectedItem)
             dismiss()
         }
@@ -166,20 +226,90 @@ class PlayerGlassMenuDialog(
         dialog?.show()
         dialog?.window?.apply {
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            val width = minOf((520 * context.resources.displayMetrics.density).toInt(),
-                (context.resources.displayMetrics.widthPixels * 0.92f).toInt())
+            val width = minOf(
+                (540 * context.resources.displayMetrics.density).toInt(),
+                (context.resources.displayMetrics.widthPixels * 0.92f).toInt()
+            )
             setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
             dialogBinding.root.setCardBackgroundColor(Color.TRANSPARENT)
             zechs.drive.stream.utils.FrostedWindow.apply(this)
         }
         dialogBinding.rvDialogItems.post {
             if (initialFocusIndex == null) {
-                dialogBinding.btnDialogClose.requestFocus()
+                if (dialogBinding.btnDialogAction.visibility == View.VISIBLE) {
+                    dialogBinding.btnDialogAction.requestFocus()
+                } else {
+                    dialogBinding.btnDialogClose.requestFocus()
+                }
             } else {
                 requestInitialItemFocus(dialogBinding, initialFocusIndex, attemptsRemaining = 5)
             }
         }
         return this
+    }
+
+    private fun stylePillView(pill: TextView, isSelected: Boolean) {
+        val density = context.resources.displayMetrics.density
+        val cornerRadius = 999f * density
+        pill.typeface = Typeface.create("sans-serif-medium", if (isSelected) Typeface.BOLD else Typeface.NORMAL)
+        val bg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            this.cornerRadius = cornerRadius
+            if (isSelected) {
+                setColor(Color.argb(60, Color.red(accentColorResolved), Color.green(accentColorResolved), Color.blue(accentColorResolved)))
+                setStroke((1.5f * density).toInt(), accentColorResolved)
+            } else {
+                setColor(Color.parseColor("#1E293B"))
+                setStroke((1f * density).toInt(), Color.parseColor("#334155"))
+            }
+        }
+        pill.background = bg
+        pill.setTextColor(if (isSelected) Color.WHITE else Color.parseColor("#CBD5E1"))
+    }
+
+    private fun renderLanguagePills(container: LinearLayout) {
+        val density = context.resources.displayMetrics.density
+        val padH = (12 * density).toInt()
+        val padV = (6 * density).toInt()
+        val marginEnd = (8 * density).toInt()
+        val languages = SubtitleLanguage.values()
+
+        if (container.childCount == languages.size) {
+            languages.forEachIndexed { idx, lang ->
+                val pill = container.getChildAt(idx) as? TextView ?: return@forEachIndexed
+                stylePillView(pill, lang == selectedLanguage)
+            }
+            return
+        }
+
+        container.removeAllViews()
+        languages.forEach { lang ->
+            val pill = TextView(context).apply {
+                text = "${lang.flag} ${lang.shortLabel}"
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f)
+                gravity = Gravity.CENTER
+                setPadding(padH, padV, padH, padV)
+                isClickable = true
+                isFocusable = true
+                stylePillView(this, lang == selectedLanguage)
+
+                setOnClickListener {
+                    if (selectedLanguage != lang) {
+                        selectedLanguage = lang
+                        renderLanguagePills(container)
+                        onLanguageChanged?.invoke(this@PlayerGlassMenuDialog, lang)
+                    }
+                }
+            }
+
+            val lp = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                this.marginEnd = marginEnd
+            }
+            container.addView(pill, lp)
+        }
     }
 
     private fun requestInitialItemFocus(
@@ -216,6 +346,23 @@ class PlayerGlassMenuDialog(
             b.dialogProgressBar.visibility = if (show) View.VISIBLE else View.GONE
             b.btnDialogAction.isEnabled = !show
         }
+    }
+
+    fun updateSubtitle(text: String?) {
+        subtitleText = text
+        binding?.let { b ->
+            if (!text.isNullOrBlank()) {
+                b.tvDialogSubtitle.text = text
+                b.tvDialogSubtitle.visibility = View.VISIBLE
+            } else {
+                b.tvDialogSubtitle.visibility = View.GONE
+            }
+        }
+    }
+
+    fun updateActionButtonText(text: String) {
+        actionButtonText = text
+        binding?.btnDialogAction?.text = text
     }
 
     fun updateItems(newItems: List<GlassMenuItem>) {
@@ -256,6 +403,7 @@ class PlayerGlassMenuDialog(
 
             if (!item.subtitle.isNullOrBlank()) {
                 b.tvItemSubtitle.text = item.subtitle
+                b.tvItemSubtitle.maxLines = 3
                 b.tvItemSubtitle.visibility = View.VISIBLE
             } else {
                 b.tvItemSubtitle.visibility = View.GONE
