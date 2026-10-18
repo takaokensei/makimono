@@ -57,14 +57,19 @@ Consulte sempre [`docs/design/DESIGN.md`](docs/design/DESIGN.md). Erros mais com
 
 ---
 
-## 6. Ambiente de Desenvolvimento Windows
+## 6. Consulta Obrigatória de Documentação (Context7)
+- Antes de usar APIs de Media3, Room, Glide ou TV, consulte o Context7 para a versão exata configurada em `app/build.gradle` (guia em [`docs/dev/TOOLS.md`](docs/dev/TOOLS.md)). Não confie em assinaturas ou métodos de memória pré-treinada desatualizada.
+
+---
+
+## 7. Ambiente de Desenvolvimento Windows
 - **Caminho Curto via `subst`:** Como caminhos com acentos (ex: `Cauã V`) podem quebrar workers do Gradle, use uma unidade virtual ASCII (ex: `subst Z: .` e rode a partir de `Z:\`).
 - **Emulador TV:** 1920×1080 @320dpi (xhdpi), canvas base 960×540dp.
 - **Screenshots:** Utilize a `VisualReviewActivity` (`zechs.drive.stream.visualreview`) para capturar telas de forma isolada.
 
 ---
 
-## 7. Definição de Pronto (DoD)
+## 8. Definição de Pronto (DoD)
 Toda tarefa de código só é considerada pronta quando:
 1. O código compila perfeitamente sem erros.
 2. O script de verificação unificada `./scripts/verify-all.ps1` (ou `./scripts/verify-all.sh`) executar 100% verde (testes unitários, linter Android, compilação debug e guardas estáticas); use `--quick` apenas para iterações rápidas durante o desenvolvimento.
