@@ -45,7 +45,11 @@ class AniSkipRepository @Inject constructor(
             val chapters = body.results.mapIndexed { index, item ->
                 val type = when (item.skipType.lowercase()) {
                     "op" -> MatroskaChapterParser.ChapterType.OPENING
-                    "ed", "mixed-ed" -> if (item.interval.startTime >= 300.0) MatroskaChapterParser.ChapterType.ENDING else MatroskaChapterParser.ChapterType.OTHER
+                    "ed", "mixed-ed" -> if (item.interval.startTime >= 300.0) {
+                        MatroskaChapterParser.ChapterType.ENDING
+                    } else {
+                        MatroskaChapterParser.ChapterType.OTHER
+                    }
                     "recap" -> MatroskaChapterParser.ChapterType.RECAP
                     else -> MatroskaChapterParser.ChapterType.OTHER
                 }

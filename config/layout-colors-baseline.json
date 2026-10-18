@@ -1,0 +1,53 @@
+{
+  "app/src/main/res/layout-land/fragment_profile_selection.xml": [
+    65,
+    141,
+    179,
+    191,
+    193
+  ],
+  "app/src/main/res/layout-land/item_series_episode_card.xml": [
+    16,
+    55,
+    78,
+    105
+  ],
+  "app/src/main/res/layout/activity_mpv.xml": [
+    38,
+    46
+  ],
+  "app/src/main/res/layout/activity_player.xml": [
+    41,
+    48
+  ],
+  "app/src/main/res/layout/component_crunchyroll_skeleton.xml": [
+    22,
+    30,
+    45,
+    52,
+    59,
+    66,
+    73
+  ],
+  "app/src/main/res/layout/dialog_profile_editor.xml": [
+    8,
+    75,
+    92
+  ],
+  "app/src/main/res/layout/fragment_profile_selection.xml": [
+    65,
+    141,
+    179,
+    191,
+    193
+  ],
+  "app/src/main/res/layout/item_profile_card.xml": [
+    84
+  ],
+  "app/src/main/res/layout/item_series_episode_card.xml": [
+    16,
+    55,
+    78,
+    105
+  ]
+}

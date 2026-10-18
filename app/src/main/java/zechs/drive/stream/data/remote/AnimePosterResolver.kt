@@ -126,11 +126,12 @@ class AnimePosterResolver @Inject constructor() {
             clean = clean.replace(Regex("\\(.*?\\)"), " ")
             // Remove HDR10+ explicitly
             clean = clean.replace(Regex("(?i)hdr10\\+"), " ")
-            // Remove technical keywords, codecs, HDR, audio channels, and release tags
-            clean = clean.replace(
-                Regex("(?i)\\b(2160p|1080p|720p|480p|4k|uhd|hevc|avc|x264|x265|h264|h265|bluray|bdrip|brrip|web-dl|webdl|webrip|web|hdtv|remux|imax|dv|dovi|dolby(?:\\s*vision|\\s*digital|\\s*audio)?|dolby|hdr10plus|hdr10|hdr|sdr|10bit|8bit|ddp?5\\.1|dd5\\.1|5\\.1|7\\.1|2\\.0|stereo|truehd|atmos|dts(?:-hd|-x)?|flac|aac|eac3|ac3|dual(?:[\\s_-]*audio)?|multi(?:[\\s_-]*audio)?|multisub|dublado|legendado|repack|proper|internal|complete)\\b"),
-                " "
-            )
+            val techPattern = "(?i)\\b(2160p|1080p|720p|480p|4k|uhd|hevc|avc|x264|x265|h264|h265|bluray|bdrip|" +
+                "brrip|web-dl|webdl|webrip|web|hdtv|remux|imax|dv|dovi|dolby(?:\\s*vision|\\s*digital|\\s*audio)?|" +
+                "dolby|hdr10plus|hdr10|hdr|sdr|10bit|8bit|ddp?5\\.1|dd5\\.1|5\\.1|7\\.1|2\\.0|stereo|truehd|atmos|" +
+                "dts(?:-hd|-x)?|flac|aac|eac3|ac3|dual(?:[\\s_-]*audio)?|multi(?:[\\s_-]*audio)?|multisub|dublado|" +
+                "legendado|repack|proper|internal|complete)\\b"
+            clean = clean.replace(Regex(techPattern), " ")
             // Strip standalone 4-digit release years (e.g. 1980..2035) so search engines don't choke
             clean = clean.replace(Regex("\\b(19\\d\\d|20[0-3]\\d)\\b"), " ")
             // Clean up dots, underscores, hyphens and extra whitespace

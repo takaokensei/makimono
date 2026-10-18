@@ -843,7 +843,6 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
             }
             val focusedItem = when {
                 controller.btnBack.isFocused -> zechs.drive.stream.utils.PlayerFocusItem.EXIT
-                controller.progressBar.isFocused -> zechs.drive.stream.utils.PlayerFocusItem.TIMELINE
                 controller.btnPlayPause.isFocused -> zechs.drive.stream.utils.PlayerFocusItem.PLAY_PAUSE
                 else -> zechs.drive.stream.utils.PlayerFocusItem.OTHER
             }
@@ -861,7 +860,6 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
                 handledFocusDirectionKeyCode = event.keyCode
                 when (target) {
                     zechs.drive.stream.utils.PlayerFocusItem.EXIT -> controller.btnBack.requestFocus()
-                    zechs.drive.stream.utils.PlayerFocusItem.TIMELINE -> controller.progressBar.requestFocus()
                     zechs.drive.stream.utils.PlayerFocusItem.PLAY_PAUSE -> controller.btnPlayPause.requestFocus()
                     zechs.drive.stream.utils.PlayerFocusItem.OTHER -> Unit
                 }
@@ -1590,6 +1588,50 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
                             addSubtitleToMpv(cached, sub)
                         }
                     }
+                }
+            }
+
+            // 3. Automatically download and index PT-BR subtitle if none is present
+            val hasPortugueseSub = savedSubs.any { it.isPortuguese } ||
+                matching.any {
+                    zechs.drive.stream.utils.SubtitleSelectionPolicy.isPortuguese(it.languageCode, it.name)
+                }
+
+            if (!hasPortugueseSub) {
+                try {
+                    val parsed = EpisodeParser.parse(videoTitle)
+                    val seasonNum = parsed.season?.toInt()
+                    val epDouble = parsed.episode?.toDouble()
+                    val seriesExtra = intent.getStringExtra(PlayerLauncher.EXTRA_SERIES_TITLE)
+                    val autoRes = onlineSubtitleManager.get().downloadBestSubtitle(
+                        rawTitle = videoTitle,
+                        season = seasonNum,
+                        episode = epDouble,
+                        seriesTitle = seriesExtra,
+                        preferredLanguage = zechs.drive.stream.utils.SubtitleLanguage.PT_BR
+                    )
+                    autoRes.onSuccess { (cachedFile, sub) ->
+                        val virtualId = "saved_${cachedFile.nameWithoutExtension}"
+                        if (!addedSubtitleFileIds.contains(virtualId)) {
+                            addedSubtitleFileIds.add(virtualId)
+                            val virtualSub = SubtitleItem(
+                                id = virtualId,
+                                name = "💾 [PT-BR] ${sub.langName}",
+                                languageLabel = sub.langName,
+                                languageCode = sub.lang
+                            )
+                            withContext(Dispatchers.Main) {
+                                addSubtitleToMpv(cachedFile, virtualSub)
+                                Snackbar.make(
+                                    binding.root,
+                                    "⚡ Legenda PT-BR baixada e indexada (${sub.confidenceScore}% certeza)",
+                                    1800
+                                ).show()
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "Auto PT-BR subtitle download error: ${e.message}")
                 }
             }
         }

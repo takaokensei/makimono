@@ -1,9 +1,8 @@
-package zechs.drive.stream.domain.library
+package zechs.drive.stream.data.repository
 
 import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.data.remote.AnimePosterResolver
 import zechs.drive.stream.data.remote.TenraiAnimeService
-import zechs.drive.stream.data.repository.FolderMetadataRepository
 import zechs.drive.stream.utils.AppLog
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
@@ -54,8 +53,9 @@ class FranchiseGroupingManager @Inject constructor(
 
         return when {
             norm.contains("monogatari") || norm.contains("kizumonogatari") || norm.contains("bakemonogatari") ||
-                norm.contains("nisemonogatari") || norm.contains("nekomonogatari") || norm.contains("koyomimonogatari") ||
-                norm.contains("owarimonogatari") || norm.contains("tsukimonogatari") || norm.contains("zoku") -> {
+                norm.contains("nisemonogatari") || norm.contains("nekomonogatari") ||
+                norm.contains("koyomimonogatari") || norm.contains("owarimonogatari") ||
+                norm.contains("tsukimonogatari") || norm.contains("zoku") -> {
                 "monogatari_series"
             }
             norm.contains("owari no seraph") || norm.contains("seraph of the end") -> {
@@ -66,6 +66,9 @@ class FranchiseGroupingManager @Inject constructor(
             }
             norm.contains("bleach") -> {
                 "bleach"
+            }
+            norm.contains("mushoku") || norm.contains("jobless reincarnation") -> {
+                "mushoku_tensei"
             }
             norm.contains("jigokuraku") || norm.contains("hell's paradise") -> {
                 "jigokuraku"
@@ -95,6 +98,7 @@ class FranchiseGroupingManager @Inject constructor(
             "owari_no_seraph" -> "Owari no Seraph"
             "tensei_shitara_slime" -> "Tensei Shitara Slime Datta Ken"
             "bleach" -> "BLEACH"
+            "mushoku_tensei" -> "Mushoku Tensei"
             "jigokuraku" -> "Jigokuraku"
             "spider_man" -> "Spider-Man"
             "the_mentalist" -> "The Mentalist"
@@ -142,17 +146,20 @@ class FranchiseGroupingManager @Inject constructor(
                 val sortedMembers = members.map { file ->
                     val targetId = if (file.isShortcut) file.shortcutDetails.targetId ?: file.id else file.id
                     val meta = allMeta[targetId] ?: allMeta[file.id]
+                    val arcTitle = meta?.titleRomaji ?: meta?.titleEnglish
+                        ?: AnimePosterResolver.cleanAnimeTitle(file.name)
                     FranchiseMember(
                         folderId = file.id,
                         folderName = file.name,
-                        arcTitle = meta?.titleRomaji ?: meta?.titleEnglish ?: AnimePosterResolver.cleanAnimeTitle(file.name),
+                        arcTitle = arcTitle,
                         releaseYear = meta?.year,
                         episodeCount = meta?.episodeCount,
                         isMovie = meta?.isMovie == true,
                         posterUrl = meta?.posterUrl ?: file.posterUrl,
                         bannerUrl = meta?.bannerUrl ?: file.thumbnailLink,
                         score = meta?.score,
-                        scoreSource = if (meta?.isMovie == true || meta?.mediaType == "movie" || meta?.mediaType == "tv") "TMDB" else "MAL"
+                        scoreSource = if (meta?.isMovie == true ||
+                            meta?.mediaType == "movie" || meta?.mediaType == "tv") "TMDB" else "MAL"
                     )
                 }.sortedWith(
                     compareBy<FranchiseMember> { it.releaseYear ?: 9999 }
@@ -163,7 +170,8 @@ class FranchiseGroupingManager @Inject constructor(
                 val primaryFile = members.firstOrNull { it.id == primaryMember.folderId } ?: members.first()
 
                 val bestPoster = sortedMembers.mapNotNull { it.posterUrl }.firstOrNull() ?: primaryFile.posterUrl
-                val bestBanner = sortedMembers.mapNotNull { allMeta[it.folderId]?.bannerUrl }.firstOrNull() ?: primaryFile.thumbnailLink
+                val bestBanner = sortedMembers.mapNotNull { allMeta[it.folderId]?.bannerUrl }.firstOrNull()
+                    ?: primaryFile.thumbnailLink
 
                 val hub = FranchiseHub(
                     franchiseKey = franchiseKey,
@@ -185,7 +193,7 @@ class FranchiseGroupingManager @Inject constructor(
                 )
 
                 result.add(consolidatedCard)
-                AppLog.d(TAG, "Grouped ${sortedMembers.size} folders into franchise '$canonicalTitle': ${sortedMembers.map { it.arcTitle }}")
+                AppLog.d(TAG, "Grouped ${sortedMembers.size} folders into franchise '$canonicalTitle'")
             } else {
                 // Only 1 folder in library for this franchise: present normally
                 val singleFile = members.first()
@@ -217,34 +225,46 @@ class FranchiseGroupingManager @Inject constructor(
         val cached = getFranchiseHub(key)
         if (cached != null) return cached
 
-        val canonicalTitle = getCanonicalTitle(key)
-        return try {
-            val arcs = tenraiAnimeService.resolveFranchiseArcs(seriesTitle)
-            if (arcs.size > 1) {
-                val members = arcs.map { arc ->
-                    FranchiseMember(
-                        folderId = if (arc.title.contains(seriesTitle, true)) folderId else arc.title,
-                        folderName = arc.title,
-                        arcTitle = arc.title,
-                        releaseYear = arc.year,
-                        episodeCount = null,
-                        isMovie = arc.title.contains("movie", true) || arc.title.contains("filme", true)
-                    )
-                }
-                val hub = FranchiseHub(
-                    franchiseKey = key,
-                    canonicalTitle = canonicalTitle,
-                    primaryFolderId = folderId,
-                    posterUrl = null,
-                    bannerUrl = null,
-                    members = members
-                )
-                franchiseHubsCache[key] = hub
-                folderToFranchiseMap[folderId] = key
-                hub
-            } else null
+        val allMeta = try {
+            folderMetadataRepository.getAllMetadata()
         } catch (_: Exception) {
-            null
+            emptyList()
         }
+
+        val matchingFolders = allMeta.filter { meta ->
+            resolveFranchiseKey(meta.folderName) == key
+        }
+
+        if (matchingFolders.size > 1) {
+            val canonicalTitle = getCanonicalTitle(key)
+            val members = matchingFolders.map { meta ->
+                FranchiseMember(
+                    folderId = meta.folderId,
+                    folderName = meta.folderName,
+                    arcTitle = meta.titleRomaji?.takeIf { it.isNotBlank() }
+                        ?: meta.titleEnglish?.takeIf { it.isNotBlank() }
+                        ?: AnimePosterResolver.cleanAnimeTitle(meta.folderName),
+                    releaseYear = meta.year,
+                    episodeCount = meta.episodeCount,
+                    isMovie = meta.isMovie,
+                    posterUrl = meta.posterUrl,
+                    bannerUrl = meta.bannerUrl,
+                    score = meta.score,
+                    scoreSource = if (meta.mediaType == "movie" || meta.mediaType == "tv") "TMDB" else "MAL"
+                )
+            }
+            val hub = FranchiseHub(
+                franchiseKey = key,
+                canonicalTitle = canonicalTitle,
+                primaryFolderId = folderId,
+                posterUrl = matchingFolders.firstOrNull { it.posterUrl?.isNotBlank() == true }?.posterUrl,
+                bannerUrl = matchingFolders.firstOrNull { it.bannerUrl?.isNotBlank() == true }?.bannerUrl,
+                members = members
+            )
+            franchiseHubsCache[key] = hub
+            matchingFolders.forEach { folderToFranchiseMap[it.folderId] = key }
+            return hub
+        }
+        return null
     }
 }

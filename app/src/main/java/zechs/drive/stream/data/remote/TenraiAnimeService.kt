@@ -46,7 +46,8 @@ class TenraiAnimeService @Inject constructor() {
     data class TenraiEpisodeEntry(
         val epNumber: Int,
         val title: String?,
-        val titleJapanese: String?
+        val titleJapanese: String?,
+        val synopsis: String? = null
     )
 
     data class TenraiFranchiseArc(
@@ -56,7 +57,8 @@ class TenraiAnimeService @Inject constructor() {
         val type: String,
         val episodeCount: Int?,
         val year: Int?,
-        val episodes: Map<Int, String> = emptyMap()
+        val episodes: Map<Int, String> = emptyMap(),
+        val episodeSynopses: Map<Int, String> = emptyMap()
     )
 
     private val httpClient = OkHttpClient.Builder()
@@ -228,7 +230,13 @@ class TenraiAnimeService @Inject constructor() {
                     val epNum = item.optInt("mal_id", i + 1)
                     val title = item.optString("title").takeIf { it.isNotBlank() && it != "null" }
                     val titleJp = item.optString("title_japanese").takeIf { it.isNotBlank() && it != "null" }
-                    epList.add(TenraiEpisodeEntry(epNum, title, titleJp))
+                    val synopsis = item.optString("synopsis").takeIf { it.isNotBlank() && it != "null" }
+                        ?.replace(Regex("<br\\s*/?>"), " ")
+                        ?.replace(Regex("<.*?>"), "")
+                        ?.replace(Regex("\\[Written by.*?\\]"), "")
+                        ?.replace(Regex("\\(Source:.*?\\)"), "")
+                        ?.trim()
+                    epList.add(TenraiEpisodeEntry(epNum, title, titleJp, synopsis))
                 }
                 episodesCache[malId] = epList
                 epList
@@ -295,8 +303,12 @@ class TenraiAnimeService @Inject constructor() {
             val isTv = anime.type.equals("TV", ignoreCase = true)
             val seasonNum = if (isTv) tvSeasonCounter++ else null
 
+            val epList = if (isTv) getEpisodes(anime.malId) else emptyList()
             val episodesMap = if (isTv) {
-                getEpisodes(anime.malId).associate { it.epNumber to (it.title ?: "Episódio ${it.epNumber}") }
+                epList.associate { it.epNumber to (it.title ?: "Episódio ${it.epNumber}") }
+            } else emptyMap()
+            val synopsesMap = if (isTv) {
+                epList.filter { !it.synopsis.isNullOrBlank() }.associate { it.epNumber to it.synopsis!! }
             } else emptyMap()
 
             arcs.add(
@@ -307,7 +319,8 @@ class TenraiAnimeService @Inject constructor() {
                     type = anime.type ?: "TV",
                     episodeCount = anime.episodes,
                     year = anime.year,
-                    episodes = episodesMap
+                    episodes = episodesMap,
+                    episodeSynopses = synopsesMap
                 )
             )
         }

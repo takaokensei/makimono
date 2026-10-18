@@ -55,7 +55,7 @@ class HomeViewModelUiStateTest {
     private val catalogRepository = mockk<CatalogRepository>(relaxed = true)
     private val watchQueueRepository = mockk<WatchQueueRepository>(relaxed = true)
     private val profileManager = mockk<ProfileManager>(relaxed = true)
-    private val franchiseGroupingManager = mockk<zechs.drive.stream.domain.library.FranchiseGroupingManager>(relaxed = true)
+    private val franchiseGroupingManager = mockk<zechs.drive.stream.data.repository.FranchiseGroupingManager>(relaxed = true)
 
     private val testDispatcher = UnconfinedTestDispatcher()
 
@@ -87,6 +87,7 @@ class HomeViewModelUiStateTest {
         coEvery { watchListRepository.getLastWatched() } returns null
         coEvery { watchListRepository.getRecentWatches(any()) } returns emptyList()
         coEvery { watchListRepository.getAllWatches() } returns emptyList()
+        coEvery { franchiseGroupingManager.groupLibrary(any()) } answers { firstArg() }
     }
 
     @After

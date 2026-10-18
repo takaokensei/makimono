@@ -55,7 +55,10 @@ object SeriesMoreActionsDialog {
         fun addAction(label: String, iconRes: Int, action: () -> Unit) {
             val item = TextView(context).apply {
                 text = label
-                setTextAppearance(R.style.TextAppearance_Makimono_TV_Body)
+                androidx.core.widget.TextViewCompat.setTextAppearance(
+                    this,
+                    R.style.TextAppearance_Makimono_TV_Body
+                )
                 setTextColor(ContextCompat.getColor(context, R.color.obsidian_text_primary))
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(16), dp(8), dp(16), dp(8))

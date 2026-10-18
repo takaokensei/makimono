@@ -58,7 +58,7 @@ class HomeViewModel @Inject constructor(
     private val catalogRepository: CatalogRepository,
     private val watchQueueRepository: WatchQueueRepository,
     private val profileManager: ProfileManager,
-    private val franchiseGroupingManager: zechs.drive.stream.domain.library.FranchiseGroupingManager
+    private val franchiseGroupingManager: zechs.drive.stream.data.repository.FranchiseGroupingManager
 ) : ViewModel() {
 
     companion object {
@@ -397,8 +397,10 @@ class HomeViewModel @Inject constructor(
 
             if (!configuredName.isNullOrBlank()) {
                 val escapedName = configuredName.replace("'", "\\'")
+                val queryStr = "name = '$escapedName' and (mimeType = 'application/vnd.google-apps.folder' or " +
+                    "mimeType = 'application/vnd.google-apps.shortcut') and trashed=false"
                 val response = driveRepository.get().getAllFilesDetailed(
-                    query = "name = '$escapedName' and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut') and trashed=false",
+                    query = queryStr,
                     pageSize = 25
                 )
                 val listing = when (response) {

@@ -76,4 +76,48 @@ internal object SeriesMediaMetadataPolicy {
     private fun qualityLabel(fileName: String): String? = qualityTags.firstNotNullOfOrNull { (label, pattern) ->
         label.takeIf { pattern.containsMatchIn(fileName) }
     }
+
+    /**
+     * Formats hero synopsis into a concise, non-truncated overview (1 to 2 complete sentences)
+     * without mid-sentence truncation or trailing broken ellipsis.
+     */
+    fun formatHeroSynopsis(synopsis: String?, maxSentences: Int = 2, maxChars: Int = 220): String? {
+        if (synopsis.isNullOrBlank()) return null
+        val clean = synopsis
+            .replace(Regex("<br\\s*/?>"), " ")
+            .replace(Regex("<.*?>"), "")
+            .replace(Regex("\\[Written by.*?\\]"), "")
+            .replace(Regex("\\(Source:.*?\\)"), "")
+            .trim()
+        if (clean.isBlank()) return null
+
+        val sentenceEndRegex = Regex("(?<=[.!?])\\s+")
+        val sentences = clean.split(sentenceEndRegex).map { it.trim() }.filter { it.isNotBlank() }
+        if (sentences.isEmpty()) return null
+
+        val sb = StringBuilder()
+        var count = 0
+        for (sentence in sentences) {
+            if (count >= maxSentences) break
+            if (sb.isNotEmpty() && (sb.length + sentence.length + 1 > maxChars)) {
+                break
+            }
+            if (sb.isNotEmpty()) sb.append(" ")
+            sb.append(sentence)
+            count++
+        }
+
+        val result = sb.toString().trim()
+        return if (result.isNotBlank()) {
+            result
+        } else {
+            val first = sentences.first()
+            if (first.length <= maxChars) {
+                first
+            } else {
+                first.take(maxChars).substringBeforeLast(" ").trimEnd('.', ',', ';', ':') + "."
+            }
+        }
+    }
 }
+

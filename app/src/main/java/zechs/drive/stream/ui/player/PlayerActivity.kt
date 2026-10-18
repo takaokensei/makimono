@@ -1272,11 +1272,8 @@ class PlayerActivity : BasePlayerActivity() {
                 KeyEvent.KEYCODE_DPAD_DOWN -> zechs.drive.stream.utils.PlayerFocusDirection.DOWN
                 else -> null
             }
-            val timeBar = playerView.findViewById<View>(androidx.media3.ui.R.id.exo_progress)
-            val isTimeBarFocused = timeBar?.isFocused == true
             val focusedItem = when {
                 btnBack.isFocused -> zechs.drive.stream.utils.PlayerFocusItem.EXIT
-                isTimeBarFocused -> zechs.drive.stream.utils.PlayerFocusItem.TIMELINE
                 btnPlayPause.isFocused -> zechs.drive.stream.utils.PlayerFocusItem.PLAY_PAUSE
                 else -> zechs.drive.stream.utils.PlayerFocusItem.OTHER
             }
@@ -1294,7 +1291,6 @@ class PlayerActivity : BasePlayerActivity() {
                 handledFocusDirectionKeyCode = event.keyCode
                 when (target) {
                     zechs.drive.stream.utils.PlayerFocusItem.EXIT -> btnBack.requestFocus()
-                    zechs.drive.stream.utils.PlayerFocusItem.TIMELINE -> timeBar?.requestFocus()
                     zechs.drive.stream.utils.PlayerFocusItem.PLAY_PAUSE -> btnPlayPause.requestFocus()
                     zechs.drive.stream.utils.PlayerFocusItem.OTHER -> Unit
                 }
@@ -1854,6 +1850,57 @@ class PlayerActivity : BasePlayerActivity() {
                             applyExternalSubtitle(cached, sub, isMatching = true)
                         }
                     }
+                }
+            }
+
+            // 3. Automatically download and index PT-BR subtitle if none is present
+            val hasPortugueseSub = savedSubs.any { it.isPortuguese } ||
+                matching.any {
+                    zechs.drive.stream.utils.SubtitleSelectionPolicy.isPortuguese(it.languageCode, it.name)
+                }
+
+            if (!hasPortugueseSub) {
+                try {
+                    val parsed = EpisodeParser.parse(videoTitle)
+                    val seasonNum = parsed.season?.toInt()
+                    val epDouble = parsed.episode?.toDouble()
+                    val seriesExtra = intent.getStringExtra(PlayerLauncher.EXTRA_SERIES_TITLE)
+                    val autoRes = onlineSubtitleManager.get().downloadBestSubtitle(
+                        rawTitle = videoTitle,
+                        season = seasonNum,
+                        episode = epDouble,
+                        seriesTitle = seriesExtra,
+                        preferredLanguage = zechs.drive.stream.utils.SubtitleLanguage.PT_BR
+                    )
+                    autoRes.onSuccess { (cachedFile, sub) ->
+                        val virtualId = "saved_${cachedFile.nameWithoutExtension}"
+                        if (!addedSubtitleFileIds.contains(virtualId)) {
+                            addedSubtitleFileIds.add(virtualId)
+                            val virtualSub = SubtitleItem(
+                                id = virtualId,
+                                name = "💾 [PT-BR] ${sub.langName}",
+                                languageLabel = sub.langName,
+                                languageCode = sub.lang
+                            )
+                            withContext(Dispatchers.Main) {
+                                applyExternalSubtitle(
+                                    cachedFile,
+                                    virtualSub,
+                                    isMatching = true,
+                                    forceSelect = true
+                                )
+                                Snackbar.make(
+                                    playerView,
+                                    "⚡ Legenda PT-BR baixada e indexada (${sub.confidenceScore}% certeza)",
+                                    1800
+                                ).apply {
+                                    anchorView = progressViewGroup
+                                }.show()
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "Auto PT-BR subtitle download error: ${e.message}")
                 }
             }
         }

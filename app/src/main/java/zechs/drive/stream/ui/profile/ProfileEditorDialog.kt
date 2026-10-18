@@ -33,6 +33,7 @@ import zechs.drive.stream.R
 import zechs.drive.stream.data.model.UserProfile
 import zechs.drive.stream.data.remote.ProfileArt
 import zechs.drive.stream.data.remote.ProfileArtCatalog
+import zechs.drive.stream.data.remote.ProfileArtCatalogPolicy
 import zechs.drive.stream.databinding.DialogProfileEditorBinding
 import zechs.drive.stream.databinding.ItemProfileCatalogCardBinding
 import zechs.drive.stream.utils.ProfileManager
@@ -204,7 +205,10 @@ class ProfileEditorDialog(
 
                 val sectionTitle = TextView(context).apply {
                     text = "$sectionTitleText (${arts.size})"
-                    setTextAppearance(R.style.TextAppearance_Makimono_TV_Body)
+                    androidx.core.widget.TextViewCompat.setTextAppearance(
+                        this,
+                        R.style.TextAppearance_Makimono_TV_Body
+                    )
                     setTextColor(Color.WHITE)
                     setTypeface(typeface, android.graphics.Typeface.BOLD)
                     val topPad = dp(16)
@@ -303,6 +307,25 @@ class ProfileEditorDialog(
                     Glide.with(context)
                         .load(art.url)
                         .apply(if (isWallpaper) glideWallpaperOptions else glideAvatarOptions)
+                        .listener(object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
+                            override fun onLoadFailed(
+                                e: com.bumptech.glide.load.engine.GlideException?,
+                                model: Any?,
+                                target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>,
+                                isFirstResource: Boolean
+                            ): Boolean {
+                                cardBinding.root.visibility = View.GONE
+                                return false
+                            }
+
+                            override fun onResourceReady(
+                                resource: android.graphics.drawable.Drawable,
+                                model: Any,
+                                target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?,
+                                dataSource: com.bumptech.glide.load.DataSource,
+                                isFirstResource: Boolean
+                            ): Boolean = false
+                        })
                         .into(cardBinding.ivArtImage)
 
                     row.addView(cardBinding.root)
@@ -349,12 +372,19 @@ class ProfileEditorDialog(
                     }
                 }
 
+                val relevantTitles = resolver.getRelevantTitles()
+                val organizedSections = ProfileArtCatalogPolicy.organizeSections(
+                    rawSections = allSections,
+                    relevantTitles = relevantTitles,
+                    maxRelevant = 3
+                )
+
                 shimmerAnim?.cancel()
                 b.layoutAvatarSkeleton.isVisible = false
                 b.scrollAvatarCatalog.isVisible = true
 
                 renderCatalogSections(
-                    sections = allSections,
+                    sections = organizedSections,
                     container = b.layoutAvatarSections,
                     isWallpaper = false
                 )
@@ -395,12 +425,19 @@ class ProfileEditorDialog(
                     }
                 }
 
+                val relevantTitles = resolver.getRelevantTitles()
+                val organizedSections = ProfileArtCatalogPolicy.organizeSections(
+                    rawSections = allSections,
+                    relevantTitles = relevantTitles,
+                    maxRelevant = 3
+                )
+
                 shimmerAnim?.cancel()
                 b.layoutWallpaperSkeleton.isVisible = false
                 b.scrollWallpaperCatalog.isVisible = true
 
                 renderCatalogSections(
-                    sections = allSections,
+                    sections = organizedSections,
                     container = b.layoutWallpaperSections,
                     isWallpaper = true
                 )

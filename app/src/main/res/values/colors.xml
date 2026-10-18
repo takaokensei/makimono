@@ -25,11 +25,11 @@
     <!-- Obsidian Design System Specific Tokens -->
     <color name="obsidian_bg">#070B11</color>
     <color name="obsidian_surface">#111925</color>
-    <color name="obsidian_accent">#22D3EE</color>
+    <color name="obsidian_accent">#FF640A</color>
     <color name="obsidian_ice_white">#F5F7FA</color>
     <color name="obsidian_gray">#B0B8C4</color>
     <color name="obsidian_link_blue_gray">#8EA0B8</color>
-    <color name="obsidian_completed_green">#10B981</color>
+    <color name="obsidian_completed_green">#FF640A</color>
     <color name="obsidian_glass_fill">#26FFFFFF</color>
     <color name="obsidian_glass_stroke">#33FFFFFF</color>
 

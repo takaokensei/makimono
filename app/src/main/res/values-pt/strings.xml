@@ -478,4 +478,17 @@
     <string name="series_action_marked_watched_btn">✓ Visto</string>
     <string name="series_audio_legendado_pt">Legendado (PT-BR)</string>
     <string name="series_synopsis_read_more">Ler sinopse completa</string>
+    <string name="profile_logout_action">LOG OUT</string>
+    <string name="profile_logout_confirm_title">Sair da conta</string>
+    <string name="profile_logout_confirm_message">Tem certeza de que deseja sair da sua conta?</string>
+    <string name="profile_logout_action_confirm">Sair</string>
+    <string name="profile_art_section_library">Da sua biblioteca</string>
+    <string name="tab_episodes">EPISÓDIOS</string>
+    <string name="tab_details">DETALHES</string>
+    <string name="tab_more_like_this">MAIS COMO ESTE</string>
+    <string name="series_action_watchlist">Salvar na Lista</string>
+    <string name="series_action_in_watchlist">Na sua Lista</string>
+    <string name="details_studio_label">Estúdio</string>
+    <string name="details_original_title_label">Título Original</string>
+    <string name="details_media_specs_label">Especificações Técnicas</string>
 </resources>

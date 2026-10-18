@@ -162,9 +162,9 @@ class SeriesDetailEpisodeAdapter(
                 progress = progressDescription
             )
 
-            val thumbUrl = item.file.thumbnailLarge
+            val thumbUrl = item.fallbackThumbnailUrl
+                ?: item.file.thumbnailLarge
                 ?: item.file.thumbnailLink
-                ?: item.fallbackThumbnailUrl
                 ?: item.file.posterUrl
             MediaImageLoader.card(binding.ivEpisodeThumb, thumbUrl)
         }

@@ -22,6 +22,7 @@ import zechs.drive.stream.data.remote.TenraiAnimeService
 import zechs.drive.stream.data.repository.DriveRepository
 import zechs.drive.stream.data.repository.FolderMetadataRepository
 import zechs.drive.stream.data.repository.FollowedFolderRepository
+import zechs.drive.stream.data.repository.FranchiseGroupingManager
 import zechs.drive.stream.data.repository.WatchListRepository
 import zechs.drive.stream.data.repository.WatchQueueRepository
 import zechs.drive.stream.ui.files.adapter.FilesDataModel
@@ -39,6 +40,8 @@ import zechs.drive.stream.utils.state.Resource
 import zechs.drive.stream.domain.common.AppError
 import zechs.drive.stream.data.repository.DriveFailureClassifier
 import zechs.drive.stream.utils.state.ResourceErrorKind
+import zechs.drive.stream.data.remote.EpisodeDetails
+import zechs.drive.stream.data.remote.EpisodeMetadataResolver
 import java.util.Locale
 import javax.inject.Inject
 
@@ -74,7 +77,7 @@ sealed class SeriesDetailUiState {
         val hasIncompleteDriveListing: Boolean = false,
         val isMovie: Boolean = false,
         val selectedNavTab: SeriesNavTab = SeriesNavTab.EPISODES,
-        val franchiseHub: zechs.drive.stream.domain.library.FranchiseGroupingManager.FranchiseHub? = null,
+        val franchiseHub: FranchiseGroupingManager.FranchiseHub? = null,
         val activeMemberFolderId: String? = null,
         val isFranchiseHub: Boolean = false,
         val franchiseMembersCount: Int = 0,
@@ -115,7 +118,8 @@ class SeriesDetailViewModel @Inject constructor(
     private val favoriteRepository: zechs.drive.stream.data.repository.FavoriteRepository,
     private val followedFolderRepository: FollowedFolderRepository,
     private val watchQueueRepository: WatchQueueRepository,
-    private val franchiseGroupingManager: zechs.drive.stream.domain.library.FranchiseGroupingManager
+    private val franchiseGroupingManager: FranchiseGroupingManager,
+    private val episodeMetadataResolver: EpisodeMetadataResolver
 ) : ViewModel() {
 
     companion object {
@@ -140,6 +144,7 @@ class SeriesDetailViewModel @Inject constructor(
     private var isFolderFollowed: Boolean = false
     private var animeEntry: TenraiAnimeService.TenraiAnimeEntry? = null
     private var franchiseArcs = listOf<TenraiAnimeService.TenraiFranchiseArc>()
+    private var currentResolvedEpisodes = listOf<EpisodeDetails>()
 
     var lastFocusedPosition: Int? = null
     var selectedSeasonPosition: Int = 0
@@ -262,6 +267,16 @@ class SeriesDetailViewModel @Inject constructor(
                     }
                 }
 
+                val episodeMetaDeferred = async {
+                    try {
+                        episodeMetadataResolver.fetchShowEpisodes(seriesTitle)
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        AppLog.w(TAG, "Episode metadata fetch error: ${e.message}")
+                        emptyList()
+                    }
+                }
+
                 // 2. Fetch Drive files in folder
                 val driveResult = fetchAllDriveVideos(folderId)
                 val driveFiles = driveResult.files
@@ -351,6 +366,13 @@ class SeriesDetailViewModel @Inject constructor(
                     )
                 }
 
+                val resolvedEpisodes = try {
+                    episodeMetaDeferred.await()
+                } catch (_: Exception) {
+                    emptyList()
+                }
+                currentResolvedEpisodes = resolvedEpisodes
+
                 val enrichedState = buildSuccessState(
                     folderId = folderId,
                     seriesTitle = seriesTitle,
@@ -360,7 +382,8 @@ class SeriesDetailViewModel @Inject constructor(
                     aniListMeta = aniListMeta,
                     arcs = validArcs,
                     fallbackPosterUrl = finalPoster,
-                    hasIncompleteDriveListing = driveResult.isIncomplete
+                    hasIncompleteDriveListing = driveResult.isIncomplete,
+                    resolvedEpisodes = resolvedEpisodes
                 )
                 withContext(Dispatchers.Main) {
                     val previous = _uiState.value as? SeriesDetailUiState.Success
@@ -414,11 +437,16 @@ class SeriesDetailViewModel @Inject constructor(
         aniListMeta: AnimeMetadata?,
         arcs: List<TenraiAnimeService.TenraiFranchiseArc>,
         fallbackPosterUrl: String?,
-        hasIncompleteDriveListing: Boolean
+        hasIncompleteDriveListing: Boolean,
+        resolvedEpisodes: List<EpisodeDetails> = emptyList()
     ): SeriesDetailUiState.Success {
         val isMovie = aniListMeta?.isMovie == true
-        val movieCanonical = if (isMovie) (aniListMeta?.titleRomaji ?: aniListMeta?.titleEnglish ?: seriesTitle) else null
-        val fallbackThumb = if (isMovie) (aniListMeta?.bannerUrl ?: aniListMeta?.posterUrl ?: fallbackPosterUrl) else null
+        val movieCanonical = if (isMovie) {
+            aniListMeta?.titleRomaji ?: aniListMeta?.titleEnglish ?: seriesTitle
+        } else null
+        val fallbackThumb = if (isMovie) {
+            aniListMeta?.bannerUrl ?: aniListMeta?.posterUrl ?: fallbackPosterUrl
+        } else null
         allEpisodeItems = driveFiles.map { file ->
             mapToEpisodeItem(
                 file = file,
@@ -426,7 +454,8 @@ class SeriesDetailViewModel @Inject constructor(
                 arcs = arcs,
                 isMovie = isMovie,
                 canonicalMovieTitle = movieCanonical,
-                fallbackThumbnail = fallbackThumb
+                fallbackThumbnail = fallbackThumb,
+                resolvedEpisodes = resolvedEpisodes
             )
         }
 
@@ -638,7 +667,8 @@ class SeriesDetailViewModel @Inject constructor(
         arcs: List<TenraiAnimeService.TenraiFranchiseArc>,
         isMovie: Boolean = false,
         canonicalMovieTitle: String? = null,
-        fallbackThumbnail: String? = null
+        fallbackThumbnail: String? = null,
+        resolvedEpisodes: List<EpisodeDetails> = emptyList()
     ): SeriesEpisodeItem {
         val parsed = EpisodeParser.parse(file.name)
         // OP/ED and other extras can contain a number (for example OP4a), but that
@@ -646,20 +676,35 @@ class SeriesDetailViewModel @Inject constructor(
         // to a franchise episode title or shown with an EP badge.
         val epNum = parsed.episode?.toInt()?.takeUnless { parsed.isSpecial || isMovie }
 
-        // Match canonical episode title from franchise arcs
+        // Match canonical episode title and synopsis from franchise arcs
         var canonName: String? = null
+        var arcSynopsis: String? = null
         if (isMovie) {
             canonName = canonicalMovieTitle
         } else if (epNum != null) {
             for (arc in arcs) {
                 if (arc.episodes.containsKey(epNum)) {
                     canonName = arc.episodes[epNum]
+                    arcSynopsis = arc.episodeSynopses[epNum]
                     break
                 }
             }
         }
 
-        val presentation = presentSeriesEpisode(file.name, canonName, isMovie = isMovie)
+        val epMeta = if (isMovie) null else {
+            episodeMetadataResolver.findEpisode(
+                episodes = resolvedEpisodes,
+                season = parsed.season?.toInt() ?: 1,
+                episodeNumber = epNum,
+                canonicalName = canonName
+            )
+        }
+
+        val resolvedTitle = epMeta?.name ?: canonName
+        val epSynopsis = epMeta?.synopsis ?: arcSynopsis ?: file.description
+        val epThumbnail = epMeta?.previewImageUrl ?: fallbackThumbnail
+
+        val presentation = presentSeriesEpisode(file.name, resolvedTitle, isMovie = isMovie)
 
         val progress = watch?.watchProgress() ?: 0
         val durationText = if (watch != null && watch.totalDuration > 0) {
@@ -682,7 +727,8 @@ class SeriesDetailViewModel @Inject constructor(
             watchedDuration = watch?.watchedDuration ?: 0L,
             totalDuration = watch?.totalDuration ?: 0L,
             badgeText = badge,
-            fallbackThumbnailUrl = fallbackThumbnail
+            fallbackThumbnailUrl = epThumbnail,
+            synopsis = epSynopsis
         )
     }
 
@@ -752,6 +798,11 @@ class SeriesDetailViewModel @Inject constructor(
                     val videoIds = driveResult.files.map { it.id }
                     val watchList = watchListRepository.getWatches(videoIds)
                     val watchMap = watchList.associateBy { it.videoId }
+                    val resolved = try {
+                        episodeMetadataResolver.fetchShowEpisodes(tab.title)
+                    } catch (_: Exception) {
+                        currentResolvedEpisodes
+                    }.ifEmpty { currentResolvedEpisodes }
                     val newEpisodes = driveResult.files.map { file ->
                         mapToEpisodeItem(
                             file = file,
@@ -759,7 +810,9 @@ class SeriesDetailViewModel @Inject constructor(
                             arcs = franchiseArcs,
                             isMovie = tab.subtitle?.contains("Filme", true) == true,
                             canonicalMovieTitle = null,
-                            fallbackThumbnail = currentState.aniListMetadata?.bannerUrl ?: currentState.fallbackPosterUrl
+                            fallbackThumbnail = currentState.aniListMetadata?.bannerUrl
+                                ?: currentState.fallbackPosterUrl,
+                            resolvedEpisodes = resolved
                         )
                     }
                     folderEpisodesCache[tab.id] = newEpisodes

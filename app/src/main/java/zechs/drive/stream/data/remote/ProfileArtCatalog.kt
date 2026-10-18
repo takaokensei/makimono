@@ -23,6 +23,14 @@ class ProfileArtCatalog @Inject constructor(
     private val cache = context.getSharedPreferences("profile_art_catalog", Context.MODE_PRIVATE)
     private val client = OkHttpClient.Builder().callTimeout(12, TimeUnit.SECONDS).build()
 
+    suspend fun getRelevantTitles(): List<String> = withContext(Dispatchers.IO) {
+        val repo = folderMetadataRepository?.get() ?: return@withContext emptyList()
+        val allMeta = try { repo.getAllMetadata() } catch (_: Exception) { emptyList() }
+        allMeta.filter { it.lastOpened > 0L }
+            .sortedByDescending { it.lastOpened }
+            .map { it.titleRomaji ?: it.titleEnglish ?: it.folderName }
+    }
+
     @Volatile
     private var memoryCachedSections: Pair<List<Pair<String, List<ProfileArt>>>, List<Pair<String, List<ProfileArt>>>>? = null
 
@@ -222,15 +230,19 @@ class ProfileArtCatalog @Inject constructor(
         ProfileArt("Norn Greyrat (Mushoku Tensei)", "https://s4.anilist.co/file/anilistcdn/character/large/b145458-JG4FkAjUjw2l.png", false),
 
         // Spider-Man / Homem-Aranha
-        ProfileArt("Spider-Man (Spider-Man)", "https://m.media-amazon.com/images/M/MV5BOWNjYWM3NWItOGE0ZS00MWRjLThiZWEtYjc4ZmNmMmU5ZTVmXkEyXkFqcGc@._V1_SX500.jpg", false),
+        ProfileArt(
+            "Spider-Man (Spider-Man)",
+            "https://m.media-amazon.com/images/M/MV5BOWNjYWM3NWItOGE0ZS00MWRjLThiZWEtYjc4ZmNmMmU5ZTVmXkEyXkFqcGc@._V1_SX500.jpg",
+            false
+        ),
         ProfileArt("Peter Parker (Spider-Man)", "https://images.metahub.space/background/medium/tt22084616/img", false),
 
         // The Mentalist / Mentalista
-        ProfileArt("Patrick Jane (The Mentalist)", "https://static.tvmaze.com/uploads/images/medium_portrait/1/3990.jpg", false),
-        ProfileArt("Teresa Lisbon (The Mentalist)", "https://static.tvmaze.com/uploads/images/medium_portrait/1/3991.jpg", false),
-        ProfileArt("Kimball Cho (The Mentalist)", "https://static.tvmaze.com/uploads/images/medium_portrait/1/3992.jpg", false),
-        ProfileArt("Wayne Rigsby (The Mentalist)", "https://static.tvmaze.com/uploads/images/medium_portrait/1/3993.jpg", false),
-        ProfileArt("Grace Van Pelt (The Mentalist)", "https://static.tvmaze.com/uploads/images/medium_portrait/1/3994.jpg", false),
+        ProfileArt("Patrick Jane (The Mentalist)", "https://static.tvmaze.com/uploads/images/medium_portrait/175/439819.jpg", false),
+        ProfileArt("Teresa Lisbon (The Mentalist)", "https://static.tvmaze.com/uploads/images/medium_portrait/12/30222.jpg", false),
+        ProfileArt("Kimball Cho (The Mentalist)", "https://static.tvmaze.com/uploads/images/medium_portrait/111/278470.jpg", false),
+        ProfileArt("Wayne Rigsby (The Mentalist)", "https://static.tvmaze.com/uploads/images/medium_portrait/178/446798.jpg", false),
+        ProfileArt("Grace Van Pelt (The Mentalist)", "https://static.tvmaze.com/uploads/images/medium_portrait/190/477262.jpg", false),
 
         // Sousou no Frieren
         ProfileArt("Frieren (Sousou no Frieren)", "https://s4.anilist.co/file/anilistcdn/character/large/b176754-PCnpqIOkjhFk.png", false),
@@ -381,7 +393,10 @@ class ProfileArtCatalog @Inject constructor(
                     ?: person?.optJSONObject("image")?.optString("medium")
                     ?: person?.optJSONObject("image")?.optString("original")
 
-                if (!charImg.isNullOrBlank() && charImg.startsWith("http")) {
+                if (!charImg.isNullOrBlank() &&
+                    charImg.startsWith("http") &&
+                    ProfileArtCatalogPolicy.isValidArtUrl(charImg)
+                ) {
                     items.add(ProfileArt("$charName ($showName)", charImg, false))
                 }
             }
@@ -416,7 +431,10 @@ class ProfileArtCatalog @Inject constructor(
 
             // 1. Wallpaper banner
             val banner = media.optString("bannerImage")
-            if (banner.startsWith("https://") && seenUrls.add(banner)) {
+            if (banner.startsWith("https://") &&
+                ProfileArtCatalogPolicy.isValidArtUrl(banner) &&
+                seenUrls.add(banner)
+            ) {
                 wallpapers.add(ProfileArt("Wallpaper · $animeTitle", banner, true))
             }
 
@@ -427,7 +445,10 @@ class ProfileArtCatalog @Inject constructor(
                     val character = characters.optJSONObject(j) ?: continue
                     val url = character.optJSONObject("image")?.optString("large").orEmpty()
                     val charName = character.optJSONObject("name")?.optString("full") ?: "Personagem"
-                    if (url.startsWith("https://") && seenUrls.add(url)) {
+                    if (url.startsWith("https://") &&
+                        ProfileArtCatalogPolicy.isValidArtUrl(url) &&
+                        seenUrls.add(url)
+                    ) {
                         avatars.add(ProfileArt("$charName ($animeTitle)", url, false))
                     }
                 }

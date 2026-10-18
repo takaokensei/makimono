@@ -88,4 +88,30 @@ class SeriesMediaMetadataPolicyTest {
         assertEquals("Dublado", SeriesMediaMetadataPolicy.audioLabelForFile("Show - 05 Dublado.mkv"))
         assertEquals("Dublado", SeriesMediaMetadataPolicy.audioLabelForFile("Show - 06 [Dub].mkv"))
     }
+
+    @Test
+    fun `formatHeroSynopsis extracts complete sentences without mid-sentence truncation`() {
+        assertNull(SeriesMediaMetadataPolicy.formatHeroSynopsis(null))
+        assertNull(SeriesMediaMetadataPolicy.formatHeroSynopsis(""))
+        assertNull(SeriesMediaMetadataPolicy.formatHeroSynopsis("   "))
+
+        val fullSynopsis = "Destruction looms at the end of the Thousand-Year Blood War between Soul Reapers and Quincies. " +
+            "As the death of the Soul King mirrors the collapse of the Three Worlds, Ichigo fights to save everything. " +
+            "A third sentence that should not be included in the hero overview because it exceeds max sentences."
+
+        val formatted = SeriesMediaMetadataPolicy.formatHeroSynopsis(fullSynopsis, maxSentences = 2, maxChars = 220)
+        assertEquals(
+            "Destruction looms at the end of the Thousand-Year Blood War between Soul Reapers and Quincies. " +
+                "As the death of the Soul King mirrors the collapse of the Three Worlds, Ichigo fights to save everything.",
+            formatted
+        )
+    }
+
+    @Test
+    fun `formatHeroSynopsis strips HTML tags and MAL source citations`() {
+        val raw = "<p>Ichigo is back in action.</p><br>He faces new enemies! [Written by MAL Rewrite] (Source: IMDB)"
+        val formatted = SeriesMediaMetadataPolicy.formatHeroSynopsis(raw, maxSentences = 2)
+        assertEquals("Ichigo is back in action. He faces new enemies!", formatted)
+    }
 }
+

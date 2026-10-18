@@ -24,6 +24,7 @@ import zechs.drive.stream.data.model.FileCollectionResult
 import zechs.drive.stream.data.model.FilesResponse
 import zechs.drive.stream.data.remote.AnimeMetadata
 import zechs.drive.stream.data.remote.AnimePosterResolver
+import zechs.drive.stream.data.remote.EpisodeMetadataResolver
 import zechs.drive.stream.data.remote.TenraiAnimeService
 import zechs.drive.stream.data.repository.DriveRepository
 import zechs.drive.stream.data.repository.FavoriteRepository
@@ -32,6 +33,7 @@ import zechs.drive.stream.data.repository.FollowedFolderRepository
 import zechs.drive.stream.data.repository.WatchListRepository
 import zechs.drive.stream.data.repository.WatchQueueRepository
 import zechs.drive.stream.domain.common.AppError
+import zechs.drive.stream.data.repository.FranchiseGroupingManager
 import zechs.drive.stream.utils.state.Resource
 import zechs.drive.stream.utils.state.ResourceErrorKind
 
@@ -49,17 +51,20 @@ class SeriesDetailViewModelTest {
     private val favoriteRepository = mockk<FavoriteRepository>(relaxed = true)
     private val followedFolderRepository = mockk<FollowedFolderRepository>(relaxed = true)
     private val watchQueueRepository = mockk<WatchQueueRepository>(relaxed = true)
-    private val franchiseGroupingManager = mockk<zechs.drive.stream.domain.library.FranchiseGroupingManager>(relaxed = true)
+    private val franchiseGroupingManager = mockk<FranchiseGroupingManager>(relaxed = true)
+    private val episodeMetadataResolver = mockk<EpisodeMetadataResolver>(relaxed = true)
 
     private lateinit var viewModel: SeriesDetailViewModel
 
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
+        SeriesDetailViewModel.clearCache()
         coEvery { tenraiAnimeService.searchAnime(any()) } returns emptyList()
         coEvery { animePosterResolver.resolveMetadata(any()) } returns null
         coEvery { folderMetadataRepository.getMetadata(any()) } returns null
         coEvery { watchListRepository.getAllWatches(any()) } returns emptyList()
+        coEvery { episodeMetadataResolver.fetchShowEpisodes(any()) } returns emptyList()
 
         viewModel = SeriesDetailViewModel(
             driveRepository,
@@ -70,12 +75,14 @@ class SeriesDetailViewModelTest {
             favoriteRepository,
             followedFolderRepository,
             watchQueueRepository,
-            franchiseGroupingManager
+            franchiseGroupingManager,
+            episodeMetadataResolver
         )
     }
 
     @After
     fun tearDown() {
+        SeriesDetailViewModel.clearCache()
         Dispatchers.resetMain()
     }
 

@@ -40,9 +40,9 @@ internal class SeriesSynopsisDisclosure(
         val disclosureHadFocus = toggle.hasFocus()
         expanded = false
         isTruncated = false
-        val content = text?.toString()?.trim().orEmpty()
+        val formatted = SeriesMediaMetadataPolicy.formatHeroSynopsis(text?.toString())
         if (disclosureHadFocus) fallbackFocus.requestFocus()
-        if (content.isEmpty()) {
+        if (formatted.isNullOrBlank()) {
             synopsis.text = null
             synopsis.visibility = View.GONE
             toggle.visibility = View.GONE
@@ -52,10 +52,10 @@ internal class SeriesSynopsisDisclosure(
 
         synopsis.visibility = View.VISIBLE
         synopsis.maxLines = collapsedMaxLines
-        synopsis.ellipsize = TextUtils.TruncateAt.END
-        synopsis.text = content
+        synopsis.ellipsize = null
+        synopsis.text = formatted
         toggle.visibility = View.GONE
-        synopsis.post { inspectCollapsedLayout() }
+        onAvailabilityChanged(false)
     }
 
     private fun inspectCollapsedLayout() {

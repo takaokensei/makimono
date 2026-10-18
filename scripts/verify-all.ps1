@@ -1,10 +1,9 @@
 # scripts/verify-all.ps1
 param(
-    [switch]$Quick,
-    [switch]$quick
+    [switch]$Quick
 )
 
-$isQuick = $Quick -or $quick -or ($args -contains "--quick") -or ($args -contains "-q")
+$isQuick = $Quick -or ($args -contains "--quick") -or ($args -contains "-q")
 
 $ErrorActionPreference = "Stop"
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
