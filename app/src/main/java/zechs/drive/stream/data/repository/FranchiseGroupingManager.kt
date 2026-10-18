@@ -110,24 +110,6 @@ class FranchiseGroupingManager @Inject constructor(
         }
     }
 
-    fun getFranchiseSynopsis(franchiseKey: String): String? {
-        return when (franchiseKey) {
-            "monogatari_series" -> "A aclamada franquia Monogatari acompanha Koyomi Araragi, um estudante que " +
-                "sobreviveu a um ataque vampírico e passa a ajudar jovens garotas envolvidas com fenômenos " +
-                "sobrenaturais e aparições urbanas."
-            "owari_no_seraph" -> "Após um vírus devastar a humanidade e vampiros emergirem para escravizar " +
-                "os sobreviventes, Yuichiro Hyakuya busca vingança jurando erradicar todos os vampiros."
-            "mushoku_tensei" -> "A história de um homem de 34 anos que reencarna como Rudeus Greyrat em um " +
-                "mundo de fantasia e magia, determinado a viver sua nova vida ao máximo e proteger aqueles que ama."
-            "bleach" -> "Ichigo Kurosaki é um estudante com a habilidade de ver fantasmas que ganha os " +
-                "poderes de um Shinigami (Ceifeiro de Almas) para proteger os vivos e guiar os espíritos."
-            "tensei_shitara_slime" -> "Satoru Mikami reencarna em um mundo de fantasia como uma slime com " +
-                "habilidades devoradoras, fundando a Federação Jura Tempest."
-            "the_mentalist" -> "Patrick Jane, um ex-médium celebridade, usa suas extraordinárias habilidades " +
-                "de observação e dedução para ajudar a CBI a solucionar crimes e encontrar Red John."
-            else -> null
-        }
-    }
 
     /**
      * Groups library files into unified franchise hubs according to Option A.
@@ -200,13 +182,15 @@ class FranchiseGroupingManager @Inject constructor(
                 val bestBanner = sortedMembers.mapNotNull { allMeta[it.folderId]?.bannerUrl }.firstOrNull()
                     ?: primaryFile.thumbnailLink
 
+                val bestSynopsis = sortedMembers.mapNotNull { allMeta[it.folderId]?.synopsis }.firstOrNull { it.isNotBlank() }
+
                 val hub = FranchiseHub(
                     franchiseKey = franchiseKey,
                     canonicalTitle = canonicalTitle,
                     primaryFolderId = primaryFile.id,
                     posterUrl = bestPoster,
                     bannerUrl = bestBanner,
-                    synopsis = getFranchiseSynopsis(franchiseKey),
+                    synopsis = bestSynopsis,
                     members = sortedMembers
                 )
 
@@ -296,7 +280,7 @@ class FranchiseGroupingManager @Inject constructor(
                 primaryFolderId = folderId,
                 posterUrl = matchingFolders.firstOrNull { it.posterUrl?.isNotBlank() == true }?.posterUrl,
                 bannerUrl = matchingFolders.firstOrNull { it.bannerUrl?.isNotBlank() == true }?.bannerUrl,
-                synopsis = getFranchiseSynopsis(key),
+                synopsis = matchingFolders.firstOrNull { it.synopsis?.isNotBlank() == true }?.synopsis,
                 members = members
             )
             franchiseHubsCache[key] = hub

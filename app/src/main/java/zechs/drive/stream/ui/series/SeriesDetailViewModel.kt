@@ -838,19 +838,26 @@ class SeriesDetailViewModel @Inject constructor(
                     } catch (_: Exception) {
                         currentResolvedEpisodes
                     }.ifEmpty { currentResolvedEpisodes }
+                    val isMovieTab = tab.subtitle?.contains("Filme", true) == true
                     val arcMeta = folderMetadataRepository.getMetadata(tab.id)?.toAnimeMetadata()
+                        ?: try {
+                            animePosterResolver.resolveMetadata(tab.title)
+                        } catch (_: Exception) { null }
                     val arcRating = formatRating(arcMeta?.ageRating)
                         ?: formatRating(currentState.aniListMetadata?.ageRating)
                         ?: formatRating(animeEntry?.rating)
+                    val fallbackThumb = arcMeta?.bannerUrl
+                        ?: arcMeta?.posterUrl
+                        ?: currentState.aniListMetadata?.bannerUrl
+                        ?: currentState.fallbackPosterUrl
                     val newEpisodes = driveResult.files.map { file ->
                         mapToEpisodeItem(
                             file = file,
                             watch = watchMap[file.id],
                             arcs = franchiseArcs,
-                            isMovie = tab.subtitle?.contains("Filme", true) == true,
-                            canonicalMovieTitle = null,
-                            fallbackThumbnail = currentState.aniListMetadata?.bannerUrl
-                                ?: currentState.fallbackPosterUrl,
+                            isMovie = isMovieTab,
+                            canonicalMovieTitle = if (isMovieTab) tab.title else null,
+                            fallbackThumbnail = fallbackThumb,
                             resolvedEpisodes = resolved,
                             seriesAgeRating = arcRating
                         )

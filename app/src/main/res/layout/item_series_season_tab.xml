@@ -57,13 +57,13 @@
             <TextView
                 android:id="@+id/tvTabTitle"
                 style="@style/TextAppearance.Makimono.TV.Callout"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:duplicateParentState="true"
                 android:ellipsize="end"
                 android:fontFamily="sans-serif-bold"
                 android:includeFontPadding="false"
-                android:maxLines="1"
+                android:maxLines="2"
                 android:textColor="@color/obsidian_text_primary"
                 tools:text="Bakemonogatari" />
 

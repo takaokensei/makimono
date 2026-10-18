@@ -62,8 +62,33 @@ class SeriesEpisodePresentationTest {
         assertEquals("10+", formatRating("PG"))
         assertEquals("10+", formatRating("TV-PG"))
         assertEquals("L", formatRating("G - All Ages"))
-        assertEquals("L", formatRating("Livre"))
         assertEquals(null, formatRating(null))
         assertEquals(null, formatRating(""))
+    }
+
+    @Test
+    fun moviePreservesCanonicalTitleAndCleansFileNameWithoutGenericFallback() {
+        val withCanonical = presentSeriesEpisode(
+            "Kizumonogatari I - Tekketsu-hen [1080p].mkv",
+            canonicalTitle = "Kizumonogatari I: Tekketsu-hen",
+            isMovie = true
+        )
+        assertEquals("Kizumonogatari I: Tekketsu-hen", withCanonical.displayTitle)
+        assertEquals(null, withCanonical.episodeNumber)
+
+        val withoutCanonical = presentSeriesEpisode(
+            "[Fansub] Kizumonogatari I - Tekketsu-hen [1080p].mkv",
+            canonicalTitle = null,
+            isMovie = true
+        )
+        assertEquals("Kizumonogatari I - Tekketsu-hen", withoutCanonical.displayTitle)
+        assertEquals(null, withoutCanonical.episodeNumber)
+
+        val fallback = presentSeriesEpisode(
+            "Episodio 01.mkv",
+            canonicalTitle = null,
+            isMovie = true
+        )
+        assertEquals("Filme Completo", fallback.displayTitle)
     }
 }

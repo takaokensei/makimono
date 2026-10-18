@@ -85,6 +85,58 @@ class SeriesDetailEpisodeAdapter(
                 binding.ivPlayOverlay.visibility = if (hasFocus) View.VISIBLE else View.GONE
                 updateSynopsisVisibility(hasFocus)
             }
+
+            binding.cardEpisodeItem.setOnKeyListener { _, keyCode, event ->
+                if (event.action == android.view.KeyEvent.ACTION_DOWN) {
+                    val position = bindingAdapterPosition
+                    if (position != RecyclerView.NO_POSITION) {
+                        when (keyCode) {
+                            android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                if (position < itemCount - 1) {
+                                    val nextPos = position + 1
+                                    val rv = binding.cardEpisodeItem.parent as? RecyclerView
+                                    rv?.smoothScrollToPosition(nextPos)
+                                    val nextHolder = rv?.findViewHolderForAdapterPosition(nextPos)
+                                    if (nextHolder != null) {
+                                        nextHolder.itemView.findViewById<View>(R.id.cardEpisodeItem)?.requestFocus()
+                                    } else {
+                                        rv?.post {
+                                            rv.findViewHolderForAdapterPosition(nextPos)?.itemView
+                                                ?.findViewById<View>(R.id.cardEpisodeItem)?.requestFocus()
+                                                ?: rv.postDelayed({
+                                                    rv.findViewHolderForAdapterPosition(nextPos)?.itemView
+                                                        ?.findViewById<View>(R.id.cardEpisodeItem)?.requestFocus()
+                                                }, 50)
+                                        }
+                                    }
+                                }
+                                return@setOnKeyListener true
+                            }
+                            android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                if (position > 0) {
+                                    val prevPos = position - 1
+                                    val rv = binding.cardEpisodeItem.parent as? RecyclerView
+                                    rv?.smoothScrollToPosition(prevPos)
+                                    val prevHolder = rv?.findViewHolderForAdapterPosition(prevPos)
+                                    if (prevHolder != null) {
+                                        prevHolder.itemView.findViewById<View>(R.id.cardEpisodeItem)?.requestFocus()
+                                    } else {
+                                        rv?.post {
+                                            rv.findViewHolderForAdapterPosition(prevPos)?.itemView
+                                                ?.findViewById<View>(R.id.cardEpisodeItem)?.requestFocus()
+                                        }
+                                    }
+                                    return@setOnKeyListener true
+                                }
+                            }
+                            android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                return@setOnKeyListener true
+                            }
+                        }
+                    }
+                }
+                false
+            }
         }
 
         fun bind(item: SeriesEpisodeItem) {
@@ -169,9 +221,9 @@ class SeriesDetailEpisodeAdapter(
                 progress = progressDescription
             )
 
-            val thumbUrl = item.fallbackThumbnailUrl
-                ?: item.file.thumbnailLarge
+            val thumbUrl = item.file.thumbnailLarge
                 ?: item.file.thumbnailLink
+                ?: item.fallbackThumbnailUrl
                 ?: item.file.posterUrl
             MediaImageLoader.card(binding.ivEpisodeThumb, thumbUrl)
         }

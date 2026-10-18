@@ -192,6 +192,8 @@ class SeriesDetailFragment : BaseFragment() {
             }
         )
         binding.rvEpisodes.adapter = episodeAdapter
+        binding.rvEpisodes.setItemViewCacheSize(15)
+        (binding.rvEpisodes.layoutManager as? androidx.recyclerview.widget.LinearLayoutManager)?.initialPrefetchItemCount = 8
     }
 
     private fun setupFocusAnimations() {

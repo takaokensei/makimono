@@ -15,13 +15,19 @@ internal fun presentSeriesEpisode(
     isMovie: Boolean = false
 ): SeriesEpisodePresentation {
     if (isMovie) {
+        val cleanTitle = EpisodeParser.cleanTitleString(fileName)
         val cleanName = EpisodeParser.cleanEpisodeFileName(fileName)
-        val title = if (!canonicalTitle.isNullOrBlank()) {
-            canonicalTitle
-        } else if (cleanName.isNotBlank() && !cleanName.contains("Episódio", ignoreCase = true)) {
-            cleanName
-        } else {
-            "Filme Completo"
+        val isGenericEpisode = { s: String ->
+            s.contains("episódio", ignoreCase = true) ||
+                s.contains("episodio", ignoreCase = true) ||
+                s.contains("episode", ignoreCase = true) ||
+                s.matches(Regex("(?i)^ep?\\s*\\d+$"))
+        }
+        val title = when {
+            !canonicalTitle.isNullOrBlank() -> canonicalTitle
+            cleanTitle.isNotBlank() && !isGenericEpisode(cleanTitle) -> cleanTitle
+            cleanName.isNotBlank() && !isGenericEpisode(cleanName) -> cleanName
+            else -> "Filme Completo"
         }
         return SeriesEpisodePresentation(title, null)
     }

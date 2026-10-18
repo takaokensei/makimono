@@ -353,11 +353,17 @@ object EpisodeParser {
         return if (tags.isNotEmpty()) tags.joinToString(" • ") else null
     }
 
-    private fun cleanTitleString(raw: String): String {
-        var result = raw.replace(Regex("\\[[^\\]]*\\]|\\([^\\)]*\\)"), "")
+    fun cleanTitleString(raw: String): String {
+        var result = raw.replace(Regex("\\.(mkv|mp4|avi|mov|wmv|flv|webm|m4v|ts)$", RegexOption.IGNORE_CASE), "")
+        result = result.replace(Regex("\\[[^\\]]*\\]|\\([^\\)]*\\)"), "")
         result = result.replace(Regex("(?i)hdr10\\+"), " ")
         result = result.replace(
-            Regex("(?i)\\b(?:1080p|720p|480p|2160p|4k|uhd|x264|x265|hevc|avc|h264|h265|webrip|web-dl|webdl|bluray|bdrip|brrip|remux|imax|dv|dovi|hdr10plus|hdr10|hdr|sdr|aac|flac|opus|dts|10bit|8bit|ddp?5\\.1|dd5\\.1|5\\.1|7\\.1|dual(?:[\\s_-]*audio)?|multi(?:[\\s_-]*audio)?|multisub|dublado|legendado)\\b"),
+            Regex(
+                "(?i)\\b(?:1080p|720p|480p|2160p|4k|uhd|x264|x265|hevc|avc|h264|h265|" +
+                    "webrip|web-dl|webdl|bluray|bdrip|brrip|remux|imax|dv|dovi|hdr10plus|" +
+                    "hdr10|hdr|sdr|aac|flac|opus|dts|10bit|8bit|ddp?5\\.1|dd5\\.1|5\\.1|7\\.1|" +
+                    "dual(?:[\\s_-]*audio)?|multi(?:[\\s_-]*audio)?|multisub|dublado|legendado)\\b"
+            ),
             " "
         )
         result = result.replace(Regex("[_.]+"), " ")
