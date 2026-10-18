@@ -545,7 +545,11 @@ class SeriesDetailFragment : BaseFragment() {
         }
 
         // 5. Synopsis
-        val rawSynopsis = state.aniListMetadata?.synopsis ?: state.animeEntry?.synopsis
+        val rawSynopsis = if (state.isFranchiseHub && !state.franchiseHub?.synopsis.isNullOrBlank()) {
+            state.franchiseHub?.synopsis
+        } else {
+            state.aniListMetadata?.synopsis ?: state.animeEntry?.synopsis
+        }
         val cleanSynopsis = rawSynopsis?.takeIf(String::isNotBlank)?.let {
             it
                 .replace(Regex("<br\\s*/?>"), " ")
@@ -612,7 +616,7 @@ class SeriesDetailFragment : BaseFragment() {
         binding.tabButtonDetails.isSelected = state.selectedNavTab == SeriesNavTab.DETAILS
         binding.tabButtonMoreLikeThis.isSelected = state.selectedNavTab == SeriesNavTab.MORE_LIKE_THIS
 
-        val showEpisodes = !isMovie && state.selectedNavTab == SeriesNavTab.EPISODES
+        val showEpisodes = isMovie || state.selectedNavTab == SeriesNavTab.EPISODES
         binding.panelEpisodesTab.visibility = if (showEpisodes) View.VISIBLE else View.GONE
         binding.panelDetailsTab.visibility = if (state.selectedNavTab == SeriesNavTab.DETAILS) View.VISIBLE else View.GONE
         binding.panelMoreLikeThisTab.visibility = if (state.selectedNavTab == SeriesNavTab.MORE_LIKE_THIS) View.VISIBLE else View.GONE
@@ -621,7 +625,7 @@ class SeriesDetailFragment : BaseFragment() {
 
         if (isMovie) {
             binding.tabsContainer.visibility = View.GONE
-            binding.panelEpisodesTab.visibility = View.GONE
+            binding.panelEpisodesTab.visibility = View.VISIBLE
             binding.rvSeasonTabs.visibility = View.GONE
             binding.layoutSeasonsColumn.visibility = View.GONE
             binding.tvEpisodesHeading?.visibility = View.GONE

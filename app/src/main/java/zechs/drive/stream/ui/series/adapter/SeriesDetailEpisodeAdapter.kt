@@ -27,7 +27,8 @@ data class SeriesEpisodeItem(
     val badgeText: String? = null,
     val fallbackThumbnailUrl: String? = null,
     val category: MediaItemCategory = MediaItemCategory.STORY,
-    val synopsis: String? = null
+    val synopsis: String? = null,
+    val ageRating: String? = null
 )
 
 class SeriesDetailEpisodeAdapter(
@@ -94,10 +95,16 @@ class SeriesDetailEpisodeAdapter(
             binding.tvEpisodeDuration.text = item.durationText
             binding.tvEpisodeDuration.visibility = if (hasDuration) View.VISIBLE else View.GONE
 
+            val hasAge = !item.ageRating.isNullOrBlank()
+            binding.layoutEpisodeAgeRating.visibility = if (hasAge) View.VISIBLE else View.GONE
+            binding.tvEpisodeAgeRating.text = item.ageRating
+            binding.tvEpisodeAgeRating.visibility = if (hasAge) View.VISIBLE else View.GONE
+
             val hasAudio = item.audioBadgeText.isNotBlank()
+            binding.layoutAudioBadge.visibility = if (hasAudio) View.VISIBLE else View.GONE
             binding.tvAudioBadge.text = item.audioBadgeText
             binding.tvAudioBadge.visibility = if (hasAudio) View.VISIBLE else View.GONE
-            binding.tvEpisodeDot1.visibility = if (hasDuration && hasAudio) View.VISIBLE else View.GONE
+            binding.tvEpisodeDot1.visibility = View.GONE
 
             // Episode description / synopsis (2 lines at rest, expands to 4 lines on focus)
             val desc = item.synopsis?.takeIf { it.isNotBlank() }

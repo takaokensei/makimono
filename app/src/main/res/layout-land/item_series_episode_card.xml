@@ -3,30 +3,32 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/cardEpisodeItem"
-    android:layout_width="match_parent"
+    android:layout_width="280dp"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="10dp"
+    android:layout_marginStart="4dp"
+    android:layout_marginEnd="16dp"
+    android:layout_marginTop="8dp"
+    android:layout_marginBottom="12dp"
     android:clickable="true"
     android:focusable="true"
     android:focusableInTouchMode="true"
     android:foreground="@drawable/item_series_episode_focus_border"
     app:cardBackgroundColor="@color/obsidian_surface"
-    app:cardCornerRadius="10dp"
+    app:cardCornerRadius="12dp"
     app:cardElevation="0dp"
-    app:strokeColor="#1FFFFFFF"
+    app:strokeColor="@color/obsidian_border_glass"
     app:strokeWidth="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="8dp">
+        android:orientation="vertical"
+        android:padding="6dp">
 
-        <!-- 16:9 Thumbnail on the left -->
+        <!-- 16:9 Thumbnail -->
         <com.google.android.material.card.MaterialCardView
-            android:layout_width="168dp"
-            android:layout_height="95dp"
+            android:layout_width="match_parent"
+            android:layout_height="154dp"
             app:cardBackgroundColor="@color/obsidian_bg"
             app:cardCornerRadius="8dp"
             app:cardElevation="0dp"
@@ -52,7 +54,7 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="top|start"
                     android:layout_margin="6dp"
-                    android:background="#B3070B11"
+                    android:background="@color/obsidian_media_scrim"
                     android:paddingStart="6dp"
                     android:paddingTop="2dp"
                     android:paddingEnd="6dp"
@@ -62,7 +64,7 @@
                     android:textStyle="bold"
                     tools:text="EP 01" />
 
-                <!-- Watched checkmark badge on top-right (green pill, mockup image 4) -->
+                <!-- Watched checkmark badge on top-right -->
                 <TextView
                     android:id="@+id/badgeWatched"
                     android:layout_width="wrap_content"
@@ -75,7 +77,7 @@
                     android:paddingEnd="6dp"
                     android:paddingBottom="2dp"
                     android:text="@string/series_episode_watched_badge"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/obsidian_text_primary"
                     android:textSize="10sp"
                     android:textStyle="bold"
                     android:visibility="gone"
@@ -84,8 +86,8 @@
                 <!-- Play icon overlay on focus -->
                 <ImageView
                     android:id="@+id/ivPlayOverlay"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
                     android:layout_gravity="center"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_play_24"
@@ -93,7 +95,7 @@
                     app:tint="@color/obsidian_accent"
                     tools:visibility="visible" />
 
-                <!-- Thin progress bar on bottom (accent for in-progress, green for completed) -->
+                <!-- Progress bar on bottom -->
                 <ProgressBar
                     android:id="@+id/pbEpisodeProgress"
                     style="?android:attr/progressBarStyleHorizontal"
@@ -102,20 +104,21 @@
                     android:layout_gravity="bottom"
                     android:max="100"
                     android:progress="40"
-                    android:progressBackgroundTint="#33FFFFFF"
+                    android:progressBackgroundTint="@color/obsidian_hairline"
                     android:progressTint="@color/obsidian_accent" />
 
             </FrameLayout>
 
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Episode Info on the right (matching Mockup Image 4) -->
+        <!-- Episode Info below thumbnail -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="14dp"
-            android:layout_marginEnd="10dp"
-            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="6dp"
+            android:layout_marginBottom="6dp"
             android:orientation="vertical">
 
             <!-- Title -->
@@ -131,36 +134,71 @@
                 android:textColor="@color/obsidian_ice_white"
                 tools:text="Episódio 01 - Hitagi Crab, Part One" />
 
-            <!-- Duration row -->
-            <TextView
-                android:id="@+id/tvEpisodeDuration"
-                style="@style/TextAppearance.Makimono.TV.Caption"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="3dp"
-                android:textColor="@color/obsidian_gray"
-                android:textSize="12sp"
-                tools:text="25 min" />
-
-            <!-- Audio/Subtitle pill badge -->
+            <!-- Metadata row (Duration, Age rating, Audio) -->
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:background="@drawable/glass_meta_pill_bg"
-                android:paddingStart="6dp"
-                android:paddingTop="2dp"
-                android:paddingEnd="6dp"
-                android:paddingBottom="2dp">
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
                 <TextView
-                    android:id="@+id/tvAudioBadge"
-                    style="@style/TextAppearance.Makimono.TV.Badge"
+                    android:id="@+id/tvEpisodeDuration"
+                    style="@style/TextAppearance.Makimono.TV.Caption"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/obsidian_link_blue_gray"
-                    android:textSize="11sp"
-                    tools:text="Áudio Japonês • Legenda PT-BR" />
+                    android:textColor="@color/obsidian_gray"
+                    android:textSize="12sp"
+                    tools:text="25 min" />
+
+                <!-- Age rating pill badge -->
+                <LinearLayout
+                    android:id="@+id/layoutEpisodeAgeRating"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/glass_meta_pill_bg"
+                    android:paddingStart="6dp"
+                    android:paddingTop="2dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="2dp"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <TextView
+                        android:id="@+id/tvEpisodeAgeRating"
+                        style="@style/TextAppearance.Makimono.TV.Badge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/obsidian_ice_white"
+                        android:textSize="10sp"
+                        tools:text="16+" />
+                </LinearLayout>
+
+                <!-- Audio/Subtitle pill badge -->
+                <LinearLayout
+                    android:id="@+id/layoutAudioBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/glass_meta_pill_bg"
+                    android:paddingStart="6dp"
+                    android:paddingTop="2dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="2dp"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <TextView
+                        android:id="@+id/tvAudioBadge"
+                        style="@style/TextAppearance.Makimono.TV.Badge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/obsidian_link_blue_gray"
+                        android:textSize="10sp"
+                        tools:text="PT-BR" />
+                </LinearLayout>
+
             </LinearLayout>
 
             <!-- 2-Line Synopsis -->
@@ -175,8 +213,8 @@
                 android:lineSpacingExtra="1dp"
                 android:maxLines="2"
                 android:textColor="@color/obsidian_link_blue_gray"
-                android:textSize="12sp"
-                tools:text="Araragi encontra Hitagi, uma garota que parece ter um problema sobrenatural relacionado a um caranguejo." />
+                android:textSize="11sp"
+                tools:text="Araragi encontra Hitagi, uma garota que parece ter um problema sobrenatural." />
 
             <!-- Dummy view for tvEpisodeProgressPercent to satisfy binding without showing -->
             <TextView

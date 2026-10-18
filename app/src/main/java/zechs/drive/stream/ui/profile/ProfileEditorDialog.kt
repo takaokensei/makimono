@@ -352,11 +352,13 @@ class ProfileEditorDialog(
                 val presetAvatars = resolver.getPresetAvatars()
 
                 val allSections = mutableListOf<Pair<String, List<ProfileArt>>>()
-                val seenTitles = mutableSetOf<String>()
+                val seenFranchises = mutableSetOf<String>()
 
                 // 1. Each anime from the user's library gets its OWN individual section with character avatars
                 libAvatarSections.forEach { (animeTitle, avatars) ->
-                    if (avatars.isNotEmpty() && seenTitles.add(animeTitle.lowercase(java.util.Locale.ROOT).trim())) {
+                    if (avatars.isNotEmpty()) {
+                        val descriptor = ProfileArtCatalogPolicy.resolveFranchise(animeTitle)
+                        seenFranchises.add(descriptor.franchiseKey)
                         allSections.add(Pair(animeTitle, avatars))
                     }
                 }
@@ -366,8 +368,8 @@ class ProfileEditorDialog(
                     art.label.substringAfterLast("(", "").substringBefore(")", "").ifBlank { "Destaques" }
                 }
                 groupedPresets.forEach { (franchise, arts) ->
-                    val normFranchise = franchise.lowercase(java.util.Locale.ROOT).trim()
-                    if (seenTitles.add(normFranchise)) {
+                    val descriptor = ProfileArtCatalogPolicy.resolveFranchise(franchise)
+                    if (seenFranchises.add(descriptor.franchiseKey)) {
                         allSections.add(Pair(franchise, arts))
                     }
                 }
@@ -405,11 +407,13 @@ class ProfileEditorDialog(
                 val presetWallpapers = resolver.getPresetWallpapers()
 
                 val allSections = mutableListOf<Pair<String, List<ProfileArt>>>()
-                val seenTitles = mutableSetOf<String>()
+                val seenFranchises = mutableSetOf<String>()
 
                 // 1. Each anime from the user's library gets its OWN wallpaper section
                 libWallpaperSections.forEach { (animeTitle, wallpapers) ->
-                    if (wallpapers.isNotEmpty() && seenTitles.add(animeTitle.lowercase(java.util.Locale.ROOT).trim())) {
+                    if (wallpapers.isNotEmpty()) {
+                        val descriptor = ProfileArtCatalogPolicy.resolveFranchise(animeTitle)
+                        seenFranchises.add(descriptor.franchiseKey)
                         allSections.add(Pair(animeTitle, wallpapers))
                     }
                 }
@@ -419,8 +423,8 @@ class ProfileEditorDialog(
                     art.label.substringAfter("· ", "").ifBlank { "Destaques" }
                 }
                 groupedPresets.forEach { (franchise, arts) ->
-                    val normFranchise = franchise.lowercase(java.util.Locale.ROOT).trim()
-                    if (seenTitles.add(normFranchise)) {
+                    val descriptor = ProfileArtCatalogPolicy.resolveFranchise(franchise)
+                    if (seenFranchises.add(descriptor.franchiseKey)) {
                         allSections.add(Pair(franchise, arts))
                     }
                 }

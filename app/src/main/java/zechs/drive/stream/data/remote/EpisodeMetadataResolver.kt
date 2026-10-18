@@ -18,7 +18,8 @@ data class EpisodeDetails(
     val episodeNumber: Int,
     val name: String?,
     val synopsis: String?,
-    val previewImageUrl: String?
+    val previewImageUrl: String?,
+    val ageRating: String? = null
 )
 
 @Singleton

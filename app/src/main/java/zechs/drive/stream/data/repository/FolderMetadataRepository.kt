@@ -58,7 +58,7 @@ class FolderMetadataRepository @Inject constructor(
             year = metadata.year ?: existing?.year,
             episodeCount = metadata.episodeCount ?: existing?.episodeCount,
             genres = if (metadata.genres.isNotEmpty()) metadata.genres.joinToString(", ") else existing?.genres,
-            ageRating = existing?.ageRating,
+            ageRating = metadata.ageRating ?: existing?.ageRating,
             clearLogoUrl = metadata.clearLogoUrl ?: existing?.clearLogoUrl
         )
         folderMetadataDao.upsert(updated)

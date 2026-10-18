@@ -48,6 +48,7 @@ fun FolderMetadata.toAnimeMetadata(): AnimeMetadata? {
         clearLogoUrl = clearLogoUrl,
         isMovie = isMovie,
         isAnime = mediaType != "movie" && mediaType != "tv",
-        mediaType = mediaType
+        mediaType = mediaType,
+        ageRating = ageRating
     )
 }

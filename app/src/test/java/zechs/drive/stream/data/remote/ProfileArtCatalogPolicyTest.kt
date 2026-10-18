@@ -2,6 +2,7 @@ package zechs.drive.stream.data.remote
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -49,20 +50,32 @@ class ProfileArtCatalogPolicyTest {
     }
 
     @Test
-    fun `resolveFranchise correctly identifies Monogatari Series sub-types`() {
+    fun `resolveFranchise correctly unifies Monogatari Series`() {
         val bake = ProfileArtCatalogPolicy.resolveFranchise("Bakemonogatari")
         assertEquals("monogatari_series", bake.franchiseKey)
         assertEquals("Monogatari Series", bake.canonicalTitle)
-        assertEquals("Bakemonogatari", bake.subType)
+        assertNull(bake.subType)
 
         val kizu = ProfileArtCatalogPolicy.resolveFranchise("Kizumonogatari I: Tekketsu-hen")
         assertEquals("monogatari_series", kizu.franchiseKey)
         assertEquals("Monogatari Series", kizu.canonicalTitle)
-        assertEquals("Kizumonogatari", kizu.subType)
+        assertNull(kizu.subType)
 
         val secondSeason = ProfileArtCatalogPolicy.resolveFranchise("Monogatari Series: Second Season")
         assertEquals("monogatari_series", secondSeason.franchiseKey)
         assertEquals("Monogatari Series", secondSeason.canonicalTitle)
+        assertNull(secondSeason.subType)
+    }
+
+    @Test
+    fun `resolveFranchise unifies Owari no Seraph seasons`() {
+        val s1 = ProfileArtCatalogPolicy.resolveFranchise("Owari no Seraph")
+        val s2 = ProfileArtCatalogPolicy.resolveFranchise("Owari no Seraph: Nagoya Kessen-hen")
+
+        assertEquals("owari_no_seraph", s1.franchiseKey)
+        assertEquals("Owari no Seraph", s1.canonicalTitle)
+        assertEquals("owari_no_seraph", s2.franchiseKey)
+        assertEquals("Owari no Seraph", s2.canonicalTitle)
     }
 
     @Test
@@ -108,7 +121,7 @@ class ProfileArtCatalogPolicyTest {
     }
 
     @Test
-    fun `organizeSections groups Monogatari into distinct sub-types`() {
+    fun `organizeSections unifies Monogatari into a single canonical franchise section without duplicates`() {
         val raw = listOf(
             Pair("Bakemonogatari", listOf(
                 ProfileArt("Hitagi", "https://cdn.example/hitagi.png", false)
@@ -124,11 +137,10 @@ class ProfileArtCatalogPolicyTest {
             ))
         )
         val organized = ProfileArtCatalogPolicy.organizeSections(raw)
-        // Should produce exactly 2 sections: Bakemonogatari and Kizumonogatari (no redundant duplicate rows)
-        assertEquals(2, organized.size)
-        val titles = organized.map { it.first }
-        assertTrue(titles.contains("Monogatari Series · Bakemonogatari"))
-        assertTrue(titles.contains("Monogatari Series · Kizumonogatari"))
+        // Should produce exactly 1 unified Monogatari Series section with deduplicated arts
+        assertEquals(1, organized.size)
+        assertEquals("Monogatari Series", organized[0].first)
+        assertEquals(2, organized[0].second.size) // Hitagi and Kiss-Shot deduplicated
     }
 
     @Test
@@ -148,7 +160,7 @@ class ProfileArtCatalogPolicyTest {
         assertEquals(4, organized.size)
         // Top 2 must be relevant in priority order
         assertEquals("Mushoku Tensei", organized[0].first)
-        assertEquals("Bleach", organized[1].first)
+        assertEquals("BLEACH", organized[1].first)
         // Remaining must be alphabetical
         assertEquals("Attack on Titan", organized[2].first)
         assertEquals("Zoro The Movie", organized[3].first)

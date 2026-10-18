@@ -51,23 +51,27 @@ object ProfileArtCatalogPolicy {
         val norm = clean.lowercase(Locale.ROOT)
 
         return when {
-            // Monogatari Series: distinguishes sub-arcs while maintaining franchise identity
-            norm.contains("kizumonogatari") -> {
-                FranchiseDescriptor("monogatari_series", "Monogatari Series", "Kizumonogatari")
-            }
-            norm.contains("bakemonogatari") -> {
-                FranchiseDescriptor("monogatari_series", "Monogatari Series", "Bakemonogatari")
-            }
-            norm.contains("monogatari") || norm.contains("nisemonogatari") || norm.contains("nekomonogatari") ||
+            // Monogatari Series: unifies all seasons, movies and arcs into one franchise
+            norm.contains("monogatari") || norm.contains("kizumonogatari") || norm.contains("bakemonogatari") ||
+                norm.contains("nisemonogatari") || norm.contains("nekomonogatari") ||
                 norm.contains("koyomimonogatari") || norm.contains("owarimonogatari") ||
                 norm.contains("tsukimonogatari") || norm.contains("zoku") -> {
-                // Secondary seasons without distinct preset character packs map to Bakemonogatari core cast
-                FranchiseDescriptor("monogatari_series", "Monogatari Series", "Bakemonogatari")
+                FranchiseDescriptor("monogatari_series", "Monogatari Series", null)
+            }
+
+            // Owari no Seraph
+            norm.contains("owari no seraph") || norm.contains("seraph of the end") -> {
+                FranchiseDescriptor("owari_no_seraph", "Owari no Seraph", null)
             }
 
             // Mushoku Tensei: unifies all seasons and cours
             norm.contains("mushoku") || norm.contains("jobless reincarnation") -> {
                 FranchiseDescriptor("mushoku_tensei", "Mushoku Tensei", null)
+            }
+
+            // Bleach
+            norm.contains("bleach") -> {
+                FranchiseDescriptor("bleach", "BLEACH", null)
             }
 
             // The Mentalist
@@ -88,6 +92,26 @@ object ProfileArtCatalogPolicy {
             // Slime
             norm.contains("tensei shitara") || norm.contains("slime datta ken") -> {
                 FranchiseDescriptor("tensei_shitara_slime", "Tensei Shitara Slime Datta Ken", null)
+            }
+
+            // Jigokuraku
+            norm.contains("jigokuraku") || norm.contains("hell's paradise") -> {
+                FranchiseDescriptor("jigokuraku", "Jigokuraku", null)
+            }
+
+            // Grisaia
+            norm.contains("grisaia") -> {
+                FranchiseDescriptor("grisaia", "Grisaia Series", null)
+            }
+
+            // Durarara
+            norm.contains("durarara") -> {
+                FranchiseDescriptor("durarara", "Durarara!!", null)
+            }
+
+            // Shangri-La Frontier
+            norm.contains("shangri-la frontier") || norm.contains("shangri la frontier") -> {
+                FranchiseDescriptor("shangri_la_frontier", "Shangri-La Frontier", null)
             }
 
             // Default: standalone work

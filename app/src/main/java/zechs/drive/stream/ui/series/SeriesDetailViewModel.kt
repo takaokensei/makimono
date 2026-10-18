@@ -7,6 +7,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -440,13 +442,22 @@ class SeriesDetailViewModel @Inject constructor(
         hasIncompleteDriveListing: Boolean,
         resolvedEpisodes: List<EpisodeDetails> = emptyList()
     ): SeriesDetailUiState.Success {
-        val isMovie = aniListMeta?.isMovie == true
+        val fileModels = driveFiles.map { FilesDataModel.File(it) }
+        allSeasonGroups = SeasonEpisodeGrouper.groupFiles(seriesTitle, fileModels)
+
+        val explicitMovie = isExplicitMovieTitle(seriesTitle)
+        val isMovie = (aniListMeta?.isMovie == true || explicitMovie) &&
+            driveFiles.size <= 2 &&
+            allSeasonGroups.size <= 1
         val movieCanonical = if (isMovie) {
             aniListMeta?.titleRomaji ?: aniListMeta?.titleEnglish ?: seriesTitle
         } else null
         val fallbackThumb = if (isMovie) {
             aniListMeta?.bannerUrl ?: aniListMeta?.posterUrl ?: fallbackPosterUrl
         } else null
+        val seriesAgeRating = formatRating(aniListMeta?.ageRating)
+            ?: formatRating(fetchedAnime?.rating)
+
         allEpisodeItems = driveFiles.map { file ->
             mapToEpisodeItem(
                 file = file,
@@ -455,11 +466,11 @@ class SeriesDetailViewModel @Inject constructor(
                 isMovie = isMovie,
                 canonicalMovieTitle = movieCanonical,
                 fallbackThumbnail = fallbackThumb,
-                resolvedEpisodes = resolvedEpisodes
+                resolvedEpisodes = resolvedEpisodes,
+                seriesAgeRating = seriesAgeRating
             )
         }
 
-        val fileModels = driveFiles.map { FilesDataModel.File(it) }
         val hub = try {
             franchiseGroupingManager.getOrCreateFranchiseHub(folderId, seriesTitle)
         } catch (_: Exception) { null }
@@ -469,7 +480,8 @@ class SeriesDetailViewModel @Inject constructor(
             emptyList()
         } else if (members != null && members.size > 1) {
             members.mapIndexed { index, member ->
-                val subtitle = if (member.isMovie) "Filme" else member.episodeCount?.let { "$it Episódios" } ?: "Temporada"
+                val count = member.episodeCount ?: 1
+                val subtitle = formatCountLabel(count, member.isMovie)
                 val isSelected = member.folderId == folderId || (index == 0 && members.none { it.folderId == folderId })
                 SeasonTab(
                     id = member.folderId,
@@ -496,7 +508,7 @@ class SeriesDetailViewModel @Inject constructor(
                 SeasonTab(
                     id = group.id,
                     title = group.name,
-                    subtitle = "${group.fileItems.size} Episódios",
+                    subtitle = formatCountLabel(group.fileItems.size, isMovie = false),
                     posterUrl = aniListMeta?.posterUrl ?: fallbackPosterUrl,
                     bannerUrl = aniListMeta?.bannerUrl,
                     releaseYear = aniListMeta?.year,
@@ -545,12 +557,21 @@ class SeriesDetailViewModel @Inject constructor(
 
         val isFranchise = hub != null && hub.members.size > 1
         val franchiseTitle = if (isFranchise && hub != null) hub.canonicalTitle else (aniListMeta?.titleRomaji ?: seriesTitle)
+        val hubSynopsis = hub?.synopsis
+        val effectiveAniListMeta = if (isFranchise && !hubSynopsis.isNullOrBlank()) {
+            aniListMeta?.copy(synopsis = hubSynopsis) ?: AnimeMetadata(
+                posterUrl = fallbackPosterUrl,
+                titleRomaji = franchiseTitle,
+                synopsis = hubSynopsis,
+                isAnime = true
+            )
+        } else aniListMeta
 
         val successState = SeriesDetailUiState.Success(
             folderId = folderId,
             seriesTitle = franchiseTitle,
             animeEntry = fetchedAnime,
-            aniListMetadata = aniListMeta,
+            aniListMetadata = effectiveAniListMeta,
             seasonTabs = tabsWithChips,
             currentEpisodes = initialEpisodes,
             continueWatchingItem = continueItem,
@@ -629,12 +650,18 @@ class SeriesDetailViewModel @Inject constructor(
 
         // If folder has subfolders (e.g. Kajitsu, Meikyuu, Rakuen) and few direct videos, fetch subfolders
         if (subfolders.isNotEmpty() && videoFiles.size <= 2) {
-            for (sub in subfolders) {
-                val subId = if (sub.isShortcut) sub.shortcutDetails.targetId ?: sub.id else sub.id
-                val subRes = driveRepository.getAllFilesDetailed(
-                    query = "'$subId' in parents and trashed = false",
-                    pageSize = 100
-                )
+            val subResults = coroutineScope {
+                subfolders.map { sub ->
+                    async {
+                        val subId = if (sub.isShortcut) sub.shortcutDetails.targetId ?: sub.id else sub.id
+                        driveRepository.getAllFilesDetailed(
+                            query = "'$subId' in parents and trashed = false",
+                            pageSize = 100
+                        )
+                    }
+                }.awaitAll()
+            }
+            for (subRes in subResults) {
                 val subCollection = when (subRes) {
                     is Resource.Success -> subRes.data
                     is Resource.Error -> subRes.data
@@ -661,6 +688,11 @@ class SeriesDetailViewModel @Inject constructor(
         }, isIncomplete = isIncomplete)
     }
 
+    private fun isExplicitMovieTitle(title: String): Boolean {
+        val lower = title.lowercase(Locale.ROOT)
+        return lower.contains("kizumonogatari") || lower.contains("movie") || lower.contains("filme")
+    }
+
     private fun mapToEpisodeItem(
         file: DriveFile,
         watch: WatchList?,
@@ -668,7 +700,8 @@ class SeriesDetailViewModel @Inject constructor(
         isMovie: Boolean = false,
         canonicalMovieTitle: String? = null,
         fallbackThumbnail: String? = null,
-        resolvedEpisodes: List<EpisodeDetails> = emptyList()
+        resolvedEpisodes: List<EpisodeDetails> = emptyList(),
+        seriesAgeRating: String? = null
     ): SeriesEpisodeItem {
         val parsed = EpisodeParser.parse(file.name)
         // OP/ED and other extras can contain a number (for example OP4a), but that
@@ -716,6 +749,7 @@ class SeriesDetailViewModel @Inject constructor(
 
         val audioText = SeriesMediaMetadataPolicy.audioLabelForFile(file.name).orEmpty()
         val badge = if (isMovie) "FILME" else null
+        val resolvedAge = formatRating(epMeta?.ageRating) ?: formatRating(seriesAgeRating) ?: if (isMovie) null else "14+"
 
         return SeriesEpisodeItem(
             file = file,
@@ -728,7 +762,8 @@ class SeriesDetailViewModel @Inject constructor(
             totalDuration = watch?.totalDuration ?: 0L,
             badgeText = badge,
             fallbackThumbnailUrl = epThumbnail,
-            synopsis = epSynopsis
+            synopsis = epSynopsis,
+            ageRating = resolvedAge
         )
     }
 
@@ -803,6 +838,10 @@ class SeriesDetailViewModel @Inject constructor(
                     } catch (_: Exception) {
                         currentResolvedEpisodes
                     }.ifEmpty { currentResolvedEpisodes }
+                    val arcMeta = folderMetadataRepository.getMetadata(tab.id)?.toAnimeMetadata()
+                    val arcRating = formatRating(arcMeta?.ageRating)
+                        ?: formatRating(currentState.aniListMetadata?.ageRating)
+                        ?: formatRating(animeEntry?.rating)
                     val newEpisodes = driveResult.files.map { file ->
                         mapToEpisodeItem(
                             file = file,
@@ -812,7 +851,8 @@ class SeriesDetailViewModel @Inject constructor(
                             canonicalMovieTitle = null,
                             fallbackThumbnail = currentState.aniListMetadata?.bannerUrl
                                 ?: currentState.fallbackPosterUrl,
-                            resolvedEpisodes = resolved
+                            resolvedEpisodes = resolved,
+                            seriesAgeRating = arcRating
                         )
                     }
                     folderEpisodesCache[tab.id] = newEpisodes

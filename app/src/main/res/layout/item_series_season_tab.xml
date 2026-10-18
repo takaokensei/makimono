@@ -4,6 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:layout_marginBottom="12dp"
     android:orientation="vertical">
 
@@ -12,6 +14,10 @@
         android:id="@+id/tabPillContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="4dp"
+        android:layout_marginTop="2dp"
+        android:layout_marginBottom="2dp"
         android:minHeight="56dp"
         android:background="@drawable/bg_arc_card_selector"
         android:clickable="true"

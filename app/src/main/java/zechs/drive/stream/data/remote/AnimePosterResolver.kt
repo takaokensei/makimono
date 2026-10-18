@@ -37,7 +37,8 @@ data class AnimeMetadata(
     val clearLogoUrl: String? = null,
     val isMovie: Boolean = false,
     val isAnime: Boolean = true,
-    val mediaType: String? = null
+    val mediaType: String? = null,
+    val ageRating: String? = null
 )
 
 @Singleton
@@ -81,6 +82,13 @@ class AnimePosterResolver @Inject constructor() {
             "deadpool", "wolverine", "x-men", "oppenheimer", "interstellar", "dune"
         )
 
+        private val WESTERN_SERIES_KEYWORDS = listOf(
+            "mentalista", "mentalist", "the mentalist", "o mentalista",
+            "breaking bad", "game of thrones", "stranger things",
+            "better call saul", "dexter", "sopranos", "the office", "house of cards",
+            "sherlock", "true detective", "fargo", "supernatural"
+        )
+
         private const val ANILIST_GRAPHQL_QUERY = """
             query (${'$'}search: String) {
               Page(page: 1, perPage: 8) {
@@ -105,6 +113,7 @@ class AnimePosterResolver @Inject constructor() {
                   popularity
                   format
                   status
+                  isAdult
                   trailer {
                     id
                     site
@@ -265,6 +274,11 @@ class AnimePosterResolver @Inject constructor() {
             val norm = normalizeText(query)
             return WESTERN_MEDIA_KEYWORDS.any { norm.contains(it) }
         }
+
+        fun isLikelyWesternSeries(query: String): Boolean {
+            val norm = normalizeText(query)
+            return WESTERN_SERIES_KEYWORDS.any { norm.contains(it) }
+        }
     }
 
     fun cleanAnimeTitle(folderName: String): String = Companion.cleanAnimeTitle(folderName)
@@ -294,7 +308,23 @@ class AnimePosterResolver @Inject constructor() {
 
         AppLog.d(TAG, "Resolving metadata for: '$query' (original: '$folderName')")
 
-        // 1. If folder name strongly suggests a Western movie or series (e.g. Spider-Man, Mentalista)
+        // 1. If folder name strongly suggests a Western TV series (e.g. The Mentalist, Breaking Bad)
+        if (isLikelyWesternSeries(query)) {
+            AppLog.d(TAG, "Query '$query' recognized as Western TV series candidate. Querying Cinemeta series & TVmaze...")
+            val cinemetaSeries = fetchFromCinemeta(query, isMovie = false)
+            val seriesMeta = if (cinemetaSeries != null && !cinemetaSeries.bannerUrl.isNullOrBlank()) {
+                cinemetaSeries
+            } else {
+                fetchFromTvMaze(query) ?: cinemetaSeries
+            }
+            if (seriesMeta != null && !seriesMeta.posterUrl.isNullOrBlank()) {
+                AppLog.d(TAG, "Successfully matched Western series: ${seriesMeta.titleRomaji}")
+                metadataCache[query] = seriesMeta
+                return@withContext seriesMeta
+            }
+        }
+
+        // 2. If folder name strongly suggests a Western movie (e.g. Spider-Man)
         if (isLikelyWesternOrMovie(query)) {
             AppLog.d(TAG, "Query '$query' recognized as Western movie/series candidate. Querying Cinemeta & TVmaze...")
             val movieMeta = fetchFromCinemeta(query, isMovie = true)
@@ -452,6 +482,7 @@ class AnimePosterResolver @Inject constructor() {
 
                 val format = media.optString("format")
                 val isMovie = format.equals("MOVIE", ignoreCase = true)
+                val isAdult = media.optBoolean("isAdult", false)
 
                 AnimeMetadata(
                     posterUrl = extraLarge ?: large,
@@ -468,7 +499,8 @@ class AnimePosterResolver @Inject constructor() {
                     trailerUrl = trailerUrl,
                     isMovie = isMovie,
                     isAnime = true,
-                    mediaType = if (isMovie) "movie" else "anime"
+                    mediaType = if (isMovie) "movie" else "anime",
+                    ageRating = if (isAdult) "18+" else null
                 )
             }
         } catch (e: Exception) {
@@ -547,6 +579,9 @@ class AnimePosterResolver @Inject constructor() {
                     }
                 }
 
+                val cert = item.optString("certification").takeIf { it.isNotBlank() && it != "null" }
+                    ?: item.optString("rated").takeIf { it.isNotBlank() && it != "null" }
+
                 AnimeMetadata(
                     posterUrl = posterUrl,
                     bannerUrl = bannerUrl,
@@ -557,7 +592,8 @@ class AnimePosterResolver @Inject constructor() {
                     genres = genresList,
                     isMovie = isMovie,
                     isAnime = false,
-                    mediaType = if (isMovie) "movie" else "tv"
+                    mediaType = if (isMovie) "movie" else "tv",
+                    ageRating = cert
                 )
             }
         } catch (e: Exception) {
@@ -666,6 +702,10 @@ class AnimePosterResolver @Inject constructor() {
                         }
                     }
 
+                    val type = anime.optString("type")
+                    val isMovie = type.equals("Movie", ignoreCase = true)
+                    val rating = anime.optString("rating").takeIf { it.isNotBlank() && it != "null" }
+
                     return AnimeMetadata(
                         posterUrl = posterUrl,
                         titleRomaji = title,
@@ -675,7 +715,10 @@ class AnimePosterResolver @Inject constructor() {
                         score = score,
                         year = year,
                         genres = genresList,
-                        isAnime = true
+                        isMovie = isMovie,
+                        isAnime = true,
+                        mediaType = if (isMovie) "movie" else "tv",
+                        ageRating = rating
                     )
                 }
                 null
@@ -732,6 +775,11 @@ class AnimePosterResolver @Inject constructor() {
                     val synopsis = attributes.optString("synopsis").takeIf { it.isNotBlank() && it != "null" }
                     val score = attributes.optString("averageRating").toFloatOrNull()?.let { it / 10.0f }
 
+                    val subtype = attributes.optString("subtype")
+                    val isMovie = subtype.equals("movie", ignoreCase = true)
+                    val ageRating = attributes.optString("ageRatingGuide").takeIf { it.isNotBlank() && it != "null" }
+                        ?: attributes.optString("ageRating").takeIf { it.isNotBlank() && it != "null" }
+
                     return AnimeMetadata(
                         posterUrl = posterUrl,
                         bannerUrl = bannerUrl,
@@ -740,7 +788,10 @@ class AnimePosterResolver @Inject constructor() {
                         titleNative = jaJp?.takeIf { it.isNotBlank() && it != "null" },
                         synopsis = synopsis,
                         score = score,
-                        isAnime = true
+                        isMovie = isMovie,
+                        isAnime = true,
+                        mediaType = if (isMovie) "movie" else "tv",
+                        ageRating = ageRating
                     )
                 }
                 null

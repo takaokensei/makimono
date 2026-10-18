@@ -25,6 +25,7 @@ class FranchiseGroupingManager @Inject constructor(
         val primaryFolderId: String,
         val posterUrl: String?,
         val bannerUrl: String?,
+        val synopsis: String? = null,
         val members: List<FranchiseMember>
     )
 
@@ -109,6 +110,25 @@ class FranchiseGroupingManager @Inject constructor(
         }
     }
 
+    fun getFranchiseSynopsis(franchiseKey: String): String? {
+        return when (franchiseKey) {
+            "monogatari_series" -> "A aclamada franquia Monogatari acompanha Koyomi Araragi, um estudante que " +
+                "sobreviveu a um ataque vampírico e passa a ajudar jovens garotas envolvidas com fenômenos " +
+                "sobrenaturais e aparições urbanas."
+            "owari_no_seraph" -> "Após um vírus devastar a humanidade e vampiros emergirem para escravizar " +
+                "os sobreviventes, Yuichiro Hyakuya busca vingança jurando erradicar todos os vampiros."
+            "mushoku_tensei" -> "A história de um homem de 34 anos que reencarna como Rudeus Greyrat em um " +
+                "mundo de fantasia e magia, determinado a viver sua nova vida ao máximo e proteger aqueles que ama."
+            "bleach" -> "Ichigo Kurosaki é um estudante com a habilidade de ver fantasmas que ganha os " +
+                "poderes de um Shinigami (Ceifeiro de Almas) para proteger os vivos e guiar os espíritos."
+            "tensei_shitara_slime" -> "Satoru Mikami reencarna em um mundo de fantasia como uma slime com " +
+                "habilidades devoradoras, fundando a Federação Jura Tempest."
+            "the_mentalist" -> "Patrick Jane, um ex-médium celebridade, usa suas extraordinárias habilidades " +
+                "de observação e dedução para ajudar a CBI a solucionar crimes e encontrar Red John."
+            else -> null
+        }
+    }
+
     /**
      * Groups library files into unified franchise hubs according to Option A.
      * Pastas that belong to the same franchise (e.g. Bakemonogatari + Kizumonogatari)
@@ -148,17 +168,24 @@ class FranchiseGroupingManager @Inject constructor(
                     val meta = allMeta[targetId] ?: allMeta[file.id]
                     val arcTitle = meta?.titleRomaji ?: meta?.titleEnglish
                         ?: AnimePosterResolver.cleanAnimeTitle(file.name)
+                    val isMovie = meta?.isMovie == true ||
+                        arcTitle.contains("kizumonogatari", ignoreCase = true) ||
+                        file.name.contains("kizumonogatari", ignoreCase = true) ||
+                        arcTitle.contains("movie", ignoreCase = true) ||
+                        file.name.contains("movie", ignoreCase = true) ||
+                        arcTitle.contains("filme", ignoreCase = true) ||
+                        file.name.contains("filme", ignoreCase = true)
                     FranchiseMember(
                         folderId = file.id,
                         folderName = file.name,
                         arcTitle = arcTitle,
                         releaseYear = meta?.year,
                         episodeCount = meta?.episodeCount,
-                        isMovie = meta?.isMovie == true,
+                        isMovie = isMovie,
                         posterUrl = meta?.posterUrl ?: file.posterUrl,
                         bannerUrl = meta?.bannerUrl ?: file.thumbnailLink,
                         score = meta?.score,
-                        scoreSource = if (meta?.isMovie == true ||
+                        scoreSource = if (isMovie ||
                             meta?.mediaType == "movie" || meta?.mediaType == "tv") "TMDB" else "MAL"
                     )
                 }.sortedWith(
@@ -179,6 +206,7 @@ class FranchiseGroupingManager @Inject constructor(
                     primaryFolderId = primaryFile.id,
                     posterUrl = bestPoster,
                     bannerUrl = bestBanner,
+                    synopsis = getFranchiseSynopsis(franchiseKey),
                     members = sortedMembers
                 )
 
@@ -238,19 +266,28 @@ class FranchiseGroupingManager @Inject constructor(
         if (matchingFolders.size > 1) {
             val canonicalTitle = getCanonicalTitle(key)
             val members = matchingFolders.map { meta ->
+                val arc = meta.titleRomaji?.takeIf { it.isNotBlank() }
+                    ?: meta.titleEnglish?.takeIf { it.isNotBlank() }
+                    ?: AnimePosterResolver.cleanAnimeTitle(meta.folderName)
+                val isMovie = meta.isMovie ||
+                    arc.contains("kizumonogatari", ignoreCase = true) ||
+                    meta.folderName.contains("kizumonogatari", ignoreCase = true) ||
+                    arc.contains("movie", ignoreCase = true) ||
+                    meta.folderName.contains("movie", ignoreCase = true) ||
+                    arc.contains("filme", ignoreCase = true) ||
+                    meta.folderName.contains("filme", ignoreCase = true)
                 FranchiseMember(
                     folderId = meta.folderId,
                     folderName = meta.folderName,
-                    arcTitle = meta.titleRomaji?.takeIf { it.isNotBlank() }
-                        ?: meta.titleEnglish?.takeIf { it.isNotBlank() }
-                        ?: AnimePosterResolver.cleanAnimeTitle(meta.folderName),
+                    arcTitle = arc,
                     releaseYear = meta.year,
                     episodeCount = meta.episodeCount,
-                    isMovie = meta.isMovie,
+                    isMovie = isMovie,
                     posterUrl = meta.posterUrl,
                     bannerUrl = meta.bannerUrl,
                     score = meta.score,
-                    scoreSource = if (meta.mediaType == "movie" || meta.mediaType == "tv") "TMDB" else "MAL"
+                    scoreSource = if (isMovie ||
+                        meta.mediaType == "movie" || meta.mediaType == "tv") "TMDB" else "MAL"
                 )
             }
             val hub = FranchiseHub(
@@ -259,6 +296,7 @@ class FranchiseGroupingManager @Inject constructor(
                 primaryFolderId = folderId,
                 posterUrl = matchingFolders.firstOrNull { it.posterUrl?.isNotBlank() == true }?.posterUrl,
                 bannerUrl = matchingFolders.firstOrNull { it.bannerUrl?.isNotBlank() == true }?.bannerUrl,
+                synopsis = getFranchiseSynopsis(key),
                 members = members
             )
             franchiseHubsCache[key] = hub
