@@ -30,3 +30,6 @@ captures/
 scratch/
 __pycache__/
 docs/ui-audit/
+
+# Graphify local output
+graphify-out/

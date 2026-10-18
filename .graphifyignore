@@ -1,0 +1,8 @@
+build/
+.gradle/
+.idea/
+makimono-dossie/
+backend/
+benchmark/
+mpv/build/
+docs/archive/
