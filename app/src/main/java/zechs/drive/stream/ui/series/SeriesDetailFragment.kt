@@ -87,6 +87,7 @@ class SeriesDetailFragment : BaseFragment() {
         TvAccessibilityLayout.adaptDetailsSynopsis(requireContext(), binding.tvSynopsis)
         setupTopHeader()
         setupAdapters()
+        setupNavigationTabs()
         setupFocusAnimations()
         setupFocusChain()
         synopsisDisclosure = SeriesSynopsisDisclosure(
@@ -115,6 +116,31 @@ class SeriesDetailFragment : BaseFragment() {
         )
     }
 
+    private fun setupNavigationTabs() {
+        binding.tabButtonEpisodes.setOnClickListener {
+            viewModel.onEvent(SeriesDetailEvent.SelectNavTab(SeriesNavTab.EPISODES))
+        }
+        binding.tabButtonDetails.setOnClickListener {
+            viewModel.onEvent(SeriesDetailEvent.SelectNavTab(SeriesNavTab.DETAILS))
+        }
+        binding.tabButtonMoreLikeThis.setOnClickListener {
+            viewModel.onEvent(SeriesDetailEvent.SelectNavTab(SeriesNavTab.MORE_LIKE_THIS))
+        }
+
+        listOf(
+            binding.tabButtonEpisodes,
+            binding.tabButtonDetails,
+            binding.tabButtonMoreLikeThis
+        ).forEach {
+            FocusEngine.attach(it, FocusEngine.FocusKind.BUTTON)
+        }
+
+        binding.tabButtonEpisodes.nextFocusRightId = binding.tabButtonDetails.id
+        binding.tabButtonDetails.nextFocusLeftId = binding.tabButtonEpisodes.id
+        binding.tabButtonDetails.nextFocusRightId = binding.tabButtonMoreLikeThis.id
+        binding.tabButtonMoreLikeThis.nextFocusLeftId = binding.tabButtonDetails.id
+    }
+
     private fun setupTopHeader() {
         binding.btnBack.setOnClickListener {
             findNavController().navigateUp()
@@ -141,9 +167,14 @@ class SeriesDetailFragment : BaseFragment() {
     }
 
     private fun setupAdapters() {
-        seasonAdapter = SeriesDetailSeasonAdapter { seasonTab ->
-            viewModel.selectSeasonTab(seasonTab)
-        }
+        seasonAdapter = SeriesDetailSeasonAdapter(
+            onTabClick = { seasonTab ->
+                viewModel.selectSeasonTab(seasonTab)
+            },
+            onChipClick = { category ->
+                viewModel.selectCategory(category)
+            }
+        )
         binding.rvSeasonTabs.adapter = seasonAdapter
 
         episodeAdapter = SeriesDetailEpisodeAdapter(
@@ -212,11 +243,6 @@ class SeriesDetailFragment : BaseFragment() {
     private fun updateFocusChain(isMovie: Boolean, hasSeasonTabs: Boolean) {
         if (!DeviceUi.isTenFootExperience(requireContext())) return
         val hasTopHeader = binding.topHeaderBar.visibility == View.VISIBLE
-        val downTarget = when {
-            isMovie -> View.NO_ID
-            hasSeasonTabs -> binding.rvSeasonTabs.id
-            else -> binding.rvEpisodes.id
-        }
         val upTarget = when {
             binding.tvSynopsisMore.visibility == View.VISIBLE -> binding.tvSynopsisMore.id
             hasTopHeader -> binding.btnBack.id
@@ -228,13 +254,25 @@ class SeriesDetailFragment : BaseFragment() {
             binding.btnMoreActions,
             binding.btnMarkWatched
         ).forEach {
-            it.nextFocusDownId = downTarget
+            it.nextFocusDownId = binding.tabButtonEpisodes.id
             it.nextFocusUpId = upTarget
         }
+
+        listOf(
+            binding.tabButtonEpisodes,
+            binding.tabButtonDetails,
+            binding.tabButtonMoreLikeThis
+        ).forEach {
+            it.nextFocusUpId = binding.btnPrimaryAction.id
+        }
+
         if (!isMovie) {
-            binding.rvSeasonTabs.nextFocusUpId = binding.btnPrimaryAction.id
-            binding.rvSeasonTabs.nextFocusDownId = binding.rvEpisodes.id
-            binding.rvEpisodes.nextFocusUpId = downTarget
+            val downTarget = if (hasSeasonTabs) binding.rvSeasonTabs.id else binding.rvEpisodes.id
+            binding.tabButtonEpisodes.nextFocusDownId = downTarget
+            binding.rvSeasonTabs.nextFocusUpId = binding.tabButtonEpisodes.id
+            binding.rvSeasonTabs.nextFocusRightId = binding.rvEpisodes.id
+            binding.rvEpisodes.nextFocusLeftId = if (hasSeasonTabs) binding.rvSeasonTabs.id else binding.rvEpisodes.id
+            binding.rvEpisodes.nextFocusUpId = binding.tabButtonEpisodes.id
         }
     }
 
@@ -394,11 +432,27 @@ class SeriesDetailFragment : BaseFragment() {
             binding.tvJapaneseTitle.visibility = View.GONE
         }
 
-        val canonicalTitle = state.aniListMetadata?.titleRomaji
-            ?: state.animeEntry?.title?.takeIf { it.isNotBlank() }
-            ?: state.seriesTitle
+        val canonicalTitle = if (state.isFranchiseHub && state.seriesTitle.isNotBlank()) {
+            state.seriesTitle
+        } else {
+            state.aniListMetadata?.titleRomaji
+                ?: state.animeEntry?.title?.takeIf { it.isNotBlank() }
+                ?: state.seriesTitle
+        }
         binding.tvRomajiTitle.text = canonicalTitle
         binding.tvBreadcrumbCurrent.text = canonicalTitle
+
+        if (state.isFranchiseHub && state.franchiseMembersCount > 1) {
+            binding.tvFranchiseCanonicalPill.visibility = View.VISIBLE
+            val countStr = resources.getQuantityString(
+                R.plurals.franchise_works_count,
+                state.franchiseMembersCount,
+                state.franchiseMembersCount
+            )
+            binding.tvFranchiseCanonicalPill.text = getString(R.string.franchise_canonical_badge, countStr)
+        } else {
+            binding.tvFranchiseCanonicalPill.visibility = View.GONE
+        }
 
         val englishSubtitle = state.aniListMetadata?.titleEnglish
             ?: state.animeEntry?.titleEnglish
@@ -418,7 +472,7 @@ class SeriesDetailFragment : BaseFragment() {
             binding.tvAgeRating.visibility = View.GONE
         }
 
-        val releaseYear = state.aniListMetadata?.year ?: state.animeEntry?.year
+        val releaseYear = state.activeArcYear ?: state.aniListMetadata?.year ?: state.animeEntry?.year
         if (releaseYear != null) {
             binding.tvReleaseYear.visibility = View.VISIBLE
             binding.tvReleaseYear.text = releaseYear.toString()
@@ -438,7 +492,7 @@ class SeriesDetailFragment : BaseFragment() {
         binding.tvSeriesStatus.visibility = if (airingStatusLabel == null) View.GONE else View.VISIBLE
         airingStatusLabel?.let(binding.tvSeriesStatus::setText)
 
-        val scoreVal = state.aniListMetadata?.score ?: state.animeEntry?.score
+        val scoreVal = state.activeArcScore ?: state.aniListMetadata?.score ?: state.animeEntry?.score
         binding.layoutRating.visibility = if (scoreVal != null) View.VISIBLE else View.GONE
         val genres = state.aniListMetadata?.genres ?: state.animeEntry?.genres.orEmpty()
         val hasMetaRow1 = ageRating != null || releaseYear != null ||
@@ -446,9 +500,11 @@ class SeriesDetailFragment : BaseFragment() {
         binding.metaRow1.visibility = if (hasMetaRow1) View.VISIBLE else View.GONE
         if (scoreVal != null) {
             binding.tvMalScore.visibility = View.VISIBLE
-            binding.tvMalScore.text = String.format(Locale.US, "%.1f", scoreVal)
-            val isTmdb = state.aniListMetadata?.isAnime == false || state.aniListMetadata?.mediaType != null
-            binding.tvRatingSource?.text = if (isTmdb) "TMDB" else getString(R.string.series_source_mal)
+            binding.tvMalScore.text = String.format(Locale.US, "%.2f", scoreVal)
+            val scoreSource = state.activeArcScoreSource.ifBlank {
+                if (state.aniListMetadata?.isAnime == false) "TMDB" else getString(R.string.series_source_mal)
+            }
+            binding.tvRatingSource?.text = scoreSource
         } else {
             binding.tvMalScore.visibility = View.GONE
         }
@@ -481,8 +537,9 @@ class SeriesDetailFragment : BaseFragment() {
         // Genres Row
         if (genres.isNotEmpty()) {
             binding.tvGenres?.visibility = View.VISIBLE
-            val joinedGenres = genres.take(4).joinToString(if (isTenFoot) ", " else " • ")
-            binding.tvGenres?.text = if (isTenFoot) "♦  Legendado  ♦  $joinedGenres" else joinedGenres
+            val translatedGenres = genres.map { translateGenreToPortuguese(it) }
+            val joinedGenres = translatedGenres.take(4).joinToString(", ")
+            binding.tvGenres?.text = joinedGenres
         } else {
             binding.tvGenres?.visibility = View.GONE
         }
@@ -550,17 +607,33 @@ class SeriesDetailFragment : BaseFragment() {
             Toast.makeText(requireContext(), getString(R.string.season_marked_watched), Toast.LENGTH_SHORT).show()
         }
 
-        // 6. Season Tabs & Episodes Rail
+        // 6. Navigation Tabs & Panels
+        binding.tabButtonEpisodes.isSelected = state.selectedNavTab == SeriesNavTab.EPISODES
+        binding.tabButtonDetails.isSelected = state.selectedNavTab == SeriesNavTab.DETAILS
+        binding.tabButtonMoreLikeThis.isSelected = state.selectedNavTab == SeriesNavTab.MORE_LIKE_THIS
+
+        val showEpisodes = !isMovie && state.selectedNavTab == SeriesNavTab.EPISODES
+        binding.panelEpisodesTab.visibility = if (showEpisodes) View.VISIBLE else View.GONE
+        binding.panelDetailsTab.visibility = if (state.selectedNavTab == SeriesNavTab.DETAILS) View.VISIBLE else View.GONE
+        binding.panelMoreLikeThisTab.visibility = if (state.selectedNavTab == SeriesNavTab.MORE_LIKE_THIS) View.VISIBLE else View.GONE
+
+        binding.tvDetailsFullSynopsis.text = cleanSynopsis ?: ""
+
         if (isMovie) {
+            binding.tabsContainer.visibility = View.GONE
+            binding.panelEpisodesTab.visibility = View.GONE
             binding.rvSeasonTabs.visibility = View.GONE
+            binding.layoutSeasonsColumn.visibility = View.GONE
             binding.tvEpisodesHeading?.visibility = View.GONE
-            binding.rvEpisodes.visibility = View.GONE
+            binding.rvEpisodes.visibility = View.VISIBLE
+            episodeAdapter.submitList(state.currentEpisodes)
             binding.tvEmptyEpisodes.visibility = View.GONE
-            binding.tvPartialListingNotice?.visibility = View.GONE
+            binding.tvPartialListingNotice.visibility = View.GONE
         } else {
-            binding.rvSeasonTabs.visibility = if (state.seasonTabs.isEmpty()) View.GONE else View.VISIBLE
-            binding.tvEpisodesHeading?.visibility = View.VISIBLE
-            binding.tvEpisodesHeading?.text = getString(R.string.series_heading_episodes)
+            binding.tabsContainer.visibility = View.VISIBLE
+            val hasSeasons = state.seasonTabs.isNotEmpty()
+            binding.layoutSeasonsColumn.visibility = if (hasSeasons) View.VISIBLE else View.GONE
+            binding.rvSeasonTabs.visibility = if (hasSeasons) View.VISIBLE else View.GONE
             seasonAdapter.submitList(state.seasonTabs)
 
             binding.rvEpisodes.visibility = View.VISIBLE
@@ -610,13 +683,13 @@ class SeriesDetailFragment : BaseFragment() {
                 ContextCompat.getDrawable(requireContext(), R.drawable.ic_star_filled_24)
             )
             binding.ivFavoriteIcon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.amber_500))
-            binding.tvFavoriteText.setText(R.string.series_action_favorited)
+            binding.tvFavoriteText.setText(R.string.series_action_in_watchlist)
         } else {
             binding.ivFavoriteIcon.setImageDrawable(
                 ContextCompat.getDrawable(requireContext(), R.drawable.ic_star_outline_24)
             )
             binding.ivFavoriteIcon.clearColorFilter()
-            binding.tvFavoriteText.setText(R.string.series_action_favorite)
+            binding.tvFavoriteText.setText(R.string.series_action_watchlist)
         }
     }
 
@@ -747,6 +820,35 @@ class SeriesDetailFragment : BaseFragment() {
             lower.contains("pg") -> "10+"
             lower.contains("g") -> "L"
             else -> null
+        }
+    }
+
+    private fun translateGenreToPortuguese(genre: String): String {
+        return when (genre.trim().lowercase(Locale.ROOT)) {
+            "action", "ação" -> "Ação"
+            "adventure", "aventura" -> "Aventura"
+            "comedy", "comédia" -> "Comédia"
+            "drama" -> "Drama"
+            "fantasy", "fantasia" -> "Fantasia"
+            "mystery", "mistério" -> "Mistério"
+            "psychological", "psicológico" -> "Psicológico"
+            "romance" -> "Romance"
+            "sci-fi", "science fiction", "ficção científica" -> "Ficção Científica"
+            "supernatural", "sobrenatural" -> "Sobrenatural"
+            "thriller", "suspense" -> "Suspense"
+            "slice of life", "cotidiano" -> "Cotidiano"
+            "horror", "terror" -> "Terror"
+            "sports", "esporte", "esportes" -> "Esportes"
+            "mecha" -> "Mecha"
+            "music", "música" -> "Música"
+            "ecchi" -> "Ecchi"
+            "magic", "magia" -> "Magia"
+            "school", "escolar" -> "Escolar"
+            "shounen" -> "Shounen"
+            "seinen" -> "Seinen"
+            "shoujo" -> "Shoujo"
+            "josei" -> "Josei"
+            else -> genre.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
         }
     }
 

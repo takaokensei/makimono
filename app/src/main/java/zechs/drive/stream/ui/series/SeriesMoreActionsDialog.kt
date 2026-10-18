@@ -42,6 +42,16 @@ object SeriesMoreActionsDialog {
         }
 
         var popup: PopupWindow? = null
+        fun dismissWithAnimation() {
+            panel.animate()
+                .alpha(0f)
+                .scaleX(0.94f)
+                .scaleY(0.94f)
+                .setDuration(140)
+                .withEndAction { popup?.dismiss() }
+                .start()
+        }
+
         fun addAction(label: String, iconRes: Int, action: () -> Unit) {
             val item = TextView(context).apply {
                 text = label
@@ -61,16 +71,23 @@ object SeriesMoreActionsDialog {
                 isFocusableInTouchMode = true
                 isClickable = true
                 background = ContextCompat.getDrawable(context, R.drawable.bg_context_menu_item)
-                setOnFocusChangeListener { _, hasFocus ->
+                setOnFocusChangeListener { v, hasFocus ->
                     icon?.setTint(
                         ContextCompat.getColor(
                             context,
                             if (hasFocus) R.color.obsidian_accent_primary else R.color.obsidian_text_secondary
                         )
                     )
+                    v.animate()
+                        .scaleX(if (hasFocus) 1.035f else 1.0f)
+                        .scaleY(if (hasFocus) 1.035f else 1.0f)
+                        .translationZ(if (hasFocus) dp(4).toFloat() else 0f)
+                        .setDuration(160)
+                        .setInterpolator(android.view.animation.DecelerateInterpolator())
+                        .start()
                 }
                 setOnClickListener {
-                    popup?.dismiss()
+                    dismissWithAnimation()
                     action()
                 }
             }
@@ -96,6 +113,7 @@ object SeriesMoreActionsDialog {
             panelHeight,
             true
         ).apply {
+            animationStyle = android.R.style.Animation_Dialog
             isOutsideTouchable = true
             isTouchable = true
             setBackgroundDrawable(GradientDrawable().apply {
@@ -121,12 +139,27 @@ object SeriesMoreActionsDialog {
         )
         val leftOnScreen = preferredLeft.coerceAtMost(visibleFrame.right - panelWidth - dp(8))
             .coerceAtLeast(visibleFrame.left)
+
+        panel.alpha = 0f
+        panel.scaleX = 0.92f
+        panel.scaleY = 0.92f
+        panel.pivotX = (panelWidth / 2).toFloat()
+        panel.pivotY = 0f
+
         popup.showAtLocation(
             focusAnchor.rootView,
             Gravity.TOP or Gravity.START,
             leftOnScreen - rootLocation[0],
             topOnScreen.coerceAtLeast(visibleFrame.top) - rootLocation[1]
         )
+        panel.animate()
+            .alpha(1f)
+            .scaleX(1f)
+            .scaleY(1f)
+            .setDuration(200)
+            .setInterpolator(android.view.animation.DecelerateInterpolator())
+            .start()
+
         panel.requestFocus()
         (panel.getChildAt(0) as? View)?.requestFocus()
     }

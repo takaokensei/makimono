@@ -578,10 +578,12 @@ class VisualReviewActivity : AppCompatActivity(), zechs.drive.stream.ui.player.P
     }
     private fun profiles() {
         setContentView(R.layout.fragment_profile_selection)
-        TvAccessibilityLayout.adaptProfileActions(
-            this,
-            listOf(findViewById(R.id.btnManageProfiles), findViewById(R.id.btnProfileSettings))
-        )
+        findViewById<View?>(R.id.btnLogOut)?.let { btn ->
+            TvAccessibilityLayout.adaptProfileActions(this, listOf(btn))
+            btn.setOnClickListener {
+                android.widget.Toast.makeText(this, "Log out clicked", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
         val rv=findViewById<RecyclerView>(R.id.rvProfiles)
         rv.layoutParams=rv.layoutParams.apply { height=ViewGroup.LayoutParams.WRAP_CONTENT }
         rv.layoutManager=LinearLayoutManager(this,RecyclerView.HORIZONTAL,false)
@@ -593,12 +595,6 @@ class VisualReviewActivity : AppCompatActivity(), zechs.drive.stream.ui.player.P
             submitList(listOf(ProfileUiModel.ProfileItem(UserProfile("one","Cauã",avatarResName="avatar_anime",isAdmin=true),true),ProfileUiModel.ProfileItem(UserProfile("two","Visitante",avatarResName="avatar_anime"),false),ProfileUiModel.ProfileItem(UserProfile("three","Kids / Shounen",avatarResName="avatar_anime",isKids=true),false),ProfileUiModel.AddProfileItem))
         }
         rv.adapter=adapter
-        var managing = false
-        findViewById<View>(R.id.btnManageProfiles).setOnClickListener { button ->
-            managing = !managing
-            adapter.isManageMode = managing
-            (button as? TextView)?.text = if (managing) "CONCLUÍDO" else "GERENCIAR PERFIS"
-        }
         rv.postDelayed({rv.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus()},500)
     }
 

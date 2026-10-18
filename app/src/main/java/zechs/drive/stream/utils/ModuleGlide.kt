@@ -12,8 +12,22 @@ import java.io.InputStream
 import java.util.concurrent.TimeUnit
 
 
+import com.bumptech.glide.GlideBuilder
+import com.bumptech.glide.load.engine.cache.InternalCacheDiskCacheFactory
+import com.bumptech.glide.load.engine.cache.LruResourceCache
+import com.bumptech.glide.load.engine.cache.MemorySizeCalculator
+
 @GlideModule
 class ModuleGlide : AppGlideModule() {
+
+    override fun applyOptions(context: Context, builder: GlideBuilder) {
+        val diskCacheSizeBytes = 500L * 1024L * 1024L // 500 MB persistent cache
+        builder.setDiskCache(InternalCacheDiskCacheFactory(context, diskCacheSizeBytes))
+        val calculator = MemorySizeCalculator.Builder(context)
+            .setMemoryCacheScreens(3f)
+            .build()
+        builder.setMemoryCache(LruResourceCache(calculator.memoryCacheSize.toLong()))
+    }
 
     override fun registerComponents(
         context: Context, glide: Glide, registry: Registry

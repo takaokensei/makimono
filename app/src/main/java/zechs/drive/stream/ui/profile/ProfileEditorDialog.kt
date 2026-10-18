@@ -1,18 +1,33 @@
 package zechs.drive.stream.ui.profile
 
+import android.app.Dialog
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.view.KeyEvent
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
-import androidx.core.view.isVisible
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.view.ContextThemeWrapper
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DecodeFormat
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.request.RequestOptions
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zechs.drive.stream.R
 import zechs.drive.stream.data.model.UserProfile
@@ -20,507 +35,485 @@ import zechs.drive.stream.data.remote.ProfileArt
 import zechs.drive.stream.data.remote.ProfileArtCatalog
 import zechs.drive.stream.databinding.DialogProfileEditorBinding
 import zechs.drive.stream.databinding.ItemProfileCatalogCardBinding
-import com.bumptech.glide.Glide
 import zechs.drive.stream.utils.ProfileManager
-import zechs.drive.stream.utils.TvFocusRing
-import java.net.URI
+import zechs.drive.stream.utils.ShimmerController
 import java.util.UUID
 
+/**
+ * Fullscreen Crunchyroll TV split-screen profile preferences dialog.
+ * Left 42%: Full-height live preview with wallpaper, centered circular avatar, and name.
+ * Right 58%: Clean preferences menu and categorized franchise catalogs (including user's library).
+ */
 class ProfileEditorDialog(
     private val fragment: Fragment,
     private val manager: ProfileManager,
     private val resolver: ProfileArtCatalog
 ) {
-    private enum class CatalogTab { AVATARS, WALLPAPERS }
-
     fun show(profile: UserProfile?) {
         val context = fragment.requireContext()
+        val density = context.resources.displayMetrics.density
+        fun dp(value: Int) = (value * density).toInt()
+
         val b = DialogProfileEditorBinding.inflate(LayoutInflater.from(context))
-        adaptForLargeText(b)
-        b.profileName.setText(profile?.name.orEmpty())
-        b.avatarUrl.setText(profile?.avatarUrl.orEmpty())
-        b.backgroundUrl.setText(profile?.backgroundUrl.orEmpty())
-        var selectedAvatarUrl = profile?.avatarUrl.orEmpty()
-        var selectedBackgroundUrl = profile?.backgroundUrl.orEmpty()
-        b.isAdmin.isChecked = profile?.isAdmin == true
-        b.isKids.isChecked = profile?.isKids == true
-        var search: Job? = null
-        val catalogFocusTargets = mutableListOf<android.view.View>()
 
-        var currentTab = CatalogTab.AVATARS
-        var activeSearchQuery: String? = null
-        var lastSearchResults: List<ProfileArt>? = null
-
-        fun refreshPreview() {
-            val name = b.profileName.text.toString().trim()
-            b.tvPreviewName.text = name.ifBlank { context.getString(R.string.profile_name_hint) }
-            val roleText = when {
-                b.isAdmin.isChecked -> "Administrador"
-                b.isKids.isChecked -> "Modo Infantil"
-                else -> "Perfil Padrão"
-            }
-            b.tvPreviewRoleBadge.text = roleText
-
-            Glide.with(context)
-                .load(selectedAvatarUrl.takeIf { it.isNotBlank() } ?: R.drawable.ic_image_placeholder_24)
-                .placeholder(R.drawable.ic_image_placeholder_24)
-                .error(R.drawable.ic_image_placeholder_24)
-                .override(180, 180)
-                .circleCrop()
-                .into(b.ivPreviewAvatar)
-
-            Glide.with(context)
-                .load(selectedBackgroundUrl.takeIf { it.isNotBlank() } ?: R.drawable.bg_profile_fantasy)
-                .placeholder(R.drawable.bg_profile_fantasy)
-                .error(R.drawable.bg_profile_fantasy)
-                .override(480, 270)
-                .centerCrop()
-                .into(b.ivPreviewBg)
+        var currentName = profile?.name.orEmpty().ifBlank {
+            context.getString(R.string.profile_name_hint)
+        }
+        var selectedAvatarUrl = profile?.avatarUrl.orEmpty().ifBlank {
+            resolver.defaultAvatarForProfile(profile?.id ?: UUID.randomUUID().toString())?.url.orEmpty()
+        }
+        var selectedBackgroundUrl = profile?.backgroundUrl.orEmpty().ifBlank {
+            resolver.getPresetWallpapers().firstOrNull()?.url.orEmpty()
         }
 
-        b.profileName.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) { refreshPreview() }
-            override fun afterTextChanged(s: android.text.Editable?) {}
-        })
-
-        b.avatarUrl.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-                selectedAvatarUrl = s?.toString().orEmpty().trim()
-                refreshPreview()
+        val themedContext = ContextThemeWrapper(context, R.style.Theme_DriveStream_Obsidian)
+        val dialog = Dialog(themedContext, R.style.Theme_DriveStream_Obsidian).apply {
+            setContentView(b.root)
+            window?.apply {
+                setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                setBackgroundDrawable(ColorDrawable(Color.BLACK))
+                decorView.setPadding(0, 0, 0, 0)
             }
-            override fun afterTextChanged(s: android.text.Editable?) {}
-        })
-
-        b.backgroundUrl.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-                selectedBackgroundUrl = s?.toString().orEmpty().trim()
-                refreshPreview()
-            }
-            override fun afterTextChanged(s: android.text.Editable?) {}
-        })
-
-        b.isAdmin.setOnCheckedChangeListener { _, _ -> refreshPreview() }
-        b.isKids.setOnCheckedChangeListener { _, _ -> refreshPreview() }
-        refreshPreview()
-
-        val dialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
-            .setBackground(ContextCompat.getDrawable(context, R.drawable.bg_profile_editor_dialog))
-            .setTitle(if (profile == null) R.string.profile_editor_new_title else R.string.profile_editor_edit_title)
-            .setView(b.root)
-            .setPositiveButton(R.string.profile_save_action, null)
-            .setNegativeButton(R.string.profile_cancel_action, null)
-            .create()
-
-        val lifecycle = fragment.viewLifecycleOwner.lifecycle
-        val observer = object : androidx.lifecycle.DefaultLifecycleObserver {
-            override fun onDestroy(owner: androidx.lifecycle.LifecycleOwner) { dialog.dismiss() }
-        }
-        lifecycle.addObserver(observer)
-        dialog.setOnDismissListener {
-            search?.cancel()
-            lifecycle.removeObserver(observer)
         }
 
-        fun populateArtGrid(items: List<ProfileArt>) {
-            b.catalogImages.removeAllViews()
-            b.profileArtCarousel.scrollTo(0, 0)
-            val density = context.resources.displayMetrics.density
-            val avatarDiameter = (112 * density).toInt()
-            val wallpaperWidth = (198 * density).toInt()
-            val avatarRowHeight = (112 * density).toInt()
-            b.catalogImages.columnCount = items.size.coerceAtLeast(1)
+        val transparentDrawable = ColorDrawable(Color.TRANSPARENT)
+        val glideAvatarOptions = RequestOptions()
+            .format(DecodeFormat.PREFER_RGB_565)
+            .diskCacheStrategy(DiskCacheStrategy.ALL)
+            .placeholder(transparentDrawable)
+            .error(transparentDrawable)
+            .circleCrop()
 
-            val glideOptions = RequestOptions()
-                .format(DecodeFormat.PREFER_RGB_565)
-                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                .placeholder(R.drawable.ic_image_placeholder_24)
-                .error(R.drawable.ic_image_placeholder_24)
-                .override(480, 270)
-                .centerCrop()
+        val glideWallpaperOptions = RequestOptions()
+            .format(DecodeFormat.PREFER_RGB_565)
+            .diskCacheStrategy(DiskCacheStrategy.ALL)
+            .placeholder(transparentDrawable)
+            .error(transparentDrawable)
+            .centerCrop()
 
-            val inflater = LayoutInflater.from(context)
-            val catalogSelectionTargets = mutableListOf<Triple<ProfileArt, android.view.View, android.widget.ImageView>>()
-            catalogFocusTargets.clear()
+        var previewDebounceJob: Job? = null
+        var activeBgIsA = true
+        var activeAvatarIsA = true
 
-            fun isSelected(art: ProfileArt): Boolean = if (art.isWallpaper) {
-                art.url == selectedBackgroundUrl
+        fun refreshPreview(smoothTransition: Boolean = true) {
+            b.tvPreviewName.text = currentName.ifBlank { context.getString(R.string.profile_name_hint) }
+            b.tvProfileNameValue.text = currentName.ifBlank { context.getString(R.string.profile_name_hint) }
+
+            // Double-buffered avatar transition: old avatar stays visible until new avatar crossfades in
+            val currentAvatar = if (activeAvatarIsA) b.ivPreviewAvatarA else b.ivPreviewAvatarB
+            val nextAvatar = if (activeAvatarIsA) b.ivPreviewAvatarB else b.ivPreviewAvatarA
+            val avatarTarget: Any = selectedAvatarUrl.takeIf { it.isNotBlank() }
+                ?: if (profile?.avatarResName == "avatar_caua") R.drawable.avatar_caua else R.drawable.avatar_caua
+
+            if (!smoothTransition) {
+                Glide.with(context)
+                    .load(avatarTarget)
+                    .apply(glideAvatarOptions)
+                    .into(currentAvatar)
+                currentAvatar.alpha = 1f
+                nextAvatar.alpha = 0f
             } else {
-                art.url == selectedAvatarUrl
+                Glide.with(context)
+                    .load(avatarTarget)
+                    .apply(glideAvatarOptions)
+                    .into(nextAvatar)
+                nextAvatar.animate().cancel()
+                currentAvatar.animate().cancel()
+                nextAvatar.alpha = 0f
+                nextAvatar.animate().alpha(1f).setDuration(160).start()
+                currentAvatar.animate().alpha(0f).setDuration(160).withEndAction {
+                    currentAvatar.alpha = 0f
+                }.start()
+                activeAvatarIsA = !activeAvatarIsA
             }
 
-            fun updateSelection(art: ProfileArt, card: android.view.View, indicator: android.widget.ImageView) {
-                val selected = isSelected(art)
-                card.isSelected = selected
-                indicator.isVisible = selected
-                val label = if (art.isWallpaper) {
-                    context.getString(R.string.profile_wallpaper_accessibility, art.label)
+            // Double-buffered wallpaper transition: fixes Glide CrossFadeDrawable CENTER_CROP squishing bug
+            val currentBg = if (activeBgIsA) b.ivPreviewBgA else b.ivPreviewBgB
+            val nextBg = if (activeBgIsA) b.ivPreviewBgB else b.ivPreviewBgA
+            val bgTarget = selectedBackgroundUrl.takeIf { it.isNotBlank() } ?: R.drawable.bg_profile_fantasy
+
+            if (!smoothTransition) {
+                Glide.with(context)
+                    .load(bgTarget)
+                    .apply(glideWallpaperOptions)
+                    .into(currentBg)
+                currentBg.alpha = 1f
+                nextBg.alpha = 0f
+            } else {
+                Glide.with(context)
+                    .load(bgTarget)
+                    .apply(glideWallpaperOptions)
+                    .into(nextBg)
+                nextBg.animate().cancel()
+                currentBg.animate().cancel()
+                nextBg.alpha = 0f
+                nextBg.animate().alpha(1f).setDuration(180).start()
+                currentBg.animate().alpha(0f).setDuration(180).withEndAction {
+                    currentBg.alpha = 0f
+                }.start()
+                activeBgIsA = !activeBgIsA
+            }
+        }
+
+        refreshPreview(smoothTransition = false)
+
+        fun showMainMenu(focusedTarget: View? = null) {
+            b.panelAvatarCatalog.isVisible = false
+            b.panelWallpaperCatalog.isVisible = false
+            b.panelMainMenu.isVisible = true
+            (focusedTarget ?: b.rowProfileName).requestFocus()
+        }
+
+        // Row 1: Profile Name edit dialog
+        b.rowProfileName.setOnClickListener {
+            val input = EditText(context).apply {
+                setText(currentName)
+                setSelection(currentName.length)
+                setTextColor(Color.WHITE)
+                background = ContextCompat.getDrawable(context, R.drawable.glass_input_bg)
+                val pad = dp(14)
+                setPadding(pad, pad, pad, pad)
+                setSingleLine(true)
+                maxLines = 1
+                hint = context.getString(R.string.profile_name_hint)
+            }
+            MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
+                .setTitle(R.string.profile_name_hint)
+                .setView(input)
+                .setPositiveButton(R.string.ok) { _, _ ->
+                    val newName = input.text.toString().trim()
+                    if (newName.isNotBlank()) {
+                        currentName = newName
+                        refreshPreview(smoothTransition = false)
+                    }
+                }
+                .setNegativeButton(R.string.profile_cancel_action, null)
+                .show()
+        }
+
+        fun renderCatalogSections(
+            sections: List<Pair<String, List<ProfileArt>>>,
+            container: LinearLayout,
+            isWallpaper: Boolean
+        ) {
+            container.removeAllViews()
+            var firstFocusableCard: View? = null
+
+            sections.forEach { (sectionTitleText, arts) ->
+                if (arts.isEmpty()) return@forEach
+
+                val sectionTitle = TextView(context).apply {
+                    text = "$sectionTitleText (${arts.size})"
+                    setTextAppearance(R.style.TextAppearance_Makimono_TV_Body)
+                    setTextColor(Color.WHITE)
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    val topPad = dp(16)
+                    val botPad = dp(10)
+                    setPadding(0, topPad, 0, botPad)
+                }
+                container.addView(sectionTitle)
+
+                val hScroll = HorizontalScrollView(context).apply {
+                    clipChildren = false
+                    clipToPadding = false
+                    isFillViewport = false
+                    isHorizontalScrollBarEnabled = false
+                    overScrollMode = View.OVER_SCROLL_NEVER
+                }
+
+                val row = LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    clipChildren = false
+                    clipToPadding = false
+                    setPadding(0, dp(4), dp(16), dp(8))
+                }
+
+                val cardWidth: Int
+                val cardHeight: Int
+                val radius: Float
+                val selectorBg: Int
+
+                if (isWallpaper) {
+                    cardWidth = dp(192)
+                    cardHeight = dp(108) // 16:9
+                    radius = dp(10).toFloat()
+                    selectorBg = R.drawable.bg_profile_wallpaper_selector
                 } else {
-                    context.getString(R.string.profile_avatar_accessibility, art.label)
+                    cardWidth = dp(84)
+                    cardHeight = dp(84)
+                    radius = cardWidth / 2f
+                    selectorBg = R.drawable.bg_profile_avatar_selector
                 }
-                card.contentDescription = if (!selected) label else {
-                    context.getString(R.string.profile_art_selected_accessibility, label)
+                val cardMargin = dp(16)
+
+                arts.forEach { art ->
+                    val cardBinding = ItemProfileCatalogCardBinding.inflate(LayoutInflater.from(context), row, false)
+                    cardBinding.root.layoutParams = LinearLayout.LayoutParams(cardWidth, cardHeight).apply {
+                        marginEnd = cardMargin
+                    }
+                    val isCurrentlySelected = if (isWallpaper) (art.url == selectedBackgroundUrl) else (art.url == selectedAvatarUrl)
+
+                    cardBinding.cardArtRoot.apply {
+                        this.radius = radius
+                        strokeWidth = 0
+                        setCardBackgroundColor(Color.TRANSPARENT)
+                        foreground = ContextCompat.getDrawable(context, selectorBg)
+                        isFocusable = true
+                        isClickable = true
+                        isSelected = isCurrentlySelected
+
+                        setOnFocusChangeListener { v, hasFocus ->
+                            if (hasFocus) {
+                                val scale = if (isWallpaper) 1.08f else 1.12f
+                                v.animate().scaleX(scale).scaleY(scale).translationZ(dp(8).toFloat()).setDuration(160).start()
+                                previewDebounceJob?.cancel()
+                                previewDebounceJob = fragment.viewLifecycleOwner.lifecycleScope.launch {
+                                    delay(70L)
+                                    if (isWallpaper) {
+                                        selectedBackgroundUrl = art.url
+                                    } else {
+                                        selectedAvatarUrl = art.url
+                                    }
+                                    refreshPreview(smoothTransition = true)
+                                }
+                            } else {
+                                v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(160).start()
+                            }
+                        }
+
+                        setOnClickListener {
+                            previewDebounceJob?.cancel()
+                            if (isWallpaper) {
+                                selectedBackgroundUrl = art.url
+                                refreshPreview(smoothTransition = true)
+                                showMainMenu(b.btnChangeBackground)
+                            } else {
+                                selectedAvatarUrl = art.url
+                                refreshPreview(smoothTransition = true)
+                                showMainMenu(b.btnChangeAvatar)
+                            }
+                        }
+
+                        if (firstFocusableCard == null) {
+                            firstFocusableCard = this
+                        }
+                    }
+
+                    cardBinding.ivArtSelected.isVisible = isCurrentlySelected
+                    Glide.with(context)
+                        .load(art.url)
+                        .apply(if (isWallpaper) glideWallpaperOptions else glideAvatarOptions)
+                        .into(cardBinding.ivArtImage)
+
+                    row.addView(cardBinding.root)
                 }
+
+                hScroll.addView(row)
+                container.addView(hScroll)
             }
 
-            items.forEachIndexed { index, art ->
-                val cardBinding = ItemProfileCatalogCardBinding.inflate(inflater, b.catalogImages, false)
-                val itemHeight = if (art.isWallpaper) avatarRowHeight else avatarDiameter
-                val itemWidth = if (art.isWallpaper) wallpaperWidth else avatarDiameter
-                cardBinding.root.layoutParams = android.widget.GridLayout.LayoutParams().apply {
-                    width = itemWidth
-                    height = itemHeight
-                    columnSpec = android.widget.GridLayout.spec(index)
-                    setMargins((3 * density).toInt(), (3 * density).toInt(), (3 * density).toInt(), (3 * density).toInt())
+            firstFocusableCard?.post { firstFocusableCard?.requestFocus() }
+        }
+
+        var avatarCatalogPopulated = false
+        fun populateAvatarCatalog() {
+            if (avatarCatalogPopulated) return
+            avatarCatalogPopulated = true
+
+            b.scrollAvatarCatalog.isVisible = false
+            b.layoutAvatarSkeleton.isVisible = true
+            val shimmerAnim = ShimmerController.start(b.layoutAvatarSkeleton)
+
+            fragment.viewLifecycleOwner.lifecycleScope.launch {
+                val (libAvatarSections, _) = resolver.getLibraryArtSections()
+                val presetAvatars = resolver.getPresetAvatars()
+
+                val allSections = mutableListOf<Pair<String, List<ProfileArt>>>()
+                val seenTitles = mutableSetOf<String>()
+
+                // 1. Each anime from the user's library gets its OWN individual section with character avatars
+                libAvatarSections.forEach { (animeTitle, avatars) ->
+                    if (avatars.isNotEmpty() && seenTitles.add(animeTitle.lowercase(java.util.Locale.ROOT).trim())) {
+                        allSections.add(Pair(animeTitle, avatars))
+                    }
                 }
-                cardBinding.cardArtRoot.layoutParams = android.widget.FrameLayout.LayoutParams(
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT
+
+                // 2. Preset anime franchise sections that weren't already in the library
+                val groupedPresets = presetAvatars.groupBy { art ->
+                    art.label.substringAfterLast("(", "").substringBefore(")", "").ifBlank { "Destaques" }
+                }
+                groupedPresets.forEach { (franchise, arts) ->
+                    val normFranchise = franchise.lowercase(java.util.Locale.ROOT).trim()
+                    if (seenTitles.add(normFranchise)) {
+                        allSections.add(Pair(franchise, arts))
+                    }
+                }
+
+                shimmerAnim?.cancel()
+                b.layoutAvatarSkeleton.isVisible = false
+                b.scrollAvatarCatalog.isVisible = true
+
+                renderCatalogSections(
+                    sections = allSections,
+                    container = b.layoutAvatarSections,
+                    isWallpaper = false
                 )
-                cardBinding.frameArtContainer.layoutParams = cardBinding.frameArtContainer.layoutParams.apply {
-                    width = itemWidth
-                    height = itemHeight
-                }
-                cardBinding.cardArtRoot.radius = if (art.isWallpaper) {
-                    12 * density
-                } else {
-                    itemHeight / 2f
-                }
-                if (art.isWallpaper) {
-                    cardBinding.cardArtRoot.setCardBackgroundColor(
-                        ContextCompat.getColor(context, R.color.obsidian_bg_surface)
-                    )
-                    cardBinding.cardArtRoot.strokeWidth = (1 * density).toInt()
-                } else {
-                    // The circle image itself is the selectable surface. A gray MaterialCard
-                    // tile around it reduces its apparent size and conflicts with the reference.
-                    cardBinding.cardArtRoot.setCardBackgroundColor(android.graphics.Color.TRANSPARENT)
-                    cardBinding.cardArtRoot.strokeWidth = 0
-                }
-                cardBinding.cardArtRoot.apply {
-                    isFocusable = true
-                    isClickable = true
-                    setOnClickListener {
-                        if (art.isWallpaper) {
-                            selectedBackgroundUrl = art.url
-                            b.backgroundUrl.setText(art.url)
-                            b.catalogStatus.text = context.getString(R.string.profile_wallpaper_selected, art.label)
-                        } else {
-                            selectedAvatarUrl = art.url
-                            b.avatarUrl.setText(art.url)
-                            b.catalogStatus.text = context.getString(R.string.profile_avatar_selected, art.label)
-                        }
-                        refreshPreview()
-                        catalogSelectionTargets.forEach { (targetArt, card, indicator) ->
-                            updateSelection(targetArt, card, indicator)
-                        }
+            }
+        }
+
+        var wallpaperCatalogPopulated = false
+        fun populateWallpaperCatalog() {
+            if (wallpaperCatalogPopulated) return
+            wallpaperCatalogPopulated = true
+
+            b.scrollWallpaperCatalog.isVisible = false
+            b.layoutWallpaperSkeleton.isVisible = true
+            val shimmerAnim = ShimmerController.start(b.layoutWallpaperSkeleton)
+
+            fragment.viewLifecycleOwner.lifecycleScope.launch {
+                val (_, libWallpaperSections) = resolver.getLibraryArtSections()
+                val presetWallpapers = resolver.getPresetWallpapers()
+
+                val allSections = mutableListOf<Pair<String, List<ProfileArt>>>()
+                val seenTitles = mutableSetOf<String>()
+
+                // 1. Each anime from the user's library gets its OWN wallpaper section
+                libWallpaperSections.forEach { (animeTitle, wallpapers) ->
+                    if (wallpapers.isNotEmpty() && seenTitles.add(animeTitle.lowercase(java.util.Locale.ROOT).trim())) {
+                        allSections.add(Pair(animeTitle, wallpapers))
                     }
-                    setOnFocusChangeListener { focusedView, hasFocus ->
-                        if (hasFocus) {
-                            b.scrollEditor.post {
-                                val viewLocation = IntArray(2)
-                                val scrollLocation = IntArray(2)
-                                focusedView.getLocationOnScreen(viewLocation)
-                                b.scrollEditor.getLocationOnScreen(scrollLocation)
-                                val viewportTop = scrollLocation[1] + b.scrollEditor.paddingTop
-                                val viewportBottom = scrollLocation[1] + b.scrollEditor.height - b.scrollEditor.paddingBottom
-                                val focusedTop = viewLocation[1]
-                                val focusedBottom = focusedTop + focusedView.height
-                                var scrollDelta = when {
-                                    focusedBottom > viewportBottom -> focusedBottom - viewportBottom
-                                    focusedTop < viewportTop -> focusedTop - viewportTop
-                                    else -> 0
-                                }
+                }
 
-                                // A small remnant of the gallery header against the fixed dialog
-                                // title looks like a layout seam. Once scrolling passes the tabs,
-                                // move both tabs and status label fully out of view.
-                                val tabsLocation = IntArray(2)
-                                b.profileArtTabs.getLocationOnScreen(tabsLocation)
-                                val tabsTopAfterScroll = tabsLocation[1] - scrollDelta
-                                val tabsBottomAfterScroll = tabsTopAfterScroll + b.profileArtTabs.height
-                                if (tabsTopAfterScroll < viewportTop && tabsBottomAfterScroll > viewportTop) {
-                                    scrollDelta += tabsBottomAfterScroll - viewportTop + (8 * density).toInt()
-                                }
+                // 2. Preset wallpapers that were not already in the library
+                val groupedPresets = presetWallpapers.groupBy { art ->
+                    art.label.substringAfter("· ", "").ifBlank { "Destaques" }
+                }
+                groupedPresets.forEach { (franchise, arts) ->
+                    val normFranchise = franchise.lowercase(java.util.Locale.ROOT).trim()
+                    if (seenTitles.add(normFranchise)) {
+                        allSections.add(Pair(franchise, arts))
+                    }
+                }
 
-                                val statusLocation = IntArray(2)
-                                b.catalogStatus.getLocationOnScreen(statusLocation)
-                                val statusTopAfterScroll = statusLocation[1] - scrollDelta
-                                val statusBottomAfterScroll = statusTopAfterScroll + b.catalogStatus.height
-                                if (statusTopAfterScroll < viewportTop && statusBottomAfterScroll > viewportTop) {
-                                    scrollDelta += statusBottomAfterScroll - viewportTop + (8 * density).toInt()
-                                }
-                                if (scrollDelta != 0) b.scrollEditor.smoothScrollBy(0, scrollDelta)
-                                focusedView.post {
-                                    focusedView.requestRectangleOnScreen(
-                                        android.graphics.Rect(0, 0, focusedView.width, focusedView.height),
-                                        true
-                                    )
-                                }
+                shimmerAnim?.cancel()
+                b.layoutWallpaperSkeleton.isVisible = false
+                b.scrollWallpaperCatalog.isVisible = true
+
+                renderCatalogSections(
+                    sections = allSections,
+                    container = b.layoutWallpaperSections,
+                    isWallpaper = true
+                )
+            }
+        }
+
+        // Row 2: Change Avatar
+        b.btnChangeAvatar.setOnClickListener {
+            b.panelMainMenu.isVisible = false
+            b.panelWallpaperCatalog.isVisible = false
+            b.panelAvatarCatalog.isVisible = true
+            populateAvatarCatalog()
+        }
+
+        // Row 3: Change Wallpaper
+        b.btnChangeBackground.setOnClickListener {
+            b.panelMainMenu.isVisible = false
+            b.panelAvatarCatalog.isVisible = false
+            b.panelWallpaperCatalog.isVisible = true
+            populateWallpaperCatalog()
+        }
+
+        // Delete button (visible when editing an existing profile and more than 1 profile exists)
+        val canDelete = profile != null && manager.getProfiles().size > 1
+        b.btnDeleteProfile.isVisible = canDelete
+        if (canDelete) {
+            b.btnDeleteProfile.setOnClickListener {
+                MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
+                    .setTitle(context.getString(R.string.profile_delete_title, profile!!.name))
+                    .setMessage(R.string.profile_delete_message)
+                    .setPositiveButton(R.string.profile_delete_action) { _, _ ->
+                        fragment.viewLifecycleOwner.lifecycleScope.launch {
+                            try {
+                                manager.deleteProfile(profile.id)
+                                dialog.dismiss()
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (_: Exception) {
+                                Toast.makeText(context, R.string.profile_delete_error, Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
-                    catalogFocusTargets += this
-                    setOnKeyListener { _, keyCode, event ->
-                        if (event.action != android.view.KeyEvent.ACTION_DOWN) return@setOnKeyListener false
-                        when (keyCode) {
-                            android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                                // Traverse image choices in visual order. At row edges this
-                                // avoids spatial focus jumping down to Cancel/Save on TV.
-                                catalogFocusTargets.getOrNull(index + 1)?.requestFocus() ?: true
-                            }
-                            android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
-                                if (index > 0) {
-                                    catalogFocusTargets[index - 1].requestFocus()
-                                } else {
-                                    if (art.isWallpaper) b.btnTabWallpapers.requestFocus()
-                                    else b.btnTabAvatars.requestFocus()
-                                }
-                            }
-                            else -> false
-                        }
-                    }
-                }
-
-                catalogSelectionTargets += Triple(art, cardBinding.cardArtRoot, cardBinding.ivArtSelected)
-                updateSelection(art, cardBinding.cardArtRoot, cardBinding.ivArtSelected)
-
-                Glide.with(fragment)
-                    .load(art.url)
-                    .apply(glideOptions)
-                    .into(cardBinding.ivArtImage)
-
-                b.catalogImages.addView(cardBinding.root)
+                    .setNegativeButton(R.string.profile_cancel_action, null)
+                    .show()
             }
         }
 
-        fun switchTab(tab: CatalogTab) {
-            currentTab = tab
-            if (tab == CatalogTab.AVATARS) {
-                b.btnTabAvatars.setBackgroundResource(R.drawable.glass_pill_accent_bg)
-                b.btnTabAvatars.setTextColor(android.graphics.Color.parseColor("#040C16"))
-                b.btnTabWallpapers.setBackgroundResource(R.drawable.glass_pill_button_bg)
-                b.btnTabWallpapers.setTextColor(android.graphics.Color.parseColor("#CBD5E1"))
-
-                val query = activeSearchQuery
-                if (query != null && lastSearchResults != null) {
-                    val avatars = lastSearchResults!!.filter { !it.isWallpaper }
-                    if (avatars.isEmpty()) {
-                        b.catalogStatus.text = "Nenhum avatar encontrado para '$query'"
-                    } else {
-                        b.catalogStatus.text = "${avatars.size} avatares encontrados para '$query'"
-                    }
-                    populateArtGrid(avatars)
-                } else {
-                    b.catalogStatus.setText(R.string.profile_avatar_catalog_hint)
-                    populateArtGrid(resolver.getPresetAvatars())
-                }
-            } else {
-                b.btnTabAvatars.setBackgroundResource(R.drawable.glass_pill_button_bg)
-                b.btnTabAvatars.setTextColor(android.graphics.Color.parseColor("#CBD5E1"))
-                b.btnTabWallpapers.setBackgroundResource(R.drawable.glass_pill_accent_bg)
-                b.btnTabWallpapers.setTextColor(android.graphics.Color.parseColor("#040C16"))
-
-                val query = activeSearchQuery
-                if (query != null && lastSearchResults != null) {
-                    val wallpapers = lastSearchResults!!.filter { it.isWallpaper }
-                    if (wallpapers.isEmpty()) {
-                        b.catalogStatus.text = "Nenhum papel de parede encontrado para '$query'"
-                    } else {
-                        b.catalogStatus.text = "${wallpapers.size} papéis de parede encontrados para '$query'"
-                    }
-                    populateArtGrid(wallpapers)
-                } else {
-                    b.catalogStatus.setText(R.string.profile_wallpaper_catalog_hint)
-                    populateArtGrid(resolver.getPresetWallpapers())
-                }
+        // Row 4: Done button
+        b.btnDone.setOnClickListener {
+            val name = currentName.trim()
+            if (name.isBlank()) {
+                Toast.makeText(context, R.string.profile_name_required, Toast.LENGTH_SHORT).show()
+                b.rowProfileName.requestFocus()
+                return@setOnClickListener
             }
-        }
-
-        b.btnTabAvatars.setOnClickListener { switchTab(CatalogTab.AVATARS) }
-        b.btnTabWallpapers.setOnClickListener { switchTab(CatalogTab.WALLPAPERS) }
-        listOf(b.btnTabAvatars, b.btnTabWallpapers).forEach { tab ->
-            tab.setOnKeyListener { _, keyCode, event ->
-                if (event.action != android.view.KeyEvent.ACTION_DOWN || keyCode != android.view.KeyEvent.KEYCODE_DPAD_DOWN) {
-                    return@setOnKeyListener false
-                }
-                catalogFocusTargets.firstOrNull()?.requestFocus() ?: false
-            }
-        }
-        b.toggleCustomUrls.setOnClickListener {
-            val expanded = !b.customUrlsGroup.isVisible
-            b.customUrlsGroup.isVisible = expanded
-            b.toggleCustomUrls.setText(
-                if (expanded) R.string.profile_custom_urls_hide else R.string.profile_custom_urls_show
-            )
-        }
-
-        fun executeSearch() {
-            val query = b.catalogQuery.text.toString().trim()
-            if (query.isBlank()) {
-                b.catalogQuery.error = context.getString(R.string.profile_catalog_query_required)
-                return
-            }
-            search?.cancel()
-            activeSearchQuery = query
-            b.btnClearSearch.isVisible = true
-            search = fragment.viewLifecycleOwner.lifecycleScope.launch {
-                b.catalogStatus.text = "Buscando personagens e papéis de parede de '$query' na web..."
-                b.catalogImages.removeAllViews()
+            b.btnDone.isEnabled = false
+            fragment.viewLifecycleOwner.lifecycleScope.launch {
                 try {
-                    val choices = resolver.search(query)
-                    lastSearchResults = choices
-                    switchTab(currentTab)
+                    val targetProfile = (profile ?: UserProfile(UUID.randomUUID().toString(), name, "avatar_anime"))
+                        .copy(
+                            name = name,
+                            avatarUrl = selectedAvatarUrl.ifBlank { null },
+                            backgroundUrl = selectedBackgroundUrl.ifBlank { null },
+                            isAdmin = profile?.isAdmin ?: true,
+                            isKids = profile?.isKids ?: false
+                        )
+                    manager.saveProfile(targetProfile)
+                    dialog.dismiss()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (_: Exception) {
-                    b.catalogStatus.setText(R.string.profile_catalog_error)
+                    b.btnDone.isEnabled = true
+                    Toast.makeText(context, R.string.profile_save_error, Toast.LENGTH_SHORT).show()
                 }
             }
         }
 
-        b.searchCatalog.setOnClickListener { executeSearch() }
-        b.catalogQuery.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
-                executeSearch()
-                true
-            } else false
-        }
-
-        b.btnClearSearch.setOnClickListener {
-            activeSearchQuery = null
-            lastSearchResults = null
-            b.catalogQuery.setText("")
-            b.btnClearSearch.isVisible = false
-            switchTab(currentTab)
-        }
-
-        dialog.setOnShowListener {
-            TvFocusRing.install(dialog.window!!.decorView)
-            val verticalDpadNavigation = android.view.View.OnKeyListener { focusedView, keyCode, event ->
-                if (event.action != android.view.KeyEvent.ACTION_DOWN) return@OnKeyListener false
-                val direction = when (keyCode) {
-                    android.view.KeyEvent.KEYCODE_DPAD_DOWN -> android.view.View.FOCUS_DOWN
-                    android.view.KeyEvent.KEYCODE_DPAD_UP -> android.view.View.FOCUS_UP
-                    else -> return@OnKeyListener false
+        // Handle Back key navigation inside catalog screens
+        dialog.setOnKeyListener { _, keyCode, event ->
+            if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_UP) {
+                if (b.panelAvatarCatalog.isVisible) {
+                    showMainMenu(b.btnChangeAvatar)
+                    return@setOnKeyListener true
                 }
-                val next = focusedView.focusSearch(direction) ?: return@OnKeyListener false
-                if (next === focusedView || !next.isFocusable) return@OnKeyListener false
-                next.requestFocus()
-            }
-            listOf(b.profileName, b.catalogQuery, b.avatarUrl, b.backgroundUrl)
-                .forEach { it.setOnKeyListener(verticalDpadNavigation) }
-
-            // The catalog width only exists after the dialog has been measured. Populate then so
-            // portrait columns and circles are sized correctly on narrow mobile/TV windows.
-            b.catalogImages.post { switchTab(CatalogTab.AVATARS) }
-
-            dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val name = b.profileName.text.toString().trim()
-                if (name.isBlank()) {
-                    b.profileName.error = context.getString(R.string.profile_name_required)
-                    b.profileName.requestFocus()
-                    return@setOnClickListener
-                }
-                val avatar = b.avatarUrl.text.toString().trim().ifBlank { null }
-                val background = b.backgroundUrl.text.toString().trim().ifBlank { null }
-                for ((field, value) in listOf(b.avatarUrl to avatar, b.backgroundUrl to background)) {
-                    if (!validImageUrl(value)) {
-                        field.error = context.getString(R.string.profile_image_url_invalid)
-                        field.requestFocus()
-                        return@setOnClickListener
-                    }
-                }
-                val button = dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)
-                button.isEnabled = false
-                fragment.viewLifecycleOwner.lifecycleScope.launch {
-                    try {
-                        manager.saveProfile(
-                            (profile ?: UserProfile(UUID.randomUUID().toString(), name, "avatar_anime"))
-                                .copy(
-                                    name = name,
-                                    avatarUrl = avatar,
-                                    backgroundUrl = background,
-                                    isAdmin = b.isAdmin.isChecked,
-                                    isKids = b.isKids.isChecked
-                                )
-                        )
-                        dialog.dismiss()
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (_: zechs.drive.stream.utils.LastAdministratorRequiredException) {
-                        b.isAdmin.error = fragment.getString(R.string.profile_last_admin_required)
-                        button.isEnabled = true
-                    } catch (_: Exception) {
-                        b.profileName.error = context.getString(R.string.profile_save_error)
-                        button.isEnabled = true
-                    }
+                if (b.panelWallpaperCatalog.isVisible) {
+                    showMainMenu(b.btnChangeBackground)
+                    return@setOnKeyListener true
                 }
             }
-            b.profileName.requestFocus()
+            false
         }
+
+        // Lifecycle observer to prevent leak
+        val lifecycle = fragment.viewLifecycleOwner.lifecycle
+        val observer = object : DefaultLifecycleObserver {
+            override fun onDestroy(owner: LifecycleOwner) {
+                previewDebounceJob?.cancel()
+                if (dialog.isShowing) dialog.dismiss()
+            }
+        }
+        lifecycle.addObserver(observer)
+        dialog.setOnDismissListener {
+            previewDebounceJob?.cancel()
+            lifecycle.removeObserver(observer)
+        }
+
         dialog.show()
+        b.rowProfileName.post { b.rowProfileName.requestFocus() }
     }
 
     companion object {
         fun validImageUrl(value: String?): Boolean = value == null || runCatching {
-            URI(value).let { it.scheme == "https" && !it.host.isNullOrBlank() && it.userInfo == null }
+            java.net.URI(value).let { it.scheme == "https" && !it.host.isNullOrBlank() && it.userInfo == null }
         }.getOrDefault(false)
-    }
-
-    private fun adaptForLargeText(binding: DialogProfileEditorBinding) {
-        val context = fragment.requireContext()
-        val fontScale = context.resources.configuration.fontScale
-        if (fontScale < 1.3f) return
-
-        val density = context.resources.displayMetrics.density
-        fun dp(value: Int) = (value * density).toInt()
-        val controlHeight = dp(if (fontScale >= 1.8f) 64 else 56)
-
-        binding.profileArtTabs.orientation = LinearLayout.VERTICAL
-        listOf(binding.btnTabAvatars, binding.btnTabWallpapers).forEach { button ->
-            val params = button.layoutParams as? LinearLayout.LayoutParams
-                ?: LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-            params.width = ViewGroup.LayoutParams.MATCH_PARENT
-            params.height = ViewGroup.LayoutParams.WRAP_CONTENT
-            params.marginStart = 0
-            params.marginEnd = 0
-            params.topMargin = dp(6)
-            button.layoutParams = params
-            button.minHeight = controlHeight
-            button.isSingleLine = false
-            button.maxLines = 2
-        }
-
-        binding.profileArtSearchRow.orientation = LinearLayout.VERTICAL
-        binding.catalogQuery.apply {
-            layoutParams = (layoutParams as? LinearLayout.LayoutParams
-                ?: LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)).apply {
-                width = ViewGroup.LayoutParams.MATCH_PARENT
-                height = ViewGroup.LayoutParams.WRAP_CONTENT
-                weight = 0f
-            }
-            minHeight = controlHeight
-            if (fontScale >= 1.8f) hint = context.getString(R.string.profile_catalog_search_hint)
-        }
-        binding.searchCatalog.apply {
-            layoutParams = (layoutParams as? LinearLayout.LayoutParams
-                ?: LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)).apply {
-                width = ViewGroup.LayoutParams.MATCH_PARENT
-                height = ViewGroup.LayoutParams.WRAP_CONTENT
-                weight = 0f
-                marginStart = 0
-                topMargin = dp(6)
-            }
-            minHeight = controlHeight
-        }
-
-        listOf(binding.profileName, binding.avatarUrl, binding.backgroundUrl).forEach { field ->
-            field.layoutParams = field.layoutParams.apply { height = ViewGroup.LayoutParams.WRAP_CONTENT }
-            field.minHeight = controlHeight
-            field.setPadding(field.paddingLeft, dp(8), field.paddingRight, dp(8))
-        }
     }
 }

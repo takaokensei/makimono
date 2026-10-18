@@ -16,53 +16,54 @@
         android:clipToPadding="false"
         android:paddingBottom="40dp">
 
-        <!-- 1. Hero Backdrop Image (Subtle ambient layer) -->
+        <!-- 1. Apple TV Directional Ambient Hero Backdrop Image -->
         <ImageView
-            android:id="@+id/ivHeroBackdrop" android:cropToPadding="true"
+            android:id="@+id/ivHeroBackdrop"
             android:layout_width="0dp"
-            android:layout_height="480dp"
-            android:alpha="0.22"
+            android:layout_height="0dp"
+            android:alpha="1.0"
             android:contentDescription="@null"
+            android:cropToPadding="true"
             android:scaleType="centerCrop"
+            app:layout_constraintBottom_toBottomOf="@id/tabsContainer"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:src="@drawable/bg_anime_library" />
 
-        <!-- Dynamic Tint Gradient Overlay for coverImage.color -->
         <View
             android:id="@+id/viewDynamicColorTint"
             android:layout_width="0dp"
-            android:layout_height="480dp"
-            android:background="@drawable/series_detail_hero_scrim"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <!-- 2. Bottom Scrim Gradient (Transparent -> @color/obsidian_bg_base) -->
-        <View
-            android:id="@+id/viewHeroScrim"
-            android:layout_width="0dp"
-            android:layout_height="320dp"
-            android:background="@drawable/series_detail_hero_scrim"
+            android:layout_height="0dp"
+            android:background="@android:color/transparent"
             app:layout_constraintBottom_toBottomOf="@id/ivHeroBackdrop"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/ivHeroBackdrop" />
 
-        <!-- 3. Left Vignette Gradient (@color/obsidian_bg_surface -> Transparent) -->
+        <!-- Directional Scrim 1: Horizontal gradient (95% at left -> 0% at 55% width) -->
         <View
-            android:id="@+id/viewHeroVignette"
+            android:id="@+id/viewHeroScrimHorizontal"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:background="@drawable/series_detail_vignette"
+            android:background="@drawable/scrim_hero_backdrop_horizontal"
+            app:layout_constraintBottom_toBottomOf="@id/ivHeroBackdrop"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/ivHeroBackdrop"
+            app:layout_constraintWidth_percent="0.55" />
+
+        <!-- Directional Scrim 2: Vertical gradient (0% at top 50% -> 100% solid at bottom) -->
+        <View
+            android:id="@+id/viewHeroScrimVertical"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@drawable/scrim_hero_backdrop_vertical"
             app:layout_constraintBottom_toBottomOf="@id/ivHeroBackdrop"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="@id/ivHeroBackdrop" />
 
-        <!-- Keep the scrolling episode area opaque so the hero artwork never bleeds
-             through season tabs or episode cards. The existing hero scrim softens
-             the transition immediately above this surface. -->
+        <!-- Solid Base Surface under hero tabs and episode area -->
         <View
             android:id="@+id/viewSeriesBodySurface"
             android:layout_width="0dp"
@@ -72,7 +73,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/heroContentBlock" />
+            app:layout_constraintTop_toBottomOf="@id/tabsContainer" />
 
         <!-- 4. Top Header Bar -->
         <LinearLayout
@@ -252,6 +253,24 @@
                 android:textAppearance="@style/TextAppearance.Makimono.TV.Display"
                 android:textColor="@color/obsidian_text_primary"
                 tools:text="Grisaia no Rakuen" />
+
+            <!-- Canonical Franchise Pill (e.g. Franquia Canônica • 13 Obras Disponíveis) -->
+            <TextView
+                android:id="@+id/tvFranchiseCanonicalPill"
+                style="@style/TextAppearance.Makimono.TV.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/glass_meta_pill_bg"
+                android:fontFamily="sans-serif-medium"
+                android:paddingStart="10dp"
+                android:paddingTop="3dp"
+                android:paddingEnd="10dp"
+                android:paddingBottom="3dp"
+                android:textColor="@color/obsidian_accent"
+                android:visibility="gone"
+                tools:text="Franquia Canônica • 13 Obras Disponíveis"
+                tools:visibility="visible" />
 
             <!-- Subtitle / English Title -->
             <TextView
@@ -487,17 +506,16 @@
                 android:id="@+id/tvSynopsisMore"
                 style="@style/TextAppearance.Makimono.TV.Caption"
                 android:layout_width="wrap_content"
-                android:layout_height="48dp"
+                android:layout_height="32dp"
                 android:clickable="true"
                 android:contentDescription="@string/series_synopsis_expand"
                 android:focusable="true"
                 android:focusableInTouchMode="true"
                 android:gravity="center_vertical"
-                android:minWidth="104dp"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="8dp"
                 android:text="@string/series_synopsis_expand"
-                android:textColor="?attr/colorAccentPrimary"
+                android:textColor="@color/obsidian_link_blue_gray"
                 android:textStyle="bold"
                 android:visibility="gone" />
 
@@ -644,7 +662,7 @@
                     android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:layout_marginStart="12dp"
-                    android:background="@drawable/btn_secondary_action_bg"
+                    android:background="@drawable/btn_more_actions_circle"
                     android:contentDescription="@string/series_more_actions"
                     android:padding="13dp"
                     android:src="@drawable/ic_more_vert_24"
@@ -703,8 +721,7 @@
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
                     android:paddingStart="16dp"
-                    android:paddingEnd="16dp"
-                    android:visibility="gone">
+                    android:paddingEnd="16dp">
 
                     <ImageView
                         android:id="@+id/ivMarkWatchedIcon"
@@ -712,7 +729,8 @@
                         android:layout_height="18dp"
                         android:contentDescription="@null"
                         android:duplicateParentState="true"
-                        android:src="@drawable/ic_check_cyan_circle" />
+                        android:src="@drawable/ic_check_24"
+                        app:tint="@color/btn_secondary_action_foreground" />
 
                     <TextView
                         android:id="@+id/tvMarkWatchedText"
@@ -722,7 +740,7 @@
                         android:layout_marginStart="8dp"
                         android:duplicateParentState="true"
                         android:fontFamily="sans-serif-medium"
-                        android:text="@string/series_action_mark_watched"
+                        android:text="@string/series_action_mark_watched_short"
                         android:textColor="@color/btn_secondary_action_foreground" />
                 </LinearLayout>
 
@@ -732,56 +750,237 @@
 
         </LinearLayout>
 
-        <!-- 6. Season Navigation Tabs (Horizontal RecyclerView) -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvSeasonTabs"
+        <!-- 4. Navigation Tabs: [EPISÓDIOS] | [DETALHES] | [MAIS COMO ESTE] (Image 4) -->
+        <LinearLayout
+            android:id="@+id/tabsContainer"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:clipChildren="false"
-            android:clipToPadding="false"
-            android:orientation="horizontal"
-            android:paddingStart="40dp"
-            android:paddingEnd="40dp"
-            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/heroContentBlock"
-            tools:itemCount="6"
-            tools:listitem="@layout/item_series_season_tab" />
-
-        <TextView
-            android:id="@+id/tvPartialListingNotice"
-            style="@style/TextAppearance.Makimono.TV.Callout"
-            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="40dp"
-            android:layout_marginTop="8dp"
-            android:text="@string/series_partial_listing_notice"
-            android:textColor="@color/obsidian_text_secondary"
-            android:visibility="gone"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/rvSeasonTabs" />
-
-        <!-- 7. Episodes Horizontal Rail (16:9 Cards) -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvEpisodes"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:clipChildren="false"
-            android:clipToPadding="false"
+            android:layout_marginTop="20dp"
+            android:layout_marginEnd="40dp"
+            android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="40dp"
-            android:paddingEnd="40dp"
-            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvPartialListingNotice"
-            tools:itemCount="6"
-            tools:listitem="@layout/item_series_episode_card" />
+            app:layout_constraintTop_toBottomOf="@id/heroContentBlock">
 
-        <!-- Empty state or Loading spinner / Shimmer skeleton -->
+            <TextView
+                android:id="@+id/tabButtonEpisodes"
+                android:layout_width="wrap_content"
+                android:layout_height="42dp"
+                android:background="@drawable/tab_nav_selector"
+                android:clickable="true"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:fontFamily="sans-serif-black"
+                android:gravity="center"
+                android:letterSpacing="0.08"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:text="@string/tab_episodes"
+                android:textColor="@color/tab_nav_text_selector"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tabButtonDetails"
+                android:layout_width="wrap_content"
+                android:layout_height="42dp"
+                android:layout_marginStart="12dp"
+                android:background="@drawable/tab_nav_selector"
+                android:clickable="true"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:fontFamily="sans-serif-black"
+                android:gravity="center"
+                android:letterSpacing="0.08"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:text="@string/tab_details"
+                android:textColor="@color/tab_nav_text_selector"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tabButtonMoreLikeThis"
+                android:layout_width="wrap_content"
+                android:layout_height="42dp"
+                android:layout_marginStart="12dp"
+                android:background="@drawable/tab_nav_selector"
+                android:clickable="true"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:fontFamily="sans-serif-black"
+                android:gravity="center"
+                android:letterSpacing="0.08"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:text="@string/tab_more_like_this"
+                android:textColor="@color/tab_nav_text_selector"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <!-- 5. TAB 1: Panel Episodes - 2-Column Split Layout (Image 5) -->
+        <LinearLayout
+            android:id="@+id/panelEpisodesTab"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="40dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginEnd="40dp"
+            android:baselineAligned="false"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tabsContainer">
+
+            <!-- Left Column: Seasons / Franchise Arcs (Vertical list) -->
+            <LinearLayout
+                android:id="@+id/layoutSeasonsColumn"
+                android:layout_width="260dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvEpisodesHeading"
+                    style="@style/TextAppearance.Makimono.TV.Headline"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:text="@string/series_heading_episodes"
+                    android:textColor="@color/obsidian_text_primary"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvSeasonTabs"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
+                    android:nestedScrollingEnabled="false"
+                    android:orientation="vertical"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    tools:itemCount="4"
+                    tools:listitem="@layout/item_series_season_tab" />
+
+            </LinearLayout>
+
+            <!-- Right Column: Episodes (Vertical list of rows) -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="24dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvPartialListingNotice"
+                    style="@style/TextAppearance.Makimono.TV.Callout"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/series_partial_listing_notice"
+                    android:textColor="@color/obsidian_text_secondary"
+                    android:visibility="gone" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvEpisodes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
+                    android:nestedScrollingEnabled="false"
+                    android:orientation="vertical"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    tools:itemCount="6"
+                    tools:listitem="@layout/item_series_episode_card" />
+
+                <TextView
+                    android:id="@+id/tvEmptyEpisodes"
+                    style="@style/TextAppearance.Makimono.TV.Body"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="@string/series_empty_category"
+                    android:textColor="@color/obsidian_text_secondary"
+                    android:visibility="gone" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- 6. TAB 2: Panel Details -->
+        <LinearLayout
+            android:id="@+id/panelDetailsTab"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="40dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginEnd="40dp"
+            android:orientation="vertical"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tabsContainer">
+
+            <TextView
+                style="@style/TextAppearance.Makimono.TV.Headline"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/tab_details"
+                android:textColor="@color/obsidian_text_primary"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvDetailsFullSynopsis"
+                style="@style/TextAppearance.Makimono.TV.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:lineSpacingExtra="4dp"
+                android:textColor="@color/obsidian_text_secondary"
+                tools:text="Full detailed synopsis about this anime and characters..." />
+
+        </LinearLayout>
+
+        <!-- 7. TAB 3: Panel More Like This -->
+        <LinearLayout
+            android:id="@+id/panelMoreLikeThisTab"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="40dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginEnd="40dp"
+            android:orientation="vertical"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tabsContainer">
+
+            <TextView
+                style="@style/TextAppearance.Makimono.TV.Headline"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/tab_more_like_this"
+                android:textColor="@color/obsidian_text_primary"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvMoreLikeThisNotice"
+                style="@style/TextAppearance.Makimono.TV.Callout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Explore as outras obras e temporadas da franquia na coluna lateral de Episódios."
+                android:textColor="@color/obsidian_text_secondary" />
+
+        </LinearLayout>
+
+        <!-- Loading / Skeletons / StateView -->
         <ProgressBar
             android:id="@+id/pbLoading"
             android:layout_width="48dp"
@@ -798,12 +997,14 @@
         <include
             android:id="@+id/seriesSkeleton"
             layout="@layout/component_skeleton_row"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="40dp"
+            android:layout_marginEnd="40dp"
             android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/rvSeasonTabs" />
+            app:layout_constraintTop_toBottomOf="@id/tabsContainer" />
 
         <zechs.drive.stream.ui.common.StateView
             android:id="@+id/stateView"
@@ -813,21 +1014,7 @@
             android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/rvSeasonTabs" />
-
-        <TextView
-            android:id="@+id/tvEmptyEpisodes"
-            style="@style/TextAppearance.Makimono.TV.Body"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:fontFamily="sans-serif-medium"
-            android:text="@string/series_empty_category"
-            android:textColor="@color/obsidian_text_secondary"
-            android:visibility="gone"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/rvSeasonTabs" />
+            app:layout_constraintTop_toBottomOf="@id/tabsContainer" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRetry"
@@ -841,7 +1028,7 @@
             app:cornerRadius="18dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvEmptyEpisodes"
+            app:layout_constraintTop_toBottomOf="@id/stateView"
             app:strokeColor="?attr/colorAccentPrimary"
             app:strokeWidth="1dp" />
 

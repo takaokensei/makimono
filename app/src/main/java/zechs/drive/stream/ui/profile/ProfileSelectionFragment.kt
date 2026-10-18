@@ -1,6 +1,7 @@
 package zechs.drive.stream.ui.profile
 
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -50,9 +51,79 @@ class ProfileSelectionFragment : BaseFragment() {
     @Inject
     lateinit var appSettings: AppSettings
 
+    @Inject
+    lateinit var sessionManager: zechs.drive.stream.utils.SessionManager
+
     private var focusedProfileId: String? = null
     private var bgDebounceJob: Job? = null
     private lateinit var profilesAdapter: ProfilesAdapter
+    private var activeBgIsA = true
+
+    private fun transitionBackground(url: String?, reduceMotion: Boolean) {
+        val currentView = if (activeBgIsA) binding.ivFantasyBgA else binding.ivFantasyBgB
+        val nextView = if (activeBgIsA) binding.ivFantasyBgB else binding.ivFantasyBgA
+
+        if (reduceMotion) {
+            Glide.with(this@ProfileSelectionFragment)
+                .load(url)
+                .placeholder(R.drawable.bg_profile_fantasy)
+                .error(R.drawable.bg_profile_fantasy)
+                .format(DecodeFormat.PREFER_ARGB_8888)
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .into(nextView)
+            nextView.alpha = 1f
+            currentView.alpha = 0f
+            activeBgIsA = !activeBgIsA
+            return
+        }
+
+        Glide.with(this@ProfileSelectionFragment)
+            .load(url)
+            .placeholder(R.drawable.bg_profile_fantasy)
+            .error(R.drawable.bg_profile_fantasy)
+            .format(DecodeFormat.PREFER_ARGB_8888)
+            .diskCacheStrategy(DiskCacheStrategy.ALL)
+            .listener(object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
+                override fun onLoadFailed(
+                    e: com.bumptech.glide.load.engine.GlideException?,
+                    model: Any?,
+                    target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>,
+                    isFirstResource: Boolean
+                ): Boolean {
+                    return false
+                }
+
+                override fun onResourceReady(
+                    resource: android.graphics.drawable.Drawable,
+                    model: Any,
+                    target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?,
+                    dataSource: com.bumptech.glide.load.DataSource,
+                    isFirstResource: Boolean
+                ): Boolean {
+                    if (_binding == null) return false
+                    nextView.animate().cancel()
+                    currentView.animate().cancel()
+                    nextView.alpha = 0f
+                    nextView.setImageDrawable(resource)
+                    nextView.animate()
+                        .alpha(1f)
+                        .setDuration(350L)
+                        .setInterpolator(android.view.animation.DecelerateInterpolator())
+                        .start()
+                    currentView.animate()
+                        .alpha(0f)
+                        .setDuration(350L)
+                        .setInterpolator(android.view.animation.DecelerateInterpolator())
+                        .withEndAction {
+                            currentView.alpha = 0f
+                        }
+                        .start()
+                    activeBgIsA = !activeBgIsA
+                    return true
+                }
+            })
+            .into(nextView)
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -68,14 +139,14 @@ class ProfileSelectionFragment : BaseFragment() {
 
         setupRecyclerView()
         setupActions()
+        setupBackNavigation()
         observeProfiles()
     }
 
     private fun setupRecyclerView() {
         profilesAdapter = ProfilesAdapter(
             onProfileSelected = { profile ->
-                profileManager.setActiveProfile(profile.id)
-                findNavController().navigateSafe(R.id.action_profileSelectionFragment_to_homeFragment)
+                showProfileWelcomeScreen(profile)
             },
             onAddProfileClicked = {
                 showAddProfileDialog()
@@ -90,19 +161,7 @@ class ProfileSelectionFragment : BaseFragment() {
                     bgDebounceJob = viewLifecycleOwner.lifecycleScope.launch {
                         delay(120L)
                         if (!isAdded || _binding == null) return@launch
-                        val transition = if (profilesAdapter.reduceMotion) {
-                            DrawableTransitionOptions()
-                        } else {
-                            DrawableTransitionOptions.withCrossFade(350)
-                        }
-                        Glide.with(this@ProfileSelectionFragment)
-                            .load(profile.backgroundUrl)
-                            .placeholder(binding.ivFantasyBg.drawable ?: androidx.core.content.ContextCompat.getDrawable(requireContext(), R.drawable.bg_profile_fantasy))
-                            .error(R.drawable.bg_profile_fantasy)
-                            .format(DecodeFormat.PREFER_ARGB_8888)
-                            .transition(transition)
-                            .diskCacheStrategy(DiskCacheStrategy.ALL)
-                            .into(binding.ivFantasyBg)
+                        transitionBackground(profile.backgroundUrl, profilesAdapter.reduceMotion)
                     }
                 }
             },
@@ -122,19 +181,39 @@ class ProfileSelectionFragment : BaseFragment() {
     }
 
     private fun setupActions() {
-        TvAccessibilityLayout.adaptProfileActions(
-            requireContext(),
-            listOf(binding.btnManageProfiles, binding.btnProfileSettings)
-        )
-        binding.btnManageProfiles.setOnClickListener {
-            profilesAdapter.isManageMode = !profilesAdapter.isManageMode
-            binding.btnManageProfiles.setText(
-                if (profilesAdapter.isManageMode) R.string.profile_manage_done else R.string.profile_manage_action
-            )
+        binding.btnLogOut.setOnKeyListener { _, keyCode, event ->
+            if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                val targetPos = profilesAdapter.currentList.indexOfFirst {
+                    it is ProfileUiModel.ProfileItem && it.profile.id == focusedProfileId
+                }.takeIf { it != -1 } ?: 0
+                val child = binding.rvProfiles.layoutManager?.findViewByPosition(targetPos)
+                if (child != null) {
+                    child.requestFocus()
+                    return@setOnKeyListener true
+                }
+            }
+            false
         }
 
-        binding.btnProfileSettings.setOnClickListener {
-            findNavController().navigateSafe(R.id.action_profileSelectionFragment_to_settingsFragment)
+        binding.btnLogOut.setOnClickListener {
+            MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+                .setTitle(R.string.profile_logout_confirm_title)
+                .setMessage(R.string.profile_logout_confirm_message)
+                .setPositiveButton(R.string.profile_logout_action_confirm) { _, _ ->
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        try {
+                            sessionManager.resetDataStore()
+                            Glide.get(requireContext().applicationContext).clearMemory()
+                            findNavController().navigateSafe(R.id.action_profileSelectionFragment_to_signInFragment)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                            findNavController().navigateSafe(R.id.action_profileSelectionFragment_to_signInFragment)
+                        }
+                    }
+                }
+                .setNegativeButton(R.string.profile_cancel_action, null)
+                .show().also { dialog -> dialog.window?.decorView?.let(TvFocusRing::install) }
         }
     }
 
@@ -145,7 +224,7 @@ class ProfileSelectionFragment : BaseFragment() {
                 catch (e: CancellationException) { throw e }
                 catch (_: Exception) {
                     binding.tvProfilesTitle.setText(R.string.profile_load_error)
-                    binding.btnManageProfiles.isEnabled = false
+                    binding.btnLogOut.isEnabled = false
                     return@repeatOnLifecycle
                 }
                 profileManager.profilesFlow.collect { profiles ->
@@ -165,9 +244,12 @@ class ProfileSelectionFragment : BaseFragment() {
                         .load(activeProfile.backgroundUrl)
                         .placeholder(R.drawable.bg_profile_fantasy)
                         .error(R.drawable.bg_profile_fantasy)
-                        .format(DecodeFormat.PREFER_RGB_565)
+                        .format(DecodeFormat.PREFER_ARGB_8888)
                         .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .into(binding.ivFantasyBg)
+                        .into(binding.ivFantasyBgA)
+                    binding.ivFantasyBgA.alpha = 1f
+                    binding.ivFantasyBgB.alpha = 0f
+                    activeBgIsA = true
                     val activeId = activeProfile.id
                     val items = mutableListOf<ProfileUiModel>()
                     profiles.forEach { profile ->
@@ -195,52 +277,96 @@ class ProfileSelectionFragment : BaseFragment() {
     }
 
     private fun showEditProfileDialog(profile: UserProfile) {
-        val options = arrayOf(
-            getString(R.string.profile_edit_menu_action),
-            getString(R.string.profile_delete_menu_action)
+        ProfileEditorDialog(this, profileManager, posterResolver).show(profile)
+    }
+
+    private var isTransitioningToHome = false
+
+    private fun showProfileWelcomeScreen(profile: UserProfile) {
+        if (isTransitioningToHome) return
+        isTransitioningToHome = true
+
+        // 1. Immediately activate profile in data layer
+        profileManager.setActiveProfile(profile.id)
+
+        // 2. Disable interactions on other views
+        binding.btnLogOut.isEnabled = false
+        binding.rvProfiles.isEnabled = false
+
+        // 3. Prepare background image
+        val bgUrl = profile.backgroundUrl?.takeIf { it.isNotBlank() }
+        Glide.with(this)
+            .load(bgUrl ?: R.drawable.bg_profile_fantasy)
+            .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
+            .into(binding.ivWelcomeBg)
+
+        // 4. Prepare circular avatar
+        val avatarUrl = profile.avatarUrl?.takeIf { it.isNotBlank() }
+        Glide.with(this)
+            .load(avatarUrl ?: R.drawable.bg_profile_fantasy)
+            .circleCrop()
+            .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
+            .into(binding.ivWelcomeAvatar)
+
+        // 5. Welcome texts & fun loading phrase
+        binding.tvWelcomeGreeting.text = getString(R.string.profile_welcome_greeting, profile.name)
+        binding.tvWelcomeSubtitle.text = getRandomLoadingPhrase()
+
+        // 6. Smoothly animate in the welcome screen overlay
+        binding.layoutProfileWelcome.apply {
+            visibility = View.VISIBLE
+            alpha = 0f
+            animate()
+                .alpha(1f)
+                .setDuration(220L)
+                .start()
+        }
+
+        binding.welcomeContentCenter.apply {
+            scaleX = 0.90f
+            scaleY = 0.90f
+            alpha = 0f
+            animate()
+                .scaleX(1.0f)
+                .scaleY(1.0f)
+                .alpha(1f)
+                .setDuration(350L)
+                .setInterpolator(android.view.animation.DecelerateInterpolator())
+                .start()
+        }
+
+        // 7. Wait ~1.5 seconds for a polished feel, then navigate
+        viewLifecycleOwner.lifecycleScope.launch {
+            delay(1500L)
+            if (!isAdded || _binding == null) return@launch
+            findNavController().navigateSafe(R.id.action_profileSelectionFragment_to_homeFragment)
+        }
+    }
+
+    private fun getRandomLoadingPhrase(): String {
+        val phrases = listOf(
+            R.string.profile_welcome_phrase_power,
+            R.string.profile_welcome_phrase_dragonballs,
+            R.string.profile_welcome_phrase_catalog,
+            R.string.profile_welcome_phrase_chakra,
+            R.string.profile_welcome_phrase_sync
         )
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(profile.name)
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> ProfileEditorDialog(this, profileManager, posterResolver).show(profile)
-                    1 -> {
-                        if (profileManager.getProfiles().size <= 1) {
-                            android.widget.Toast.makeText(
-                                requireContext(),
-                                getString(R.string.profile_delete_only_profile),
-                                android.widget.Toast.LENGTH_SHORT
-                            ).show()
-                        } else {
-                            MaterialAlertDialogBuilder(requireContext())
-                                .setTitle(getString(R.string.profile_delete_title, profile.name))
-                                .setMessage(R.string.profile_delete_message)
-                                .setPositiveButton(R.string.profile_delete_action) { _, _ ->
-                                    viewLifecycleOwner.lifecycleScope.launch {
-                                        try {
-                                            when (profileManager.deleteProfile(profile.id)) {
-                                                null -> Unit
-                                                zechs.drive.stream.utils.ProfileManagementPolicy.DeleteBlockReason.LAST_ADMINISTRATOR ->
-                                                    android.widget.Toast.makeText(context, R.string.profile_last_admin_required, android.widget.Toast.LENGTH_LONG).show()
-                                                zechs.drive.stream.utils.ProfileManagementPolicy.DeleteBlockReason.LAST_PROFILE ->
-                                                    android.widget.Toast.makeText(context, R.string.profile_last_required, android.widget.Toast.LENGTH_SHORT).show()
-                                                zechs.drive.stream.utils.ProfileManagementPolicy.DeleteBlockReason.PROFILE_NOT_FOUND ->
-                                                    android.widget.Toast.makeText(context, R.string.profile_not_found, android.widget.Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
-                                        catch (e: CancellationException) { throw e }
-                                        catch (_: Exception) {
-                                            android.widget.Toast.makeText(context, R.string.profile_delete_error, android.widget.Toast.LENGTH_LONG).show()
-                                        }
-                                    }
-                                }
-                                .setNegativeButton(R.string.profile_cancel_action, null)
-                                .show().also { dialog -> dialog.window?.decorView?.let(TvFocusRing::install) }
-                        }
+        return getString(phrases.random())
+    }
+
+    private fun setupBackNavigation() {
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            object : androidx.activity.OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    if (isTransitioningToHome) {
+                        return
                     }
+                    isEnabled = false
+                    requireActivity().onBackPressedDispatcher.onBackPressed()
                 }
             }
-            .show().also { dialog -> dialog.window?.decorView?.let(TvFocusRing::install) }
+        )
     }
 
     override fun onDestroyView() {

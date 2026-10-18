@@ -133,4 +133,50 @@ class FolderMetadataRepository @Inject constructor(
             )
         }
     }
+
+    suspend fun cleanCorruptedMetadata(animePosterResolver: zechs.drive.stream.data.remote.AnimePosterResolver) {
+        val all = folderMetadataDao.getAllMetadata()
+        for (meta in all) {
+            val title = meta.titleRomaji ?: meta.titleEnglish
+            // Purge entries with no title or with no posters, banners, or synopsis
+            if (title.isNullOrBlank() || (meta.posterUrl.isNullOrBlank() && meta.bannerUrl.isNullOrBlank() && meta.synopsis.isNullOrBlank())) {
+                folderMetadataDao.delete(meta.folderId)
+                continue
+            }
+            val clean = zechs.drive.stream.data.remote.AnimePosterResolver.cleanAnimeTitle(meta.folderName)
+            val confidence = zechs.drive.stream.data.remote.AnimePosterResolver.calculateSimilarity(clean, title)
+            // If saved metadata similarity with the folder name is less than 0.50, it's a corrupted scraping hallucination
+            if (confidence < 0.50) {
+                zechs.drive.stream.utils.AppLog.w(
+                    "FolderMetadataRepository",
+                    "Detected corrupted metadata for '${meta.folderName}': was '$title' (confidence $confidence). Re-resolving..."
+                )
+                val resolved = animePosterResolver.resolveMetadata(meta.folderName)
+                if (resolved != null && !resolved.posterUrl.isNullOrBlank()) {
+                    saveAnimeMetadata(meta.folderId, meta.folderName, resolved)
+                    zechs.drive.stream.utils.AppLog.i(
+                        "FolderMetadataRepository",
+                        "Successfully corrected '${meta.folderName}' -> '${resolved.titleRomaji ?: resolved.titleEnglish}'"
+                    )
+                } else {
+                    folderMetadataDao.delete(meta.folderId)
+                    zechs.drive.stream.utils.AppLog.i(
+                        "FolderMetadataRepository",
+                        "Deleted non-media corrupt metadata for '${meta.folderName}'"
+                    )
+                }
+            }
+        }
+    }
+
+    suspend fun retainOnlyLibraryFolders(validFolderIds: Set<String>) {
+        if (validFolderIds.isEmpty()) return
+        folderMetadataDao.deleteExcept(validFolderIds.toList())
+        zechs.drive.stream.utils.AppLog.i(
+            "FolderMetadataRepository",
+            "Retained only ${validFolderIds.size} folders belonging to active anime library"
+        )
+    }
 }
+
+

@@ -404,7 +404,8 @@ class FilesViewModel @Inject constructor(
                     )
                 }
 
-                resolveMissingPosters(generation)
+                // Missing posters are not resolved here: metadata scraping is restricted strictly
+                // to the Animes library folder in HomeViewModel, never on arbitrary Drive folders.
             } catch (cancel: CancellationException) {
                 throw cancel
             } catch (e: Exception) {
@@ -464,50 +465,10 @@ class FilesViewModel @Inject constructor(
         )
     }
 
-    private suspend fun resolveMissingPosters(generation: Long) = coroutineScope {
-        val candidateFiles = response.orEmpty()
-            .filterIsInstance<FilesDataModel.File>()
-            .map { it.driveFile }
-            .filter { (it.isFolder || it.isShortcutFolder) && it.posterUrl.isNullOrBlank() }
-            .take(100)
-
-        candidateFiles.chunked(6).forEach { chunk ->
-            currentCoroutineContext().ensureActive()
-            if (generation != responseGeneration) return@coroutineScope
-
-            val results = chunk.map { file ->
-                async {
-                    val targetId = if (file.isShortcut) file.shortcutDetails.targetId ?: file.id else file.id
-                    val poster = animePosterResolver.resolvePoster(file.name)
-                    if (!poster.isNullOrBlank()) {
-                        folderMetadataRepository.updatePosterUrl(targetId, file.name, poster)
-                        file.id to poster
-                    } else null
-                }
-            }.awaitAll().filterNotNull()
-
-            if (results.isNotEmpty()) {
-                currentCoroutineContext().ensureActive()
-                if (generation != responseGeneration) return@coroutineScope
-                val latest = response ?: return@coroutineScope
-                val enriched = latest.toMutableList()
-                var changed = false
-                results.forEach { (fileId, poster) ->
-                    val index = enriched.indexOfFirst {
-                        it is FilesDataModel.File && it.driveFile.id == fileId
-                    }
-                    val current = enriched.getOrNull(index) as? FilesDataModel.File
-                    if (index >= 0 && current != null && current.driveFile.posterUrl.isNullOrBlank()) {
-                        enriched[index] = FilesDataModel.File(current.driveFile.copy(posterUrl = poster))
-                        changed = true
-                    }
-                }
-                if (changed) {
-                    response = enriched
-                    _filesList.postValue(Resource.Success(enriched.toList()))
-                }
-            }
-        }
+    // Kept no-op: poster scraping is strictly confined to the library root folder (HomeViewModel)
+    @Suppress("UNUSED_PARAMETER")
+    private suspend fun resolveMissingPosters(generation: Long) {
+        // No-op to avoid scraping arbitrary non-anime drive folders
     }
 
     data class FileToken(

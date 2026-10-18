@@ -298,18 +298,26 @@
                     android:orientation="vertical">
 
                     <!-- FEATURED SPOTLIGHT HERO (Figma 21:4 "EM DESTAQUE") -->
-                    <FrameLayout android:id="@+id/featuredHeroContainer" android:layout_width="match_parent" android:layout_height="320dp" android:clipChildren="false" android:clipToPadding="false" android:paddingBottom="12dp" android:visibility="gone" tools:visibility="visible">
+                    <FrameLayout android:id="@+id/featuredHeroContainer" android:layout_width="match_parent" android:layout_height="480dp" android:clipChildren="false" android:clipToPadding="false" android:paddingBottom="12dp" android:visibility="gone" tools:visibility="visible">
 
                         <FrameLayout
                             android:layout_width="match_parent"
                             android:layout_height="match_parent">
 
-                            <!-- Backdrop / Key Art Image -->
+                            <!-- Backdrop / Key Art Image Layers (Dual-Buffer Crossfade) -->
                             <zechs.drive.stream.ui.BackdropImageView
                                 android:id="@+id/ivFeaturedBackdrop"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
                                 android:contentDescription="@null"
+                                android:scaleType="centerCrop" />
+
+                            <zechs.drive.stream.ui.BackdropImageView
+                                android:id="@+id/ivFeaturedBackdropNext"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:contentDescription="@null"
+                                android:alpha="0"
                                 android:scaleType="centerCrop" />
 
                             <!-- Bottom-up dark gradient scrim -->
@@ -415,7 +423,7 @@
                                     android:layout_marginTop="14dp"
                                     android:clipChildren="false"
                                     android:clipToPadding="false"
-                                    android:paddingBottom="8dp"
+                                    android:paddingBottom="4dp"
                                     android:gravity="center_vertical"
                                     android:orientation="horizontal">
 
@@ -482,6 +490,18 @@
                                     </LinearLayout>
 
                                 </LinearLayout>
+
+                                <!-- Crunchyroll-style Pagination Pills for Featured Rotation -->
+                                <LinearLayout
+                                    android:id="@+id/layoutHeroPaginationPills"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="28dp"
+                                    android:layout_marginTop="12dp"
+                                    android:clipChildren="false"
+                                    android:clipToPadding="false"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    tools:visibility="visible" />
 
                             </LinearLayout>
 

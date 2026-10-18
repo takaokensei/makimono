@@ -13,6 +13,6 @@
     <dimen name="profile_card_margin_vertical">8dp</dimen>
     <dimen name="tv_shelf_card_width">232dp</dimen>
     <dimen name="tv_shelf_card_height">131dp</dimen>
-    <dimen name="home_hero_height">336dp</dimen>
-    <dimen name="home_hero_height_compact">336dp</dimen>
+    <dimen name="home_hero_height">480dp</dimen>
+    <dimen name="home_hero_height_compact">480dp</dimen>
 </resources>

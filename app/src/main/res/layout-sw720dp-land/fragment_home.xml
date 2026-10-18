@@ -355,6 +355,7 @@
                         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:clipChildren="false" android:clipToPadding="false" android:orientation="vertical">
                             <FrameLayout android:id="@+id/featuredHeroContainer" android:layout_width="match_parent" android:layout_height="@dimen/home_hero_height" android:clipChildren="false" android:clipToPadding="false" android:paddingBottom="12dp" android:visibility="gone" tools:visibility="visible">
                                 <zechs.drive.stream.ui.BackdropImageView android:id="@+id/ivFeaturedBackdrop" android:layout_width="match_parent" android:layout_height="match_parent" android:contentDescription="@null" android:scaleType="centerCrop" />
+                                <zechs.drive.stream.ui.BackdropImageView android:id="@+id/ivFeaturedBackdropNext" android:layout_width="match_parent" android:layout_height="match_parent" android:contentDescription="@null" android:alpha="0" android:scaleType="centerCrop" />
                                 <View android:layout_width="match_parent" android:layout_height="match_parent" android:layout_gravity="start" android:background="@drawable/bg_scrim_left" />
                                 <View android:layout_width="match_parent" android:layout_height="match_parent" android:layout_gravity="bottom" android:background="@drawable/bg_scrim_bottom" />
                                 <LinearLayout android:layout_width="680dp" android:layout_height="match_parent" android:gravity="bottom" android:orientation="vertical" android:paddingStart="@dimen/home_content_margin" android:paddingEnd="24dp" android:paddingTop="32dp" android:paddingBottom="20dp" android:clipChildren="false" android:clipToPadding="false">
@@ -375,6 +376,17 @@
                                             <TextView android:id="@+id/tvFeaturedInfoLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:duplicateParentState="true" android:fontFamily="@font/inter" android:letterSpacing="0.08" android:text="@string/home_featured_info" android:textColor="@color/btn_secondary_action_foreground" android:textAppearance="@style/TextAppearance.Makimono.TV.Caption" android:textStyle="bold" />
                                         </LinearLayout>
                                     </LinearLayout>
+                                    <!-- Crunchyroll-style Pagination Pills for Featured Rotation -->
+                                    <LinearLayout
+                                        android:id="@+id/layoutHeroPaginationPills"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="28dp"
+                                        android:layout_marginTop="12dp"
+                                        android:clipChildren="false"
+                                        android:clipToPadding="false"
+                                        android:gravity="center_vertical"
+                                        android:orientation="horizontal"
+                                        tools:visibility="visible" />
                                 </LinearLayout>
                             </FrameLayout>
                             <LinearLayout android:id="@+id/shelfHeaderRow" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginStart="@dimen/home_content_margin" android:layout_marginEnd="@dimen/tv_overscan_margin" android:layout_marginTop="12dp" android:layout_marginBottom="10dp" android:gravity="center_vertical" android:orientation="horizontal" android:visibility="gone" tools:visibility="visible">

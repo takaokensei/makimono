@@ -80,6 +80,17 @@
     <string name="profile_role_admin">Admin</string>
     <string name="profile_role_kids">Infantil</string>
     <string name="profile_manage_done">Concluído</string>
+    <string name="profile_logout_action">LOG OUT</string>
+    <string name="profile_logout_confirm_title">Sair da conta</string>
+    <string name="profile_logout_confirm_message">Tem certeza de que deseja sair da sua conta?</string>
+    <string name="profile_logout_action_confirm">Sair</string>
+    <string name="profile_art_section_library">Da sua biblioteca</string>
+    <string name="profile_welcome_greeting">Welcome, %1$s!</string>
+    <string name="profile_welcome_phrase_power">One sec, increasing power levels…</string>
+    <string name="profile_welcome_phrase_dragonballs">Gathering the Dragon Balls…</string>
+    <string name="profile_welcome_phrase_catalog">Preparing your personalized catalog…</string>
+    <string name="profile_welcome_phrase_chakra">Awakening chakra…</string>
+    <string name="profile_welcome_phrase_sync">Syncing with your watchlist…</string>
     <string name="profile_load_error">Não foi possível abrir os perfis. Reinicie o aplicativo e tente novamente.</string>
     <string name="profile_edit_menu_action">Editar nome, arte e acesso</string>
     <string name="profile_delete_menu_action">Excluir perfil</string>
@@ -371,6 +382,14 @@
     <string name="series_action_following">Seguindo</string>
     <string name="series_action_mark_watched_short">Marcar assistido</string>
     <string name="series_heading_episodes">Episódios</string>
+    <string name="tab_episodes">EPISÓDIOS</string>
+    <string name="tab_details">DETALHES</string>
+    <string name="tab_more_like_this">MAIS COMO ESTE</string>
+    <string name="series_action_watchlist">Salvar na Lista</string>
+    <string name="series_action_in_watchlist">Na sua Lista</string>
+    <string name="details_studio_label">Estúdio</string>
+    <string name="details_original_title_label">Título Original</string>
+    <string name="details_media_specs_label">Especificações Técnicas</string>
     <string name="series_empty_category">Nenhum episódio encontrado nesta categoria.</string>
     <string name="series_retry">Tentar novamente</string>
     <string name="series_audio_dual">Áudio duplo</string>
@@ -462,4 +481,26 @@
     <string name="genre_isekai">Isekai</string>
     <string name="genre_slice_of_life">Slice of Life</string>
     <string name="genre_supernatural">Sobrenatural</string>
+
+    <!-- Franchise & Series Details Redesign -->
+    <plurals name="series_episode_count">
+        <item quantity="one">%1$d Episódio</item>
+        <item quantity="many">%1$d Episódios</item>
+        <item quantity="other">%1$d Episódios</item>
+    </plurals>
+    <plurals name="franchise_works_count">
+        <item quantity="one">%1$d Obra Disponível</item>
+        <item quantity="many">%1$d Obras Disponíveis</item>
+        <item quantity="other">%1$d Obras Disponíveis</item>
+    </plurals>
+    <string name="franchise_canonical_badge">Franquia Canônica • %1$s</string>
+    <string name="chip_category_episodes">Episódios (%1$d)</string>
+    <string name="chip_category_specials">Especiais (%1$d)</string>
+    <string name="chip_category_music">OPs / EDs (%1$d)</string>
+    <string name="chip_category_previews">PVs (%1$d)</string>
+    <string name="tab_work_details">DETALHES DA OBRA</string>
+    <string name="series_action_mark_watched_btn">Marcar como Visto</string>
+    <string name="series_action_marked_watched_btn">✓ Visto</string>
+    <string name="series_audio_legendado_pt">Legendado (PT-BR)</string>
+    <string name="series_synopsis_read_more">Ler sinopse completa</string>
 </resources>

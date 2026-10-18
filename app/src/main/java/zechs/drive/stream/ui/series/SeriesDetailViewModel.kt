@@ -27,7 +27,11 @@ import zechs.drive.stream.data.repository.WatchQueueRepository
 import zechs.drive.stream.ui.files.adapter.FilesDataModel
 import zechs.drive.stream.ui.series.adapter.SeasonTab
 import zechs.drive.stream.ui.series.adapter.SeriesEpisodeItem
+import zechs.drive.stream.domain.library.CategoryChip
+import zechs.drive.stream.domain.library.EpisodeCategorizer
 import zechs.drive.stream.domain.library.EpisodeParser
+import zechs.drive.stream.domain.library.SeriesMediaCategory
+import zechs.drive.stream.domain.library.SeriesMediaClassifier
 import zechs.drive.stream.utils.PlaybackProgressPolicy
 import zechs.drive.stream.utils.SeasonEpisodeGrouper
 import zechs.drive.stream.utils.SeasonGroup
@@ -37,6 +41,12 @@ import zechs.drive.stream.data.repository.DriveFailureClassifier
 import zechs.drive.stream.utils.state.ResourceErrorKind
 import java.util.Locale
 import javax.inject.Inject
+
+enum class SeriesNavTab {
+    EPISODES,
+    DETAILS,
+    MORE_LIKE_THIS
+}
 
 sealed class SeriesDetailUiState {
     data class Loading(
@@ -62,7 +72,21 @@ sealed class SeriesDetailUiState {
         val audioBadge: String? = null,
         val subtitleBadge: String? = null,
         val hasIncompleteDriveListing: Boolean = false,
-        val isMovie: Boolean = false
+        val isMovie: Boolean = false,
+        val selectedNavTab: SeriesNavTab = SeriesNavTab.EPISODES,
+        val franchiseHub: zechs.drive.stream.domain.library.FranchiseGroupingManager.FranchiseHub? = null,
+        val activeMemberFolderId: String? = null,
+        val isFranchiseHub: Boolean = false,
+        val franchiseMembersCount: Int = 0,
+        val activeArcId: String? = null,
+        val activeArcTitle: String? = null,
+        val activeArcYear: Int? = null,
+        val activeArcScore: Float? = null,
+        val activeArcScoreSource: String = "MAL",
+        val categoryChips: List<CategoryChip> = emptyList(),
+        val selectedCategory: SeriesMediaCategory = SeriesMediaCategory.EPISODES,
+        val allCurrentArcEpisodes: List<SeriesEpisodeItem> = emptyList(),
+        val bannerUrl: String? = null
     ) : SeriesDetailUiState()
     data class Error(
         val error: AppError,
@@ -72,7 +96,9 @@ sealed class SeriesDetailUiState {
 }
 
 sealed interface SeriesDetailEvent {
+    data class SelectNavTab(val tab: SeriesNavTab) : SeriesDetailEvent
     data class SelectSeason(val tab: SeasonTab) : SeriesDetailEvent
+    data class SelectCategory(val category: SeriesMediaCategory) : SeriesDetailEvent
     data class SaveFocus(val position: Int) : SeriesDetailEvent
     data class ToggleStar(val folderId: String) : SeriesDetailEvent
     data class ToggleFollow(val folderId: String) : SeriesDetailEvent
@@ -88,11 +114,19 @@ class SeriesDetailViewModel @Inject constructor(
     private val animePosterResolver: AnimePosterResolver,
     private val favoriteRepository: zechs.drive.stream.data.repository.FavoriteRepository,
     private val followedFolderRepository: FollowedFolderRepository,
-    private val watchQueueRepository: WatchQueueRepository
+    private val watchQueueRepository: WatchQueueRepository,
+    private val franchiseGroupingManager: zechs.drive.stream.domain.library.FranchiseGroupingManager
 ) : ViewModel() {
 
     companion object {
         private const val TAG = "SeriesDetailVM"
+        private val seriesDetailCache = java.util.concurrent.ConcurrentHashMap<String, SeriesDetailUiState.Success>()
+        private val folderEpisodesCache = java.util.concurrent.ConcurrentHashMap<String, List<SeriesEpisodeItem>>()
+
+        fun clearCache() {
+            seriesDetailCache.clear()
+            folderEpisodesCache.clear()
+        }
     }
 
     private val _uiState = MutableStateFlow<SeriesDetailUiState>(SeriesDetailUiState.Loading("", ""))
@@ -112,7 +146,9 @@ class SeriesDetailViewModel @Inject constructor(
 
     fun onEvent(event: SeriesDetailEvent) {
         when (event) {
+            is SeriesDetailEvent.SelectNavTab -> selectNavTab(event.tab)
             is SeriesDetailEvent.SelectSeason -> selectSeasonTab(event.tab)
+            is SeriesDetailEvent.SelectCategory -> selectCategory(event.category)
             is SeriesDetailEvent.SaveFocus -> { lastFocusedPosition = event.position }
             is SeriesDetailEvent.ToggleStar -> toggleStar()
             is SeriesDetailEvent.ToggleFollow -> toggleFollow()
@@ -120,10 +156,57 @@ class SeriesDetailViewModel @Inject constructor(
         }
     }
 
+    fun selectCategory(category: SeriesMediaCategory) {
+        val currentState = _uiState.value as? SeriesDetailUiState.Success ?: return
+        val allEpisodes = currentState.allCurrentArcEpisodes.ifEmpty { allEpisodeItems }
+
+        val filtered = allEpisodes.filter { ep ->
+            val parsed = EpisodeParser.parse(ep.file.name)
+            val domainCat = EpisodeCategorizer.categorize(ep.file.name, parsed)
+            val mappedCat = SeriesMediaClassifier.mapCategory(domainCat)
+            mappedCat == category
+        }
+
+        val categoryCounts = mutableMapOf<SeriesMediaCategory, Int>()
+        allEpisodes.forEach { ep ->
+            val parsed = EpisodeParser.parse(ep.file.name)
+            val domainCat = EpisodeCategorizer.categorize(ep.file.name, parsed)
+            val cat = SeriesMediaClassifier.mapCategory(domainCat)
+            categoryCounts[cat] = (categoryCounts[cat] ?: 0) + 1
+        }
+        val chips = SeriesMediaClassifier.buildChips(categoryCounts, category)
+
+        val updatedTabs = currentState.seasonTabs.map { tab ->
+            if (tab.isSelected) {
+                tab.copy(selectedCategory = category, chips = chips)
+            } else tab
+        }
+
+        _uiState.value = currentState.copy(
+            selectedCategory = category,
+            categoryChips = chips,
+            seasonTabs = updatedTabs,
+            currentEpisodes = filtered
+        )
+    }
+
+    fun selectNavTab(tab: SeriesNavTab) {
+        val current = _uiState.value as? SeriesDetailUiState.Success ?: return
+        if (current.selectedNavTab != tab) {
+            _uiState.value = current.copy(selectedNavTab = tab)
+        }
+    }
+
     fun loadSeriesDetails(folderId: String, seriesTitle: String, initialPoster: String? = null) {
         currentFolderId = folderId
         currentSeriesTitle = seriesTitle
-        _uiState.value = SeriesDetailUiState.Loading(folderId, seriesTitle, initialPoster)
+
+        val cachedSuccess = seriesDetailCache[folderId]
+        if (cachedSuccess != null) {
+            _uiState.value = cachedSuccess
+        } else {
+            _uiState.value = SeriesDetailUiState.Loading(folderId, seriesTitle, initialPoster)
+        }
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -281,16 +364,26 @@ class SeriesDetailViewModel @Inject constructor(
                 )
                 withContext(Dispatchers.Main) {
                     val previous = _uiState.value as? SeriesDetailUiState.Success
+                    val selectedNavTab = previous?.selectedNavTab ?: SeriesNavTab.EPISODES
                     val selectedId = previous?.seasonTabs?.firstOrNull { it.isSelected }?.id
-                    if (selectedId == null) {
-                        _uiState.value = enrichedState
+                    val stateToPublish = if (selectedId == null) {
+                        enrichedState.copy(selectedNavTab = selectedNavTab)
                     } else {
                         val selectedGroup = allSeasonGroups.firstOrNull { it.id == selectedId }
-                        _uiState.value = enrichedState.copy(
+                        val eps = if (enrichedState.franchiseHub != null) {
+                            folderEpisodesCache[selectedId] ?: enrichedState.currentEpisodes
+                        } else {
+                            getEpisodesForGroup(selectedGroup)
+                        }
+                        enrichedState.copy(
+                            selectedNavTab = selectedNavTab,
                             seasonTabs = enrichedState.seasonTabs.map { it.copy(isSelected = it.id == selectedId) },
-                            currentEpisodes = getEpisodesForGroup(selectedGroup)
+                            currentEpisodes = eps,
+                            activeMemberFolderId = selectedId
                         )
                     }
+                    seriesDetailCache[folderId] = stateToPublish
+                    _uiState.value = stateToPublish
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -312,7 +405,7 @@ class SeriesDetailViewModel @Inject constructor(
         }
     }
 
-    private fun buildSuccessState(
+    private suspend fun buildSuccessState(
         folderId: String,
         seriesTitle: String,
         driveFiles: List<DriveFile>,
@@ -338,9 +431,30 @@ class SeriesDetailViewModel @Inject constructor(
         }
 
         val fileModels = driveFiles.map { FilesDataModel.File(it) }
-        allSeasonGroups = SeasonEpisodeGrouper.groupFiles(seriesTitle, fileModels)
+        val hub = try {
+            franchiseGroupingManager.getOrCreateFranchiseHub(folderId, seriesTitle)
+        } catch (_: Exception) { null }
+
+        val members = hub?.members
         val tabs = if (isMovie) {
             emptyList()
+        } else if (members != null && members.size > 1) {
+            members.mapIndexed { index, member ->
+                val subtitle = if (member.isMovie) "Filme" else member.episodeCount?.let { "$it Episódios" } ?: "Temporada"
+                val isSelected = member.folderId == folderId || (index == 0 && members.none { it.folderId == folderId })
+                SeasonTab(
+                    id = member.folderId,
+                    title = member.arcTitle,
+                    subtitle = subtitle,
+                    posterUrl = member.posterUrl,
+                    bannerUrl = member.bannerUrl,
+                    releaseYear = member.releaseYear,
+                    score = member.score,
+                    scoreSource = member.scoreSource,
+                    iconRes = if (member.isMovie) R.drawable.ic_player_24 else R.drawable.ic_play_24,
+                    isSelected = isSelected
+                )
+            }
         } else {
             allSeasonGroups.mapIndexed { index, group ->
                 val icon = when {
@@ -353,22 +467,63 @@ class SeriesDetailViewModel @Inject constructor(
                 SeasonTab(
                     id = group.id,
                     title = group.name,
+                    subtitle = "${group.fileItems.size} Episódios",
+                    posterUrl = aniListMeta?.posterUrl ?: fallbackPosterUrl,
+                    bannerUrl = aniListMeta?.bannerUrl,
+                    releaseYear = aniListMeta?.year,
+                    score = aniListMeta?.score,
+                    scoreSource = if (aniListMeta?.isAnime == false) "TMDB" else "MAL",
                     iconRes = icon,
                     isSelected = index == 0
                 )
             }
         }
 
+        folderEpisodesCache[folderId] = allEpisodeItems
+
+        val activeTab = tabs.firstOrNull { it.isSelected } ?: tabs.firstOrNull()
+        val categoryCounts = mutableMapOf<SeriesMediaCategory, Int>()
+        allEpisodeItems.forEach { ep ->
+            val parsed = EpisodeParser.parse(ep.file.name)
+            val domainCat = EpisodeCategorizer.categorize(ep.file.name, parsed)
+            val cat = SeriesMediaClassifier.mapCategory(domainCat)
+            categoryCounts[cat] = (categoryCounts[cat] ?: 0) + 1
+        }
+        val defaultCategory = if ((categoryCounts[SeriesMediaCategory.EPISODES] ?: 0) > 0) {
+            SeriesMediaCategory.EPISODES
+        } else {
+            categoryCounts.keys.firstOrNull() ?: SeriesMediaCategory.EPISODES
+        }
+        val initialChips = SeriesMediaClassifier.buildChips(categoryCounts, defaultCategory)
+        val tabsWithChips = tabs.map { tab ->
+            if (tab.isSelected) {
+                tab.copy(chips = initialChips, selectedCategory = defaultCategory)
+            } else tab
+        }
+
+        val initialEpisodes = if (tabs.isNotEmpty()) {
+            allEpisodeItems.filter { ep ->
+                val parsed = EpisodeParser.parse(ep.file.name)
+                val domainCat = EpisodeCategorizer.categorize(ep.file.name, parsed)
+                SeriesMediaClassifier.mapCategory(domainCat) == defaultCategory
+            }
+        } else {
+            getEpisodesForGroup(allSeasonGroups.firstOrNull())
+        }
+
         val continueItem = PrimaryEpisodeSelection.select(allEpisodeItems)
         val continueSubtitle = PrimaryEpisodeSelection.formatContinueSubtitle(continueItem, isMovie)
 
-        return SeriesDetailUiState.Success(
+        val isFranchise = hub != null && hub.members.size > 1
+        val franchiseTitle = if (isFranchise && hub != null) hub.canonicalTitle else (aniListMeta?.titleRomaji ?: seriesTitle)
+
+        val successState = SeriesDetailUiState.Success(
             folderId = folderId,
-            seriesTitle = seriesTitle,
+            seriesTitle = franchiseTitle,
             animeEntry = fetchedAnime,
             aniListMetadata = aniListMeta,
-            seasonTabs = tabs,
-            currentEpisodes = getEpisodesForGroup(allSeasonGroups.firstOrNull()),
+            seasonTabs = tabsWithChips,
+            currentEpisodes = initialEpisodes,
             continueWatchingItem = continueItem,
             trailerItem = SeriesDetailEpisodeSelection.firstTrailer(allEpisodeItems),
             continueWatchingSubtitle = continueSubtitle,
@@ -385,8 +540,24 @@ class SeriesDetailViewModel @Inject constructor(
                 driveFiles.map { it.name }, listingComplete = !hasIncompleteDriveListing
             )?.formatSubtitles(),
             hasIncompleteDriveListing = hasIncompleteDriveListing,
-            isMovie = isMovie
+            isMovie = isMovie,
+            franchiseHub = hub,
+            activeMemberFolderId = activeTab?.id ?: folderId,
+            isFranchiseHub = isFranchise,
+            franchiseMembersCount = hub?.members?.size ?: 0,
+            activeArcId = activeTab?.id ?: folderId,
+            activeArcTitle = activeTab?.title ?: seriesTitle,
+            activeArcYear = activeTab?.releaseYear ?: aniListMeta?.year,
+            activeArcScore = activeTab?.score ?: aniListMeta?.score,
+            activeArcScoreSource = activeTab?.scoreSource ?: if (aniListMeta?.isAnime == false) "TMDB" else "MAL",
+            categoryChips = initialChips,
+            selectedCategory = defaultCategory,
+            allCurrentArcEpisodes = allEpisodeItems,
+            bannerUrl = aniListMeta?.bannerUrl ?: hub?.bannerUrl
         )
+
+        seriesDetailCache[folderId] = successState
+        return successState
     }
 
     private data class DriveVideoFetch(
@@ -518,18 +689,143 @@ class SeriesDetailViewModel @Inject constructor(
     fun selectSeasonTab(tab: SeasonTab) {
         val currentState = _uiState.value as? SeriesDetailUiState.Success ?: return
 
-        val updatedTabs = currentState.seasonTabs.map {
-            it.copy(isSelected = it.id == tab.id)
+        val hub = currentState.franchiseHub
+        if (hub != null && hub.members.size > 1) {
+            val cachedEps = folderEpisodesCache[tab.id]
+            if (cachedEps != null) {
+                val categoryCounts = mutableMapOf<SeriesMediaCategory, Int>()
+                cachedEps.forEach { ep ->
+                    val parsed = EpisodeParser.parse(ep.file.name)
+                    val domainCat = EpisodeCategorizer.categorize(ep.file.name, parsed)
+                    val cat = SeriesMediaClassifier.mapCategory(domainCat)
+                    categoryCounts[cat] = (categoryCounts[cat] ?: 0) + 1
+                }
+                val defaultCategory = if ((categoryCounts[SeriesMediaCategory.EPISODES] ?: 0) > 0) {
+                    SeriesMediaCategory.EPISODES
+                } else {
+                    categoryCounts.keys.firstOrNull() ?: SeriesMediaCategory.EPISODES
+                }
+                val chips = SeriesMediaClassifier.buildChips(categoryCounts, defaultCategory)
+                val filtered = cachedEps.filter { ep ->
+                    val parsed = EpisodeParser.parse(ep.file.name)
+                    val domainCat = EpisodeCategorizer.categorize(ep.file.name, parsed)
+                    SeriesMediaClassifier.mapCategory(domainCat) == defaultCategory
+                }
+                val updatedTabs = currentState.seasonTabs.map {
+                    if (it.id == tab.id) {
+                        it.copy(isSelected = true, chips = chips, selectedCategory = defaultCategory)
+                    } else {
+                        it.copy(isSelected = false)
+                    }
+                }
+                selectedSeasonPosition = updatedTabs.indexOfFirst { it.isSelected }.coerceAtLeast(0)
+
+                _uiState.value = currentState.copy(
+                    seasonTabs = updatedTabs,
+                    currentEpisodes = filtered,
+                    allCurrentArcEpisodes = cachedEps,
+                    activeMemberFolderId = tab.id,
+                    activeArcId = tab.id,
+                    activeArcTitle = tab.title,
+                    activeArcYear = tab.releaseYear ?: currentState.activeArcYear,
+                    activeArcScore = tab.score ?: currentState.activeArcScore,
+                    activeArcScoreSource = tab.scoreSource,
+                    categoryChips = chips,
+                    selectedCategory = defaultCategory
+                )
+            } else {
+                val updatedTabs = currentState.seasonTabs.map {
+                    it.copy(isSelected = it.id == tab.id)
+                }
+                selectedSeasonPosition = updatedTabs.indexOfFirst { it.isSelected }.coerceAtLeast(0)
+                _uiState.value = currentState.copy(
+                    seasonTabs = updatedTabs,
+                    activeMemberFolderId = tab.id,
+                    activeArcId = tab.id,
+                    activeArcTitle = tab.title,
+                    activeArcYear = tab.releaseYear ?: currentState.activeArcYear,
+                    activeArcScore = tab.score ?: currentState.activeArcScore,
+                    activeArcScoreSource = tab.scoreSource
+                )
+                viewModelScope.launch(Dispatchers.IO) {
+                    val driveResult = fetchAllDriveVideos(tab.id)
+                    val videoIds = driveResult.files.map { it.id }
+                    val watchList = watchListRepository.getWatches(videoIds)
+                    val watchMap = watchList.associateBy { it.videoId }
+                    val newEpisodes = driveResult.files.map { file ->
+                        mapToEpisodeItem(
+                            file = file,
+                            watch = watchMap[file.id],
+                            arcs = franchiseArcs,
+                            isMovie = tab.subtitle?.contains("Filme", true) == true,
+                            canonicalMovieTitle = null,
+                            fallbackThumbnail = currentState.aniListMetadata?.bannerUrl ?: currentState.fallbackPosterUrl
+                        )
+                    }
+                    folderEpisodesCache[tab.id] = newEpisodes
+
+                    val categoryCounts = mutableMapOf<SeriesMediaCategory, Int>()
+                    newEpisodes.forEach { ep ->
+                        val parsed = EpisodeParser.parse(ep.file.name)
+                        val domainCat = EpisodeCategorizer.categorize(ep.file.name, parsed)
+                        val cat = SeriesMediaClassifier.mapCategory(domainCat)
+                        categoryCounts[cat] = (categoryCounts[cat] ?: 0) + 1
+                    }
+                    val defaultCategory = if ((categoryCounts[SeriesMediaCategory.EPISODES] ?: 0) > 0) {
+                        SeriesMediaCategory.EPISODES
+                    } else {
+                        categoryCounts.keys.firstOrNull() ?: SeriesMediaCategory.EPISODES
+                    }
+                    val chips = SeriesMediaClassifier.buildChips(categoryCounts, defaultCategory)
+                    val filtered = newEpisodes.filter { ep ->
+                        val parsed = EpisodeParser.parse(ep.file.name)
+                        val domainCat = EpisodeCategorizer.categorize(ep.file.name, parsed)
+                        SeriesMediaClassifier.mapCategory(domainCat) == defaultCategory
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        val finalTabs = currentState.seasonTabs.map {
+                            if (it.id == tab.id) {
+                                it.copy(isSelected = true, chips = chips, selectedCategory = defaultCategory)
+                            } else {
+                                it.copy(isSelected = false)
+                            }
+                        }
+                        _uiState.value = currentState.copy(
+                            seasonTabs = finalTabs,
+                            currentEpisodes = filtered,
+                            allCurrentArcEpisodes = newEpisodes,
+                            activeMemberFolderId = tab.id,
+                            activeArcId = tab.id,
+                            activeArcTitle = tab.title,
+                            activeArcYear = tab.releaseYear ?: currentState.activeArcYear,
+                            activeArcScore = tab.score ?: currentState.activeArcScore,
+                            activeArcScoreSource = tab.scoreSource,
+                            categoryChips = chips,
+                            selectedCategory = defaultCategory
+                        )
+                    }
+                }
+            }
+        } else {
+            val targetGroup = allSeasonGroups.firstOrNull { it.id == tab.id }
+            val filteredEpisodes = getEpisodesForGroup(targetGroup)
+
+            val updatedTabs = currentState.seasonTabs.map {
+                it.copy(isSelected = it.id == tab.id)
+            }
+            selectedSeasonPosition = updatedTabs.indexOfFirst { it.isSelected }.coerceAtLeast(0)
+
+            _uiState.value = currentState.copy(
+                seasonTabs = updatedTabs,
+                currentEpisodes = filteredEpisodes,
+                activeArcId = tab.id,
+                activeArcTitle = tab.title,
+                activeArcYear = tab.releaseYear ?: currentState.activeArcYear,
+                activeArcScore = tab.score ?: currentState.activeArcScore,
+                activeArcScoreSource = tab.scoreSource
+            )
         }
-        selectedSeasonPosition = updatedTabs.indexOfFirst { it.isSelected }.coerceAtLeast(0)
-
-        val targetGroup = allSeasonGroups.firstOrNull { it.id == tab.id }
-        val filteredEpisodes = getEpisodesForGroup(targetGroup)
-
-        _uiState.value = currentState.copy(
-            seasonTabs = updatedTabs,
-            currentEpisodes = filteredEpisodes
-        )
     }
 
     private fun getEpisodesForGroup(group: SeasonGroup?): List<SeriesEpisodeItem> {

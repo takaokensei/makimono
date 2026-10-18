@@ -47,7 +47,15 @@ class SkipController(
      * Replaces current chapters with a new list, sorted by start time.
      */
     fun setChapters(chapters: List<ParsedChapter>) {
-        parsedChapters = chapters.sortedBy { it.startTimeMs }
+        parsedChapters = chapters
+            .filter { it.endTimeMs > it.startTimeMs }
+            .map { ch ->
+                // Guard: An ENDING chapter starting in the first 5 minutes is invalid/opening credits
+                if (ch.type == ChapterType.ENDING && ch.startTimeMs < 300_000L) {
+                    ch.copy(type = ChapterType.OTHER)
+                } else ch
+            }
+            .sortedBy { it.startTimeMs }
         activeSkipChapter = null
         acknowledgedChapter = null
         acknowledgedFallbackIntro = false
@@ -65,7 +73,11 @@ class SkipController(
         val hasMkvOp = existing.any { it.type == ChapterType.OPENING }
         val hasMkvEd = existing.any { it.type == ChapterType.ENDING }
 
-        for (aniCh in aniSkipChapters) {
+        for (rawCh in aniSkipChapters) {
+            val aniCh = if (rawCh.type == ChapterType.ENDING && rawCh.startTimeMs < 300_000L) {
+                rawCh.copy(type = ChapterType.OTHER)
+            } else rawCh
+
             if (aniCh.type == ChapterType.OPENING && !hasMkvOp) {
                 existing.add(aniCh)
             } else if (aniCh.type == ChapterType.ENDING && !hasMkvEd) {
@@ -75,7 +87,9 @@ class SkipController(
             }
         }
 
-        parsedChapters = existing.sortedBy { it.startTimeMs }
+        parsedChapters = existing
+            .filter { it.endTimeMs > it.startTimeMs }
+            .sortedBy { it.startTimeMs }
     }
 
     /**
@@ -147,8 +161,14 @@ class SkipController(
                 ChapterType.OTHER -> "Pular Capítulo"
             }
 
-            // Visible as overlay if controls are hidden and not locked, or inside controls
-            val buttonUi = if (!controlsLocked && action !is SkipAction.AutoSkip) {
+            // Visible as overlay if controls are hidden and not locked, or inside controls.
+            // Never show button if already auto-skipped or acknowledged.
+            val shouldShowButton = !controlsLocked &&
+                    action !is SkipAction.AutoSkip &&
+                    !hasAutoSkippedCurrentInterval &&
+                    specialChapter != acknowledgedChapter
+
+            val buttonUi = if (shouldShowButton) {
                 SkipButtonUi.Visible(
                     label = label,
                     targetPositionMs = specialChapter.endTimeMs,

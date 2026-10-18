@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="16dp">
+
+    <!-- Left: Circle / Card skeleton block -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <!-- Circle avatar skeleton -->
+        <View
+            android:id="@+id/skeletonCircle"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:background="@drawable/glass_meta_pill_bg"
+            android:backgroundTint="#262930" />
+
+        <!-- Underline label skeleton -->
+        <View
+            android:layout_width="60dp"
+            android:layout_height="12dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/glass_meta_pill_bg"
+            android:backgroundTint="#262930" />
+    </LinearLayout>
+
+    <!-- Right: 5 horizontal skeleton text bars (like Crunchyroll Image 2) -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="28dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="16dp"
+            android:background="@drawable/glass_meta_pill_bg"
+            android:backgroundTint="#262930" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="16dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/glass_meta_pill_bg"
+            android:backgroundTint="#262930" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="16dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/glass_meta_pill_bg"
+            android:backgroundTint="#262930" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="16dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/glass_meta_pill_bg"
+            android:backgroundTint="#262930" />
+
+        <View
+            android:layout_width="140dp"
+            android:layout_height="16dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/glass_meta_pill_bg"
+            android:backgroundTint="#262930" />
+    </LinearLayout>
+
+</LinearLayout>

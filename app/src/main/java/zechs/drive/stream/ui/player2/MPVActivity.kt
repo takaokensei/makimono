@@ -26,6 +26,7 @@ import zechs.drive.stream.playback.osd.OsdViewHost
 import zechs.drive.stream.utils.MakimonoMediaSessionHelper
 import zechs.drive.stream.utils.MakimonoPiPHelper
 import zechs.drive.stream.utils.PlaybackProgressPolicy
+import zechs.drive.stream.utils.ext.resolveThemeColor
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -459,6 +460,24 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
             // progress bar
             progressBar.setOnSeekBarChangeListener(seekBarChangeListener)
 
+            val timeBarContainer = root.findViewById<View>(R.id.timeBarContainer)
+            val accentColor = resolveThemeColor(R.attr.colorAccentPrimary)
+            val defaultPositionColor = ContextCompat.getColor(this@MPVActivity, R.color.obsidian_text_primary)
+            val defaultDurationColor = ContextCompat.getColor(this@MPVActivity, R.color.obsidian_text_secondary)
+
+            progressBar.setOnFocusChangeListener { _, hasFocus ->
+                if (hasFocus) {
+                    timeBarContainer?.animate()?.scaleY(1.35f)?.scaleX(1.008f)?.setDuration(150L)?.start()
+                    exoPosition.setTextColor(accentColor)
+                    exoDuration.setTextColor(accentColor)
+                    osdController.resetInactivityTimer()
+                } else {
+                    timeBarContainer?.animate()?.scaleY(1.0f)?.scaleX(1.0f)?.setDuration(150L)?.start()
+                    exoPosition.setTextColor(defaultPositionColor)
+                    exoDuration.setTextColor(defaultDurationColor)
+                }
+            }
+
             // init onClick listeners
             btnPlayPause.setOnClickListener { player.cyclePause() }
             btnPrevEp.setOnClickListener { playPrevEpisodeDirectly() }
@@ -824,6 +843,7 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
             }
             val focusedItem = when {
                 controller.btnBack.isFocused -> zechs.drive.stream.utils.PlayerFocusItem.EXIT
+                controller.progressBar.isFocused -> zechs.drive.stream.utils.PlayerFocusItem.TIMELINE
                 controller.btnPlayPause.isFocused -> zechs.drive.stream.utils.PlayerFocusItem.PLAY_PAUSE
                 else -> zechs.drive.stream.utils.PlayerFocusItem.OTHER
             }
@@ -841,6 +861,7 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
                 handledFocusDirectionKeyCode = event.keyCode
                 when (target) {
                     zechs.drive.stream.utils.PlayerFocusItem.EXIT -> controller.btnBack.requestFocus()
+                    zechs.drive.stream.utils.PlayerFocusItem.TIMELINE -> controller.progressBar.requestFocus()
                     zechs.drive.stream.utils.PlayerFocusItem.PLAY_PAUSE -> controller.btnPlayPause.requestFocus()
                     zechs.drive.stream.utils.PlayerFocusItem.OTHER -> Unit
                 }
@@ -935,6 +956,12 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
                         gestureHelper.showSeekRipple(seekStepPolicy.cumulativeSeconds)
                         mainHandler.postDelayed(resetSeekAccumulatorRunnable, zechs.drive.stream.utils.SeekStepPolicy.TIMEOUT_MS)
                         return true
+                    } else if (controller.progressBar.isFocused) {
+                        MPVLib.command(arrayOf("seek", "-10", "relative"))
+                        gestureHelper.showSeekRipple(-10)
+                        gestureHelper.showNotification("⏪ -10s")
+                        osdController.resetInactivityTimer()
+                        return true
                     }
                 }
 
@@ -945,6 +972,12 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
                         MPVLib.command(arrayOf("seek", deltaSeconds.toString(), "relative"))
                         gestureHelper.showSeekRipple(seekStepPolicy.cumulativeSeconds)
                         mainHandler.postDelayed(resetSeekAccumulatorRunnable, zechs.drive.stream.utils.SeekStepPolicy.TIMEOUT_MS)
+                        return true
+                    } else if (controller.progressBar.isFocused) {
+                        MPVLib.command(arrayOf("seek", "10", "relative"))
+                        gestureHelper.showSeekRipple(10)
+                        gestureHelper.showNotification("⏩ +10s")
+                        osdController.resetInactivityTimer()
                         return true
                     }
                 }
@@ -1122,26 +1155,14 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
         when (val ui = skipState.buttonUi) {
             is zechs.drive.stream.playback.session.SkipController.SkipButtonUi.Visible -> {
                 binding.btnNetflixSkip.text = ui.label
-                controller.btnSkipIntro.text = ui.label
-                if (ui.isOverlay) {
-                    if (binding.netflixSkipRow.visibility != View.VISIBLE) {
-                        binding.netflixSkipRow.animate().cancel()
-                        binding.netflixSkipRow.alpha = 0f
-                        binding.netflixSkipRow.visibility = View.VISIBLE
-                        val motionEnter = resources.getInteger(R.integer.motion_pill_enter).toLong()
-                        binding.netflixSkipRow.animate().alpha(1f).setDuration(motionEnter).start()
-                    }
-                } else {
+                if (binding.netflixSkipRow.visibility != View.VISIBLE) {
                     binding.netflixSkipRow.animate().cancel()
-                    binding.netflixSkipRow.visibility = View.GONE
-                }
-                if (controller.root.isVisible && !controller.skipIntroRow.isVisible && !controlsLocked) {
-                    controller.skipIntroRow.animate().cancel()
-                    controller.skipIntroRow.alpha = 0f
-                    controller.skipIntroRow.visibility = View.VISIBLE
+                    binding.netflixSkipRow.alpha = 0f
+                    binding.netflixSkipRow.visibility = View.VISIBLE
                     val motionEnter = resources.getInteger(R.integer.motion_pill_enter).toLong()
-                    controller.skipIntroRow.animate().alpha(1f).setDuration(motionEnter).start()
+                    binding.netflixSkipRow.animate().alpha(1f).setDuration(motionEnter).start()
                 }
+                controller.skipIntroRow.visibility = View.GONE
             }
             zechs.drive.stream.playback.session.SkipController.SkipButtonUi.Hidden -> {
                 val motionExit = resources.getInteger(R.integer.motion_pill_exit).toLong()
@@ -1151,12 +1172,7 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
                         binding.netflixSkipRow.visibility = View.GONE
                     }.start()
                 }
-                if (controller.skipIntroRow.isVisible) {
-                    controller.skipIntroRow.animate().cancel()
-                    controller.skipIntroRow.animate().alpha(0f).setDuration(motionExit).withEndAction {
-                        controller.skipIntroRow.visibility = View.GONE
-                    }.start()
-                }
+                controller.skipIntroRow.visibility = View.GONE
             }
         }
     }
@@ -1268,11 +1284,11 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
                 cleanTitle.contains("previously") || cleanTitle.contains("anteriormente") ->
                     ChapterType.RECAP
                 cleanTitle == "op" || cleanTitle.contains("opening") || cleanTitle.contains("intro") ||
-                cleanTitle.contains("abertura") || cleanTitle.matches(Regex(".*\\b(op|ncop)\\d*\\b.*")) ->
+                cleanTitle.contains("abertura") || cleanTitle.contains("opening credits") || cleanTitle.matches(Regex(".*\\b(op|ncop)\\d*\\b.*")) ->
                     ChapterType.OPENING
-                cleanTitle == "ed" || cleanTitle.contains("ending") || cleanTitle.contains("credits") ||
+                (cleanTitle == "ed" || cleanTitle.contains("ending") || cleanTitle.contains("credits") ||
                 cleanTitle.contains("outro") || cleanTitle.contains("encerramento") ||
-                cleanTitle.contains("credito") || cleanTitle.matches(Regex(".*\\b(ed|nced)\\d*\\b.*")) ->
+                cleanTitle.contains("credito") || cleanTitle.matches(Regex(".*\\b(ed|nced)\\d*\\b.*"))) && startTime >= 300.0 ->
                     ChapterType.ENDING
                 else -> ChapterType.OTHER
             }

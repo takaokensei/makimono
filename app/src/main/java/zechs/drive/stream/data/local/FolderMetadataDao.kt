@@ -26,4 +26,12 @@ interface FolderMetadataDao {
     @Query("UPDATE folder_metadata SET posterUrl = :posterUrl WHERE folderId = :folderId")
     suspend fun updatePosterUrl(folderId: String, posterUrl: String)
 
+    @Query("DELETE FROM folder_metadata WHERE folderId = :folderId")
+    suspend fun delete(folderId: String)
+
+    @Query("DELETE FROM folder_metadata WHERE folderId NOT IN (:validFolderIds)")
+    suspend fun deleteExcept(validFolderIds: List<String>)
+
 }
+
+

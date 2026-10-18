@@ -1,331 +1,342 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:background="@android:color/transparent">
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:background="#0A0B0E">
 
-    <!-- Scrollable container for inputs & catalog with defined max height -->
-    <androidx.core.widget.NestedScrollView
-        android:id="@+id/scrollEditor"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:fillViewport="true"
-        app:layout_constrainedHeight="true"
-        app:layout_constraintHeight_max="480dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent">
+    <!-- Left 42%: Full-Height Live Profile Preview (Crunchyroll TV reference) -->
+    <FrameLayout
+        android:id="@+id/layoutLeftPreview"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="42">
+
+        <ImageView
+            android:id="@+id/ivPreviewBgA"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:contentDescription="@null"
+            android:src="@drawable/bg_profile_fantasy" />
+
+        <ImageView
+            android:id="@+id/ivPreviewBgB"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:contentDescription="@null"
+            android:alpha="0"
+            android:src="@drawable/bg_profile_fantasy" />
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center"
             android:orientation="vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingTop="12dp"
-            android:paddingBottom="16dp">
+            android:paddingHorizontal="32dp">
 
-            <!-- Profile Name Input -->
-            <EditText
-                android:id="@+id/profileName"
-                style="@style/TextAppearance.Makimono.TV.Body"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:background="@drawable/glass_input_bg"
-                android:hint="@string/profile_name_hint"
-                android:inputType="textPersonName"
-                android:maxLength="32"
-                android:paddingHorizontal="14dp"
-                android:singleLine="true"
-                android:textColor="@color/obsidian_text_primary"
-                android:textColorHint="@color/obsidian_text_tertiary" />
+            <FrameLayout
+                android:layout_width="160dp"
+                android:layout_height="160dp">
 
-            <!-- Live Profile Preview Card (Crunchyroll TV reference) -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardProfilePreview"
-                android:layout_width="match_parent"
-                android:layout_height="110dp"
-                android:layout_marginTop="10dp"
-                app:cardCornerRadius="14dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/obsidian_border_glass"
-                app:cardBackgroundColor="@color/obsidian_bg_surface">
-
-                <FrameLayout
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/ivPreviewAvatarA"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent">
+                    android:layout_height="match_parent"
+                    android:contentDescription="@null"
+                    android:scaleType="centerCrop"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
+                    app:strokeColor="@color/white"
+                    app:strokeWidth="3.5dp" />
 
-                    <ImageView
-                        android:id="@+id/ivPreviewBg"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:scaleType="centerCrop"
-                        android:contentDescription="@null"
-                        android:src="@drawable/bg_profile_fantasy" />
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:background="@drawable/bg_surface_overlay" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:paddingHorizontal="16dp">
-
-                        <com.google.android.material.imageview.ShapeableImageView
-                            android:id="@+id/ivPreviewAvatar"
-                            android:layout_width="64dp"
-                            android:layout_height="64dp"
-                            android:contentDescription="@null"
-                            android:scaleType="centerCrop"
-                            android:src="@drawable/ic_image_placeholder_24"
-                            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
-                            app:strokeColor="?attr/colorAccentPrimary"
-                            app:strokeWidth="2dp" />
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="14dp"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:id="@+id/tvPreviewName"
-                                style="@style/TextAppearance.Makimono.TV.Title3"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:ellipsize="end"
-                                android:maxLines="1"
-                                android:text="@string/profile_name_hint"
-                                android:textColor="@color/obsidian_text_primary"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:id="@+id/tvPreviewRoleBadge"
-                                style="@style/TextAppearance.Makimono.TV.Badge"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:background="@drawable/glass_meta_pill_bg"
-                                android:paddingHorizontal="8dp"
-                                android:paddingVertical="2dp"
-                                android:text="Perfil Padrão"
-                                android:textColor="@color/obsidian_text_secondary" />
-                        </LinearLayout>
-                    </LinearLayout>
-                </FrameLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Role Checkboxes -->
-            <LinearLayout
-                android:id="@+id/profileRolesRow"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal">
-
-                <CheckBox
-                    android:id="@+id/isAdmin"
-                    style="@style/TextAppearance.Makimono.TV.Callout"
-                    android:layout_width="0dp"
-                    android:layout_height="40dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_player_action_vertical"
-                    android:buttonTint="@color/obsidian_accent_primary"
-                    android:paddingStart="4dp"
-                    android:text="@string/profile_role_admin"
-                    android:textColor="@color/obsidian_text_primary" />
-
-                <View
-                    android:layout_width="12dp"
-                    android:layout_height="1dp" />
-
-                <CheckBox
-                    android:id="@+id/isKids"
-                    style="@style/TextAppearance.Makimono.TV.Callout"
-                    android:layout_width="0dp"
-                    android:layout_height="40dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_player_action_vertical"
-                    android:buttonTint="@color/obsidian_accent_primary"
-                    android:paddingStart="4dp"
-                    android:text="@string/profile_role_kids"
-                    android:textColor="@color/obsidian_text_primary" />
-            </LinearLayout>
-
-            <!-- Filter selection buttons: Avatares / Wallpapers -->
-            <LinearLayout
-                android:id="@+id/profileArtTabs"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:orientation="horizontal">
-
-                <Button
-                    android:id="@+id/btnTabAvatars"
-                    style="@style/TextAppearance.Makimono.TV.Caption"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="6dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/glass_pill_accent_bg"
-                    android:ellipsize="none"
-                    android:gravity="center"
-                    android:maxLines="2"
-                    android:minHeight="48dp"
-                    android:text="@string/profile_avatar_tab"
-                    android:textColor="@color/obsidian_bg_base"
-                    android:singleLine="false"
-                    android:textStyle="bold" />
-
-                <Button
-                    android:id="@+id/btnTabWallpapers"
-                    style="@style/TextAppearance.Makimono.TV.Caption"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/glass_pill_button_bg"
-                    android:ellipsize="none"
-                    android:gravity="center"
-                    android:maxLines="2"
-                    android:minHeight="48dp"
-                    android:text="@string/profile_wallpaper_tab"
-                    android:textColor="@color/obsidian_text_secondary"
-                    android:singleLine="false" />
-            </LinearLayout>
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/ivPreviewAvatarB"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@null"
+                    android:scaleType="centerCrop"
+                    android:alpha="0"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
+                    app:strokeColor="@color/white"
+                    app:strokeWidth="3.5dp" />
+            </FrameLayout>
 
             <TextView
-                android:id="@+id/catalogStatus"
-                style="@style/TextAppearance.Makimono.TV.Badge"
-                android:layout_width="match_parent"
+                android:id="@+id/tvPreviewName"
+                style="@style/TextAppearance.Makimono.TV.Title2"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:accessibilityLiveRegion="polite"
-                android:paddingVertical="4dp"
-                android:text="@string/profile_catalog_initial_status"
-                android:textColor="@color/obsidian_text_tertiary" />
+                android:layout_marginTop="20dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:shadowColor="#D0000000"
+                android:shadowDx="0"
+                android:shadowDy="2"
+                android:shadowRadius="10"
+                android:textColor="@color/white"
+                android:textStyle="bold"
+                tools:text="Taka" />
 
-            <!-- Gallery Grid with fixed column widths and cards -->
-            <HorizontalScrollView
-                android:id="@+id/profileArtCarousel"
-                android:layout_width="match_parent"
-                android:layout_height="132dp"
-                android:clipChildren="false"
-                android:clipToPadding="false"
-                android:fillViewport="false"
-                android:focusable="false"
-                android:paddingHorizontal="4dp"
-                android:scrollbars="none">
+        </LinearLayout>
+    </FrameLayout>
 
-                <GridLayout
-                    android:id="@+id/catalogImages"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:clipChildren="false"
-                    android:clipToPadding="false"
-                    android:columnCount="1"
-                    android:paddingVertical="4dp" />
-            </HorizontalScrollView>
+    <!-- Right 58%: Menu & Catalogs Container -->
+    <FrameLayout
+        android:id="@+id/layoutRightContainer"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="58"
+        android:background="#000000"
+        android:paddingHorizontal="48dp"
+        android:paddingTop="48dp"
+        android:paddingBottom="40dp">
 
-            <!-- Search is secondary to choosing a built-in image, so keep the art visible first. -->
+        <!-- Screen 1: Main Menu "Preferências do perfil" -->
+        <LinearLayout
+            android:id="@+id/panelMainMenu"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvPreferencesTitle"
+                style="@style/TextAppearance.Makimono.TV.Title1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="36dp"
+                android:text="Preferências do perfil"
+                android:textColor="@color/white"
+                android:textStyle="bold" />
+
+            <!-- Row 1: Profile Name -->
             <LinearLayout
-                android:id="@+id/profileArtSearchRow"
+                android:id="@+id/rowProfileName"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal">
+                android:layout_height="56dp"
+                android:background="@drawable/bg_profile_menu_row"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="20dp">
 
-                <EditText
-                    android:id="@+id/catalogQuery"
-                    style="@style/TextAppearance.Makimono.TV.Caption"
+                <TextView
+                    android:id="@+id/tvProfileNameLabel"
+                    style="@style/TextAppearance.Makimono.TV.Body"
                     android:layout_width="0dp"
-                    android:layout_height="42dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:background="@drawable/glass_input_bg"
-                    android:hint="@string/profile_catalog_query_hint"
-                    android:imeOptions="actionSearch"
-                    android:inputType="text"
-                    android:paddingHorizontal="12dp"
-                    android:singleLine="true"
-                    android:textColor="@color/obsidian_text_primary"
-                    android:textColorHint="@color/obsidian_text_tertiary" />
+                    android:text="Nome do perfil"
+                    android:textColor="@color/color_profile_menu_text"
+                    android:textStyle="bold" />
 
-                <Button
-                    android:id="@+id/searchCatalog"
-                    style="@style/TextAppearance.Makimono.TV.Caption"
+                <TextView
+                    android:id="@+id/tvProfileNameValue"
+                    style="@style/TextAppearance.Makimono.TV.Body"
                     android:layout_width="wrap_content"
-                    android:layout_height="42dp"
-                    android:layout_marginStart="8dp"
-                    android:background="@drawable/bg_player_action_vertical"
-                    android:paddingHorizontal="14dp"
-                    android:text="@string/profile_catalog_search_action"
-                    android:textColor="@color/obsidian_accent_primary" />
-
-                <Button
-                    android:id="@+id/btnClearSearch"
-                    style="@style/TextAppearance.Makimono.TV.Caption"
-                    android:layout_width="wrap_content"
-                    android:layout_height="42dp"
-                    android:layout_marginStart="6dp"
-                    android:background="@drawable/bg_player_action_vertical"
-                    android:paddingHorizontal="10dp"
-                    android:text="Padrão"
-                    android:visibility="gone"
-                    android:textColor="@color/obsidian_text_tertiary" />
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/color_profile_menu_text"
+                    android:textStyle="bold"
+                    tools:text="Taka" />
             </LinearLayout>
 
-            <!-- Direct image URLs are an advanced override; keep the art picker in view by default. -->
-            <Button
-                android:id="@+id/toggleCustomUrls"
-                style="@style/TextAppearance.Makimono.TV.Badge"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/bg_player_action_vertical"
-                android:text="@string/profile_custom_urls_show"
-                android:textColor="@color/obsidian_text_tertiary" />
-
+            <!-- Row 2: Change Avatar -->
             <LinearLayout
-                android:id="@+id/customUrlsGroup"
+                android:id="@+id/btnChangeAvatar"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_profile_menu_row"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="20dp">
+
+                <TextView
+                    style="@style/TextAppearance.Makimono.TV.Body"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Mudar Avatar"
+                    android:textColor="@color/color_profile_menu_text"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Row 3: Change Background -->
+            <LinearLayout
+                android:id="@+id/btnChangeBackground"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_profile_menu_row"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="20dp">
+
+                <TextView
+                    style="@style/TextAppearance.Makimono.TV.Body"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Mudar Papel de Parede"
+                    android:textColor="@color/color_profile_menu_text"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <!-- Bottom Row: Delete & DONE Buttons -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone">
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-                <EditText
-                    android:id="@+id/avatarUrl"
-                    style="@style/TextAppearance.Makimono.TV.Badge"
-                    android:layout_width="match_parent"
-                    android:layout_height="42dp"
-                    android:layout_marginTop="4dp"
-                    android:background="@drawable/glass_input_bg"
-                    android:hint="@string/profile_avatar_url_hint"
-                    android:inputType="textUri"
-                    android:paddingHorizontal="12dp"
-                    android:singleLine="true"
-                    android:textColor="@color/obsidian_text_primary"
-                    android:textColorHint="@color/obsidian_text_tertiary" />
+                <TextView
+                    android:id="@+id/btnDeleteProfile"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_btn_delete_profile"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:fontFamily="@font/inter"
+                    android:paddingHorizontal="18dp"
+                    android:paddingVertical="10dp"
+                    android:text="@string/profile_delete_menu_action"
+                    android:textColor="@color/color_btn_delete_profile_text"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
 
-                <EditText
-                    android:id="@+id/backgroundUrl"
-                    style="@style/TextAppearance.Makimono.TV.Badge"
-                    android:layout_width="match_parent"
-                    android:layout_height="42dp"
-                    android:layout_marginTop="4dp"
-                    android:background="@drawable/glass_input_bg"
-                    android:hint="@string/profile_wallpaper_url_hint"
-                    android:inputType="textUri"
-                    android:paddingHorizontal="12dp"
-                    android:singleLine="true"
-                    android:textColor="@color/obsidian_text_primary"
-                    android:textColorHint="@color/obsidian_text_tertiary" />
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDone"
+                    style="@style/TextAppearance.Makimono.TV.Body"
+                    android:layout_width="160dp"
+                    android:layout_height="48dp"
+                    android:background="@drawable/bg_profile_done_btn"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:insetLeft="0dp"
+                    android:insetTop="0dp"
+                    android:insetRight="0dp"
+                    android:insetBottom="0dp"
+                    android:letterSpacing="0.08"
+                    android:text="CONCLUÍDO"
+                    android:textColor="@color/color_profile_done_text"
+                    android:textStyle="bold"
+                    app:backgroundTint="@null" />
             </LinearLayout>
 
         </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <!-- Screen 2: Choose an Avatar -->
+        <LinearLayout
+            android:id="@+id/panelAvatarCatalog"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvAvatarCatalogTitle"
+                style="@style/TextAppearance.Makimono.TV.Title1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="Escolher um avatar"
+                android:textColor="@color/white"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:id="@+id/layoutAvatarSkeleton"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:visibility="gone">
+                <include layout="@layout/component_crunchyroll_skeleton" />
+                <include layout="@layout/component_crunchyroll_skeleton" />
+            </LinearLayout>
+
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/scrollAvatarCatalog"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:fillViewport="true">
+
+                <LinearLayout
+                    android:id="@+id/layoutAvatarSections"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
+                    android:orientation="vertical"
+                    android:paddingBottom="40dp" />
+            </androidx.core.widget.NestedScrollView>
+        </LinearLayout>
+
+        <!-- Screen 3: Choose a Background -->
+        <LinearLayout
+            android:id="@+id/panelWallpaperCatalog"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvWallpaperCatalogTitle"
+                style="@style/TextAppearance.Makimono.TV.Title1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="Escolher um papel de parede"
+                android:textColor="@color/white"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:id="@+id/layoutWallpaperSkeleton"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:visibility="gone">
+                <include layout="@layout/component_crunchyroll_skeleton" />
+                <include layout="@layout/component_crunchyroll_skeleton" />
+            </LinearLayout>
+
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/scrollWallpaperCatalog"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:fillViewport="true">
+
+                <LinearLayout
+                    android:id="@+id/layoutWallpaperSections"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
+                    android:orientation="vertical"
+                    android:paddingBottom="40dp" />
+            </androidx.core.widget.NestedScrollView>
+        </LinearLayout>
+
+    </FrameLayout>
+
+</LinearLayout>

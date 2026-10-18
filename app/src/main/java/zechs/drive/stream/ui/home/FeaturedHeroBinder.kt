@@ -45,32 +45,121 @@ internal class FeaturedHeroBinder(
         }
 
         val imageUrl = featured.backdropUrl ?: featured.posterUrl
-        binding.ivFeaturedBackdrop?.let { imageView ->
+        val baseImageView = binding.ivFeaturedBackdrop
+        val nextImageView = binding.ivFeaturedBackdropNext
+        if (baseImageView != null) {
             if (imageUrl.isNullOrBlank()) {
                 displayedBackdropUrl = null
-                Glide.with(imageView).clear(imageView)
-                imageView.setImageResource(R.drawable.kodi_primary_bg)
+                Glide.with(baseImageView).clear(baseImageView)
+                baseImageView.setImageResource(R.drawable.kodi_primary_bg)
+                nextImageView?.alpha = 0f
             } else if (displayedBackdropUrl != imageUrl) {
                 displayedBackdropUrl = imageUrl
-                val currentDrawable = imageView.drawable
-                val baseRequest = Glide.with(imageView)
-                    .load(imageUrl)
-                    .override(1440, 810)
-                    .format(com.bumptech.glide.load.DecodeFormat.PREFER_ARGB_8888)
-                    .centerCrop()
-                    .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
-                val requestWithPlaceholder = if (currentDrawable != null) {
-                    baseRequest.placeholder(currentDrawable)
+                if (nextImageView != null && !reduceMotionEnabled && baseImageView.drawable != null) {
+                    Glide.with(nextImageView)
+                        .load(imageUrl)
+                        .override(1440, 810)
+                        .format(com.bumptech.glide.load.DecodeFormat.PREFER_ARGB_8888)
+                        .centerCrop()
+                        .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
+                        .listener(object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
+                            override fun onLoadFailed(
+                                e: com.bumptech.glide.load.engine.GlideException?,
+                                model: Any?,
+                                target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>,
+                                isFirstResource: Boolean
+                            ): Boolean = false
+
+                            override fun onResourceReady(
+                                resource: android.graphics.drawable.Drawable,
+                                model: Any,
+                                target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?,
+                                dataSource: com.bumptech.glide.load.DataSource,
+                                isFirstResource: Boolean
+                            ): Boolean {
+                                nextImageView.animate().cancel()
+                                nextImageView.alpha = 0f
+                                nextImageView.setImageDrawable(resource)
+                                nextImageView.animate()
+                                    .alpha(1f)
+                                    .setDuration(400L)
+                                    .withEndAction {
+                                        baseImageView.setImageDrawable(resource)
+                                        nextImageView.alpha = 0f
+                                    }
+                                    .start()
+                                return true
+                            }
+                        })
+                        .into(nextImageView)
                 } else {
-                    baseRequest.placeholder(R.drawable.kodi_primary_bg)
+                    Glide.with(baseImageView)
+                        .load(imageUrl)
+                        .override(1440, 810)
+                        .format(com.bumptech.glide.load.DecodeFormat.PREFER_ARGB_8888)
+                        .centerCrop()
+                        .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
+                        .placeholder(R.drawable.kodi_primary_bg)
+                        .error(R.drawable.kodi_primary_bg)
+                        .into(baseImageView)
+                    nextImageView?.alpha = 0f
                 }
-                val finalRequest = if (reduceMotionEnabled) {
-                    requestWithPlaceholder.dontAnimate()
-                } else {
-                    requestWithPlaceholder.transition(DrawableTransitionOptions.withCrossFade(400))
-                }
-                finalRequest.error(R.drawable.kodi_primary_bg).into(imageView)
             }
+        }
+    }
+
+    fun updatePaginationPills(
+        count: Int,
+        activeIndex: Int,
+        onPillSelected: (Int) -> Unit
+    ) {
+        val container = binding.layoutHeroPaginationPills ?: return
+        if (count <= 1) {
+            container.visibility = View.GONE
+            return
+        }
+        container.visibility = View.VISIBLE
+        container.removeAllViews()
+
+        val density = context.resources.displayMetrics.density
+        val accentColor = context.resolveThemeColor(R.attr.colorAccentPrimary)
+        val inactiveColor = androidx.core.content.ContextCompat.getColor(context, R.color.obsidian_border_glass)
+
+        for (i in 0 until count) {
+            val isActive = i == activeIndex
+            val pill = View(context).apply {
+                val pillWidth = if (isActive) (28 * density).toInt() else (10 * density).toInt()
+                val pillHeight = (5 * density).toInt()
+                val lp = android.widget.LinearLayout.LayoutParams(pillWidth, pillHeight).apply {
+                    marginEnd = (6 * density).toInt()
+                }
+                layoutParams = lp
+
+                val drawable = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    cornerRadius = 3 * density
+                    setColor(if (isActive) accentColor else inactiveColor)
+                }
+                background = drawable
+                isFocusable = true
+                isFocusableInTouchMode = true
+                contentDescription = "Destaque ${i + 1} de $count"
+
+                setOnFocusChangeListener { _, hasFocus ->
+                    if (hasFocus) {
+                        drawable.setColor(accentColor)
+                        animate().scaleY(1.4f).setDuration(120L).start()
+                        onPillSelected(i)
+                    } else {
+                        animate().scaleY(1.0f).setDuration(120L).start()
+                        drawable.setColor(if (i == activeIndex) accentColor else inactiveColor)
+                    }
+                }
+                setOnClickListener {
+                    onPillSelected(i)
+                }
+            }
+            container.addView(pill)
         }
     }
 

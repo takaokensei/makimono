@@ -4,34 +4,41 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:background="?attr/colorBgBase">
 
     <ImageView
-        android:id="@+id/ivFantasyBg"
+        android:id="@+id/ivFantasyBgA"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:importantForAccessibility="no"
         android:scaleType="centerCrop"
         android:src="@drawable/bg_profile_fantasy"
+        android:alpha="1"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageView
+        android:id="@+id/ivFantasyBgB"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="centerCrop"
+        android:src="@drawable/bg_profile_fantasy"
+        android:alpha="0"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <View
-        android:id="@+id/vignetteOverlay"
+        android:id="@+id/bgDarkScrim"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@drawable/series_detail_vignette"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/obsidian_scrim"
+        android:background="@drawable/bg_profile_scrim"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -48,13 +55,17 @@
         android:id="@+id/tvProfilesTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="52dp"
         android:layout_marginBottom="16dp"
         android:fontFamily="@font/inter"
         android:text="@string/profile_selection_title"
-        android:textColor="?attr/colorTextPrimary"
+        android:textColor="@color/white"
         android:textSize="@dimen/profile_title_size"
         android:textStyle="bold"
+        android:shadowColor="#FF000000"
+        android:shadowDx="0"
+        android:shadowDy="3"
+        android:shadowRadius="16"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
@@ -69,9 +80,10 @@
         android:clipChildren="false"
         android:clipToPadding="false"
         android:overScrollMode="never"
+        android:nextFocusDown="@+id/btnLogOut"
         app:layout_constrainedHeight="true"
-        app:layout_constraintWidth_max="560dp"
-        app:layout_constraintBottom_toTopOf="@id/btnManageProfiles"
+        app:layout_constraintWidth_max="640dp"
+        app:layout_constraintBottom_toTopOf="@id/btnLogOut"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
@@ -79,62 +91,121 @@
         tools:itemCount="3"
         tools:listitem="@layout/item_profile_card" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnManageProfiles"
+    <TextView
+        android:id="@+id/btnLogOut"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:minHeight="64dp"
-        android:layout_marginBottom="12dp"
-        android:background="@drawable/btn_manage_profiles_bg"
-        android:letterSpacing="0.08"
-        android:paddingHorizontal="32dp"
-        android:paddingVertical="12dp"
-        android:text="@string/profile_manage_action"
-        android:textAllCaps="false"
-        android:textColor="?attr/colorTextPrimary"
-        style="@style/TextAppearance.Makimono.TV.Callout"
-        android:textStyle="bold"
-        app:backgroundTint="@null"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/btnProfileSettings" />
-
-    <LinearLayout
-        android:id="@+id/btnProfileSettings"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:minHeight="48dp"
-        android:layout_marginBottom="24dp"
-        android:background="@drawable/bg_glass_pill"
+        android:layout_marginBottom="40dp"
+        android:background="@drawable/bg_btn_logout"
         android:clickable="true"
         android:focusable="true"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingEnd="18dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp"
+        android:fontFamily="@font/inter"
+        android:gravity="center"
+        android:letterSpacing="0.08"
+        android:minWidth="140dp"
+        android:paddingHorizontal="32dp"
+        android:paddingVertical="10dp"
+        android:nextFocusUp="@+id/rvProfiles"
+        android:text="@string/profile_logout_action"
+        android:textColor="@color/color_btn_logout_text"
+        android:textSize="14sp"
+        android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- Crunchyroll-style Profile Loading/Welcome Screen -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layoutProfileWelcome"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/black"
+        android:clickable="true"
+        android:focusable="true"
+        android:elevation="40dp"
+        android:translationZ="40dp"
+        android:visibility="gone"
+        tools:visibility="gone">
 
         <ImageView
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:contentDescription="@null"
-            android:src="@drawable/ic_settings_24"
-            app:tint="@color/obsidian_text_secondary" />
+            android:id="@+id/ivWelcomeBg"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:importantForAccessibility="no"
+            android:src="@drawable/bg_profile_fantasy" />
 
-        <TextView
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#55000000" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/series_detail_vignette" />
+
+        <LinearLayout
+            android:id="@+id/welcomeContentCenter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:fontFamily="@font/inter"
-            android:text="@string/profile_settings_action"
-            android:textColor="@color/obsidian_text_primary"
-            style="@style/TextAppearance.Makimono.TV.Body"
-            android:textStyle="bold" />
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
 
-    </LinearLayout>
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/ivWelcomeAvatar"
+                android:layout_width="160dp"
+                android:layout_height="160dp"
+                android:contentDescription="@null"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_image_placeholder_24"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
+                app:strokeColor="@color/white"
+                app:strokeWidth="3.5dp" />
+
+            <TextView
+                android:id="@+id/tvWelcomeGreeting"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:fontFamily="@font/inter"
+                android:textColor="@color/white"
+                android:textSize="32sp"
+                android:textStyle="bold"
+                android:shadowColor="#CC000000"
+                android:shadowDx="0"
+                android:shadowDy="2"
+                android:shadowRadius="10"
+                tools:text="Bem-vindo, Taka!" />
+
+            <TextView
+                android:id="@+id/tvWelcomeSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:fontFamily="@font/inter"
+                android:textColor="#E8E8E8"
+                android:textSize="18sp"
+                android:shadowColor="#AA000000"
+                android:shadowDx="0"
+                android:shadowDy="2"
+                android:shadowRadius="8"
+                tools:text="Só um segundo, aumentando os níveis de poder…" />
+
+            <ProgressBar
+                android:id="@+id/pbWelcomeSpinner"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginTop="28dp"
+                android:indeterminate="true"
+                android:indeterminateTint="?attr/colorAccentPrimary" />
+
+        </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

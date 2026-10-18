@@ -1,0 +1,3 @@
+interface:
+  display_name: "Android TV Emulator"
+  short_description: "Start and verify the local Android TV AVD"

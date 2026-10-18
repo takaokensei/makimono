@@ -57,7 +57,8 @@ class HomeViewModel @Inject constructor(
     private val favoriteRepository: zechs.drive.stream.data.repository.FavoriteRepository,
     private val catalogRepository: CatalogRepository,
     private val watchQueueRepository: WatchQueueRepository,
-    private val profileManager: ProfileManager
+    private val profileManager: ProfileManager,
+    private val franchiseGroupingManager: zechs.drive.stream.domain.library.FranchiseGroupingManager
 ) : ViewModel() {
 
     companion object {
@@ -245,7 +246,15 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             watchQueue.collect { updateUnifiedUiState() }
         }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                folderMetadataRepository.cleanCorruptedMetadata(animePosterResolver)
+            } catch (e: Exception) {
+                zechs.drive.stream.utils.AppLog.w("HomeViewModel", "cleanCorruptedMetadata error: ${e.message}")
+            }
+        }
     }
+
 
     fun onEvent(event: HomeEvent) {
         when (event) {
@@ -510,9 +519,6 @@ class HomeViewModel @Inject constructor(
                 }
 
                 _starredFiles.value = filesWithPosters
-
-                // 4. In background, resolve posters for folders missing a cached poster
-                resolveMissingPosters(filesWithPosters)
             } else {
                 _starredFiles.value = emptyList()
             }
@@ -520,34 +526,6 @@ class HomeViewModel @Inject constructor(
             if (e is CancellationException) throw e
             AppLog.e(TAG, "Error fetching starred files", e)
             _uiErrorEvents.emit(UiError.fromThrowable(e))
-        }
-    }
-
-    private fun resolveMissingPosters(files: List<DriveFile>) = viewModelScope.launch(Dispatchers.IO) {
-        val updatedList = files.toMutableList()
-        val targets = updatedList.indices.take(60).filter { i ->
-            val file = updatedList[i]
-            val isFolder = file.isFolder || file.isShortcutFolder
-            isFolder && file.posterUrl.isNullOrBlank()
-        }
-
-        targets.chunked(6).forEach { chunk ->
-            coroutineScope {
-                chunk.map { index ->
-                    async {
-                        val file = updatedList[index]
-                        val targetId = if (file.isShortcut) file.shortcutDetails.targetId ?: file.id else file.id
-                        val poster = animePosterResolver.resolvePoster(file.name)
-                        if (!poster.isNullOrBlank()) {
-                            folderMetadataRepository.updatePosterUrl(targetId, file.name, poster)
-                            index to poster
-                        } else null
-                    }
-                }.awaitAll()
-            }.filterNotNull().forEach { (index, poster) ->
-                updatedList[index] = updatedList[index].copy(posterUrl = poster)
-            }
-            _starredFiles.value = updatedList.toList()
         }
     }
 
@@ -624,9 +602,10 @@ class HomeViewModel @Inject constructor(
                             )
                         }, folderId)
                         if (cachedChildren.isNotEmpty() && _animeLibrary.value.isEmpty()) {
-                            _animeLibrary.value = cachedDriveFiles
-                            _filteredAnimes.value = cachedDriveFiles
-                            resolveFeaturedSpotlight(cachedDriveFiles)
+                            val groupedCached = franchiseGroupingManager.groupLibrary(cachedDriveFiles)
+                            _animeLibrary.value = groupedCached
+                            _filteredAnimes.value = groupedCached
+                            resolveFeaturedSpotlight(groupedCached)
                         }
 
                         val query = "'$folderId' in parents and trashed=false"
@@ -704,11 +683,12 @@ class HomeViewModel @Inject constructor(
                             isComplete = listing.isComplete
                         )
 
-                            _animeLibrary.value = displayFiles
-                            _filteredAnimes.value = displayFiles
+                            val groupedDisplay = franchiseGroupingManager.groupLibrary(displayFiles)
+                            _animeLibrary.value = groupedDisplay
+                            _filteredAnimes.value = groupedDisplay
                             _isLoadingAnime.value = false
                             if (_featuredAnime.value == null) {
-                                resolveFeaturedSpotlight(displayFiles)
+                                resolveFeaturedSpotlight(groupedDisplay)
                             }
 
                             // Never replace a complete offline snapshot with a truncated response.
@@ -727,19 +707,30 @@ class HomeViewModel @Inject constructor(
                                 )
                             }
 
-                            // Resolve posters and metadata concurrently in batches of 6
+                            val animeFolderIds = displayFiles.map { if (it.isShortcut) it.shortcutDetails.targetId ?: it.id else it.id }.toSet()
+                            if (animeFolderIds.isNotEmpty() && folderId != "root") {
+                                folderMetadataRepository.retainOnlyLibraryFolders(animeFolderIds)
+                            }
+
+                            // Resolve posters and metadata concurrently in batches of 6 (strictly inside the library root, never across the whole Drive)
                             val updatedList = displayFiles.toMutableList()
-                            val unresolvedIndices = updatedList.indices.take(120).filter { i ->
-                                val file = updatedList[i]
-                                val targetId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
-                                    file.shortcutDetails.targetId
-                                } else file.id
-                                val meta = allMeta[targetId] ?: allMeta[file.id]
-                                val isFolderType = file.isFolder || file.isShortcutFolder
-                                val isMissingMeta = meta?.posterUrl.isNullOrBlank() ||
-                                    meta?.bannerUrl.isNullOrBlank() ||
-                                    meta?.synopsis.isNullOrBlank()
-                                isFolderType && isMissingMeta
+                            val isLibraryRoot = folderId != "root" && !folderName.equals("Meu Drive", ignoreCase = true)
+                            val unresolvedIndices = if (!isLibraryRoot) {
+                                emptyList()
+                            } else {
+                                updatedList.indices.take(120).filter { i ->
+                                    val file = updatedList[i]
+                                    val cleanName = AnimePosterResolver.cleanAnimeTitle(file.name).lowercase()
+                                    if (cleanName.contains("download")) return@filter false
+                                    val targetId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
+                                        file.shortcutDetails.targetId
+                                    } else file.id
+                                    val meta = allMeta[targetId] ?: allMeta[file.id]
+                                    val isFolderType = file.isFolder || file.isShortcutFolder
+                                    val isCorrupted = meta != null && meta.titleRomaji != null &&
+                                        AnimePosterResolver.calculateSimilarity(cleanName, meta.titleRomaji) < 0.35
+                                    isFolderType && (meta == null || isCorrupted)
+                                }
                             }
 
                             unresolvedIndices.chunked(6).forEach { chunk ->
@@ -749,17 +740,25 @@ class HomeViewModel @Inject constructor(
                                             val file = updatedList[index]
                                             val meta = animePosterResolver.resolveMetadata(file.name)
                                             val poster = meta?.posterUrl
+                                            val targetId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
+                                                file.shortcutDetails.targetId
+                                            } else file.id
                                             if (meta != null && !poster.isNullOrBlank()) {
-                                                val targetId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
-                                                    file.shortcutDetails.targetId
-                                                } else file.id
                                                 folderMetadataRepository.saveAnimeMetadata(
                                                     folderId = targetId,
                                                     folderName = file.name,
                                                     metadata = meta
                                                 )
                                                 ResolvedItemData(index, poster, meta.synopsis, meta.isMovie)
-                                            } else null
+                                            } else {
+                                                // Save placeholder in database so this folder is never re-queried across network on subsequent launches
+                                                folderMetadataRepository.updateMetadataDetails(
+                                                    folderId = targetId,
+                                                    folderName = file.name,
+                                                    posterUrl = ""
+                                                )
+                                                null
+                                            }
                                         }
                                     }.awaitAll()
                                 }.filterNotNull().forEach { item ->
@@ -769,12 +768,14 @@ class HomeViewModel @Inject constructor(
                                         isMovie = item.isMovie
                                     )
                                 }
-                                _animeLibrary.value = updatedList.toList()
+                                val groupedUpdated = franchiseGroupingManager.groupLibrary(updatedList)
+                                _animeLibrary.value = groupedUpdated
                                 applyCurrentFilter()
                             }
                             cachedFolderMetaMap = folderMetadataRepository.getAllMetadata().associateBy { it.folderId }
                             _homeState.value = HomeState.Content
                             if (listingWarning != null) _libraryLoadError.value = listingWarning
+                            preloadLibraryMetadata(updatedList)
                 } else {
                     AppLog.w(TAG, "Pasta de biblioteca não encontrada no Google Drive.")
                     _isLoadingAnime.value = false
@@ -791,6 +792,52 @@ class HomeViewModel @Inject constructor(
                         isOffline = isOffline
                     )
                 }
+            }
+        }
+    }
+
+    private fun preloadLibraryMetadata(files: List<DriveFile>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val targetFolders = files.filter { it.isFolder || it.isShortcutFolder }
+                for (file in targetFolders.take(30)) {
+                    val folderId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
+                        file.shortcutDetails.targetId!!
+                    } else file.id
+
+                    val existing = folderMetadataRepository.getMetadata(folderId)
+                    if (existing == null || existing.synopsis.isNullOrBlank() || existing.score == null) {
+                        try {
+                            val resolved = animePosterResolver.resolveMetadata(file.name)
+                            if (resolved != null) {
+                                folderMetadataRepository.saveAnimeMetadata(folderId, file.name, resolved)
+                            }
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
+                        }
+                    }
+
+                    // Preload franchise members if any
+                    val hub = franchiseGroupingManager.getFranchiseHubForFolder(folderId)
+                    if (hub != null) {
+                        for (member in hub.members) {
+                            val memberMeta = folderMetadataRepository.getMetadata(member.folderId)
+                            if (memberMeta == null || memberMeta.score == null) {
+                                try {
+                                    val resolved = animePosterResolver.resolveMetadata(member.arcTitle)
+                                    if (resolved != null) {
+                                        folderMetadataRepository.saveAnimeMetadata(member.folderId, member.arcTitle, resolved)
+                                    }
+                                } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                AppLog.w(TAG, "Library preload error: ${e.message}")
             }
         }
     }
@@ -815,16 +862,33 @@ class HomeViewModel @Inject constructor(
     }
 
     private var featuredSpotlightIndex = 0
+    private val _featuredCandidates = MutableStateFlow<List<DriveFile>>(emptyList())
+    val featuredCandidates = _featuredCandidates.asStateFlow()
+    val currentFeaturedIndex = MutableStateFlow(0)
 
     fun cycleNextFeaturedSpotlight() {
         if (focusedFeaturedFolderId != null) return
-        val library = _animeLibrary.value
-        val folders = library.filter { it.isFolder || it.isShortcutFolder }
-        if (folders.size <= 1) return
-        val candidates = folders.filter { it.starred == zechs.drive.stream.data.model.Starred.STARRED }.ifEmpty { folders }
+        val candidates = _featuredCandidates.value.ifEmpty {
+            val folders = _animeLibrary.value.filter { it.isFolder || it.isShortcutFolder }
+            folders.filter { it.starred == zechs.drive.stream.data.model.Starred.STARRED }.ifEmpty { folders }.take(7)
+        }
+        if (candidates.size <= 1) return
         featuredSpotlightIndex = (featuredSpotlightIndex + 1) % candidates.size
+        currentFeaturedIndex.value = featuredSpotlightIndex
         val nextFolder = candidates[featuredSpotlightIndex]
         resolveFeaturedSpotlight(listOf(nextFolder), isFocusedPreview = false)
+    }
+
+    fun selectFeaturedByIndex(index: Int) {
+        val candidates = _featuredCandidates.value.ifEmpty {
+            val folders = _animeLibrary.value.filter { it.isFolder || it.isShortcutFolder }
+            folders.filter { it.starred == zechs.drive.stream.data.model.Starred.STARRED }.ifEmpty { folders }.take(7)
+        }
+        if (index !in candidates.indices) return
+        featuredSpotlightIndex = index
+        currentFeaturedIndex.value = index
+        val chosen = candidates[index]
+        resolveFeaturedSpotlight(listOf(chosen), isFocusedPreview = false)
     }
 
     fun previewFeatured(file: DriveFile) {
@@ -842,6 +906,13 @@ class HomeViewModel @Inject constructor(
         if (!isFocusedPreview && focusedFeaturedFolderId != null) return
         val folders = files.filter { it.isFolder || it.isShortcutFolder }
         if (folders.isEmpty()) return
+
+        if (!isFocusedPreview) {
+            val allLibraryFolders = _animeLibrary.value.filter { it.isFolder || it.isShortcutFolder }
+            val source = allLibraryFolders.ifEmpty { folders }
+            _featuredCandidates.value = source.filter { it.starred == zechs.drive.stream.data.model.Starred.STARRED }
+                .ifEmpty { source }.take(7)
+        }
 
         // Prefer starred anime, or the first folder
         val chosenFolder = folders.firstOrNull { it.starred == zechs.drive.stream.data.model.Starred.STARRED }
@@ -881,7 +952,9 @@ class HomeViewModel @Inject constructor(
         featuredSpotlightJob = viewModelScope.launch(Dispatchers.IO) {
             try {
                 val dbMeta = cachedHero ?: folderMetadataRepository.getMetadata(targetId)
-                val aniListMeta = if (dbMeta != null && !dbMeta.bannerUrl.isNullOrBlank() && !dbMeta.synopsis.isNullOrBlank()) {
+                val isCorrupted = dbMeta != null && dbMeta.titleRomaji != null &&
+                    AnimePosterResolver.calculateSimilarity(cleanTitle, dbMeta.titleRomaji) < 0.35
+                val aniListMeta = if (dbMeta != null && !isCorrupted && !dbMeta.bannerUrl.isNullOrBlank() && !dbMeta.synopsis.isNullOrBlank()) {
                     null
                 } else {
                     animePosterResolver.resolveMetadata(cleanTitle)
@@ -1068,7 +1141,6 @@ class HomeViewModel @Inject constructor(
         if (toAdd.isNotEmpty()) {
             current.addAll(toAdd)
             _filteredAnimes.value = current
-            resolveMissingPosters(toAdd)
         }
     }
 

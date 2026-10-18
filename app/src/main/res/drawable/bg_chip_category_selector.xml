@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#3322D3EE" />
+            <stroke android:width="2dp" android:color="@color/obsidian_accent" />
+            <corners android:radius="14dp" />
+        </shape>
+    </item>
+    <item android:state_selected="true" android:drawable="@drawable/bg_chip_category_active" />
+    <item android:drawable="@drawable/bg_chip_category_inactive" />
+</selector>

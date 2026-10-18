@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
     <!-- Obsidian / Swiss Glass TV: Apple tvOS/visionOS Glassmorphism + Swiss International Style -->
     <color name="obsidian_bg_base">#07080B</color>
     <color name="obsidian_bg_surface">#101218</color>
@@ -19,6 +21,17 @@
     <color name="obsidian_danger">#FF3B30</color>
     <color name="obsidian_scrim">#99050608</color>
     <color name="obsidian_media_scrim">#CC050608</color>
+
+    <!-- Obsidian Design System Specific Tokens -->
+    <color name="obsidian_bg">#070B11</color>
+    <color name="obsidian_surface">#111925</color>
+    <color name="obsidian_accent">#22D3EE</color>
+    <color name="obsidian_ice_white">#F5F7FA</color>
+    <color name="obsidian_gray">#B0B8C4</color>
+    <color name="obsidian_link_blue_gray">#8EA0B8</color>
+    <color name="obsidian_completed_green">#10B981</color>
+    <color name="obsidian_glass_fill">#26FFFFFF</color>
+    <color name="obsidian_glass_stroke">#33FFFFFF</color>
 
     <!-- Swiss Glass TV Explicit Tokens -->
     <color name="swiss_canvas_base">#07080B</color>

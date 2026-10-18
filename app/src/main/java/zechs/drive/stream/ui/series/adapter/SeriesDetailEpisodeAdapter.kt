@@ -3,13 +3,16 @@ package zechs.drive.stream.ui.series.adapter
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import zechs.drive.stream.R
 import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.databinding.ItemSeriesEpisodeCardBinding
+import zechs.drive.stream.domain.library.MediaItemCategory
 import zechs.drive.stream.ui.series.EpisodeCardAccessibilityLabel
+import zechs.drive.stream.utils.FocusEngine
 import zechs.drive.stream.utils.MediaImageLoader
 
 data class SeriesEpisodeItem(
@@ -22,7 +25,9 @@ data class SeriesEpisodeItem(
     val watchedDuration: Long,
     val totalDuration: Long,
     val badgeText: String? = null,
-    val fallbackThumbnailUrl: String? = null
+    val fallbackThumbnailUrl: String? = null,
+    val category: MediaItemCategory = MediaItemCategory.STORY,
+    val synopsis: String? = null
 )
 
 class SeriesDetailEpisodeAdapter(
@@ -72,9 +77,9 @@ class SeriesDetailEpisodeAdapter(
                 }
             }
 
-            zechs.drive.stream.utils.FocusEngine.attach(
+            FocusEngine.attach(
                 binding.cardEpisodeItem,
-                zechs.drive.stream.utils.FocusEngine.FocusKind.CARD
+                FocusEngine.FocusKind.CARD
             ) { _, hasFocus ->
                 binding.ivPlayOverlay.visibility = if (hasFocus) View.VISIBLE else View.GONE
                 updateSynopsisVisibility(hasFocus)
@@ -82,24 +87,28 @@ class SeriesDetailEpisodeAdapter(
         }
 
         fun bind(item: SeriesEpisodeItem) {
+            val context = binding.root.context
             binding.tvEpisodeTitle.text = item.displayTitle
+
             val hasDuration = item.durationText.isNotBlank()
             binding.tvEpisodeDuration.text = item.durationText
             binding.tvEpisodeDuration.visibility = if (hasDuration) View.VISIBLE else View.GONE
+
             val hasAudio = item.audioBadgeText.isNotBlank()
             binding.tvAudioBadge.text = item.audioBadgeText
             binding.tvAudioBadge.visibility = if (hasAudio) View.VISIBLE else View.GONE
             binding.tvEpisodeDot1.visibility = if (hasDuration && hasAudio) View.VISIBLE else View.GONE
 
-            // Google Drive descriptions are optional and user-authored. Reveal them only
-            // on the focused episode so the rail remains scannable at rest.
-            binding.tvEpisodeSynopsis.text = item.file.description
+            // Episode description / synopsis (2 lines at rest, expands to 4 lines on focus)
+            val desc = item.synopsis?.takeIf { it.isNotBlank() }
+                ?: item.file.description?.takeIf { it.isNotBlank() }
+            binding.tvEpisodeSynopsis.text = desc
                 ?.trim()
-                ?.takeIf { it.isNotEmpty() }
                 ?.take(MAX_DESCRIPTION_LENGTH)
                 .orEmpty()
             updateSynopsisVisibility(binding.cardEpisodeItem.hasFocus())
 
+            // Episode number badge overlay (e.g. "EP 01")
             val badge = item.badgeText ?: if (item.episodeNumber != null && item.episodeNumber > 0) {
                 String.format("EP %02d", item.episodeNumber)
             } else null
@@ -111,22 +120,32 @@ class SeriesDetailEpisodeAdapter(
                 binding.tvEpNumberBadge.visibility = View.GONE
             }
 
+            // Watched state & Progress bar
             val isWatched = item.progressPercent >= 90
-            binding.badgeWatched.visibility = if (isWatched) View.VISIBLE else View.GONE
-
-            if (item.progressPercent > 0) {
+            if (isWatched) {
+                binding.badgeWatched.visibility = View.VISIBLE
+                binding.pbEpisodeProgress.visibility = View.VISIBLE
+                binding.pbEpisodeProgress.progress = 100
+                binding.pbEpisodeProgress.progressTintList = ContextCompat.getColorStateList(
+                    context, R.color.obsidian_completed_green
+                )
+            } else if (item.progressPercent > 0) {
+                binding.badgeWatched.visibility = View.GONE
                 binding.pbEpisodeProgress.visibility = View.VISIBLE
                 binding.pbEpisodeProgress.progress = item.progressPercent
-                binding.tvEpisodeProgressPercent.visibility = View.VISIBLE
-                binding.tvEpisodeProgressPercent.text = "${item.progressPercent}%"
+                binding.pbEpisodeProgress.progressTintList = ContextCompat.getColorStateList(
+                    context, R.color.obsidian_accent
+                )
             } else {
+                binding.badgeWatched.visibility = View.GONE
                 binding.pbEpisodeProgress.visibility = View.GONE
-                binding.tvEpisodeProgressPercent.visibility = View.GONE
             }
 
-            val context = binding.root.context
+            // No percentage text shown (per user specification)
+            binding.tvEpisodeProgressPercent.visibility = View.GONE
+
             val progressDescription = when {
-                item.progressPercent >= 95 -> context.getString(R.string.series_episode_accessibility_watched)
+                item.progressPercent >= 90 -> context.getString(R.string.series_episode_accessibility_watched)
                 item.progressPercent > 0 -> context.getString(
                     R.string.series_episode_accessibility_in_progress,
                     item.progressPercent
@@ -151,8 +170,9 @@ class SeriesDetailEpisodeAdapter(
         }
 
         private fun updateSynopsisVisibility(hasFocus: Boolean) {
-            binding.tvEpisodeSynopsis.visibility =
-                if (hasFocus && binding.tvEpisodeSynopsis.text.isNotBlank()) View.VISIBLE else View.GONE
+            val hasText = binding.tvEpisodeSynopsis.text.isNotBlank()
+            binding.tvEpisodeSynopsis.visibility = if (hasText) View.VISIBLE else View.GONE
+            binding.tvEpisodeSynopsis.maxLines = if (hasFocus) 4 else 2
         }
     }
 

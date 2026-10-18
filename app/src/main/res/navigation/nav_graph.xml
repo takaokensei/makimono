@@ -20,6 +20,13 @@
         <action
             android:id="@+id/action_profileSelectionFragment_to_settingsFragment"
             app:destination="@id/settingsFragment" />
+        <action
+            android:id="@+id/action_profileSelectionFragment_to_signInFragment"
+            app:destination="@id/signInFragment"
+            app:enterAnim="@android:anim/fade_in"
+            app:exitAnim="@android:anim/fade_out"
+            app:popUpTo="@id/profileSelectionFragment"
+            app:popUpToInclusive="true" />
     </fragment>
 
     <fragment

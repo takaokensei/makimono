@@ -214,6 +214,20 @@ class HeroController(
                 }
             }
         }
+        lifecycleOwner.lifecycleScope.launch {
+            lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                kotlinx.coroutines.flow.combine(
+                    viewModel.featuredCandidates,
+                    viewModel.currentFeaturedIndex
+                ) { candidates, activeIdx ->
+                    candidates to activeIdx
+                }.collect { (candidates, activeIdx) ->
+                    featuredHeroBinder?.updatePaginationPills(candidates.size, activeIdx) { index ->
+                        viewModel.selectFeaturedByIndex(index)
+                    }
+                }
+            }
+        }
     }
 
     fun startHeroAutoCycle(currentTabProvider: () -> String) {
@@ -238,7 +252,7 @@ class HeroController(
                         inside
                     }
 
-                    if (currentTabProvider() == "Início" && (isHeroFocused || isRailFocused) && !viewModel.isFocusPreviewActive) {
+                    if (currentTabProvider() == "Início" && !viewModel.isFocusPreviewActive) {
                         viewModel.cycleNextFeaturedSpotlight()
                     }
                 }

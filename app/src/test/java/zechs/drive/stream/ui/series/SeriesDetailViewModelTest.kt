@@ -49,6 +49,7 @@ class SeriesDetailViewModelTest {
     private val favoriteRepository = mockk<FavoriteRepository>(relaxed = true)
     private val followedFolderRepository = mockk<FollowedFolderRepository>(relaxed = true)
     private val watchQueueRepository = mockk<WatchQueueRepository>(relaxed = true)
+    private val franchiseGroupingManager = mockk<zechs.drive.stream.domain.library.FranchiseGroupingManager>(relaxed = true)
 
     private lateinit var viewModel: SeriesDetailViewModel
 
@@ -68,7 +69,8 @@ class SeriesDetailViewModelTest {
             animePosterResolver,
             favoriteRepository,
             followedFolderRepository,
-            watchQueueRepository
+            watchQueueRepository,
+            franchiseGroupingManager
         )
     }
 

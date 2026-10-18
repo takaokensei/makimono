@@ -666,11 +666,12 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                if (resolvedFolderId.isNullOrBlank()) {
-                    resolvedFolderId = "root"
+                if (resolvedFolderId.isNullOrBlank() || resolvedFolderId == "root") {
+                    AppLog.d(TAG, "Library root is unconfigured or 'root': skipping automatic anime metadata scraping to prevent Drive pollution.")
+                    return@launch
                 }
 
-                // Query files in library root folder
+                // Query files strictly in designated library root folder
                 val filesResponse = driveRepository.get().getAllFilesDetailed(
                     query = "'$resolvedFolderId' in parents and trashed=false",
                     pageSize = 100
@@ -708,6 +709,12 @@ class MainActivity : AppCompatActivity() {
                             )
                         }
                     )
+
+                    // Purge non-library folders from metadata
+                    val animeFolderIds = validMedia.map { if (it.isShortcut) it.shortcutDetails.targetId ?: it.id else it.id }.toSet()
+                    if (animeFolderIds.isNotEmpty()) {
+                        folderMetadataRepository.retainOnlyLibraryFolders(animeFolderIds)
+                    }
 
                     val existingMeta = folderMetadataRepository.getAllMetadata().associateBy { it.folderId }
                     val total = validMedia.size

@@ -122,6 +122,7 @@ import android.content.pm.PackageManager
 import zechs.drive.stream.utils.DeviceUi
 import zechs.drive.stream.utils.MotionPolicy
 import android.view.MotionEvent
+import zechs.drive.stream.utils.ext.resolveThemeColor
 import java.util.*
 import javax.inject.Inject
 import kotlin.math.roundToInt
@@ -605,6 +606,27 @@ class PlayerActivity : BasePlayerActivity() {
         }
 
         PlayerQuickOptions.bind(playerView)
+
+        val timeBar = playerView.findViewById<View>(androidx.media3.ui.R.id.exo_progress)
+        val timeBarContainer = playerView.findViewById<View>(R.id.timeBarContainer)
+        val tvExoPosition = playerView.findViewById<TextView>(androidx.media3.ui.R.id.exo_position)
+        val tvExoDuration = playerView.findViewById<TextView>(androidx.media3.ui.R.id.exo_duration)
+        val accentColor = resolveThemeColor(R.attr.colorAccentPrimary)
+        val defaultPositionColor = androidx.core.content.ContextCompat.getColor(this, R.color.obsidian_text_primary)
+        val defaultDurationColor = androidx.core.content.ContextCompat.getColor(this, R.color.obsidian_text_secondary)
+
+        timeBar?.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                timeBarContainer?.animate()?.scaleY(1.35f)?.scaleX(1.008f)?.setDuration(150L)?.start()
+                tvExoPosition?.setTextColor(accentColor)
+                tvExoDuration?.setTextColor(accentColor)
+                osdController.resetInactivityTimer()
+            } else {
+                timeBarContainer?.animate()?.scaleY(1.0f)?.scaleX(1.0f)?.setDuration(150L)?.start()
+                tvExoPosition?.setTextColor(defaultPositionColor)
+                tvExoDuration?.setTextColor(defaultDurationColor)
+            }
+        }
 
         gestureHelper = PlayerGestureHelper(
             activity = this,
@@ -1250,8 +1272,11 @@ class PlayerActivity : BasePlayerActivity() {
                 KeyEvent.KEYCODE_DPAD_DOWN -> zechs.drive.stream.utils.PlayerFocusDirection.DOWN
                 else -> null
             }
+            val timeBar = playerView.findViewById<View>(androidx.media3.ui.R.id.exo_progress)
+            val isTimeBarFocused = timeBar?.isFocused == true
             val focusedItem = when {
                 btnBack.isFocused -> zechs.drive.stream.utils.PlayerFocusItem.EXIT
+                isTimeBarFocused -> zechs.drive.stream.utils.PlayerFocusItem.TIMELINE
                 btnPlayPause.isFocused -> zechs.drive.stream.utils.PlayerFocusItem.PLAY_PAUSE
                 else -> zechs.drive.stream.utils.PlayerFocusItem.OTHER
             }
@@ -1269,6 +1294,7 @@ class PlayerActivity : BasePlayerActivity() {
                 handledFocusDirectionKeyCode = event.keyCode
                 when (target) {
                     zechs.drive.stream.utils.PlayerFocusItem.EXIT -> btnBack.requestFocus()
+                    zechs.drive.stream.utils.PlayerFocusItem.TIMELINE -> timeBar?.requestFocus()
                     zechs.drive.stream.utils.PlayerFocusItem.PLAY_PAUSE -> btnPlayPause.requestFocus()
                     zechs.drive.stream.utils.PlayerFocusItem.OTHER -> Unit
                 }
@@ -1349,6 +1375,15 @@ class PlayerActivity : BasePlayerActivity() {
                         gestureHelper.showSeekRipple(seekStepPolicy.cumulativeSeconds)
                         mainHandler.postDelayed(resetSeekAccumulatorRunnable, zechs.drive.stream.utils.SeekStepPolicy.TIMEOUT_MS)
                         return true
+                    } else {
+                        val timeBar = playerView.findViewById<View>(androidx.media3.ui.R.id.exo_progress)
+                        if (timeBar?.isFocused == true) {
+                            seekRelative(-10000L)
+                            gestureHelper.showSeekRipple(-10)
+                            gestureHelper.showNotification("⏪ -10s")
+                            osdController.resetInactivityTimer()
+                            return true
+                        }
                     }
                 }
 
@@ -1360,6 +1395,15 @@ class PlayerActivity : BasePlayerActivity() {
                         gestureHelper.showSeekRipple(seekStepPolicy.cumulativeSeconds)
                         mainHandler.postDelayed(resetSeekAccumulatorRunnable, zechs.drive.stream.utils.SeekStepPolicy.TIMEOUT_MS)
                         return true
+                    } else {
+                        val timeBar = playerView.findViewById<View>(androidx.media3.ui.R.id.exo_progress)
+                        if (timeBar?.isFocused == true) {
+                            seekRelative(10000L)
+                            gestureHelper.showSeekRipple(10)
+                            gestureHelper.showNotification("⏩ +10s")
+                            osdController.resetInactivityTimer()
+                            return true
+                        }
                     }
                 }
 
@@ -2251,36 +2295,21 @@ class PlayerActivity : BasePlayerActivity() {
         if (skipAction is zechs.drive.stream.playback.session.SkipController.SkipAction.AutoSkip) {
             player.seekTo(skipAction.targetPositionMs)
             gestureHelper.showNotification(skipAction.message)
-            val pillText = when (activeSkipChapter?.type) {
-                MatroskaChapterParser.ChapterType.ENDING -> "Encerramento pulado (AniSkip)"
-                MatroskaChapterParser.ChapterType.RECAP -> "Recap pulado (AniSkip)"
-                else -> "Abertura pulada (AniSkip)"
-            }
-            showAniSkipPill(pillText)
+            showAniSkipPill(skipAction.message)
             return
         }
 
         when (val ui = skipState.buttonUi) {
             is zechs.drive.stream.playback.session.SkipController.SkipButtonUi.Visible -> {
-                btnSkipIntro.text = ui.label
                 binding.btnNetflixSkip.text = ui.label
-                if (ui.isOverlay) {
-                    binding.netflixSkipRow.animate().cancel()
-                    binding.netflixSkipRow.alpha = 1f
-                    binding.netflixSkipRow.visibility = View.VISIBLE
-                    skipIntroRow.visibility = View.GONE
-                } else {
-                    binding.netflixSkipRow.animate().cancel()
-                    binding.netflixSkipRow.visibility = View.GONE
-                    skipIntroRow.animate().cancel()
-                    skipIntroRow.alpha = 1f
-                    skipIntroRow.visibility = View.VISIBLE
-                }
+                binding.netflixSkipRow.animate().cancel()
+                binding.netflixSkipRow.alpha = 1f
+                binding.netflixSkipRow.visibility = View.VISIBLE
+                skipIntroRow.visibility = View.GONE
             }
             zechs.drive.stream.playback.session.SkipController.SkipButtonUi.Hidden -> {
                 binding.netflixSkipRow.animate().cancel()
                 binding.netflixSkipRow.visibility = View.GONE
-                skipIntroRow.animate().cancel()
                 skipIntroRow.visibility = View.GONE
             }
         }

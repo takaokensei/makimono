@@ -9,14 +9,17 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.net.URLEncoder
+import java.text.Normalizer
 import java.util.Collections
 import java.util.LinkedHashMap
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
-
-import zechs.drive.stream.BuildConfig
-import java.util.Locale
+import kotlin.math.ln
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sqrt
 
 data class AnimeMetadata(
     val posterUrl: String?,
@@ -45,6 +48,38 @@ class AnimePosterResolver @Inject constructor() {
         private const val ANILIST_URL = "https://graphql.anilist.co"
         private const val JIKAN_BASE_URL = "https://api.jikan.moe/v4/anime"
         private const val KITSU_BASE_URL = "https://kitsu.io/api/edge/anime"
+        private const val CINEMETA_BASE_URL = "https://v3-cinemeta.strem.io"
+        private const val TVMAZE_BASE_URL = "https://api.tvmaze.com"
+
+        private const val MIN_ANIME_CONFIDENCE = 0.58
+        private const val MIN_MOVIE_CONFIDENCE = 0.50
+
+        private val STOP_WORDS = setOf(
+            "a", "o", "os", "as", "um", "uma", "uns", "umas", "de", "do", "da", "dos", "das",
+            "em", "no", "na", "nos", "nas", "por", "para", "com", "sem", "e", "ou",
+            "the", "a", "an", "of", "in", "on", "at", "to", "for", "with", "and", "or",
+            "season", "temporada", "questions", "pasta", "aula", "aulas", "projeto", "projetos",
+            "trabalho", "experimento", "roteiro", "ciclo", "capitulos", "capitulo"
+        )
+
+        private val TRANSLATION_MAP = mapOf(
+            "homem aranha" to "spider man",
+            "homem-aranha" to "spider man",
+            "homem de ferro" to "iron man",
+            "o mentalista" to "the mentalist",
+            "mentalista" to "the mentalist",
+            "um novo dia" to "brand new day",
+            "novo dia" to "brand new day",
+            "vingadores" to "avengers"
+        )
+
+        private val WESTERN_MEDIA_KEYWORDS = listOf(
+            "homem aranha", "homem-aranha", "spider-man", "spiderman", "batman",
+            "mentalista", "mentalist", "marvel", "avengers", "vingadores",
+            "superman", "iron man", "star wars", "breaking bad", "game of thrones",
+            "stranger things", "better call saul", "matrix", "john wick", "harry potter",
+            "deadpool", "wolverine", "x-men", "oppenheimer", "interstellar", "dune"
+        )
 
         private const val ANILIST_GRAPHQL_QUERY = """
             query (${'$'}search: String) {
@@ -96,7 +131,7 @@ class AnimePosterResolver @Inject constructor() {
                 Regex("(?i)\\b(2160p|1080p|720p|480p|4k|uhd|hevc|avc|x264|x265|h264|h265|bluray|bdrip|brrip|web-dl|webdl|webrip|web|hdtv|remux|imax|dv|dovi|dolby(?:\\s*vision|\\s*digital|\\s*audio)?|dolby|hdr10plus|hdr10|hdr|sdr|10bit|8bit|ddp?5\\.1|dd5\\.1|5\\.1|7\\.1|2\\.0|stereo|truehd|atmos|dts(?:-hd|-x)?|flac|aac|eac3|ac3|dual(?:[\\s_-]*audio)?|multi(?:[\\s_-]*audio)?|multisub|dublado|legendado|repack|proper|internal|complete)\\b"),
                 " "
             )
-            // Strip standalone 4-digit release years (e.g. 1980..2035) so search engines and titles don't choke on them
+            // Strip standalone 4-digit release years (e.g. 1980..2035) so search engines don't choke
             clean = clean.replace(Regex("\\b(19\\d\\d|20[0-3]\\d)\\b"), " ")
             // Clean up dots, underscores, hyphens and extra whitespace
             clean = clean.replace(Regex("[_.]+"), " ")
@@ -106,69 +141,136 @@ class AnimePosterResolver @Inject constructor() {
             return clean.ifBlank { folderName.trim() }
         }
 
-        private const val TMDB_BASE_URL = "https://api.themoviedb.org/3"
-        private const val TMDB_IMAGE_BASE_POSTER = "https://image.tmdb.org/t/p/w500"
-        private const val TMDB_IMAGE_BASE_BACKDROP = "https://image.tmdb.org/t/p/w1280"
-
-        private val TMDB_GENRE_MAP = mapOf(
-            28 to "Ação",
-            12 to "Aventura",
-            16 to "Animação",
-            35 to "Comédia",
-            80 to "Crime",
-            99 to "Documentário",
-            18 to "Drama",
-            10751 to "Família",
-            14 to "Fantasia",
-            36 to "História",
-            27 to "Terror",
-            10402 to "Música",
-            9648 to "Mistério",
-            10749 to "Romance",
-            878 to "Ficção Científica",
-            10770 to "Cinema TV",
-            53 to "Thriller",
-            10752 to "Guerra",
-            37 to "Faroeste",
-            10759 to "Ação & Aventura",
-            10762 to "Kids",
-            10763 to "Notícias",
-            10764 to "Reality",
-            10765 to "Sci-Fi & Fantasia",
-            10766 to "Novela",
-            10767 to "Talk Show",
-            10768 to "Guerra & Política"
-        )
-
-        fun calculateSimilarity(query: String, candidate: String): Double {
-            val qTokens = cleanTokens(query)
-            val cTokens = cleanTokens(candidate)
-            if (qTokens.isEmpty() || cTokens.isEmpty()) return 0.0
-            val qStr = qTokens.joinToString(" ")
-            val cStr = cTokens.joinToString(" ")
-            if (qStr.contains(cStr) || cStr.contains(qStr)) {
-                val minLen = minOf(qStr.length, cStr.length).toDouble()
-                val maxLen = maxOf(qStr.length, cStr.length).toDouble()
-                return (minLen / maxLen).coerceAtLeast(0.70)
-            }
-            val common = qTokens.intersect(cTokens).size
-            return (2.0 * common) / (qTokens.size + cTokens.size)
+        fun normalizeText(text: String): String {
+            val nfkd = Normalizer.normalize(text, Normalizer.Form.NFD)
+            val withoutAccents = nfkd.replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "")
+            return withoutAccents.lowercase(Locale.ROOT)
+                .replace(Regex("[^a-z0-9\\s]"), " ")
+                .trim()
+                .replace(Regex("\\s+"), " ")
         }
 
-        private fun cleanTokens(text: String): Set<String> {
-            return text.lowercase(Locale.ROOT)
-                .replace(Regex("[^a-z0-9\\s]"), " ")
-                .split("\\s+".toRegex())
+        private fun tokenize(normText: String): List<String> {
+            return normText.split(" ")
                 .filter { it.isNotBlank() && it.length > 1 }
-                .toSet()
+        }
+
+        private fun getTokenWeights(tokens: List<String>): Map<String, Double> {
+            val weights = mutableMapOf<String, Double>()
+            for (t in tokens) {
+                if (STOP_WORDS.contains(t)) {
+                    weights[t] = 0.20
+                } else {
+                    weights[t] = 1.0 + ln(max(1, t.length).toDouble()) * 0.30
+                }
+            }
+            return weights
+        }
+
+        private fun tfidfCosineSimilarity(queryTokens: List<String>, candidateTokens: List<String>): Double {
+            if (queryTokens.isEmpty() || candidateTokens.isEmpty()) return 0.0
+            val qWeights = getTokenWeights(queryTokens)
+            val cWeights = getTokenWeights(candidateTokens)
+            val qSet = queryTokens.toSet()
+            val cSet = candidateTokens.toSet()
+            val intersection = qSet.intersect(cSet)
+
+            val dotProduct = intersection.sumOf { (qWeights[it] ?: 0.0) * (cWeights[it] ?: 0.0) }
+            val magQ = sqrt(qWeights.values.sumOf { it * it })
+            val magC = sqrt(cWeights.values.sumOf { it * it })
+
+            if (magQ == 0.0 || magC == 0.0) return 0.0
+            return dotProduct / (magQ * magC)
+        }
+
+        private fun ngramDice(s1: String, s2: String, n: Int): Double {
+            if (s1.length < n || s2.length < n) {
+                return if (s1 == s2) 1.0 else 0.0
+            }
+            val ngrams1 = (0..s1.length - n).map { s1.substring(it, it + n) }.toSet()
+            val ngrams2 = (0..s2.length - n).map { s2.substring(it, it + n) }.toSet()
+            val common = ngrams1.intersect(ngrams2).size
+            return (2.0 * common) / (ngrams1.size + ngrams2.size)
+        }
+
+        private fun levenshteinSim(s1: String, s2: String): Double {
+            if (s1 == s2) return 1.0
+            val m = s1.length
+            val n = s2.length
+            if (m == 0 || n == 0) return 0.0
+            val dp = Array(m + 1) { IntArray(n + 1) }
+            for (i in 0..m) dp[i][0] = i
+            for (j in 0..n) dp[0][j] = j
+            for (i in 1..m) {
+                for (j in 1..n) {
+                    val cost = if (s1[i - 1] == s2[j - 1]) 0 else 1
+                    dp[i][j] = minOf(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost)
+                }
+            }
+            val dist = dp[m][n]
+            return max(0.0, 1.0 - dist.toDouble() / max(m, n).toDouble())
+        }
+
+        /**
+         * Computes semantic confidence using TF-IDF cosine similarity, character N-grams,
+         * Levenshtein distance, multilingual translation expansions, and content recall penalties.
+         */
+        fun calculateSimilarity(query: String, candidate: String): Double {
+            val qNorm = normalizeText(query)
+            val cNorm = normalizeText(candidate)
+            if (qNorm.isBlank() || cNorm.isBlank()) return 0.0
+            if (qNorm == cNorm) return 1.0
+
+            var qExpanded = qNorm
+            for ((pt, en) in TRANSLATION_MAP) {
+                if (qExpanded.contains(pt)) {
+                    qExpanded = qExpanded.replace(pt, en)
+                }
+            }
+
+            val qToks = tokenize(qNorm)
+            val qExpToks = tokenize(qExpanded)
+            val cToks = tokenize(cNorm)
+
+            val tfidfOrig = tfidfCosineSimilarity(qToks, cToks)
+            val tfidfExp = tfidfCosineSimilarity(qExpToks, cToks)
+            val tfidf = max(tfidfOrig, tfidfExp)
+
+            val diceOrig = (ngramDice(qNorm, cNorm, 2) + ngramDice(qNorm, cNorm, 3)) / 2.0
+            val diceExp = (ngramDice(qExpanded, cNorm, 2) + ngramDice(qExpanded, cNorm, 3)) / 2.0
+            val dice = max(diceOrig, diceExp)
+
+            val lev = max(levenshteinSim(qNorm, cNorm), levenshteinSim(qExpanded, cNorm))
+
+            var score = (0.50 * tfidf) + (0.30 * dice) + (0.20 * lev)
+
+            // Content word recall penalty: if distinctive query tokens are completely absent in candidate
+            val activeToks = if (tfidfExp > tfidfOrig || diceExp > diceOrig) qExpToks else qToks
+            val sigQ = activeToks.filter { !STOP_WORDS.contains(it) }
+            if (sigQ.isNotEmpty()) {
+                val matchedSig = sigQ.count { t ->
+                    cNorm.contains(t) || cToks.any { ct -> levenshteinSim(t, ct) >= 0.75 }
+                }
+                val recall = matchedSig.toDouble() / sigQ.size.toDouble()
+                if (recall < 0.50) {
+                    score *= (recall * 1.50).coerceAtMost(1.0)
+                }
+            }
+
+            return (score * 1000.0).toLong() / 1000.0
+        }
+
+        fun isLikelyWesternOrMovie(query: String): Boolean {
+            val norm = normalizeText(query)
+            return WESTERN_MEDIA_KEYWORDS.any { norm.contains(it) }
         }
     }
 
     fun cleanAnimeTitle(folderName: String): String = Companion.cleanAnimeTitle(folderName)
 
     private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(5, TimeUnit.SECONDS)
-        .readTimeout(8, TimeUnit.SECONDS)
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(12, TimeUnit.SECONDS)
         .build()
 
     private val metadataCache = Collections.synchronizedMap(
@@ -181,7 +283,7 @@ class AnimePosterResolver @Inject constructor() {
 
     /**
      * Resolves complete metadata (high-res poster, banner, dominant color, canonical titles, score, synopsis)
-     * for a folder using AniList GraphQL as the primary source, falling back to Jikan (MAL) and Kitsu.
+     * using AniList GraphQL for anime, and Cinemeta/TVmaze for movies and Western live-action series.
      */
     suspend fun resolveMetadata(folderName: String): AnimeMetadata? = withContext(Dispatchers.IO) {
         val query = cleanAnimeTitle(folderName.trim())
@@ -191,48 +293,50 @@ class AnimePosterResolver @Inject constructor() {
 
         AppLog.d(TAG, "Resolving metadata for: '$query' (original: '$folderName')")
 
-        // 1. Primary: AniList GraphQL (extraLarge ~460x650 poster + dominant color + banner)
-        val aniListMeta = fetchFromAniList(query)
-        val aniSimilarity = if (aniListMeta != null) {
-            maxOf(
-                calculateSimilarity(query, aniListMeta.titleRomaji ?: ""),
-                calculateSimilarity(query, aniListMeta.titleEnglish ?: ""),
-                calculateSimilarity(query, aniListMeta.titleNative ?: "")
-            )
-        } else 0.0
+        // 1. If folder name strongly suggests a Western movie or series (e.g. Spider-Man, Mentalista)
+        if (isLikelyWesternOrMovie(query)) {
+            AppLog.d(TAG, "Query '$query' recognized as Western movie/series candidate. Querying Cinemeta & TVmaze...")
+            val movieMeta = fetchFromCinemeta(query, isMovie = true)
+            if (movieMeta != null && !movieMeta.posterUrl.isNullOrBlank()) {
+                AppLog.d(TAG, "Successfully matched movie on Cinemeta: ${movieMeta.titleRomaji}")
+                metadataCache[query] = movieMeta
+                return@withContext movieMeta
+            }
 
-        // If AniList returned a high-confidence match (>= 0.45) with a valid poster, use it directly
-        if (aniListMeta != null && !aniListMeta.posterUrl.isNullOrBlank() && aniSimilarity >= 0.45) {
-            AppLog.d(TAG, "Successfully matched anime on AniList (confidence $aniSimilarity): ${aniListMeta.titleRomaji}")
-            metadataCache[query] = aniListMeta
-            return@withContext aniListMeta
-        }
-
-        // 2. Fallback to TMDB: If match confidence with anime is very low (< 0.45) or AniList returned null,
-        // consider that it is a movie or live-action series and fetch from TMDB
-        AppLog.d(TAG, "AniList confidence low ($aniSimilarity) or not found for '$query'. Checking TMDB for movies/series...")
-        val tmdbMeta = fetchFromTmdb(query)
-        if (tmdbMeta != null && !tmdbMeta.posterUrl.isNullOrBlank()) {
-            val tmdbSimilarity = maxOf(
-                calculateSimilarity(query, tmdbMeta.titleRomaji ?: ""),
-                calculateSimilarity(query, tmdbMeta.titleEnglish ?: "")
-            )
-            if (tmdbSimilarity >= 0.35 && (aniListMeta == null || tmdbSimilarity > aniSimilarity)) {
-                AppLog.d(TAG, "Successfully resolved on TMDB (confidence $tmdbSimilarity, isMovie=${tmdbMeta.isMovie}): ${tmdbMeta.titleRomaji}")
-                metadataCache[query] = tmdbMeta
-                return@withContext tmdbMeta
+            val seriesMeta = fetchFromCinemeta(query, isMovie = false) ?: fetchFromTvMaze(query)
+            if (seriesMeta != null && !seriesMeta.posterUrl.isNullOrBlank()) {
+                AppLog.d(TAG, "Successfully matched series on Cinemeta/TVmaze: ${seriesMeta.titleRomaji}")
+                metadataCache[query] = seriesMeta
+                return@withContext seriesMeta
             }
         }
 
-        // If TMDB didn't match and AniList had something, use AniList
+        // 2. Primary Anime: AniList GraphQL
+        val aniListMeta = fetchFromAniList(query)
         if (aniListMeta != null && !aniListMeta.posterUrl.isNullOrBlank()) {
-            AppLog.d(TAG, "Using AniList as best available: ${aniListMeta.titleRomaji}")
+            AppLog.d(TAG, "Successfully matched anime on AniList: ${aniListMeta.titleRomaji}")
             metadataCache[query] = aniListMeta
             return@withContext aniListMeta
         }
 
-        // 3. Secondary fallback: Jikan (MAL)
-        AppLog.d(TAG, "AniList & TMDB unavailable or empty. Trying Jikan for '$query'...")
+        // 3. Fallback: Check Cinemeta (Movie & Series) and TVmaze for non-anime media
+        AppLog.d(TAG, "No high-confidence anime match on AniList for '$query'. Checking Cinemeta/TVmaze...")
+        val cinemetaMovie = fetchFromCinemeta(query, isMovie = true)
+        if (cinemetaMovie != null && !cinemetaMovie.posterUrl.isNullOrBlank()) {
+            AppLog.d(TAG, "Resolved as movie on Cinemeta: ${cinemetaMovie.titleRomaji}")
+            metadataCache[query] = cinemetaMovie
+            return@withContext cinemetaMovie
+        }
+
+        val cinemetaSeries = fetchFromCinemeta(query, isMovie = false) ?: fetchFromTvMaze(query)
+        if (cinemetaSeries != null && !cinemetaSeries.posterUrl.isNullOrBlank()) {
+            AppLog.d(TAG, "Resolved as series on Cinemeta/TVmaze: ${cinemetaSeries.titleRomaji}")
+            metadataCache[query] = cinemetaSeries
+            return@withContext cinemetaSeries
+        }
+
+        // 4. Secondary fallback: Jikan (MAL) with strict confidence check
+        AppLog.d(TAG, "Trying Jikan for '$query'...")
         val jikanMeta = fetchFromJikan(query)
         if (jikanMeta != null && !jikanMeta.posterUrl.isNullOrBlank()) {
             AppLog.d(TAG, "Successfully fetched metadata from Jikan: ${jikanMeta.posterUrl}")
@@ -240,8 +344,8 @@ class AnimePosterResolver @Inject constructor() {
             return@withContext jikanMeta
         }
 
-        // 4. Tertiary fallback: Kitsu
-        AppLog.d(TAG, "Jikan unavailable or empty. Trying Kitsu for '$query'...")
+        // 5. Tertiary fallback: Kitsu with strict confidence check
+        AppLog.d(TAG, "Trying Kitsu for '$query'...")
         val kitsuMeta = fetchFromKitsu(query)
         if (kitsuMeta != null && !kitsuMeta.posterUrl.isNullOrBlank()) {
             AppLog.d(TAG, "Successfully fetched metadata from Kitsu: ${kitsuMeta.posterUrl}")
@@ -249,13 +353,10 @@ class AnimePosterResolver @Inject constructor() {
             return@withContext kitsuMeta
         }
 
-        AppLog.w(TAG, "No metadata found for '$query'")
+        AppLog.w(TAG, "No verified metadata found for '$query' (confidence threshold not met)")
         null
     }
 
-    /**
-     * Resolves the official anime poster URL for a folder.
-     */
     suspend fun resolvePoster(folderName: String): String? {
         return resolveMetadata(folderName)?.posterUrl
     }
@@ -272,16 +373,13 @@ class AnimePosterResolver @Inject constructor() {
             val requestBody = jsonPayload.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
             val request = Request.Builder()
                 .url(ANILIST_URL)
-                .header("User-Agent", "Makimono/1.4.21 (Android)")
+                .header("User-Agent", "Makimono/1.9.3 (Android)")
                 .header("Accept", "application/json")
                 .post(requestBody)
                 .build()
 
             httpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    AppLog.w(TAG, "AniList API returned HTTP ${response.code}")
-                    return null
-                }
+                if (!response.isSuccessful) return null
                 val body = response.body?.string() ?: return null
                 val json = JSONObject(body)
                 val data = json.optJSONObject("data") ?: return null
@@ -290,7 +388,7 @@ class AnimePosterResolver @Inject constructor() {
                 if (mediaList.length() == 0) return null
 
                 var bestItem: JSONObject? = null
-                var bestScore = -1.0
+                var bestSim = 0.0
 
                 for (i in 0 until mediaList.length()) {
                     val candidate = mediaList.optJSONObject(i) ?: continue
@@ -305,35 +403,20 @@ class AnimePosterResolver @Inject constructor() {
                         calculateSimilarity(query, native ?: "")
                     )
 
-                    // Skip candidates with very poor resemblance to the search query
-                    if (sim < 0.20) continue
+                    // Strictly reject candidates below threshold
+                    if (sim < MIN_ANIME_CONFIDENCE) continue
 
-                    var score = sim
-
-                    val status = candidate.optString("status")
-                    if (status.equals("NOT_YET_RELEASED", ignoreCase = true) || status.equals("CANCELLED", ignoreCase = true)) {
-                        score -= 0.25 // Heavy penalty for unreleased promotional flyers/teasers
-                    } else if (status.equals("FINISHED", ignoreCase = true) || status.equals("RELEASING", ignoreCase = true)) {
-                        score += 0.15
-                    }
-
+                    var weightedScore = sim
                     val pop = candidate.optDouble("popularity", 0.0)
-                    score += (pop / 100000.0).coerceAtMost(0.20)
+                    weightedScore += (pop / 200000.0).coerceAtMost(0.15)
 
-                    val format = candidate.optString("format")
-                    if (format.equals("TV", ignoreCase = true) || format.equals("MOVIE", ignoreCase = true)) {
-                        score += 0.05
-                    } else if (format.equals("MUSIC", ignoreCase = true)) {
-                        score -= 0.35
-                    }
-
-                    if (score > bestScore) {
-                        bestScore = score
+                    if (weightedScore > bestSim) {
+                        bestSim = weightedScore
                         bestItem = candidate
                     }
                 }
 
-                val media = bestItem ?: mediaList.optJSONObject(0) ?: return null
+                val media = bestItem ?: return null
 
                 val titleObj = media.optJSONObject("title")
                 val romaji = titleObj?.optString("romaji")?.takeIf { it.isNotBlank() && it != "null" }
@@ -366,6 +449,9 @@ class AnimePosterResolver @Inject constructor() {
                     "https://www.youtube.com/watch?v=$trailerId"
                 } else null
 
+                val format = media.optString("format")
+                val isMovie = format.equals("MOVIE", ignoreCase = true)
+
                 AnimeMetadata(
                     posterUrl = extraLarge ?: large,
                     bannerUrl = banner,
@@ -378,7 +464,10 @@ class AnimePosterResolver @Inject constructor() {
                     year = year,
                     episodeCount = episodeCount,
                     genres = genresList,
-                    trailerUrl = trailerUrl
+                    trailerUrl = trailerUrl,
+                    isMovie = isMovie,
+                    isAnime = true,
+                    mediaType = if (isMovie) "movie" else "anime"
                 )
             }
         } catch (e: Exception) {
@@ -387,62 +476,208 @@ class AnimePosterResolver @Inject constructor() {
         }
     }
 
+    private fun fetchFromCinemeta(query: String, isMovie: Boolean): AnimeMetadata? {
+        val searchType = if (isMovie) "movie" else "series"
+        // Try original query, and if query has translations (e.g. "Homem-Aranha" -> "Spider-Man"), try translation as well
+        val queries = mutableListOf(query)
+        var translated = query
+        for ((pt, en) in TRANSLATION_MAP) {
+            if (translated.lowercase(Locale.ROOT).contains(pt)) {
+                translated = translated.replace(Regex("(?i)$pt"), en)
+            }
+        }
+        if (translated != query) queries.add(translated)
+
+        for (q in queries) {
+            val result = queryCinemetaCatalog(q, searchType, isMovie, query)
+            if (result != null) return result
+        }
+        return null
+    }
+
+    private fun queryCinemetaCatalog(query: String, searchType: String, isMovie: Boolean, originalQuery: String): AnimeMetadata? {
+        return try {
+            val encoded = URLEncoder.encode(query, "UTF-8").replace("+", "%20")
+            val url = "$CINEMETA_BASE_URL/catalog/$searchType/top/search=$encoded.json"
+            val request = Request.Builder()
+                .url(url)
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                .header("Accept", "application/json")
+                .build()
+
+            httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return null
+                val body = response.body?.string() ?: return null
+                val json = JSONObject(body)
+                val metas = json.optJSONArray("metas") ?: return null
+                if (metas.length() == 0) return null
+
+                var bestCandidate: JSONObject? = null
+                var bestSim = 0.0
+
+                for (i in 0 until metas.length()) {
+                    val item = metas.optJSONObject(i) ?: continue
+                    val name = item.optString("name")
+                    val sim = maxOf(
+                        calculateSimilarity(originalQuery, name),
+                        calculateSimilarity(query, name)
+                    )
+                    if (sim >= MIN_MOVIE_CONFIDENCE && sim > bestSim) {
+                        bestSim = sim
+                        bestCandidate = item
+                    }
+                }
+
+                val item = bestCandidate ?: return null
+                val name = item.optString("name")
+                val posterRaw = item.optString("poster").takeIf { it.isNotBlank() && it != "null" }
+                // Upgrade Amazon image resolution if applicable
+                val posterUrl = posterRaw?.replace(Regex("_V1_SX\\d+\\.jpg"), "_V1_SX500.jpg")
+                val bannerUrl = item.optString("background").takeIf { it.isNotBlank() && it != "null" }
+                val desc = item.optString("description").takeIf { it.isNotBlank() && it != "null" }
+                val releaseInfo = item.optString("releaseInfo")
+                val year = releaseInfo.take(4).toIntOrNull()
+
+                val genresList = mutableListOf<String>()
+                item.optJSONArray("genres")?.let { arr ->
+                    for (i in 0 until arr.length()) {
+                        val g = arr.optString(i)
+                        if (g.isNotBlank() && g != "null") genresList.add(g)
+                    }
+                }
+
+                AnimeMetadata(
+                    posterUrl = posterUrl,
+                    bannerUrl = bannerUrl,
+                    titleRomaji = name,
+                    titleEnglish = name,
+                    synopsis = desc,
+                    year = year,
+                    genres = genresList,
+                    isMovie = isMovie,
+                    isAnime = false,
+                    mediaType = if (isMovie) "movie" else "tv"
+                )
+            }
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Cinemeta exception for '$query': ${e.message}")
+            null
+        }
+    }
+
+    private fun fetchFromTvMaze(query: String): AnimeMetadata? {
+        return try {
+            val tvQuery = if (query.lowercase(Locale.ROOT).contains("mentalista")) "The Mentalist" else query
+            val encoded = URLEncoder.encode(tvQuery, "UTF-8").replace("+", "%20")
+            val url = "$TVMAZE_BASE_URL/singlesearch/shows?q=$encoded&embed=cast"
+            val request = Request.Builder()
+                .url(url)
+                .header("User-Agent", "Mozilla/5.0")
+                .build()
+
+            httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return null
+                val body = response.body?.string() ?: return null
+                val root = JSONObject(body)
+                val name = root.optString("name")
+                val sim = calculateSimilarity(query, name)
+                if (sim < MIN_MOVIE_CONFIDENCE) return null
+
+                val imgObj = root.optJSONObject("image")
+                val poster = imgObj?.optString("original") ?: imgObj?.optString("medium")
+                val summaryHtml = root.optString("summary")
+                val cleanSummary = summaryHtml.replace(Regex("<[^>]*>"), "").trim()
+                val rating = root.optJSONObject("rating")?.optDouble("average", -1.0)?.takeIf { it >= 0 }?.toFloat()
+                val premiered = root.optString("premiered")
+                val year = premiered.take(4).toIntOrNull()
+
+                val genresList = mutableListOf<String>()
+                root.optJSONArray("genres")?.let { arr ->
+                    for (i in 0 until arr.length()) {
+                        val g = arr.optString(i)
+                        if (g.isNotBlank() && g != "null") genresList.add(g)
+                    }
+                }
+
+                AnimeMetadata(
+                    posterUrl = poster,
+                    bannerUrl = poster,
+                    titleRomaji = name,
+                    titleEnglish = name,
+                    synopsis = cleanSummary,
+                    score = rating,
+                    year = year,
+                    genres = genresList,
+                    isMovie = false,
+                    isAnime = false,
+                    mediaType = "tv"
+                )
+            }
+        } catch (e: Exception) {
+            AppLog.w(TAG, "TVmaze exception for '$query': ${e.message}")
+            null
+        }
+    }
+
     private fun fetchFromJikan(query: String): AnimeMetadata? {
         return try {
             val encodedQuery = URLEncoder.encode(query, "UTF-8")
-            val url = "$JIKAN_BASE_URL?q=$encodedQuery&limit=1&sfw=true"
+            val url = "$JIKAN_BASE_URL?q=$encodedQuery&limit=3&sfw=true"
             val request = Request.Builder()
                 .url(url)
                 .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
                 .build()
 
             httpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    AppLog.w(TAG, "Jikan API returned HTTP ${response.code}")
-                    return null
-                }
+                if (!response.isSuccessful) return null
                 val body = response.body?.string() ?: return null
                 val json = JSONObject(body)
                 val data = json.optJSONArray("data") ?: return null
                 if (data.length() == 0) return null
 
-                val anime = data.getJSONObject(0)
-                val images = anime.optJSONObject("images")
-                val jpg = images?.optJSONObject("jpg")
-                val webp = images?.optJSONObject("webp")
+                for (i in 0 until data.length()) {
+                    val anime = data.optJSONObject(i) ?: continue
+                    val title = anime.optString("title")
+                    val titleEng = anime.optString("title_english")
+                    val sim = maxOf(
+                        calculateSimilarity(query, title),
+                        calculateSimilarity(query, titleEng)
+                    )
+                    if (sim < MIN_ANIME_CONFIDENCE) continue
 
-                val posterUrl = jpg?.optString("large_image_url")?.takeIf { it.isNotBlank() && it != "null" }
-                    ?: webp?.optString("large_image_url")?.takeIf { it.isNotBlank() && it != "null" }
-                    ?: jpg?.optString("image_url")?.takeIf { it.isNotBlank() && it != "null" }
+                    val images = anime.optJSONObject("images")
+                    val jpg = images?.optJSONObject("jpg")
+                    val webp = images?.optJSONObject("webp")
+                    val posterUrl = jpg?.optString("large_image_url")?.takeIf { it.isNotBlank() && it != "null" }
+                        ?: webp?.optString("large_image_url")?.takeIf { it.isNotBlank() && it != "null" }
+                        ?: jpg?.optString("image_url")
 
-                val title = anime.optString("title").takeIf { it.isNotBlank() && it != "null" }
-                val titleEng = anime.optString("title_english").takeIf { it.isNotBlank() && it != "null" }
-                val titleJap = anime.optString("title_japanese").takeIf { it.isNotBlank() && it != "null" }
-                val synopsis = anime.optString("synopsis").takeIf { it.isNotBlank() && it != "null" }
-                val score = anime.optDouble("score", -1.0).takeIf { it >= 0 }?.toFloat()
-                val year = anime.optInt("year", -1).takeIf { it > 0 }
+                    val titleJap = anime.optString("title_japanese").takeIf { it.isNotBlank() && it != "null" }
+                    val synopsis = anime.optString("synopsis").takeIf { it.isNotBlank() && it != "null" }
+                    val score = anime.optDouble("score", -1.0).takeIf { it >= 0 }?.toFloat()
+                    val year = anime.optInt("year", -1).takeIf { it > 0 }
 
-                val genresList = mutableListOf<String>()
-                anime.optJSONArray("genres")?.let { arr ->
-                    for (i in 0 until arr.length()) {
-                        val g = arr.getJSONObject(i).optString("name")
-                        if (g.isNotBlank() && g != "null") genresList.add(g)
+                    val genresList = mutableListOf<String>()
+                    anime.optJSONArray("genres")?.let { arr ->
+                        for (j in 0 until arr.length()) {
+                            val g = arr.getJSONObject(j).optString("name")
+                            if (g.isNotBlank() && g != "null") genresList.add(g)
+                        }
                     }
+
+                    return AnimeMetadata(
+                        posterUrl = posterUrl,
+                        titleRomaji = title,
+                        titleEnglish = titleEng.takeIf { it.isNotBlank() && it != "null" },
+                        titleNative = titleJap,
+                        synopsis = synopsis,
+                        score = score,
+                        year = year,
+                        genres = genresList,
+                        isAnime = true
+                    )
                 }
-
-                val trailerUrl = anime.optJSONObject("trailer")?.optString("url")?.takeIf { it.isNotBlank() && it != "null" }
-
-                AnimeMetadata(
-                    posterUrl = posterUrl,
-                    titleRomaji = title,
-                    titleEnglish = titleEng,
-                    titleNative = titleJap,
-                    synopsis = synopsis,
-                    score = score,
-                    year = year,
-                    genres = genresList,
-                    trailerUrl = trailerUrl
-                )
+                null
             }
         } catch (e: Exception) {
             AppLog.w(TAG, "Jikan API exception for '$query': ${e.message}")
@@ -453,151 +688,65 @@ class AnimePosterResolver @Inject constructor() {
     private fun fetchFromKitsu(query: String): AnimeMetadata? {
         return try {
             val encodedQuery = URLEncoder.encode(query, "UTF-8")
-            val url = "$KITSU_BASE_URL?filter[text]=$encodedQuery&page[limit]=1"
+            val url = "$KITSU_BASE_URL?filter[text]=$encodedQuery&page[limit]=3"
             val request = Request.Builder()
                 .url(url)
                 .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
                 .build()
 
             httpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    AppLog.w(TAG, "Kitsu API returned HTTP ${response.code}")
-                    return null
-                }
+                if (!response.isSuccessful) return null
                 val body = response.body?.string() ?: return null
                 val json = JSONObject(body)
                 val data = json.optJSONArray("data") ?: return null
                 if (data.length() == 0) return null
 
-                val anime = data.getJSONObject(0)
-                val attributes = anime.optJSONObject("attributes") ?: return null
-                val posterImage = attributes.optJSONObject("posterImage")
-                val coverImage = attributes.optJSONObject("coverImage")
+                for (i in 0 until data.length()) {
+                    val anime = data.optJSONObject(i) ?: continue
+                    val attributes = anime.optJSONObject("attributes") ?: continue
+                    val titles = attributes.optJSONObject("titles")
+                    val canonical = attributes.optString("canonicalTitle")
+                    val enJp = titles?.optString("en_jp") ?: canonical
+                    val en = titles?.optString("en")
+                    val jaJp = titles?.optString("ja_jp")
 
-                val posterUrl = posterImage?.optString("large")?.takeIf { it.isNotBlank() && it != "null" }
-                    ?: posterImage?.optString("original")?.takeIf { it.isNotBlank() && it != "null" }
-                    ?: posterImage?.optString("medium")?.takeIf { it.isNotBlank() && it != "null" }
+                    val sim = maxOf(
+                        calculateSimilarity(query, canonical),
+                        calculateSimilarity(query, enJp),
+                        calculateSimilarity(query, en ?: "")
+                    )
+                    // Strictly reject candidate if below threshold
+                    if (sim < MIN_ANIME_CONFIDENCE) continue
 
-                val bannerUrl = coverImage?.optString("original")?.takeIf { it.isNotBlank() && it != "null" }
-                    ?: coverImage?.optString("large")?.takeIf { it.isNotBlank() && it != "null" }
+                    val posterImage = attributes.optJSONObject("posterImage")
+                    val coverImage = attributes.optJSONObject("coverImage")
 
-                val titles = attributes.optJSONObject("titles")
-                val enJp = titles?.optString("en_jp")?.takeIf { it.isNotBlank() && it != "null" }
-                val en = titles?.optString("en")?.takeIf { it.isNotBlank() && it != "null" }
-                val jaJp = titles?.optString("ja_jp")?.takeIf { it.isNotBlank() && it != "null" }
-                val synopsis = attributes.optString("synopsis").takeIf { it.isNotBlank() && it != "null" }
-                val score = attributes.optString("averageRating").toFloatOrNull()?.let { it / 10.0f }
-                val ytId = attributes.optString("youtubeVideoId").takeIf { it.isNotBlank() && it != "null" }
-                val trailerUrl = ytId?.let { "https://www.youtube.com/watch?v=$it" }
+                    val posterUrl = posterImage?.optString("large")?.takeIf { it.isNotBlank() && it != "null" }
+                        ?: posterImage?.optString("original")?.takeIf { it.isNotBlank() && it != "null" }
+                        ?: posterImage?.optString("medium")
 
-                AnimeMetadata(
-                    posterUrl = posterUrl,
-                    bannerUrl = bannerUrl,
-                    titleRomaji = enJp,
-                    titleEnglish = en,
-                    titleNative = jaJp,
-                    synopsis = synopsis,
-                    score = score,
-                    trailerUrl = trailerUrl
-                )
+                    val bannerUrl = coverImage?.optString("original")?.takeIf { it.isNotBlank() && it != "null" }
+                        ?: coverImage?.optString("large")
+
+                    val synopsis = attributes.optString("synopsis").takeIf { it.isNotBlank() && it != "null" }
+                    val score = attributes.optString("averageRating").toFloatOrNull()?.let { it / 10.0f }
+
+                    return AnimeMetadata(
+                        posterUrl = posterUrl,
+                        bannerUrl = bannerUrl,
+                        titleRomaji = enJp,
+                        titleEnglish = en?.takeIf { it.isNotBlank() && it != "null" },
+                        titleNative = jaJp?.takeIf { it.isNotBlank() && it != "null" },
+                        synopsis = synopsis,
+                        score = score,
+                        isAnime = true
+                    )
+                }
+                null
             }
         } catch (e: Exception) {
             AppLog.w(TAG, "Kitsu API exception for '$query': ${e.message}")
             null
         }
     }
-
-    private fun fetchFromTmdb(query: String): AnimeMetadata? {
-        val apiKey = BuildConfig.TMDB_API_KEY
-        if (apiKey.isBlank()) {
-            // Sem chave configurada (local.properties / TMDB_API_KEY), TMDB é ignorado e AniList/Kitsu continuam como fontes.
-            return null
-        }
-        return try {
-            val encodedQuery = URLEncoder.encode(query, "UTF-8")
-            val url = "$TMDB_BASE_URL/search/multi?api_key=$apiKey&query=$encodedQuery&language=pt-BR&include_adult=false"
-            val request = Request.Builder()
-                .url(url)
-                .header("User-Agent", "Makimono/1.6.4 (Android)")
-                .header("Accept", "application/json")
-                .build()
-
-            httpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    AppLog.w(TAG, "TMDB search returned HTTP ${response.code}")
-                    return null
-                }
-                val body = response.body?.string() ?: return null
-                val json = JSONObject(body)
-                val results = json.optJSONArray("results") ?: return null
-                if (results.length() == 0) return null
-
-                // Pick the candidate with highest title similarity among movies & TV shows
-                var bestCandidate: JSONObject? = null
-                var bestScore = -1.0
-
-                for (i in 0 until results.length()) {
-                    val item = results.getJSONObject(i)
-                    val mediaType = item.optString("media_type")
-                    if (mediaType != "movie" && mediaType != "tv") continue
-
-                    val title = item.optString("title").ifBlank { item.optString("name") }
-                    val origTitle = item.optString("original_title").ifBlank { item.optString("original_name") }
-                    val score = maxOf(
-                        calculateSimilarity(query, title),
-                        calculateSimilarity(query, origTitle)
-                    )
-                    if (score > bestScore) {
-                        bestScore = score
-                        bestCandidate = item
-                    }
-                }
-
-                val item = bestCandidate ?: return null
-                val mediaType = item.optString("media_type")
-                val isMovie = mediaType == "movie"
-
-                val title = item.optString("title").ifBlank { item.optString("name") }
-                val origTitle = item.optString("original_title").ifBlank { item.optString("original_name") }
-                val posterPath = item.optString("poster_path").takeIf { it.isNotBlank() && it != "null" }
-                val backdropPath = item.optString("backdrop_path").takeIf { it.isNotBlank() && it != "null" }
-
-                val posterUrl = posterPath?.let { "$TMDB_IMAGE_BASE_POSTER$it" }
-                val bannerUrl = backdropPath?.let { "$TMDB_IMAGE_BASE_BACKDROP$it" }
-
-                val synopsis = item.optString("overview").takeIf { it.isNotBlank() && it != "null" }
-                val voteAvg = item.optDouble("vote_average", -1.0).takeIf { it >= 0 }?.toFloat()
-
-                val dateStr = item.optString("release_date").ifBlank { item.optString("first_air_date") }
-                val year = if (dateStr.length >= 4) dateStr.substring(0, 4).toIntOrNull() else null
-
-                val genreList = mutableListOf<String>()
-                item.optJSONArray("genre_ids")?.let { arr ->
-                    for (i in 0 until arr.length()) {
-                        val gId = arr.optInt(i)
-                        TMDB_GENRE_MAP[gId]?.let { genreList.add(it) }
-                    }
-                }
-
-                AnimeMetadata(
-                    posterUrl = posterUrl,
-                    bannerUrl = bannerUrl,
-                    titleRomaji = title,
-                    titleEnglish = origTitle,
-                    titleNative = origTitle,
-                    synopsis = synopsis,
-                    score = voteAvg,
-                    year = year,
-                    genres = genreList,
-                    isMovie = isMovie,
-                    isAnime = false,
-                    mediaType = mediaType
-                )
-            }
-        } catch (e: Exception) {
-            AppLog.w(TAG, "TMDB search exception for '$query': ${e.message}")
-            null
-        }
-    }
-
 }

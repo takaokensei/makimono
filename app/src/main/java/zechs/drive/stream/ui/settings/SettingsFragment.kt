@@ -309,6 +309,8 @@ class SettingsFragment : BaseFragment() {
                 minimumHeight = minHeight
                 insetTop = 0
                 insetBottom = 0
+                val padH = resources.getDimensionPixelSize(R.dimen.spacing_5)
+                setPadding(padH, 0, padH, 0)
                 cornerRadius = resources.getDimensionPixelSize(R.dimen.settings_category_corner_radius)
                 strokeWidth = resources.getDimensionPixelSize(R.dimen.settings_category_stroke_width)
                 isFocusable = true

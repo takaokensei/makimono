@@ -1,7 +1,9 @@
 package zechs.drive.stream.ui.profile
 
-import android.view.LayoutInflater
+import android.graphics.Color
 import android.graphics.Typeface
+import android.view.KeyEvent
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
@@ -98,15 +100,108 @@ class ProfilesAdapter(
                 zechs.drive.stream.utils.FocusEngine.FocusKind.CARD
             ) { _, hasFocus ->
                 val focusedItem = currentList.getOrNull(bindingAdapterPosition) as? ProfileUiModel.ProfileItem
-                binding.avatarContainer.isSelected = hasFocus
-                binding.tvProfileName.isSelected = hasFocus
+                val editHasFocus = binding.btnEditProfile.hasFocus()
+                val isCardOrEditFocused = hasFocus || editHasFocus
+                binding.avatarContainer.isSelected = isCardOrEditFocused
+                binding.tvProfileName.isSelected = isCardOrEditFocused
+                binding.tvProfileName.setTextColor(if (isCardOrEditFocused) Color.WHITE else Color.parseColor("#B0B0B0"))
                 binding.tvProfileName.setTypeface(
-                    binding.tvProfileName.typeface,
-                    if (hasFocus) Typeface.BOLD else Typeface.NORMAL
+                    null,
+                    if (isCardOrEditFocused) Typeface.BOLD else Typeface.NORMAL
                 )
+                if (focusedItem != null) {
+                    binding.btnEditProfile.isVisible = isCardOrEditFocused
+                    if (!isCardOrEditFocused) {
+                        binding.btnEditProfile.isFocusable = false
+                    }
+                } else {
+                    binding.btnEditProfile.isVisible = false
+                    binding.btnEditProfile.isFocusable = false
+                }
                 if (hasFocus) {
                     focusedItem?.profile?.let(onProfileFocused)
                 }
+            }
+
+            binding.cardProfileRoot.setOnKeyListener { _, keyCode, event ->
+                if (event.action == KeyEvent.ACTION_DOWN) {
+                    if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                        val item = currentList.getOrNull(bindingAdapterPosition)
+                        if (item is ProfileUiModel.ProfileItem && binding.btnEditProfile.isVisible) {
+                            binding.btnEditProfile.isFocusable = true
+                            binding.btnEditProfile.requestFocus()
+                            return@setOnKeyListener true
+                        } else {
+                            val logoutBtn = binding.root.rootView.findViewById<View>(R.id.btnLogOut)
+                            if (logoutBtn != null && logoutBtn.isFocusable) {
+                                logoutBtn.requestFocus()
+                                return@setOnKeyListener true
+                            }
+                        }
+                    }
+                }
+                false
+            }
+
+            binding.btnEditProfile.setOnFocusChangeListener { v, hasFocus ->
+                if (hasFocus) {
+                    v.animate().scaleX(1.15f).scaleY(1.15f).setDuration(150).start()
+                    binding.avatarContainer.isSelected = true
+                    binding.tvProfileName.isSelected = true
+                    binding.tvProfileName.setTextColor(Color.WHITE)
+                    binding.tvProfileName.setTypeface(null, Typeface.BOLD)
+                    binding.btnEditProfile.isVisible = true
+                    val focusedItem = currentList.getOrNull(bindingAdapterPosition) as? ProfileUiModel.ProfileItem
+                    focusedItem?.profile?.let(onProfileFocused)
+                } else {
+                    v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start()
+                    val cardFocused = binding.cardProfileRoot.hasFocus()
+                    binding.btnEditProfile.isVisible = cardFocused
+                    if (!cardFocused) {
+                        binding.btnEditProfile.isFocusable = false
+                        binding.avatarContainer.isSelected = false
+                        binding.tvProfileName.isSelected = false
+                        binding.tvProfileName.setTextColor(Color.parseColor("#B0B0B0"))
+                        binding.tvProfileName.setTypeface(null, Typeface.NORMAL)
+                    }
+                }
+            }
+
+            binding.btnEditProfile.setOnKeyListener { _, keyCode, event ->
+                if (event.action == KeyEvent.ACTION_DOWN) {
+                    when (keyCode) {
+                        KeyEvent.KEYCODE_DPAD_UP -> {
+                            binding.btnEditProfile.isFocusable = false
+                            binding.cardProfileRoot.requestFocus()
+                            return@setOnKeyListener true
+                        }
+                        KeyEvent.KEYCODE_DPAD_DOWN -> {
+                            binding.btnEditProfile.isFocusable = false
+                            val logoutBtn = binding.root.rootView.findViewById<View>(R.id.btnLogOut)
+                            if (logoutBtn != null && logoutBtn.isFocusable) {
+                                logoutBtn.requestFocus()
+                                return@setOnKeyListener true
+                            }
+                        }
+                        KeyEvent.KEYCODE_DPAD_LEFT -> {
+                            val prevPos = bindingAdapterPosition - 1
+                            if (prevPos >= 0) {
+                                binding.btnEditProfile.isFocusable = false
+                                recyclerView?.findViewHolderForAdapterPosition(prevPos)?.itemView?.requestFocus()
+                                return@setOnKeyListener true
+                            }
+                        }
+                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                            val nextPos = bindingAdapterPosition + 1
+                            if (nextPos < itemCount) {
+                                binding.btnEditProfile.isFocusable = false
+                                recyclerView?.findViewHolderForAdapterPosition(nextPos)?.itemView?.requestFocus()
+                                return@setOnKeyListener true
+                            }
+                        }
+                    }
+                }
+                false
             }
         }
 
@@ -124,56 +219,55 @@ class ProfilesAdapter(
                         .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
                         .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
                         .into(binding.ivProfileAvatar)
-                    binding.tvProfileRole.text = listOfNotNull(
-                        itemView.context.getString(R.string.profile_role_admin).takeIf { profile.isAdmin },
-                        itemView.context.getString(R.string.profile_role_kids).takeIf { profile.isKids }
-                    ).joinToString(" · ")
-                    binding.tvProfileRole.visibility = if (profile.isAdmin || profile.isKids)
-                        android.view.View.VISIBLE else android.view.View.GONE
                     binding.ivProfileAvatar.isVisible = true
                     binding.ivAddIcon.isVisible = false
                     binding.avatarContainer.setBackgroundResource(R.drawable.item_profile_avatar_ring)
                     val ringInset = (3 * itemView.resources.displayMetrics.density).toInt()
                     binding.avatarContainer.setPadding(ringInset, ringInset, ringInset, ringInset)
 
-                    val isFocused = binding.cardProfileRoot.hasFocus()
+                    val isFocused = binding.cardProfileRoot.hasFocus() || binding.btnEditProfile.hasFocus()
                     binding.cardProfileRoot.background = null
                     binding.cardProfileRoot.isSelected = isFocused
                     binding.avatarContainer.isSelected = isFocused
                     binding.tvProfileName.isSelected = isFocused
+                    binding.tvProfileName.setTextColor(if (isFocused) Color.WHITE else Color.parseColor("#B0B0B0"))
                     binding.tvProfileName.setTypeface(
-                        binding.tvProfileName.typeface,
+                        null,
                         if (isFocused) Typeface.BOLD else Typeface.NORMAL
                     )
+
+                    // Pencil edit button & long-click support
+                    binding.btnEditProfile.isVisible = isFocused
+                    binding.btnEditProfile.isFocusable = binding.btnEditProfile.hasFocus()
+                    binding.btnEditProfile.setOnClickListener {
+                        onEditProfileClicked(profile)
+                    }
+                    binding.cardProfileRoot.setOnLongClickListener {
+                        onEditProfileClicked(profile)
+                        true
+                    }
 
                     // Tick indicator
                     binding.badgeStatusTick.isVisible = false
                     binding.cardProfileRoot.contentDescription = buildList {
                         add(profile.name)
-                        if (profile.isAdmin) add(itemView.context.getString(R.string.profile_role_admin_accessibility))
-                        if (profile.isKids) add(itemView.context.getString(R.string.profile_role_kids_accessibility))
                         if (item.isActive) add(itemView.context.getString(R.string.profile_active_accessibility))
                     }.joinToString(", ")
 
-                    // Manage mode edit icon
-                    binding.ivEditBadge.isVisible = isManageMode
+                    binding.ivEditBadge.isVisible = false
 
                     binding.cardProfileRoot.setOnClickListener {
-                        if (isManageMode) {
-                            onEditProfileClicked(profile)
-                        } else {
-                            onProfileSelected(profile)
-                        }
+                        onProfileSelected(profile)
                     }
                 }
                 is ProfileUiModel.AddProfileItem -> {
-                    binding.tvProfileRole.visibility = android.view.View.INVISIBLE
                     binding.cardProfileRoot.contentDescription =
                         itemView.context.getString(R.string.profile_add_accessibility)
                     com.bumptech.glide.Glide.with(binding.ivProfileAvatar).clear(binding.ivProfileAvatar)
                     binding.tvProfileName.setText(R.string.profile_add_accessibility)
                     binding.tvProfileName.isSelected = false
-                    binding.tvProfileName.setTypeface(binding.tvProfileName.typeface, Typeface.NORMAL)
+                    binding.tvProfileName.setTextColor(Color.parseColor("#B0B0B0"))
+                    binding.tvProfileName.setTypeface(null, Typeface.NORMAL)
                     binding.ivProfileAvatar.setImageDrawable(null)
                     binding.ivProfileAvatar.isVisible = false
                     binding.ivAddIcon.isVisible = true
@@ -182,9 +276,12 @@ class ProfilesAdapter(
                     binding.avatarContainer.isSelected = false
                     binding.badgeStatusTick.isVisible = false
                     binding.ivEditBadge.isVisible = false
+                    binding.btnEditProfile.isVisible = false
+                    binding.btnEditProfile.isFocusable = false
 
                     binding.cardProfileRoot.background = null
                     binding.cardProfileRoot.isSelected = false
+                    binding.cardProfileRoot.setOnLongClickListener(null)
 
                     binding.cardProfileRoot.setOnClickListener {
                         onAddProfileClicked()

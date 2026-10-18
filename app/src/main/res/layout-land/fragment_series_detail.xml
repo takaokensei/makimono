@@ -1,100 +1,1058 @@
-<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" xmlns:tools="http://schemas.android.com/tools" android:id="@+id/scrollView" android:layout_width="match_parent" android:layout_height="match_parent" android:clipChildren="true" android:clipToPadding="true" android:fillViewport="true">
-    <androidx.constraintlayout.widget.ConstraintLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:clipChildren="false" android:clipToPadding="false" android:paddingBottom="40dp">
-        <ImageView android:id="@+id/ivHeroBackdrop" android:cropToPadding="true" android:layout_width="0dp" android:layout_height="0dp" android:alpha="0.9" android:contentDescription="@null" android:scaleType="centerCrop" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toTopOf="parent" tools:src="@drawable/bg_anime_library" app:layout_constraintBottom_toBottomOf="@id/heroContentBlock" />
-        <View android:id="@+id/viewDynamicColorTint" android:layout_width="0dp" android:layout_height="0dp" android:background="@android:color/transparent" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toTopOf="@id/ivHeroBackdrop" app:layout_constraintBottom_toBottomOf="@id/ivHeroBackdrop" />
-        <View android:id="@+id/viewHeroScrim" android:layout_width="0dp" android:layout_height="0dp" android:background="@drawable/detail_backdrop_fade" app:layout_constraintBottom_toBottomOf="@id/ivHeroBackdrop" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toTopOf="@id/ivHeroBackdrop" />
-        <View android:id="@+id/viewHeroVignette" android:layout_width="0dp" android:layout_height="0dp" android:background="@drawable/detail_backdrop_shade" app:layout_constraintBottom_toBottomOf="@id/ivHeroBackdrop" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toTopOf="@id/ivHeroBackdrop" />
-        <!-- Keep the hero artwork out of the season and episode area on TV. -->
-        <View android:id="@+id/viewSeriesBodySurface" android:layout_width="0dp" android:layout_height="0dp" android:background="?attr/colorBgBase" android:clickable="false" app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toBottomOf="@id/heroContentBlock" />
-        <LinearLayout android:id="@+id/topHeaderBar" android:layout_width="0dp" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:paddingStart="@dimen/tv_overscan_margin" android:paddingTop="@dimen/tv_overscan_margin_vertical" android:paddingEnd="@dimen/tv_overscan_margin" android:paddingBottom="4dp" android:visibility="gone" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toTopOf="parent" android:layout_marginStart="0dp" android:layout_marginEnd="0dp" android:layout_marginTop="0dp">
-            <ImageView android:layout_width="32dp" android:layout_height="32dp" android:layout_marginEnd="20dp" android:src="@drawable/ic_makimono_torii" android:contentDescription="@string/app_name" />
-            <FrameLayout android:id="@+id/btnBack" android:layout_width="48dp" android:layout_height="48dp" android:background="@drawable/btn_secondary_action_bg" android:clickable="true" android:contentDescription="@string/back" android:focusable="true" android:focusableInTouchMode="true" android:layout_marginEnd="12dp">
-                <ImageView android:layout_width="20dp" android:layout_height="20dp" android:layout_gravity="center" android:contentDescription="@string/back" android:duplicateParentState="true" android:src="@drawable/ic_back_24" app:tint="@color/btn_secondary_action_foreground" />
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/scrollView"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipChildren="true"
+    android:clipToPadding="true"
+    android:fillViewport="true">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:paddingBottom="48dp">
+
+        <!-- 1. Apple TV Directional Ambient Hero Backdrop Image -->
+        <ImageView
+            android:id="@+id/ivHeroBackdrop"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:alpha="1.0"
+            android:contentDescription="@null"
+            android:cropToPadding="true"
+            android:scaleType="centerCrop"
+            app:layout_constraintBottom_toBottomOf="@id/tabsContainer"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:src="@drawable/bg_anime_library" />
+
+        <View
+            android:id="@+id/viewDynamicColorTint"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@android:color/transparent"
+            app:layout_constraintBottom_toBottomOf="@id/ivHeroBackdrop"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/ivHeroBackdrop" />
+
+        <!-- Directional Scrim 1: Horizontal gradient (95% at left -> 0% at 55% width) -->
+        <View
+            android:id="@+id/viewHeroScrimHorizontal"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@drawable/scrim_hero_backdrop_horizontal"
+            app:layout_constraintBottom_toBottomOf="@id/ivHeroBackdrop"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/ivHeroBackdrop"
+            app:layout_constraintWidth_percent="0.55" />
+
+        <!-- Directional Scrim 2: Vertical gradient (0% at top 50% -> 100% solid at bottom) -->
+        <View
+            android:id="@+id/viewHeroScrimVertical"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@drawable/scrim_hero_backdrop_vertical"
+            app:layout_constraintBottom_toBottomOf="@id/ivHeroBackdrop"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/ivHeroBackdrop" />
+
+        <!-- Solid Base Surface under hero tabs and episode area -->
+        <View
+            android:id="@+id/viewSeriesBodySurface"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="?attr/colorBgBase"
+            android:clickable="false"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tabsContainer" />
+
+        <!-- 2. Top Header Bar -->
+        <LinearLayout
+            android:id="@+id/topHeaderBar"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="@dimen/tv_overscan_margin"
+            android:paddingTop="@dimen/tv_overscan_margin_vertical"
+            android:paddingEnd="@dimen/tv_overscan_margin"
+            android:paddingBottom="4dp"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <ImageView
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="20dp"
+                android:contentDescription="@string/app_name"
+                android:src="@drawable/ic_makimono_torii" />
+
+            <FrameLayout
+                android:id="@+id/btnBack"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="12dp"
+                android:background="@drawable/btn_secondary_action_bg"
+                android:clickable="true"
+                android:contentDescription="@string/back"
+                android:focusable="true"
+                android:focusableInTouchMode="true">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@string/back"
+                    android:duplicateParentState="true"
+                    android:src="@drawable/ic_back_24"
+                    app:tint="@color/btn_secondary_action_foreground" />
             </FrameLayout>
-            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
-                <TextView android:id="@+id/tvBreadcrumbRoot" style="@style/TextAppearance.Makimono.TV.Body" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="sans-serif-medium" android:text="@string/series_breadcrumb_library" android:textColor="@color/obsidian_text_secondary" />
-                <TextView style="@style/TextAppearance.Makimono.TV.Body" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:layout_marginEnd="8dp" android:text="›" android:textColor="@color/obsidian_text_tertiary" />
-                <TextView android:id="@+id/tvBreadcrumbCurrent" style="@style/TextAppearance.Makimono.TV.Body" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="sans-serif-medium" android:text="@string/series_breadcrumb_titles" android:textColor="@color/obsidian_text_secondary" android:maxLines="1" android:maxWidth="320dp" android:ellipsize="end" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvBreadcrumbRoot"
+                    style="@style/TextAppearance.Makimono.TV.Body"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="@string/series_breadcrumb_library"
+                    android:textColor="@color/obsidian_text_secondary" />
+
+                <TextView
+                    style="@style/TextAppearance.Makimono.TV.Body"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:text="›"
+                    android:textColor="@color/obsidian_text_tertiary" />
+
+                <TextView
+                    android:id="@+id/tvBreadcrumbCurrent"
+                    style="@style/TextAppearance.Makimono.TV.Body"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="sans-serif-medium"
+                    android:maxWidth="320dp"
+                    android:maxLines="1"
+                    android:text="@string/series_breadcrumb_titles"
+                    android:textColor="@color/obsidian_text_secondary" />
             </LinearLayout>
-            <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1" />
-            <View android:layout_width="16dp" android:layout_height="0dp" />
-            <FrameLayout android:id="@+id/btnSearch" android:layout_width="48dp" android:layout_height="48dp" android:background="@drawable/btn_secondary_action_bg" android:clickable="true" android:contentDescription="@string/search" android:focusable="true" android:focusableInTouchMode="true">
-                <ImageView android:layout_width="20dp" android:layout_height="20dp" android:layout_gravity="center" android:contentDescription="@string/search" android:duplicateParentState="true" android:src="@drawable/ic_search_24" app:tint="@color/btn_secondary_action_foreground" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <FrameLayout
+                android:id="@+id/btnSearch"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/btn_secondary_action_bg"
+                android:clickable="true"
+                android:contentDescription="@string/search"
+                android:focusable="true"
+                android:focusableInTouchMode="true">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@string/search"
+                    android:duplicateParentState="true"
+                    android:src="@drawable/ic_search_24"
+                    app:tint="@color/btn_secondary_action_foreground" />
             </FrameLayout>
         </LinearLayout>
-        <LinearLayout android:id="@+id/heroContentBlock" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="@dimen/tv_overscan_margin" android:layout_marginTop="28dp" android:layout_marginEnd="@dimen/tv_overscan_margin" android:gravity="top" android:orientation="horizontal" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toBottomOf="@id/topHeaderBar" android:paddingBottom="6dp">
-            <com.google.android.material.card.MaterialCardView android:id="@+id/cardSeriesPoster" android:layout_width="112dp" android:layout_height="168dp" android:clickable="false" android:focusable="false" android:visibility="gone" app:cardBackgroundColor="?attr/colorBgSurface" app:cardCornerRadius="6dp" app:cardElevation="10dp" app:strokeColor="@color/obsidian_border_glass" app:strokeWidth="1dp">
-                <ImageView android:id="@+id/ivSeriesPosterCard" android:layout_width="match_parent" android:layout_height="match_parent" android:contentDescription="@null" android:scaleType="centerCrop" tools:src="@drawable/kodi_primary_bg" />
+
+        <!-- 3. Hero Content Block (Image 4 Apple / Crunchyroll Standard) -->
+        <LinearLayout
+            android:id="@+id/heroContentBlock"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/tv_overscan_margin"
+            android:layout_marginTop="28dp"
+            android:layout_marginEnd="@dimen/tv_overscan_margin"
+            android:gravity="top"
+            android:orientation="horizontal"
+            android:paddingBottom="12dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/topHeaderBar">
+
+            <!-- 2:3 Sharp Poster Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardSeriesPoster"
+                android:layout_width="120dp"
+                android:layout_height="180dp"
+                android:clickable="false"
+                android:focusable="false"
+                android:visibility="gone"
+                app:cardBackgroundColor="?attr/colorBgSurface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="8dp"
+                app:strokeColor="@color/obsidian_border_glass"
+                app:strokeWidth="1dp">
+
+                <ImageView
+                    android:id="@+id/ivSeriesPosterCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@null"
+                    android:scaleType="centerCrop"
+                    tools:src="@drawable/kodi_primary_bg" />
             </com.google.android.material.card.MaterialCardView>
-            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="0dp" android:layout_weight="1" android:orientation="vertical">
-                <TextView android:id="@+id/tvRomajiTitle" style="@style/TextAppearance.Makimono.TV.Title1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:fontFamily="@font/inter" android:includeFontPadding="false" android:letterSpacing="-0.02" android:shadowColor="@color/obsidian_media_scrim" android:shadowDx="0" android:shadowDy="3" android:shadowRadius="0" android:textColor="@color/obsidian_text_primary" tools:text="Grisaia no Rakuen" android:maxLines="2" android:ellipsize="end" android:textStyle="bold" />
-                <TextView android:id="@+id/tvJapaneseTitle" style="@style/TextAppearance.Makimono.TV.Callout" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="sans-serif-black" android:includeFontPadding="false" android:letterSpacing="0.04" android:shadowColor="@color/obsidian_scrim" android:shadowDx="0" android:shadowDy="2" android:shadowRadius="6" android:textColor="@color/surface_specular" android:visibility="gone" tools:text="グリザイアの楽園" android:layout_marginTop="4dp" android:maxLines="1" android:ellipsize="end" />
-                <TextView android:id="@+id/tvEnglishSubtitle" style="@style/TextAppearance.Makimono.TV.Callout" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:fontFamily="sans-serif-medium" android:includeFontPadding="false" android:letterSpacing="0.08" android:textAllCaps="true" android:textColor="?attr/colorAccentPrimary" tools:text="THE EDEN OF GRISAIA" android:visibility="gone" />
-                <LinearLayout android:id="@+id/metaRow1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:gravity="center_vertical" android:orientation="horizontal">
-                    <TextView android:id="@+id/tvAgeRating" style="@style/TextAppearance.Makimono.TV.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/badge_age_rating_bg" android:paddingStart="7dp" android:paddingTop="2dp" android:paddingEnd="7dp" android:paddingBottom="2dp" android:textColor="?attr/colorOnPrimary" android:textStyle="bold" tools:text="16+" />
-                    <TextView android:id="@+id/tvReleaseYear" style="@style/TextAppearance.Makimono.TV.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:background="@drawable/glass_meta_pill_bg" android:paddingStart="8dp" android:paddingTop="2dp" android:paddingEnd="8dp" android:paddingBottom="2dp" android:textColor="@color/obsidian_text_secondary" tools:text="2015" />
-                    <TextView android:id="@+id/tvSeriesStatus" style="@style/TextAppearance.Makimono.TV.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/glass_meta_pill_bg" android:paddingStart="8dp" android:paddingTop="2dp" android:paddingEnd="8dp" android:paddingBottom="2dp" android:textColor="@color/obsidian_text_secondary" tools:text="Completo" android:layout_marginStart="8dp" android:visibility="gone" />
-                    <LinearLayout android:id="@+id/layoutRating" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:layout_marginStart="10dp" android:visibility="gone">
-                        <ImageView android:layout_width="14dp" android:layout_height="14dp" android:contentDescription="@null" android:src="@drawable/ic_star_filled_24" app:tint="@color/obsidian_warning" />
-                        <TextView android:id="@+id/tvMalScore" style="@style/TextAppearance.Makimono.TV.Callout" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="5dp" android:fontFamily="sans-serif-bold" android:textColor="@color/obsidian_text_primary" tools:text="8.2" />
-                        <TextView android:id="@+id/tvRatingSource" style="@style/TextAppearance.Makimono.TV.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="4dp" android:textColor="@color/obsidian_text_secondary" android:text="@string/series_source_mal" />
+
+            <!-- Text & Controls on Right -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="0dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <!-- Main Romaji / Canonical Title -->
+                <TextView
+                    android:id="@+id/tvRomajiTitle"
+                    style="@style/TextAppearance.Makimono.TV.Title1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/inter"
+                    android:includeFontPadding="false"
+                    android:letterSpacing="-0.02"
+                    android:maxLines="2"
+                    android:shadowColor="@color/obsidian_media_scrim"
+                    android:shadowDx="0"
+                    android:shadowDy="3"
+                    android:shadowRadius="0"
+                    android:textColor="@color/obsidian_text_primary"
+                    android:textStyle="bold"
+                    tools:text="Monogatari Series" />
+
+                <!-- Canonical Franchise Pill (e.g. Franquia Canônica • 13 Obras Disponíveis) -->
+                <TextView
+                    android:id="@+id/tvFranchiseCanonicalPill"
+                    style="@style/TextAppearance.Makimono.TV.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/glass_meta_pill_bg"
+                    android:fontFamily="sans-serif-medium"
+                    android:paddingStart="10dp"
+                    android:paddingTop="3dp"
+                    android:paddingEnd="10dp"
+                    android:paddingBottom="3dp"
+                    android:textColor="@color/obsidian_accent"
+                    android:visibility="gone"
+                    tools:text="Franquia Canônica • 13 Obras Disponíveis"
+                    tools:visibility="visible" />
+
+                <!-- Japanese Kanji Title -->
+                <TextView
+                    android:id="@+id/tvJapaneseTitle"
+                    style="@style/TextAppearance.Makimono.TV.Callout"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:ellipsize="end"
+                    android:fontFamily="sans-serif-black"
+                    android:includeFontPadding="false"
+                    android:letterSpacing="0.04"
+                    android:maxLines="1"
+                    android:shadowColor="@color/obsidian_scrim"
+                    android:shadowDx="0"
+                    android:shadowDy="2"
+                    android:shadowRadius="6"
+                    android:textColor="@color/surface_specular"
+                    android:visibility="gone"
+                    tools:text="物語シリーズ" />
+
+                <TextView
+                    android:id="@+id/tvEnglishSubtitle"
+                    style="@style/TextAppearance.Makimono.TV.Callout"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:includeFontPadding="false"
+                    android:letterSpacing="0.08"
+                    android:textAllCaps="true"
+                    android:textColor="?attr/colorAccentPrimary"
+                    android:visibility="gone"
+                    tools:text="MONOGATARI SERIES" />
+
+                <!-- Meta Row 1: Age Rating [A14] • Dub | Sub • Genres • Year • Score (Image 4) -->
+                <LinearLayout
+                    android:id="@+id/metaRow1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <!-- Age Rating Pill -->
+                    <TextView
+                        android:id="@+id/tvAgeRating"
+                        style="@style/TextAppearance.Makimono.TV.Caption"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/badge_age_rating_bg"
+                        android:paddingStart="7dp"
+                        android:paddingTop="2dp"
+                        android:paddingEnd="7dp"
+                        android:paddingBottom="2dp"
+                        android:textColor="?attr/colorOnPrimary"
+                        android:textStyle="bold"
+                        tools:text="A14" />
+
+                    <!-- Sub / Dub Tag -->
+                    <LinearLayout
+                        android:id="@+id/audioBadgeContainer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/glass_meta_pill_bg"
+                        android:gravity="center_vertical"
+                        android:paddingStart="8dp"
+                        android:paddingTop="2dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="2dp">
+
+                        <TextView
+                            android:id="@+id/tvAudioTrackBadge"
+                            style="@style/TextAppearance.Makimono.TV.Caption"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="?attr/colorAccentPrimary"
+                            android:textStyle="bold"
+                            tools:text="Sub | Dub" />
                     </LinearLayout>
-                    <TextView android:id="@+id/tvGenres" style="@style/TextAppearance.Makimono.TV.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:textColor="@color/obsidian_text_secondary" android:visibility="gone" tools:text="♦ Ação • Aventura • Ficção Científica" tools:visibility="visible" />
+
+                    <!-- Dot -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp"
+                        android:text="•"
+                        android:textColor="@color/obsidian_text_tertiary" />
+
+                    <!-- Genres -->
+                    <TextView
+                        android:id="@+id/tvGenres"
+                        style="@style/TextAppearance.Makimono.TV.Caption"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/obsidian_text_secondary"
+                        tools:text="drama, sobrenatural, mistério" />
+
+                    <!-- Dot -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp"
+                        android:text="•"
+                        android:textColor="@color/obsidian_text_tertiary" />
+
+                    <!-- Release Year -->
+                    <TextView
+                        android:id="@+id/tvReleaseYear"
+                        style="@style/TextAppearance.Makimono.TV.Caption"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/obsidian_text_secondary"
+                        tools:text="2015" />
+
+                    <TextView
+                        android:id="@+id/tvSeriesStatus"
+                        style="@style/TextAppearance.Makimono.TV.Caption"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/glass_meta_pill_bg"
+                        android:paddingStart="8dp"
+                        android:paddingTop="2dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="2dp"
+                        android:textColor="@color/obsidian_text_secondary"
+                        android:visibility="gone"
+                        tools:text="Completo" />
+
+                    <!-- Rating Score -->
+                    <LinearLayout
+                        android:id="@+id/layoutRating"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:visibility="gone"
+                        tools:visibility="visible">
+
+                        <ImageView
+                            android:layout_width="13dp"
+                            android:layout_height="13dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_star_filled_24"
+                            app:tint="@color/obsidian_warning" />
+
+                        <TextView
+                            android:id="@+id/tvMalScore"
+                            style="@style/TextAppearance.Makimono.TV.Callout"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="5dp"
+                            android:fontFamily="sans-serif-bold"
+                            android:textColor="@color/obsidian_text_primary"
+                            tools:text="8.4" />
+
+                        <TextView
+                            android:id="@+id/tvRatingSource"
+                            style="@style/TextAppearance.Makimono.TV.Caption"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:text="@string/series_source_mal"
+                            android:textColor="@color/obsidian_text_secondary" />
+                    </LinearLayout>
                 </LinearLayout>
-                <LinearLayout android:id="@+id/metaRow2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:gravity="center_vertical" android:orientation="horizontal">
-                    <LinearLayout android:id="@+id/qualityBadgeContainer" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/glass_meta_pill_bg" android:gravity="center_vertical" android:paddingStart="8dp" android:paddingTop="3dp" android:paddingEnd="8dp" android:paddingBottom="3dp">
-                        <ImageView android:layout_width="14dp" android:layout_height="14dp" android:contentDescription="@null" android:src="@drawable/ic_player_24" app:tint="@color/obsidian_text_secondary" />
-                        <TextView android:id="@+id/tvQualityBadge" style="@style/TextAppearance.Makimono.TV.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="5dp" android:text="" android:textColor="@color/obsidian_text_primary" />
+
+                <!-- Meta Row 2: Tech Specs (1080p, Subtitles) -->
+                <LinearLayout
+                    android:id="@+id/metaRow2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:id="@+id/qualityBadgeContainer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/glass_meta_pill_bg"
+                        android:gravity="center_vertical"
+                        android:paddingStart="8dp"
+                        android:paddingTop="2dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="2dp">
+
+                        <ImageView
+                            android:layout_width="13dp"
+                            android:layout_height="13dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_player_24"
+                            app:tint="@color/obsidian_text_secondary" />
+
+                        <TextView
+                            android:id="@+id/tvQualityBadge"
+                            style="@style/TextAppearance.Makimono.TV.Caption"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="5dp"
+                            android:textColor="@color/obsidian_text_primary"
+                            tools:text="1080p" />
                     </LinearLayout>
-                    <LinearLayout android:id="@+id/audioBadgeContainer" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:background="@drawable/glass_meta_pill_bg" android:gravity="center_vertical" android:paddingStart="8dp" android:paddingTop="3dp" android:paddingEnd="8dp" android:paddingBottom="3dp">
-                        <ImageView android:layout_width="14dp" android:layout_height="14dp" android:contentDescription="@null" android:src="@drawable/ic_audio_24" app:tint="@color/obsidian_text_secondary" />
-                        <TextView android:id="@+id/tvAudioTrackBadge" style="@style/TextAppearance.Makimono.TV.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="5dp" android:text="" android:textColor="@color/obsidian_text_primary" />
-                    </LinearLayout>
-                    <LinearLayout android:id="@+id/subtitleBadgeContainer" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:background="@drawable/glass_meta_pill_bg" android:gravity="center_vertical" android:paddingStart="8dp" android:paddingTop="3dp" android:paddingEnd="8dp" android:paddingBottom="3dp">
-                        <ImageView android:layout_width="14dp" android:layout_height="14dp" android:contentDescription="@null" android:src="@drawable/ic_subtitles_24" app:tint="@color/obsidian_text_secondary" />
-                        <TextView android:id="@+id/tvSubtitleBadge" style="@style/TextAppearance.Makimono.TV.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="5dp" android:text="" android:textColor="@color/obsidian_text_primary" />
+
+                    <LinearLayout
+                        android:id="@+id/subtitleBadgeContainer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/glass_meta_pill_bg"
+                        android:gravity="center_vertical"
+                        android:paddingStart="8dp"
+                        android:paddingTop="2dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="2dp">
+
+                        <ImageView
+                            android:layout_width="13dp"
+                            android:layout_height="13dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_subtitles_24"
+                            app:tint="@color/obsidian_text_secondary" />
+
+                        <TextView
+                            android:id="@+id/tvSubtitleBadge"
+                            style="@style/TextAppearance.Makimono.TV.Caption"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="5dp"
+                            android:textColor="@color/obsidian_text_primary"
+                            tools:text="Multi Subs" />
                     </LinearLayout>
                 </LinearLayout>
-                <TextView android:id="@+id/tvSynopsis" style="@style/TextAppearance.Makimono.TV.Callout" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:ellipsize="end" android:fontFamily="sans-serif" android:lineSpacingExtra="2dp" android:maxLines="3" android:textColor="@color/obsidian_text_secondary" tools:text="Após ser atacada por um vampiro e sobreviver, Koyomi Araragi se vê envolvido com diversas garotas ligadas a excentricidades sobrenaturais..." android:maxWidth="720dp" />
-                <TextView android:id="@+id/tvSynopsisMore" style="@style/TextAppearance.Makimono.TV.Caption" android:layout_width="wrap_content" android:layout_height="36dp" android:clickable="true" android:contentDescription="@string/series_synopsis_expand" android:focusable="true" android:focusableInTouchMode="true" android:gravity="center_vertical" android:minWidth="104dp" android:paddingStart="10dp" android:paddingEnd="10dp" android:text="@string/series_synopsis_expand" android:textColor="?attr/colorAccentPrimary" android:textStyle="bold" android:visibility="gone" />
-                <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:fillViewport="false" android:scrollbars="none" android:clipToPadding="false">
-                    <LinearLayout android:id="@+id/actionsRow" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:gravity="center_vertical" android:orientation="horizontal">
-                        <LinearLayout android:id="@+id/btnPrimaryAction" android:layout_width="wrap_content" android:layout_height="48dp" android:background="@drawable/detail_primary_action_bg" android:clickable="true" android:focusable="true" android:focusableInTouchMode="true" android:gravity="center_vertical" android:orientation="horizontal" android:paddingStart="14dp" android:paddingEnd="16dp">
-                            <ImageView android:id="@+id/ivPrimaryActionIcon" android:layout_width="22dp" android:layout_height="22dp" android:contentDescription="@null" android:duplicateParentState="true" android:src="@drawable/ic_play_24" app:tint="@color/detail_primary_action_foreground" />
-                            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="10dp" android:duplicateParentState="true" android:orientation="vertical">
-                                <TextView android:id="@+id/tvPrimaryActionTitle" style="@style/TextAppearance.Makimono.TV.Body" android:layout_width="wrap_content" android:layout_height="wrap_content" android:duplicateParentState="true" android:fontFamily="sans-serif-bold" android:includeFontPadding="false" android:textColor="@color/detail_primary_action_foreground" tools:text="Continuar Assistindo" android:text="@string/series_action_play" android:textStyle="bold" />
-                                <TextView android:id="@+id/tvPrimaryActionSubtitle" style="@style/TextAppearance.Makimono.TV.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:duplicateParentState="true" android:fontFamily="sans-serif" android:includeFontPadding="false" android:textColor="@color/detail_primary_action_foreground" tools:text="Ep. 4 · 14:28 restante" android:maxLines="1" />
+
+                <!-- Short 2-Line Synopsis (Image 4) -->
+                <TextView
+                    android:id="@+id/tvSynopsis"
+                    style="@style/TextAppearance.Makimono.TV.Callout"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:ellipsize="end"
+                    android:fontFamily="sans-serif"
+                    android:lineSpacingExtra="2dp"
+                    android:maxLines="2"
+                    android:maxWidth="740dp"
+                    android:textColor="@color/obsidian_text_secondary"
+                    tools:text="Após ser atacado por uma lendária vampira e sobreviver, Koyomi Araragi se vê envolvido com diversas garotas ligadas a excentricidades sobrenaturais..." />
+
+                <TextView
+                    android:id="@+id/tvSynopsisMore"
+                    style="@style/TextAppearance.Makimono.TV.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:clickable="true"
+                    android:contentDescription="@string/series_synopsis_expand"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:gravity="center_vertical"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="8dp"
+                    android:text="@string/series_synopsis_expand"
+                    android:textColor="@color/obsidian_link_blue_gray"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+
+                <!-- Action Buttons: Continuar Assistindo | Salvar na Lista | More Actions -->
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipToPadding="false"
+                    android:fillViewport="false"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:id="@+id/actionsRow"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <!-- Primary Action Button (Play / Continuar Assistindo) -->
+                        <LinearLayout
+                            android:id="@+id/btnPrimaryAction"
+                            android:layout_width="wrap_content"
+                            android:layout_height="48dp"
+                            android:background="@drawable/detail_primary_action_bg"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:focusableInTouchMode="true"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="18dp">
+
+                            <ImageView
+                                android:id="@+id/ivPrimaryActionIcon"
+                                android:layout_width="22dp"
+                                android:layout_height="22dp"
+                                android:contentDescription="@null"
+                                android:duplicateParentState="true"
+                                android:src="@drawable/ic_play_24"
+                                app:tint="@color/detail_primary_action_foreground" />
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="10dp"
+                                android:duplicateParentState="true"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/tvPrimaryActionTitle"
+                                    style="@style/TextAppearance.Makimono.TV.Body"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:duplicateParentState="true"
+                                    android:fontFamily="sans-serif-bold"
+                                    android:includeFontPadding="false"
+                                    android:text="@string/series_action_continue"
+                                    android:textColor="@color/detail_primary_action_foreground"
+                                    android:textStyle="bold"
+                                    tools:text="Continuar Assistindo" />
+
+                                <TextView
+                                    android:id="@+id/tvPrimaryActionSubtitle"
+                                    style="@style/TextAppearance.Makimono.TV.Caption"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:duplicateParentState="true"
+                                    android:fontFamily="sans-serif"
+                                    android:includeFontPadding="false"
+                                    android:maxLines="1"
+                                    android:textColor="@color/detail_primary_action_foreground"
+                                    tools:text="Ep. 4 • 14:28 restante" />
                             </LinearLayout>
                         </LinearLayout>
-                        <LinearLayout android:id="@+id/btnTrailer" android:layout_width="wrap_content" android:layout_height="48dp" android:layout_marginStart="8dp" android:background="@drawable/detail_secondary_action_bg" android:clickable="true" android:focusable="true" android:focusableInTouchMode="true" android:gravity="center_vertical" android:orientation="horizontal" android:paddingStart="12dp" android:paddingEnd="12dp" android:visibility="gone">
-                            <ImageView android:layout_width="18dp" android:layout_height="18dp" android:contentDescription="@null" android:duplicateParentState="true" android:src="@drawable/ic_trailer_24" app:tint="@color/btn_secondary_action_foreground" />
-                            <TextView style="@style/TextAppearance.Makimono.TV.Callout" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:duplicateParentState="true" android:fontFamily="sans-serif-medium" android:text="@string/series_action_trailer" android:textColor="@color/btn_secondary_action_foreground" />
+
+                        <!-- Watchlist / Favoritar (Salvar na Lista) -->
+                        <LinearLayout
+                            android:id="@+id/btnFavorite"
+                            android:layout_width="wrap_content"
+                            android:layout_height="48dp"
+                            android:layout_marginStart="10dp"
+                            android:background="@drawable/detail_secondary_action_bg"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:focusableInTouchMode="true"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp">
+
+                            <ImageView
+                                android:id="@+id/ivFavoriteIcon"
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
+                                android:contentDescription="@null"
+                                android:duplicateParentState="true"
+                                android:src="@drawable/ic_star_outline_24"
+                                app:tint="@color/btn_secondary_action_foreground" />
+
+                            <TextView
+                                android:id="@+id/tvFavoriteText"
+                                style="@style/TextAppearance.Makimono.TV.Callout"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:duplicateParentState="true"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="@string/series_action_watchlist"
+                                android:textColor="@color/btn_secondary_action_foreground" />
                         </LinearLayout>
-                        <LinearLayout android:id="@+id/btnFavorite" android:layout_width="wrap_content" android:layout_height="48dp" android:layout_marginStart="8dp" android:background="@drawable/detail_secondary_action_bg" android:clickable="true" android:focusable="true" android:focusableInTouchMode="true" android:gravity="center_vertical" android:orientation="horizontal" android:paddingStart="12dp" android:paddingEnd="12dp">
-                            <ImageView android:id="@+id/ivFavoriteIcon" android:layout_width="18dp" android:layout_height="18dp" android:contentDescription="@null" android:duplicateParentState="true" android:src="@drawable/ic_star_outline_24" app:tint="@color/btn_secondary_action_foreground" />
-                            <TextView android:id="@+id/tvFavoriteText" style="@style/TextAppearance.Makimono.TV.Callout" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:duplicateParentState="true" android:fontFamily="sans-serif-medium" android:text="@string/series_action_favorite" android:textColor="@color/btn_secondary_action_foreground" />
+
+                        <!-- Trailer -->
+                        <LinearLayout
+                            android:id="@+id/btnTrailer"
+                            android:layout_width="wrap_content"
+                            android:layout_height="48dp"
+                            android:layout_marginStart="10dp"
+                            android:background="@drawable/detail_secondary_action_bg"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:focusableInTouchMode="true"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:visibility="gone">
+
+                            <ImageView
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
+                                android:contentDescription="@null"
+                                android:duplicateParentState="true"
+                                android:src="@drawable/ic_trailer_24"
+                                app:tint="@color/btn_secondary_action_foreground" />
+
+                            <TextView
+                                style="@style/TextAppearance.Makimono.TV.Callout"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:duplicateParentState="true"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="@string/series_action_trailer"
+                                android:textColor="@color/btn_secondary_action_foreground" />
                         </LinearLayout>
-                        <ImageButton android:id="@+id/btnMoreActions" android:layout_width="48dp" android:layout_height="48dp" android:layout_marginStart="8dp" android:background="@drawable/detail_secondary_action_bg" android:contentDescription="@string/series_more_actions" android:padding="13dp" android:src="@drawable/ic_more_vert_24" app:tint="@color/btn_secondary_action_foreground" android:clickable="true" android:focusable="true" android:focusableInTouchMode="true" />
-                        <LinearLayout android:id="@+id/btnFollow" android:layout_width="wrap_content" android:layout_height="48dp" android:layout_marginStart="8dp" android:background="@drawable/detail_secondary_action_bg" android:clickable="true" android:focusable="true" android:focusableInTouchMode="true" android:gravity="center_vertical" android:orientation="horizontal" android:paddingStart="12dp" android:paddingEnd="12dp" android:visibility="gone">
-                            <ImageView android:id="@+id/ivFollowIcon" android:layout_width="18dp" android:layout_height="18dp" android:contentDescription="@null" android:duplicateParentState="true" android:src="@drawable/ic_notification_24" app:tint="@color/btn_secondary_action_foreground" />
-                            <TextView android:id="@+id/tvFollowText" style="@style/TextAppearance.Makimono.TV.Callout" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:duplicateParentState="true" android:fontFamily="sans-serif-medium" android:text="@string/series_action_follow" android:textColor="@color/btn_secondary_action_foreground" />
+
+                        <!-- More actions button -->
+                        <ImageButton
+                            android:id="@+id/btnMoreActions"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:layout_marginStart="10dp"
+                            android:background="@drawable/btn_more_actions_circle"
+                            android:clickable="true"
+                            android:contentDescription="@string/series_more_actions"
+                            android:focusable="true"
+                            android:focusableInTouchMode="true"
+                            android:padding="13dp"
+                            android:src="@drawable/ic_more_vert_24"
+                            app:tint="@color/btn_secondary_action_foreground" />
+
+                        <!-- Follow -->
+                        <LinearLayout
+                            android:id="@+id/btnFollow"
+                            android:layout_width="wrap_content"
+                            android:layout_height="48dp"
+                            android:layout_marginStart="10dp"
+                            android:background="@drawable/detail_secondary_action_bg"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:focusableInTouchMode="true"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:visibility="gone">
+
+                            <ImageView
+                                android:id="@+id/ivFollowIcon"
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
+                                android:contentDescription="@null"
+                                android:duplicateParentState="true"
+                                android:src="@drawable/ic_notification_24"
+                                app:tint="@color/btn_secondary_action_foreground" />
+
+                            <TextView
+                                android:id="@+id/tvFollowText"
+                                style="@style/TextAppearance.Makimono.TV.Callout"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:duplicateParentState="true"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="@string/series_action_follow"
+                                android:textColor="@color/btn_secondary_action_foreground" />
                         </LinearLayout>
-                        <LinearLayout android:id="@+id/btnMarkWatched" android:layout_width="wrap_content" android:layout_height="48dp" android:layout_marginStart="8dp" android:background="@drawable/detail_secondary_action_bg" android:clickable="true" android:focusable="true" android:focusableInTouchMode="true" android:gravity="center_vertical" android:orientation="horizontal" android:paddingStart="12dp" android:paddingEnd="12dp" android:visibility="gone">
-                            <ImageView android:id="@+id/ivMarkWatchedIcon" android:layout_width="18dp" android:layout_height="18dp" android:contentDescription="@null" android:duplicateParentState="true" android:src="@drawable/ic_check_24" app:tint="@color/btn_secondary_action_foreground" />
-                            <TextView android:id="@+id/tvMarkWatchedText" style="@style/TextAppearance.Makimono.TV.Callout" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:duplicateParentState="true" android:fontFamily="sans-serif-medium" android:text="@string/series_action_mark_watched_short" android:textColor="@color/btn_secondary_action_foreground" />
+
+                        <!-- Mark watched -->
+                        <LinearLayout
+                            android:id="@+id/btnMarkWatched"
+                            android:layout_width="wrap_content"
+                            android:layout_height="48dp"
+                            android:layout_marginStart="10dp"
+                            android:background="@drawable/detail_secondary_action_bg"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:focusableInTouchMode="true"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp">
+
+                            <ImageView
+                                android:id="@+id/ivMarkWatchedIcon"
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
+                                android:contentDescription="@null"
+                                android:duplicateParentState="true"
+                                android:src="@drawable/ic_check_24"
+                                app:tint="@color/btn_secondary_action_foreground" />
+
+                            <TextView
+                                android:id="@+id/tvMarkWatchedText"
+                                style="@style/TextAppearance.Makimono.TV.Callout"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:duplicateParentState="true"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="@string/series_action_mark_watched_short"
+                                android:textColor="@color/btn_secondary_action_foreground" />
                         </LinearLayout>
                     </LinearLayout>
                 </HorizontalScrollView>
             </LinearLayout>
         </LinearLayout>
-        <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvSeasonTabs" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:clipChildren="false" android:clipToPadding="false" android:orientation="horizontal" android:paddingStart="@dimen/tv_overscan_margin" android:paddingEnd="@dimen/tv_overscan_margin" app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toBottomOf="@id/heroContentBlock" tools:itemCount="6" tools:listitem="@layout/item_series_season_tab" android:paddingTop="4dp" android:paddingBottom="4dp" />
-        <TextView android:id="@+id/tvEpisodesHeading" style="@style/TextAppearance.Makimono.TV.Headline" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="@dimen/tv_overscan_margin" android:layout_marginEnd="@dimen/tv_overscan_margin" android:layout_marginTop="6dp" android:text="@string/series_heading_episodes" android:textColor="@color/obsidian_text_primary" android:textStyle="bold" app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintTop_toBottomOf="@id/rvSeasonTabs" />
-        <TextView android:id="@+id/tvPartialListingNotice" style="@style/TextAppearance.Makimono.TV.Callout" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="@dimen/tv_overscan_margin" android:layout_marginTop="2dp" android:text="@string/series_partial_listing_notice" android:textColor="@color/obsidian_text_secondary" android:visibility="gone" app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toBottomOf="@id/tvEpisodesHeading" />
-        <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvEpisodes" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:clipChildren="false" android:clipToPadding="false" android:orientation="horizontal" android:paddingStart="@dimen/tv_overscan_margin" android:paddingEnd="@dimen/tv_overscan_margin" app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toBottomOf="@id/tvPartialListingNotice" tools:itemCount="6" tools:listitem="@layout/item_series_episode_card" android:paddingTop="6dp" android:paddingBottom="8dp" />
-        <ProgressBar android:id="@+id/pbLoading" android:layout_width="48dp" android:layout_height="48dp" android:indeterminate="true" android:indeterminateTint="@color/obsidian_accent_primary" android:visibility="gone" app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toTopOf="parent" tools:visibility="gone" />
-        <include android:id="@+id/seriesSkeleton" layout="@layout/component_skeleton_row" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="@dimen/tv_overscan_margin" android:layout_marginEnd="@dimen/tv_overscan_margin" android:visibility="gone" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toBottomOf="@id/rvSeasonTabs" />
-        <zechs.drive.stream.ui.common.StateView android:id="@+id/stateView" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:visibility="gone" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toBottomOf="@id/rvSeasonTabs" />
-        <TextView android:id="@+id/tvEmptyEpisodes" style="@style/TextAppearance.Makimono.TV.Body" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:fontFamily="sans-serif-medium" android:text="@string/series_empty_category" android:textColor="@color/obsidian_text_secondary" android:visibility="gone" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toBottomOf="@id/rvSeasonTabs" />
-        <com.google.android.material.button.MaterialButton android:id="@+id/btnRetry" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="@string/series_retry" android:textColor="?attr/colorTextPrimary" android:visibility="gone" app:backgroundTint="?attr/colorBgSurface" app:cornerRadius="18dp" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toBottomOf="@id/tvEmptyEpisodes" app:strokeColor="?attr/colorAccentPrimary" app:strokeWidth="1dp" />
+
+        <!-- 4. Navigation Tabs: [EPISÓDIOS] | [DETALHES] | [MAIS COMO ESTE] (Image 4) -->
+        <LinearLayout
+            android:id="@+id/tabsContainer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/tv_overscan_margin"
+            android:layout_marginTop="16dp"
+            android:layout_marginEnd="@dimen/tv_overscan_margin"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/heroContentBlock">
+
+            <TextView
+                android:id="@+id/tabButtonEpisodes"
+                android:layout_width="wrap_content"
+                android:layout_height="42dp"
+                android:background="@drawable/tab_nav_selector"
+                android:clickable="true"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:fontFamily="sans-serif-black"
+                android:gravity="center"
+                android:letterSpacing="0.08"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:text="@string/tab_episodes"
+                android:textColor="@color/tab_nav_text_selector"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tabButtonDetails"
+                android:layout_width="wrap_content"
+                android:layout_height="42dp"
+                android:layout_marginStart="12dp"
+                android:background="@drawable/tab_nav_selector"
+                android:clickable="true"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:fontFamily="sans-serif-black"
+                android:gravity="center"
+                android:letterSpacing="0.08"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:text="@string/tab_details"
+                android:textColor="@color/tab_nav_text_selector"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tabButtonMoreLikeThis"
+                android:layout_width="wrap_content"
+                android:layout_height="42dp"
+                android:layout_marginStart="12dp"
+                android:background="@drawable/tab_nav_selector"
+                android:clickable="true"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:fontFamily="sans-serif-black"
+                android:gravity="center"
+                android:letterSpacing="0.08"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:text="@string/tab_more_like_this"
+                android:textColor="@color/tab_nav_text_selector"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <!-- 5. TAB 1: Panel Episodes - 2-Column Split Layout (Image 5) -->
+        <LinearLayout
+            android:id="@+id/panelEpisodesTab"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/tv_overscan_margin"
+            android:layout_marginTop="16dp"
+            android:layout_marginEnd="@dimen/tv_overscan_margin"
+            android:baselineAligned="false"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tabsContainer">
+
+            <!-- Left Column: Seasons / Franchise Arcs (Vertical list) ~32% -->
+            <LinearLayout
+                android:id="@+id/layoutSeasonsColumn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="32"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvEpisodesHeading"
+                    style="@style/TextAppearance.Makimono.TV.Headline"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:text="@string/series_heading_episodes"
+                    android:textColor="@color/obsidian_text_primary"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvSeasonTabs"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
+                    android:nestedScrollingEnabled="false"
+                    android:orientation="vertical"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    tools:itemCount="4"
+                    tools:listitem="@layout/item_series_season_tab" />
+
+            </LinearLayout>
+
+            <!-- Right Column: Episodes (Vertical list of rows) ~68% -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="24dp"
+                android:layout_weight="68"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvPartialListingNotice"
+                    style="@style/TextAppearance.Makimono.TV.Callout"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/series_partial_listing_notice"
+                    android:textColor="@color/obsidian_text_secondary"
+                    android:visibility="gone" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvEpisodes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
+                    android:nestedScrollingEnabled="false"
+                    android:orientation="vertical"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    tools:itemCount="6"
+                    tools:listitem="@layout/item_series_episode_card" />
+
+                <TextView
+                    android:id="@+id/tvEmptyEpisodes"
+                    style="@style/TextAppearance.Makimono.TV.Body"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="@string/series_empty_category"
+                    android:textColor="@color/obsidian_text_secondary"
+                    android:visibility="gone" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- 6. TAB 2: Panel Details -->
+        <LinearLayout
+            android:id="@+id/panelDetailsTab"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/tv_overscan_margin"
+            android:layout_marginTop="16dp"
+            android:layout_marginEnd="@dimen/tv_overscan_margin"
+            android:orientation="vertical"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tabsContainer">
+
+            <TextView
+                style="@style/TextAppearance.Makimono.TV.Headline"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/tab_details"
+                android:textColor="@color/obsidian_text_primary"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvDetailsFullSynopsis"
+                style="@style/TextAppearance.Makimono.TV.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:lineSpacingExtra="4dp"
+                android:textColor="@color/obsidian_text_secondary"
+                tools:text="Full detailed synopsis about this anime and characters..." />
+
+        </LinearLayout>
+
+        <!-- 7. TAB 3: Panel More Like This -->
+        <LinearLayout
+            android:id="@+id/panelMoreLikeThisTab"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/tv_overscan_margin"
+            android:layout_marginTop="16dp"
+            android:layout_marginEnd="@dimen/tv_overscan_margin"
+            android:orientation="vertical"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tabsContainer">
+
+            <TextView
+                style="@style/TextAppearance.Makimono.TV.Headline"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/tab_more_like_this"
+                android:textColor="@color/obsidian_text_primary"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvMoreLikeThisNotice"
+                style="@style/TextAppearance.Makimono.TV.Callout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Explore as outras obras e temporadas da franquia na coluna lateral de Episódios."
+                android:textColor="@color/obsidian_text_secondary" />
+
+        </LinearLayout>
+
+        <!-- Loading / Skeletons / StateView -->
+        <ProgressBar
+            android:id="@+id/pbLoading"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:indeterminate="true"
+            android:indeterminateTint="@color/obsidian_accent_primary"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:visibility="gone" />
+
+        <include
+            android:id="@+id/seriesSkeleton"
+            layout="@layout/component_skeleton_row"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/tv_overscan_margin"
+            android:layout_marginEnd="@dimen/tv_overscan_margin"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tabsContainer" />
+
+        <zechs.drive.stream.ui.common.StateView
+            android:id="@+id/stateView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tabsContainer" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRetry"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/series_retry"
+            android:textColor="?attr/colorTextPrimary"
+            android:visibility="gone"
+            app:backgroundTint="?attr/colorBgSurface"
+            app:cornerRadius="18dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/stateView"
+            app:strokeColor="?attr/colorAccentPrimary"
+            app:strokeWidth="1dp" />
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.core.widget.NestedScrollView>

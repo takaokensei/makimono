@@ -226,16 +226,17 @@ object MatroskaChapterParser {
                 normalizedTitle.contains("opening") ||
                 normalizedTitle.contains("abertura") ||
                 normalizedTitle.contains("title sequence") ||
+                normalizedTitle.contains("opening credits") ||
                 normalizedTitle.matches(Regex(".*\\b(op|ncop)\\d*\\b.*", RegexOption.IGNORE_CASE)) -> ChapterType.OPENING
 
-                normalizedTitle.contains("ending") ||
+                (normalizedTitle.contains("ending") ||
                 normalizedTitle.contains("credits") ||
                 normalizedTitle.contains("créditos") ||
                 normalizedTitle.contains("creditos") ||
                 normalizedTitle.contains("outro") ||
                 normalizedTitle.contains("encerramento") ||
                 normalizedTitle.contains("closing") ||
-                normalizedTitle.matches(Regex(".*\\b(ed|nced)\\d*\\b.*", RegexOption.IGNORE_CASE)) -> ChapterType.ENDING
+                normalizedTitle.matches(Regex(".*\\b(ed|nced)\\d*\\b.*", RegexOption.IGNORE_CASE))) && curr.startMs >= 300_000L -> ChapterType.ENDING
 
                 else -> ChapterType.OTHER
             }
