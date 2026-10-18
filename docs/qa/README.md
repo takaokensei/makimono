@@ -32,3 +32,5 @@ Os relatórios numerados na raiz de `docs/qa/` refletem etapas anteriores de est
 - **Baseline de Desempenho e Medições:** [`perf-baseline.md`](perf-baseline.md) e [`baseline-0.md`](baseline-0.md)
 - **Spike de Mídia Local:** [`local-media/spike.md`](local-media/spike.md)
 - **Auditorias Visuais Curadas:** [`audits/README.md`](audits/README.md)
+- **Captura de Telas (VisualReviewActivity):** [`visual-review-screenshots.md`](visual-review-screenshots.md)
+

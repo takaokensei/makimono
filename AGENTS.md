@@ -67,8 +67,8 @@ Consulte sempre [`docs/design/DESIGN.md`](docs/design/DESIGN.md). Erros mais com
 ## 7. Definição de Pronto (DoD)
 Toda tarefa de código só é considerada pronta quando:
 1. O código compila perfeitamente sem erros.
-2. Todos os testes passam (unitários + `./scripts/verify-all.ps1` ou `./scripts/verify-all.sh`).
-3. O linter Android (`lintDebug`) passa sem violações novas.
-4. O checklist de navegação D-pad de TV (`docs/qa/focus-checklist.md`) é respeitado.
+2. O script de verificação unificada `./scripts/verify-all.ps1` (ou `./scripts/verify-all.sh`) executar 100% verde (testes unitários, linter Android, compilação debug e guardas estáticas); use `--quick` apenas para iterações rápidas durante o desenvolvimento.
+3. O linter Android (`lintDebug`) passa sem violações novas em relação à baseline.
+4. O checklist de navegação D-pad de TV (`docs/qa/focus-checklist.md`) é respeitado, com evidência visual via `VisualReviewActivity` (`docs/qa/visual-review-screenshots.md`) para mudanças de UI.
 5. Sem novos warnings introduzidos no build.
 6. Commit pequeno criado com mensagem convencional descritiva.
