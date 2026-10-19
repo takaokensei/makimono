@@ -33,3 +33,7 @@ docs/ui-audit/
 
 # Graphify local output
 graphify-out/
+
+# Cloudflare Wrangler & temporary XML dumps
+.wrangler/
+live_dump*.xml
