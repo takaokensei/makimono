@@ -1,0 +1,20 @@
+{
+  "name": "@makimono/pairing-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "d1:migrate:local": "wrangler d1 migrations apply makimono-pairing --local",
+    "d1:migrate:remote": "wrangler d1 migrations apply makimono-pairing --remote",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "1.4.4",
+    "@cloudflare/workers-types": "5.20261019.1",
+    "typescript": "7.0.2",
+    "vitest": "4.1.0",
+    "wrangler": "4.151.1"
+  }
+}

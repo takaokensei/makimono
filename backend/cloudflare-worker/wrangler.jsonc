@@ -1,0 +1,21 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "makimono-pairing",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-10-19",
+	"workers_dev": true,
+	"observability": {
+		"enabled": true,
+		"traces": {
+			"enabled": true
+		}
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "makimono-pairing",
+			"database_id": "084ae1bd-0fb6-4088-be3e-fc21c8d76c93",
+			"migrations_dir": "migrations"
+		}
+	]
+}
