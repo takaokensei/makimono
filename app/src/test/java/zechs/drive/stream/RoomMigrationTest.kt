@@ -111,4 +111,19 @@ class RoomMigrationTest {
             db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `genres` TEXT")
         }
     }
+
+    @Test
+    fun migration_10_11_createsTheObservedDownloadItemsCompatibilityTable() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+        WatchListDatabase.MIGRATION_10_11.migrate(db)
+
+        verify(exactly = 1) {
+            db.execSQL(match {
+                it.contains("CREATE TABLE IF NOT EXISTS download_items") &&
+                    it.contains("localPath TEXT NOT NULL") &&
+                    it.contains("PRIMARY KEY(fileId)")
+            })
+        }
+    }
+
 }

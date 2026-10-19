@@ -17,7 +17,7 @@ import zechs.drive.stream.data.model.WatchQueueItem
         FollowedFolder::class,
         ProfileEntity::class
     ],
-    version = 10,
+    version = 12,
     exportSchema = true
 )
 abstract class WatchListDatabase : RoomDatabase() {
@@ -33,6 +33,39 @@ abstract class WatchListDatabase : RoomDatabase() {
     abstract fun getProfileCleanupDao(): ProfileCleanupDao
 
     companion object {
+        /**
+         * Some installed v11 builds created this table outside the current Room entities.
+         * Preserve it for existing installs, and create the observed v11 table for v10 installs
+         * so both database histories can advance without losing local download records.
+         */
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""CREATE TABLE IF NOT EXISTS download_items (
+                    fileId TEXT NOT NULL,
+                    folderId TEXT,
+                    seriesTitle TEXT,
+                    name TEXT NOT NULL,
+                    seasonNumber INTEGER,
+                    episodeNumber INTEGER,
+                    thumbnailUrl TEXT,
+                    localPath TEXT NOT NULL,
+                    totalBytes INTEGER NOT NULL DEFAULT 0,
+                    downloadedBytes INTEGER NOT NULL DEFAULT 0,
+                    status TEXT NOT NULL DEFAULT 'QUEUED',
+                    profileId TEXT NOT NULL DEFAULT 'caua',
+                    createdAt INTEGER NOT NULL,
+                    completedAt INTEGER,
+                    errorMessage TEXT,
+                    PRIMARY KEY(fileId)
+                )""".trimIndent())
+            }
+        }
+
+        /** Advances v11 installs that already contain the compatibility table. */
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) = Unit
+        }
+
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `folder_metadata` ADD COLUMN `bannerUrl` TEXT")
