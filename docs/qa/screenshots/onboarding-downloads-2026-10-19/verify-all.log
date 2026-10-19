@@ -1,0 +1,551 @@
+=====================================================
+ [Makimono] Iniciando VerificaÃ§Ã£o Completa do Projeto
+=====================================================
+
+==> Executando: 1/4: Testes UnitÃ¡rios (testDebugUnitTest)...
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.7/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :app
+WARNING: The option setting 'android.overridePathCheck=true' is experimental.
+The current default is 'false'.
+WARNING: The option setting 'android.defaults.buildfeatures.buildconfig=true' is deprecated.
+The current default is 'false'.
+It will be removed in version 9.0 of the Android Gradle plugin.
+You can resolve this warning in Android Studio via `Refactor` > `Migrate BuildConfig to Gradle Build Files`
+WARNING: No release.storeFile configured in local.properties. Release build will be signed with the DEBUG key. This is fine for personal/local builds, but such an APK must not be distributed as if it were a production release. See local.properties.example for how to configure a real release keystore.
+Warning: SDK processing. This version only understands SDK XML versions up to 3 but an SDK XML file of version 4 was encountered. This can happen if you use versions of Android Studio and the command-line tools that were released at different times.
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:checkKotlinGradlePluginConfigurationErrors
+> Task :app:dataBindingMergeDependencyArtifactsDebug UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :mpv:preBuild UP-TO-DATE
+> Task :mpv:preDebugBuild UP-TO-DATE
+> Task :mpv:generateDebugResValues UP-TO-DATE
+> Task :mpv:generateDebugResources UP-TO-DATE
+> Task :mpv:packageDebugResources UP-TO-DATE
+> Task :app:packageDebugResources
+> Task :mpv:parseDebugLocalResources UP-TO-DATE
+> Task :mpv:processDebugManifest UP-TO-DATE
+> Task :mpv:generateDebugRFile UP-TO-DATE
+> Task :app:mergeDebugResources
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:generateSafeArgsDebug UP-TO-DATE
+> Task :mpv:writeDebugAarMetadata UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:parseDebugLocalResources
+> Task :mpv:extractDeepLinksDebug UP-TO-DATE
+> Task :app:dataBindingGenBaseClassesDebug
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :mpv:compileDebugLibraryResources UP-TO-DATE
+> Task :mpv:checkKotlinGradlePluginConfigurationErrors
+> Task :mpv:generateDebugBuildConfig UP-TO-DATE
+> Task :mpv:compileDebugKotlin UP-TO-DATE
+> Task :mpv:javaPreCompileDebug UP-TO-DATE
+> Task :mpv:compileDebugJavaWithJavac UP-TO-DATE
+> Task :mpv:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :mpv:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :mpv:processDebugJavaRes UP-TO-DATE
+> Task :mpv:preDebugUnitTestBuild UP-TO-DATE
+> Task :mpv:generateDebugUnitTestStubRFile UP-TO-DATE
+> Task :mpv:compileDebugUnitTestKotlin NO-SOURCE
+> Task :mpv:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :mpv:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :mpv:processDebugUnitTestJavaRes NO-SOURCE
+> Task :mpv:testDebugUnitTest NO-SOURCE
+> Task :app:processDebugResources
+> Task :app:kaptGenerateStubsDebugKotlin
+
+> Task :app:kaptDebugKotlin
+warning: Kapt support in Moshi Kotlin Code Gen is deprecated and will be removed in 2.0. Please migrate to KSP. https://github.com/square/moshi#codegen
+Note: [1] Wrote GeneratedAppGlideModule with: [com.bumptech.glide.integration.okhttp3.OkHttpLibraryGlideModule]
+warning: The following options were not recognized by any processor: '[room.schemaLocation, kapt.kotlin.generated]'
+
+> Task :app:compileDebugKotlin
+w: file:///L:/makimono/app/src/debug/java/zechs/drive/stream/debug/VisualReviewActivity.kt:133:26 'setter for systemUiVisibility: Int' is deprecated. Deprecated in Java
+w: file:///L:/makimono/app/src/debug/java/zechs/drive/stream/debug/VisualReviewActivity.kt:133:52 'SYSTEM_UI_FLAG_FULLSCREEN: Int' is deprecated. Deprecated in Java
+w: file:///L:/makimono/app/src/debug/java/zechs/drive/stream/debug/VisualReviewActivity.kt:133:86 'SYSTEM_UI_FLAG_HIDE_NAVIGATION: Int' is deprecated. Deprecated in Java
+w: file:///L:/makimono/app/src/debug/java/zechs/drive/stream/debug/VisualReviewActivity.kt:133:125 'SYSTEM_UI_FLAG_IMMERSIVE_STICKY: Int' is deprecated. Deprecated in Java
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/data/repository/DriveRepository.kt:97:48 Elvis operator (?:) always returns the left operand of non-nullable type ResourceErrorKind
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/data/repository/DriveRepository.kt:164:102 Elvis operator (?:) always returns the left operand of non-nullable type ResourceErrorKind
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/data/repository/DriveRepository.kt:245:56 Elvis operator (?:) always returns the left operand of non-nullable type ResourceErrorKind
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/data/repository/DriveRepository.kt:285:48 Elvis operator (?:) always returns the left operand of non-nullable type ResourceErrorKind
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/data/repository/DriveRepository.kt:347:69 Elvis operator (?:) always returns the left operand of non-nullable type String
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/data/repository/DriveRepository.kt:414:46 Elvis operator (?:) always returns the left operand of non-nullable type String
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/data/repository/DriveRepository.kt:435:42 Elvis operator (?:) always returns the left operand of non-nullable type String
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/data/repository/DriveRepository.kt:466:46 Elvis operator (?:) always returns the left operand of non-nullable type String
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/data/repository/DriveRepository.kt:487:42 Elvis operator (?:) always returns the left operand of non-nullable type String
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/playback/session/PlaybackController.kt:180:13 Variable 'next' is never used
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/files/FilesViewModel.kt:297:80 Condition 'localMediaRepository != null' is always 'true'
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/FeaturedHeroBinder.kt:25:42 Unnecessary safe call on a non-null receiver of type LinearLayout?
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/FeaturedHeroBinder.kt:26:42 Unnecessary safe call on a non-null receiver of type LinearLayout?
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/FeaturedHeroBinder.kt:32:50 Unnecessary safe call on a non-null receiver of type LinearLayout?
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/FeaturedHeroBinder.kt:33:50 Unnecessary safe call on a non-null receiver of type LinearLayout?
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/HomeFragment.kt:330:29 Unnecessary safe call on a non-null receiver of type TextView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/HomeFragment.kt:552:29 Condition 'file != null' is always 'true'
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/HomeFragment.kt:568:66 Elvis operator (?:) always returns the left operand of non-nullable type String
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/HomeViewModel.kt:442:57 Unnecessary safe call on a non-null receiver of type FileCollectionResult
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/HomeViewModel.kt:477:68 Condition 'response.data != null' is always 'true'
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/HomeViewModel.kt:557:64 Elvis operator (?:) always returns the left operand of non-nullable type String
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/HomeViewModel.kt:810:54 Unnecessary non-null assertion (!!) on a non-null receiver of type String
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/CatalogPresentationController.kt:86:40 Unnecessary safe call on a non-null receiver of type LinearLayout
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/FocusCoordinator.kt:147:38 Unnecessary safe call on a non-null receiver of type RecyclerView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/FocusCoordinator.kt:149:35 Unnecessary safe call on a non-null receiver of type RecyclerView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/HeroController.kt:53:15 Parameter 'hasOverlay' is never used
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/HeroController.kt:258:25 Variable 'isHeroFocused' is never used
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/HeroController.kt:260:25 Variable 'isRailFocused' is never used
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/RailController.kt:310:38 Unnecessary safe call on a non-null receiver of type RecyclerView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/RailController.kt:313:39 Unnecessary safe call on a non-null receiver of type TextView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/RailController.kt:314:35 Unnecessary safe call on a non-null receiver of type RecyclerView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/RailController.kt:317:38 Unnecessary safe call on a non-null receiver of type TextView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/RailController.kt:332:38 Unnecessary safe call on a non-null receiver of type RecyclerView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/RailController.kt:335:39 Unnecessary safe call on a non-null receiver of type TextView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/RailController.kt:336:35 Unnecessary safe call on a non-null receiver of type RecyclerView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/RailController.kt:339:38 Unnecessary safe call on a non-null receiver of type TextView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/RailController.kt:354:38 Unnecessary safe call on a non-null receiver of type RecyclerView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/RailController.kt:357:39 Unnecessary safe call on a non-null receiver of type TextView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/RailController.kt:358:35 Unnecessary safe call on a non-null receiver of type RecyclerView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/RailController.kt:361:38 Unnecessary safe call on a non-null receiver of type TextView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/RailController.kt:376:38 Unnecessary safe call on a non-null receiver of type RecyclerView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/RailController.kt:379:39 Unnecessary safe call on a non-null receiver of type TextView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/RailController.kt:380:35 Unnecessary safe call on a non-null receiver of type RecyclerView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/RailController.kt:383:38 Unnecessary safe call on a non-null receiver of type TextView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/RailController.kt:518:34 Unnecessary safe call on a non-null receiver of type View?
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/RailController.kt:550:34 Unnecessary safe call on a non-null receiver of type View?
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/ShelvesController.kt:134:31 Unnecessary safe call on a non-null receiver of type RecyclerView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/ShelvesController.kt:135:31 Unnecessary safe call on a non-null receiver of type RecyclerView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/ShelvesController.kt:141:35 Unnecessary safe call on a non-null receiver of type RecyclerView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/ShelvesController.kt:141:107 Elvis operator (?:) always returns the left operand of non-nullable type Boolean
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/ShelvesController.kt:145:35 Unnecessary safe call on a non-null receiver of type RecyclerView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/ShelvesController.kt:148:50 Unnecessary safe call on a non-null receiver of type RecyclerView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/home/controller/ShelvesController.kt:148:79 Elvis operator (?:) always returns the left operand of non-nullable type Int
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/main/MainActivity.kt:688:61 Unnecessary safe call on a non-null receiver of type FileCollectionResult
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/player2/MPVActivity.kt:376:67 Unchecked cast: Serializable? to kotlin.collections.ArrayList<PlaylistItem> /* = java.util.ArrayList<PlaylistItem> */
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/player2/MPVActivity.kt:399:69 Unchecked cast: Serializable? to kotlin.collections.ArrayList<SubtitleItem> /* = java.util.ArrayList<SubtitleItem> */
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/player2/MPVActivity.kt:1448:48 Elvis operator (?:) always returns the left operand of non-nullable type String
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/player2/MPVActivity.kt:1458:60 Elvis operator (?:) always returns the left operand of non-nullable type String
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/player2/MPVActivity.kt:1485:91 Unnecessary safe call on a non-null receiver of type String
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/player2/MPVActivity.kt:1485:120 Elvis operator (?:) always returns the left operand of non-nullable type String
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/player2/MPVActivity.kt:1505:74 Elvis operator (?:) always returns the left operand of non-nullable type String
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/player2/MPVActivity.kt:1517:55 Elvis operator (?:) always returns the left operand of non-nullable type String
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/player/PlayerActivity.kt:718:67 Unchecked cast: Serializable? to ArrayList<PlaylistItem>
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/player/PlayerActivity.kt:741:69 Unchecked cast: Serializable? to ArrayList<SubtitleItem>
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/series/SeriesDetailFragment.kt:575:35 Unnecessary safe call on a non-null receiver of type TextView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/series/SeriesDetailFragment.kt:607:29 Unnecessary safe call on a non-null receiver of type TextView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/series/SeriesDetailFragment.kt:610:29 Unnecessary safe call on a non-null receiver of type TextView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/series/SeriesDetailFragment.kt:612:29 Unnecessary safe call on a non-null receiver of type TextView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/series/SeriesDetailFragment.kt:617:41 Unnecessary safe call on a non-null receiver of type TextView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/series/SeriesDetailFragment.kt:714:38 Unnecessary safe call on a non-null receiver of type TextView
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/series/SeriesMoreActionsDialog.kt:167:30 No cast needed
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/SettingsFragment.kt:479:36 Unnecessary safe call on a non-null receiver of type MaterialSwitch
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/SettingsFragment.kt:480:40 Unnecessary safe call on a non-null receiver of type MaterialSwitch
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/SettingsFragment.kt:481:42 Unnecessary safe call on a non-null receiver of type MaterialSwitch
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/delegates/DataSessionSettingsDelegate.kt:162:49 Unnecessary safe call on a non-null receiver of type String
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/delegates/DataSessionSettingsDelegate.kt:178:36 Unnecessary safe call on a non-null receiver of type LinearLayout
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/delegates/DataSessionSettingsDelegate.kt:183:36 Unnecessary safe call on a non-null receiver of type LinearLayout
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/delegates/DataSessionSettingsDelegate.kt:255:30 Unnecessary safe call on a non-null receiver of type LinearLayout
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/delegates/DataSessionSettingsDelegate.kt:275:37 Unnecessary safe call on a non-null receiver of type LinearLayout
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/delegates/PlaybackSettingsDelegate.kt:115:43 Unnecessary safe call on a non-null receiver of type LinearLayout
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/delegates/PlaybackSettingsDelegate.kt:116:40 Unnecessary safe call on a non-null receiver of type MaterialSwitch
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/delegates/PlaybackSettingsDelegate.kt:118:36 Unnecessary safe call on a non-null receiver of type MaterialSwitch
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/delegates/PlaybackSettingsDelegate.kt:122:47 Unnecessary safe call on a non-null receiver of type LinearLayout
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/delegates/PlaybackSettingsDelegate.kt:123:44 Unnecessary safe call on a non-null receiver of type MaterialSwitch
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/delegates/PlaybackSettingsDelegate.kt:125:40 Unnecessary safe call on a non-null receiver of type MaterialSwitch
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/delegates/PlaybackSettingsDelegate.kt:129:49 Unnecessary safe call on a non-null receiver of type LinearLayout
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/delegates/PlaybackSettingsDelegate.kt:130:46 Unnecessary safe call on a non-null receiver of type MaterialSwitch
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/delegates/PlaybackSettingsDelegate.kt:132:42 Unnecessary safe call on a non-null receiver of type MaterialSwitch
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/delegates/PlaybackSettingsDelegate.kt:136:44 Unnecessary safe call on a non-null receiver of type LinearLayout
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/delegates/PlaybackSettingsDelegate.kt:137:41 Unnecessary safe call on a non-null receiver of type MaterialSwitch
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/delegates/PlaybackSettingsDelegate.kt:139:37 Unnecessary safe call on a non-null receiver of type MaterialSwitch
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/delegates/PlaybackSettingsDelegate.kt:156:36 Unnecessary safe call on a non-null receiver of type MaterialSwitch
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/delegates/PlaybackSettingsDelegate.kt:157:40 Unnecessary safe call on a non-null receiver of type MaterialSwitch
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/delegates/PlaybackSettingsDelegate.kt:158:42 Unnecessary safe call on a non-null receiver of type MaterialSwitch
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/ui/settings/delegates/PlaybackSettingsDelegate.kt:159:37 Unnecessary safe call on a non-null receiver of type MaterialSwitch
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/utils/DeviceUi.kt:54:23 'getter for defaultDisplay: Display!' is deprecated. Deprecated in Java
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/utils/DeviceUi.kt:54:38 'getMetrics(DisplayMetrics!): Unit' is deprecated. Deprecated in Java
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/utils/HdrModeManager.kt:97:33 'getter for supportedHdrTypes: IntArray!' is deprecated. Deprecated in Java
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/utils/KeystoreEncryptedPreferences.kt:7:25 'KeyPairGeneratorSpec' is deprecated. Deprecated in Java
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/utils/KeystoreEncryptedPreferences.kt:91:13 'KeyPairGeneratorSpec' is deprecated. Deprecated in Java
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/utils/KeystoreEncryptedPreferences.kt:91:34 'constructor Builder(Context)' is deprecated. Deprecated in Java
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/utils/KeystoreEncryptedPreferences.kt:91:34 'Builder' is deprecated. Deprecated in Java
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/utils/KeystoreEncryptedPreferences.kt:92:18 'setAlias(String): KeyPairGeneratorSpec.Builder' is deprecated. Deprecated in Java
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/utils/KeystoreEncryptedPreferences.kt:93:18 'setSubject(X500Principal): KeyPairGeneratorSpec.Builder' is deprecated. Deprecated in Java
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/utils/KeystoreEncryptedPreferences.kt:94:18 'setSerialNumber(BigInteger): KeyPairGeneratorSpec.Builder' is deprecated. Deprecated in Java
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/utils/KeystoreEncryptedPreferences.kt:95:18 'setStartDate(Date): KeyPairGeneratorSpec.Builder' is deprecated. Deprecated in Java
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/utils/KeystoreEncryptedPreferences.kt:96:18 'setEndDate(Date): KeyPairGeneratorSpec.Builder' is deprecated. Deprecated in Java
+w: file:///L:/makimono/app/src/main/java/zechs/drive/stream/utils/KeystoreEncryptedPreferences.kt:97:18 'build(): KeyPairGeneratorSpec' is deprecated. Deprecated in Java
+
+> Task :app:compileDebugJavaWithJavac
+> Task :app:hiltAggregateDepsDebug UP-TO-DATE
+
+> Task :app:hiltJavaCompileDebug
+warning: Kapt support in Moshi Kotlin Code Gen is deprecated and will be removed in 2.0. Please migrate to KSP. https://github.com/square/moshi#codegen
+1 warning
+
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :app:transformDebugClassesWithAsm
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:bundleDebugClassesToRuntimeJar
+> Task :app:kaptGenerateStubsDebugUnitTestKotlin
+
+> Task :app:kaptDebugUnitTestKotlin
+warning: Kapt support in Moshi Kotlin Code Gen is deprecated and will be removed in 2.0. Please migrate to KSP. https://github.com/square/moshi#codegen
+warning: The following options were not recognized by any processor: '[dagger.fastInit, dagger.hilt.android.internal.disableAndroidSuperclassValidation, dagger.hilt.android.internal.projectType, dagger.hilt.internal.useAggregatingRootProcessor, room.schemaLocation, kapt.kotlin.generated]'
+
+> Task :app:compileDebugUnitTestKotlin
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:hiltAggregateDepsDebugUnitTest UP-TO-DATE
+> Task :app:hiltJavaCompileDebugUnitTest NO-SOURCE
+> Task :app:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :app:transformDebugUnitTestClassesWithAsm
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+> Task :app:testDebugUnitTest
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.7/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 2m 51s
+54 actionable tasks: 21 executed, 33 up-to-date
+  -> Aprovado em 171.6s
+
+==> Executando: 2/4: Android Lint (lintDebug)...
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.7/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :app
+WARNING: The option setting 'android.overridePathCheck=true' is experimental.
+The current default is 'false'.
+WARNING: The option setting 'android.defaults.buildfeatures.buildconfig=true' is deprecated.
+The current default is 'false'.
+It will be removed in version 9.0 of the Android Gradle plugin.
+You can resolve this warning in Android Studio via `Refactor` > `Migrate BuildConfig to Gradle Build Files`
+WARNING: No release.storeFile configured in local.properties. Release build will be signed with the DEBUG key. This is fine for personal/local builds, but such an APK must not be distributed as if it were a production release. See local.properties.example for how to configure a real release keystore.
+Warning: SDK processing. This version only understands SDK XML versions up to 3 but an SDK XML file of version 4 was encountered. This can happen if you use versions of Android Studio and the command-line tools that were released at different times.
+
+> Task :mpv:preBuild UP-TO-DATE
+> Task :mpv:preDebugBuild UP-TO-DATE
+> Task :mpv:mergeDebugJniLibFolders UP-TO-DATE
+> Task :mpv:mergeDebugNativeLibs UP-TO-DATE
+> Task :mpv:stripDebugDebugSymbols UP-TO-DATE
+> Task :mpv:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :mpv:checkKotlinGradlePluginConfigurationErrors
+> Task :mpv:generateDebugBuildConfig UP-TO-DATE
+> Task :mpv:generateDebugResValues UP-TO-DATE
+> Task :mpv:generateDebugResources UP-TO-DATE
+> Task :mpv:packageDebugResources UP-TO-DATE
+> Task :mpv:parseDebugLocalResources UP-TO-DATE
+> Task :mpv:processDebugManifest UP-TO-DATE
+> Task :mpv:generateDebugRFile UP-TO-DATE
+> Task :mpv:compileDebugKotlin UP-TO-DATE
+> Task :mpv:extractDebugAnnotations UP-TO-DATE
+> Task :mpv:extractDeepLinksForAarDebug UP-TO-DATE
+> Task :mpv:javaPreCompileDebug UP-TO-DATE
+> Task :mpv:compileDebugJavaWithJavac UP-TO-DATE
+> Task :mpv:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :mpv:mergeDebugConsumerProguardFiles UP-TO-DATE
+> Task :mpv:mergeDebugShaders UP-TO-DATE
+> Task :mpv:compileDebugShaders NO-SOURCE
+> Task :mpv:generateDebugAssets UP-TO-DATE
+> Task :mpv:packageDebugAssets UP-TO-DATE
+> Task :mpv:prepareDebugArtProfile UP-TO-DATE
+> Task :mpv:prepareLintJarForPublish UP-TO-DATE
+> Task :mpv:processDebugJavaRes UP-TO-DATE
+> Task :mpv:mergeDebugJavaResource UP-TO-DATE
+> Task :mpv:syncDebugLibJars UP-TO-DATE
+> Task :mpv:writeDebugAarMetadata UP-TO-DATE
+> Task :mpv:bundleDebugLocalLintAar UP-TO-DATE
+> Task :app:checkKotlinGradlePluginConfigurationErrors
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:dataBindingMergeDependencyArtifactsDebug UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:dataBindingGenBaseClassesDebug UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:generateSafeArgsDebug UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :mpv:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :mpv:compileDebugLibraryResources UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :mpv:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :app:kaptGenerateStubsDebugKotlin UP-TO-DATE
+> Task :app:kaptDebugKotlin UP-TO-DATE
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :mpv:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :app:extractProguardFiles UP-TO-DATE
+> Task :app:preDebugAndroidTestBuild SKIPPED
+> Task :app:generateDebugAndroidTestResValues UP-TO-DATE
+> Task :mpv:createFullJarDebug UP-TO-DATE
+> Task :mpv:extractProguardFiles UP-TO-DATE
+> Task :app:hiltAggregateDepsDebug UP-TO-DATE
+> Task :app:hiltJavaCompileDebug UP-TO-DATE
+> Task :app:bundleDebugClassesToCompileJar UP-TO-DATE
+> Task :mpv:preDebugAndroidTestBuild UP-TO-DATE
+> Task :mpv:generateDebugAndroidTestResValues UP-TO-DATE
+> Task :mpv:writeDebugLintModelMetadata UP-TO-DATE
+> Task :mpv:generateDebugLintModel UP-TO-DATE
+> Task :app:generateDebugLintReportModel
+> Task :mpv:lintAnalyzeDebug UP-TO-DATE
+> Task :mpv:generateDebugLintReportModel UP-TO-DATE
+> Task :mpv:lintReportDebug UP-TO-DATE
+> Task :mpv:lintDebug
+> Task :app:lintAnalyzeDebug
+
+> Task :app:lintReportDebug
+Wrote HTML report to file:///L:/makimono/app/build/reports/lint-results-debug.html
+
+> Task :app:lintDebug
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.7/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 14s
+71 actionable tasks: 7 executed, 64 up-to-date
+  -> Aprovado em 75s
+
+==> Executando: 3/4: CompilaÃ§Ã£o do APK (assembleDebug)...
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.7/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :app
+WARNING: The option setting 'android.overridePathCheck=true' is experimental.
+The current default is 'false'.
+WARNING: The option setting 'android.defaults.buildfeatures.buildconfig=true' is deprecated.
+The current default is 'false'.
+It will be removed in version 9.0 of the Android Gradle plugin.
+You can resolve this warning in Android Studio via `Refactor` > `Migrate BuildConfig to Gradle Build Files`
+WARNING: No release.storeFile configured in local.properties. Release build will be signed with the DEBUG key. This is fine for personal/local builds, but such an APK must not be distributed as if it were a production release. See local.properties.example for how to configure a real release keystore.
+Warning: SDK processing. This version only understands SDK XML versions up to 3 but an SDK XML file of version 4 was encountered. This can happen if you use versions of Android Studio and the command-line tools that were released at different times.
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors
+> Task :app:dataBindingMergeDependencyArtifactsDebug UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :mpv:preBuild UP-TO-DATE
+> Task :mpv:preDebugBuild UP-TO-DATE
+> Task :mpv:generateDebugResValues UP-TO-DATE
+> Task :mpv:generateDebugResources UP-TO-DATE
+> Task :mpv:packageDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :mpv:parseDebugLocalResources UP-TO-DATE
+> Task :mpv:processDebugManifest UP-TO-DATE
+> Task :mpv:generateDebugRFile UP-TO-DATE
+> Task :app:dataBindingGenBaseClassesDebug UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:generateSafeArgsDebug UP-TO-DATE
+> Task :mpv:writeDebugAarMetadata UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :mpv:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :mpv:compileDebugLibraryResources UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :mpv:checkKotlinGradlePluginConfigurationErrors
+> Task :mpv:generateDebugBuildConfig UP-TO-DATE
+> Task :mpv:compileDebugKotlin UP-TO-DATE
+> Task :mpv:javaPreCompileDebug UP-TO-DATE
+> Task :mpv:compileDebugJavaWithJavac UP-TO-DATE
+> Task :mpv:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :app:kaptGenerateStubsDebugKotlin UP-TO-DATE
+> Task :app:kaptDebugKotlin UP-TO-DATE
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:mergeDebugShaders UP-TO-DATE
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :mpv:mergeDebugShaders UP-TO-DATE
+> Task :mpv:compileDebugShaders NO-SOURCE
+> Task :mpv:generateDebugAssets UP-TO-DATE
+> Task :mpv:packageDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :mpv:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :app:hiltAggregateDepsDebug UP-TO-DATE
+> Task :app:hiltJavaCompileDebug UP-TO-DATE
+> Task :app:transformDebugClassesWithAsm UP-TO-DATE
+> Task :app:dexBuilderDebug
+> Task :app:mergeDebugGlobalSynthetics UP-TO-DATE
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :mpv:processDebugJavaRes UP-TO-DATE
+> Task :app:mergeDebugJavaResource UP-TO-DATE
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :app:mergeLibDexDebug UP-TO-DATE
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :mpv:mergeDebugJniLibFolders UP-TO-DATE
+> Task :mpv:mergeDebugNativeLibs UP-TO-DATE
+> Task :mpv:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :app:mergeDebugNativeLibs UP-TO-DATE
+> Task :app:stripDebugDebugSymbols UP-TO-DATE
+> Task :app:validateSigningDebug UP-TO-DATE
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :benchmark:preBuild UP-TO-DATE
+> Task :benchmark:preDebugBuild UP-TO-DATE
+> Task :benchmark:checkTestedAppObfuscationDebug UP-TO-DATE
+> Task :benchmark:checkKotlinGradlePluginConfigurationErrors
+> Task :benchmark:generateDebugBuildConfig UP-TO-DATE
+> Task :benchmark:checkDebugAarMetadata UP-TO-DATE
+> Task :benchmark:generateDebugResValues UP-TO-DATE
+> Task :benchmark:mapDebugSourceSetPaths UP-TO-DATE
+> Task :benchmark:generateDebugResources UP-TO-DATE
+> Task :benchmark:mergeDebugResources UP-TO-DATE
+> Task :benchmark:processDebugManifest UP-TO-DATE
+> Task :benchmark:processDebugResources UP-TO-DATE
+> Task :benchmark:compileDebugKotlin UP-TO-DATE
+> Task :benchmark:javaPreCompileDebug UP-TO-DATE
+> Task :benchmark:compileDebugJavaWithJavac UP-TO-DATE
+> Task :benchmark:mergeDebugShaders UP-TO-DATE
+> Task :benchmark:compileDebugShaders NO-SOURCE
+> Task :benchmark:generateDebugAssets UP-TO-DATE
+> Task :benchmark:mergeDebugAssets UP-TO-DATE
+> Task :benchmark:compressDebugAssets UP-TO-DATE
+> Task :benchmark:desugarDebugFileDependencies UP-TO-DATE
+> Task :benchmark:dexBuilderDebug UP-TO-DATE
+> Task :benchmark:mergeDebugGlobalSynthetics UP-TO-DATE
+> Task :benchmark:processDebugJavaRes UP-TO-DATE
+> Task :benchmark:mergeDebugJavaResource UP-TO-DATE
+> Task :benchmark:checkDebugDuplicateClasses UP-TO-DATE
+> Task :benchmark:mergeExtDexDebug UP-TO-DATE
+> Task :benchmark:mergeLibDexDebug UP-TO-DATE
+> Task :benchmark:mergeProjectDexDebug UP-TO-DATE
+> Task :benchmark:mergeDebugJniLibFolders UP-TO-DATE
+> Task :benchmark:mergeDebugNativeLibs UP-TO-DATE
+> Task :benchmark:stripDebugDebugSymbols UP-TO-DATE
+> Task :benchmark:validateSigningDebug UP-TO-DATE
+> Task :benchmark:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :benchmark:packageDebug UP-TO-DATE
+> Task :benchmark:createDebugApkListingFileRedirect UP-TO-DATE
+> Task :benchmark:assembleDebug UP-TO-DATE
+> Task :mpv:stripDebugDebugSymbols UP-TO-DATE
+> Task :app:mergeProjectDexDebug
+> Task :mpv:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :mpv:extractDebugAnnotations UP-TO-DATE
+> Task :mpv:extractDeepLinksForAarDebug UP-TO-DATE
+> Task :mpv:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :mpv:mergeDebugConsumerProguardFiles UP-TO-DATE
+> Task :mpv:prepareDebugArtProfile UP-TO-DATE
+> Task :mpv:prepareLintJarForPublish UP-TO-DATE
+> Task :mpv:mergeDebugJavaResource UP-TO-DATE
+> Task :mpv:syncDebugLibJars UP-TO-DATE
+> Task :mpv:bundleDebugAar UP-TO-DATE
+> Task :mpv:assembleDebug UP-TO-DATE
+> Task :app:packageDebug
+> Task :app:createDebugApkListingFileRedirect
+> Task :app:assembleDebug
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.7/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 17s
+108 actionable tasks: 7 executed, 101 up-to-date
+  -> Aprovado em 17.4s
+
+==> Executando: 4/4: VerificaÃ§Ãµes EstÃ¡ticas e de Design (scripts/verify-checks.ps1)...
+==> Running design system and parity verifications...
+[OK] String parity verified: 534 keys match between values and values-pt.
+Palette       role              base    surface
+obsidian      text_primary      19.14:1  17.89:1
+obsidian      text_secondary     7.81:1   7.30:1
+obsidian      primary_button_text 20.03:1  (accent fill)
+obsidian      focused_cta_text  18.72:1  (surface fill)
+tn            text_primary      10.59:1   9.63:1
+tn            text_secondary     8.47:1   7.71:1
+tn            primary_button_text  7.95:1  (accent fill)
+tn            focused_cta_text   6.18:1  (surface fill)
+dracula       text_primary      13.36:1  11.06:1
+dracula       text_secondary     8.82:1   7.30:1
+dracula       primary_button_text  8.30:1  (accent fill)
+dracula       focused_cta_text   4.89:1  (surface fill)
+nord          text_primary      10.84:1   8.73:1
+nord          text_secondary     9.00:1   7.25:1
+nord          primary_button_text 10.01:1  (accent fill)
+nord          focused_cta_text   5.03:1  (surface fill)
+mocha         text_primary      11.34:1   8.69:1
+mocha         text_secondary     9.54:1   7.31:1
+mocha         primary_button_text  9.51:1  (accent fill)
+mocha         focused_cta_text   5.97:1  (surface fill)
+estuary       text_primary      17.35:1  15.56:1
+estuary       text_secondary    10.61:1   9.51:1
+estuary       primary_button_text 11.08:1  (accent fill)
+estuary       focused_cta_text   9.82:1  (surface fill)
+
+Gradient Scrims (composited over #FFFFFF worst-case bright artwork):
+  bg_scrim_bottom.xml            primary=18.75:1  secondary= 7.65:1
+  bg_scrim_left.xml              primary=18.11:1  secondary= 7.39:1
+  shelf_item_scrim.xml           primary=18.32:1  secondary= 7.48:1
+  series_detail_hero_scrim.xml   primary=18.94:1  secondary= 7.73:1
+  player_bottom_scrim.xml        primary=16.66:1  secondary= 6.80:1
+
+Primary/secondary text meets 7:1; default, focused action, and image gradient scrims meet >= 4.5:1.
+[OK] Layout colors check passou: 0 novas viola��es (atuais: 25 <= baseline: 33).
+Literal textSize: 35 in 10 files | token usages: 535
+Distinct sizes (sp: count): 12:20, 14:9, 18:2, 20:1, 32:2, 54:1
+     6  layout/item_series_episode_card.xml
+     6  layout-land/item_series_episode_card.xml
+     4  layout/item_series_season_tab.xml
+     4  layout-land/item_series_season_tab.xml
+     3  layout/fragment_profile_selection.xml
+     3  layout/fragment_series_detail.xml
+     3  layout-land/fragment_profile_selection.xml
+     3  layout-land/fragment_series_detail.xml
+     2  layout/fragment_sign_in.xml
+     1  layout/dialog_profile_editor.xml
+[OK] Zero direct android.util.Log calls outside AppLog.kt.
+[OK] Todas as afirma��es do README.md conferem estritamente com o reposit�rio:
+  - SDK: compileSdk=34, targetSdk=33, minSdk=21
+  - Testes: 654 anota��es @Test
+  - Lint Baseline: 681 issues
+  - Strings: 537 total (534 traduz�veis)
+[OK] Zero literais de UI Kotlin (Toast/setTitle/setMessage/setText) encontrados (T-720).
+[OK] Kotlin style check passou: 0 novas viola��es (atuais: 15 <= baseline: 34).
+[OK] check_immutable_tag self-test passed: duplicate tag with different SHA aborts as required (T-906).
+==> All static verification checks passed!
+  -> Aprovado em 1.4s
+
+=====================================================
+ âœ… TODAS AS VERIFICAÃ‡Ã•ES PASSARAM COM SUCESSO!
+ Tempo total decorrido: 265.6s
+=====================================================
