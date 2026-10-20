@@ -7,10 +7,95 @@ import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
 import zechs.drive.stream.data.local.ProfileEntity
+import zechs.drive.stream.data.local.ProfileDataCleaner
 import zechs.drive.stream.data.local.WatchListDatabase
 import zechs.drive.stream.data.model.UserProfile
+import zechs.drive.stream.data.model.WatchList
 
 class ProfileMigrationTest {
+    @Test
+    fun pairingReplacesOnlyTheUntouchedStarterPairAndKeepsPrimaryHistory() = runBlocking<Unit> {
+        val target = InstrumentationRegistry.getInstrumentation().targetContext
+        val prefsName = "profile-pairing-bootstrap-test"
+        val context = object : android.content.ContextWrapper(target) {
+            override fun getSharedPreferences(name: String, mode: Int) = target.getSharedPreferences(prefsName, mode)
+        }
+        val prefs = context.getSharedPreferences("ignored", 0)
+        prefs.edit().clear().commit()
+        val db = Room.inMemoryDatabaseBuilder(target, WatchListDatabase::class.java).build()
+        val primary = UserProfile("profile-1", "Perfil principal", "avatar_anime", isDefault = true,
+            libraryRootId = "drive-root", libraryRootName = "Animes", createdAt = 42,
+            avatarUrl = "https://example.org/old-avatar.jpg",
+            backgroundUrl = "https://example.org/old-background.jpg", isAdmin = true)
+        val secondary = UserProfile("profile-2", "Perfil secundário", "avatar_anime", createdAt = 42)
+        try {
+            db.getProfileDao().replaceAll(listOf(ProfileEntity.from(primary), ProfileEntity.from(secondary)))
+            db.getWatchListDao().upsertWatch(WatchList("Principal", "primary-video", 10, 100, profileId = primary.id))
+            db.getWatchListDao().upsertWatch(WatchList("Secundário", "secondary-video", 10, 100, profileId = secondary.id))
+
+            val manager = zechs.drive.stream.utils.ProfileManager(context,
+                dagger.Lazy { ProfileDataCleaner(db) }, db)
+            manager.prepareFirstProfileAfterPairing()
+
+            assertTrue(manager.isInitialProfileSetupPending())
+            assertEquals("", manager.getInitialProfileSetupTarget()?.name)
+            assertEquals("profile_placeholder", manager.getInitialProfileSetupTarget()?.avatarResName)
+            assertEquals("drive-root", manager.getInitialProfileSetupTarget()?.libraryRootId)
+            assertNull(manager.getInitialProfileSetupTarget()?.avatarUrl)
+            assertEquals(listOf(primary.id), manager.getProfiles().map { it.id })
+            assertNotNull(db.getWatchListDao().getWatch("primary-video", primary.id))
+            assertNull(db.getWatchListDao().getWatch("secondary-video", secondary.id))
+
+            // Setup must survive Activity/process recreation between cleanup and the user's save.
+            val restarted = zechs.drive.stream.utils.ProfileManager(context,
+                dagger.Lazy { ProfileDataCleaner(db) }, db)
+            restarted.awaitReady()
+            assertTrue(restarted.isInitialProfileSetupPending())
+            assertEquals("", restarted.getInitialProfileSetupTarget()?.name)
+            assertEquals("drive-root", restarted.getInitialProfileSetupTarget()?.libraryRootId)
+
+            restarted.saveProfile(restarted.getInitialProfileSetupTarget()!!.copy(name = "Meu perfil"))
+            assertFalse(restarted.isInitialProfileSetupPending())
+            assertEquals("Meu perfil", restarted.getProfiles().single().name)
+            assertEquals("drive-root", restarted.getProfiles().single().libraryRootId)
+            assertNotNull(db.getWatchListDao().getWatch("primary-video", primary.id))
+        } finally {
+            db.close()
+            prefs.edit().clear().commit()
+        }
+    }
+
+    @Test
+    fun freshInstallPersistsOnlyTheUserCreatedProfile() = runBlocking<Unit> {
+        val target = InstrumentationRegistry.getInstrumentation().targetContext
+        val prefsName = "profile-fresh-install-test"
+        val context = object : android.content.ContextWrapper(target) {
+            override fun getSharedPreferences(name: String, mode: Int) =
+                target.getSharedPreferences(prefsName, mode)
+        }
+        val prefs = context.getSharedPreferences("ignored", 0)
+        prefs.edit().clear().commit()
+        val db = Room.inMemoryDatabaseBuilder(target, WatchListDatabase::class.java).build()
+        try {
+            val manager = zechs.drive.stream.utils.ProfileManager(context,
+                dagger.Lazy { zechs.drive.stream.data.local.ProfileDataCleaner(db) }, db)
+            manager.awaitReady()
+            assertTrue(manager.getProfiles().isEmpty())
+            assertTrue(db.getProfileDao().getAll().isEmpty())
+            manager.setLibraryRoot("prepared-root", "oneblacki")
+            manager.saveProfile(UserProfile("my-profile", "Minha escolha", "profile_placeholder"))
+            val saved = db.getProfileDao().getAll().single().toProfile()
+            assertEquals("my-profile", saved.id)
+            assertEquals("Minha escolha", saved.name)
+            assertEquals("prepared-root", saved.libraryRootId)
+            assertTrue(saved.isAdmin)
+            assertNull(saved.avatarUrl)
+        } finally {
+            db.close()
+            prefs.edit().clear().commit()
+        }
+    }
+
     @Test
     fun importsLegacyPreferencesOnceAndRoomWinsAfterRestart() = runBlocking<Unit> {
         val target = InstrumentationRegistry.getInstrumentation().targetContext
@@ -76,7 +161,8 @@ class ProfileMigrationTest {
                 WatchListDatabase.MIGRATION_8_9,
                 WatchListDatabase.MIGRATION_9_10,
                 WatchListDatabase.MIGRATION_10_11,
-                WatchListDatabase.MIGRATION_11_12
+                WatchListDatabase.MIGRATION_11_12,
+                WatchListDatabase.MIGRATION_12_13
             ).build()
         val profile = UserProfile("legacy-id", "Perfil", "avatar_anime", true, "drive-root", "Animes", 42,
             "https://example.org/avatar.jpg", "https://example.org/banner.jpg", true, true)

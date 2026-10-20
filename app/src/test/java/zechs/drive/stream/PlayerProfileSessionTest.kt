@@ -19,9 +19,11 @@ import org.junit.Before
 import org.junit.Test
 import zechs.drive.stream.data.model.UserProfile
 import zechs.drive.stream.data.model.WatchList
+import zechs.drive.stream.data.repository.DownloadRepository
 import zechs.drive.stream.data.repository.DriveRepository
 import zechs.drive.stream.data.repository.WatchListRepository
 import zechs.drive.stream.ui.player.PlayerViewModel
+import zechs.drive.stream.utils.AppSettings
 import zechs.drive.stream.utils.ProfileManager
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -29,6 +31,8 @@ class PlayerProfileSessionTest {
     private val watchListRepository = mockk<WatchListRepository>(relaxed = true)
     private val profileManager = mockk<ProfileManager>()
     private val driveRepository = Lazy { mockk<DriveRepository>(relaxed = true) }
+    private val downloadRepository = Lazy { mockk<DownloadRepository>(relaxed = true) }
+    private val appSettings = mockk<AppSettings>(relaxed = true)
     private val originalProfile = UserProfile(id = "profile-a", name = "Perfil A")
     private val otherProfile = UserProfile(id = "profile-b", name = "Perfil B")
 
@@ -45,7 +49,14 @@ class PlayerProfileSessionTest {
     @Test
     fun playbackReadsAndWritesStayWithProfileThatStartedSession() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
-        val viewModel = PlayerViewModel(watchListRepository, driveRepository, SavedStateHandle(), profileManager)
+        val viewModel = PlayerViewModel(
+            watchListRepository = watchListRepository,
+            driveRepository = driveRepository,
+            downloadRepository = downloadRepository,
+            appSettings = appSettings,
+            savedStateHandle = SavedStateHandle(),
+            profileManager = profileManager
+        )
         val existingWatch = WatchList(
             name = "Episode 01",
             videoId = "episode-1",
