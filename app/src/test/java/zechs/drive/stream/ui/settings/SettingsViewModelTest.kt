@@ -32,7 +32,6 @@ import zechs.drive.stream.utils.BackupSerializer
 import zechs.drive.stream.utils.MalSessionManager
 import zechs.drive.stream.utils.MotionPreference
 import zechs.drive.stream.utils.ProfileManager
-import zechs.drive.stream.utils.SessionManager
 import zechs.drive.stream.utils.SubtitleStyle
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -47,7 +46,6 @@ class SettingsViewModelTest {
     private val malRepository = mockk<MalRepository>(relaxed = true)
     private val driveRepository = mockk<DriveRepository>(relaxed = true)
     private val backupSerializer = mockk<BackupSerializer>(relaxed = true)
-    private val sessionManager = mockk<SessionManager>(relaxed = true)
     private val profileArtCatalog = mockk<ProfileArtCatalog>(relaxed = true)
 
     private val testProfile = UserProfile(
@@ -86,7 +84,6 @@ class SettingsViewModelTest {
             malRepository,
             driveRepository,
             backupSerializer,
-            sessionManager,
             profileArtCatalog
         )
     }
@@ -154,11 +151,28 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun resetSessionSendsRestartAppEffect() = runBlocking {
+    fun resetSessionRevokesOnlyThisTvAndSendsRestartAppEffect() = runBlocking {
         viewModel.onEvent(SettingsEvent.ResetSession)
 
-        coVerify { sessionManager.resetDataStore() }
+        coVerify { driveRepository.logoutCurrentDevice() }
         val effect = viewModel.effects.first()
         assertTrue(effect is SettingsUiEffect.RestartApp)
+    }
+
+    @Test
+    fun disconnectAllDriveDevicesRevokesGoogleGrantAndSendsRestartAppEffect() = runBlocking {
+        viewModel.onEvent(SettingsEvent.DisconnectAllDriveDevices)
+
+        coVerify { driveRepository.disconnectAllDevices() }
+        val effect = viewModel.effects.first()
+        assertTrue(effect is SettingsUiEffect.RestartApp)
+    }
+
+    @Test
+    fun setSmartDownloadsUpdatesStateAndSavesToAppSettings() = runBlocking {
+        viewModel.onEvent(SettingsEvent.SetSmartDownloads(false))
+
+        assertFalse(viewModel.uiState.value.isSmartDownloadsEnabled)
+        coVerify { appSettings.saveSmartDownloads(false, testProfile.id) }
     }
 }

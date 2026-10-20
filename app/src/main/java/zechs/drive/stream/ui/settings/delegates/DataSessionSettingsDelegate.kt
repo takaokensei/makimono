@@ -51,6 +51,7 @@ class DataSessionSettingsDelegate(
         setupCheckForUpdates()
         setupBackupRestore()
         setupLogOut()
+        setupDisconnectAllDevices()
     }
 
     private fun setupStorageAndCacheSetting() {
@@ -236,7 +237,8 @@ class DataSessionSettingsDelegate(
 
                 val result = viewModel.importBackupJson(json, mode)
                 if (result.isSuccess) {
-                    val summary = "Backup restaurado: ${result.importedProfiles} perfis, ${result.importedWatches} históricos, ${result.importedFavorites} favoritos"
+                    val summary = "Backup restaurado: ${result.importedProfiles} perfis, " +
+                        "${result.importedWatches} históricos, ${result.importedFavorites} favoritos"
                     showSnackBar(summary)
                 } else {
                     val errorMsg = result.errorMessage ?: "Erro desconhecido ao importar backup"
@@ -258,6 +260,26 @@ class DataSessionSettingsDelegate(
                 .setPositiveButton(context.getString(R.string.yes)) { d, _ ->
                     d.dismiss()
                     viewModel.onEvent(SettingsEvent.ResetSession)
+                }
+                .create()
+
+            dialog.setOnShowListener {
+                dialog.window?.let { w -> TvFocusRing.install(w.decorView) }
+                dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)?.requestFocus()
+            }
+            dialog.show()
+        }
+    }
+
+    private fun setupDisconnectAllDevices() {
+        binding.settingDisconnectAll?.setOnClickListener {
+            val dialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
+                .setTitle(R.string.disconnect_all_devices_title)
+                .setMessage(R.string.disconnect_all_devices_message)
+                .setNegativeButton(R.string.no) { d, _ -> d.dismiss() }
+                .setPositiveButton(R.string.disconnect_all_devices_action) { d, _ ->
+                    d.dismiss()
+                    viewModel.onEvent(SettingsEvent.DisconnectAllDriveDevices)
                 }
                 .create()
 

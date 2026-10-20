@@ -20,7 +20,6 @@ import zechs.drive.stream.utils.BackupSerializer
 import zechs.drive.stream.utils.MalSessionManager
 import zechs.drive.stream.utils.MotionPreference
 import zechs.drive.stream.utils.ProfileManager
-import zechs.drive.stream.utils.SessionManager
 import zechs.drive.stream.utils.SubtitleStyle
 import zechs.drive.stream.utils.state.Resource
 import java.util.Locale
@@ -34,7 +33,6 @@ class SettingsViewModel @Inject constructor(
     private val malRepository: MalRepository,
     private val driveRepository: DriveRepository,
     private val backupSerializer: BackupSerializer,
-    private val sessionManager: SessionManager,
     val profileArtCatalog: ProfileArtCatalog
 ) : ViewModel() {
 
@@ -75,6 +73,7 @@ class SettingsViewModel @Inject constructor(
             val afr = runCatching { appSettings.fetchAutoFrameRate() }.getOrDefault(false)
             val hdr = runCatching { appSettings.fetchMatchDynamicRange() }.getOrDefault(false)
             val predBuffer = runCatching { appSettings.fetchPredictiveBuffering() }.getOrDefault(false)
+            val smartDl = runCatching { appSettings.fetchSmartDownloads() }.getOrDefault(true)
 
             _uiState.update { current ->
                 current.copy(
@@ -86,7 +85,8 @@ class SettingsViewModel @Inject constructor(
                     isGesturesEnabled = malSessionManager.isGesturesEnabled(),
                     isAutoFrameRateEnabled = afr,
                     isMatchDynamicRangeEnabled = hdr,
-                    isPredictiveBufferingEnabled = predBuffer
+                    isPredictiveBufferingEnabled = predBuffer,
+                    isSmartDownloadsEnabled = smartDl
                 )
             }
         }
@@ -191,6 +191,19 @@ class SettingsViewModel @Inject constructor(
                     )
                 }
             }
+            is SettingsEvent.SetSmartDownloads -> {
+                viewModelScope.launch {
+                    val profileId = profileManager.getActiveProfile().id
+                    appSettings.saveSmartDownloads(event.enabled, profileId)
+                    _uiState.update { it.copy(isSmartDownloadsEnabled = event.enabled) }
+                    _effects.send(
+                        SettingsUiEffect.ShowSnackbar(
+                            if (event.enabled) "Downloads inteligentes ativados"
+                            else "Downloads inteligentes desativados"
+                        )
+                    )
+                }
+            }
             is SettingsEvent.SetMalSync -> {
                 malSessionManager.setSyncEnabled(event.enabled)
                 _uiState.update { it.copy(isMalSyncEnabled = event.enabled) }
@@ -261,7 +274,13 @@ class SettingsViewModel @Inject constructor(
             }
             is SettingsEvent.ResetSession -> {
                 viewModelScope.launch {
-                    sessionManager.resetDataStore()
+                    driveRepository.logoutCurrentDevice()
+                    _effects.send(SettingsUiEffect.RestartApp)
+                }
+            }
+            is SettingsEvent.DisconnectAllDriveDevices -> {
+                viewModelScope.launch {
+                    driveRepository.disconnectAllDevices()
                     _effects.send(SettingsUiEffect.RestartApp)
                 }
             }

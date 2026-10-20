@@ -27,6 +27,7 @@ data class SettingsUiState(
     val isAutoFrameRateEnabled: Boolean = false,
     val isMatchDynamicRangeEnabled: Boolean = false,
     val isPredictiveBufferingEnabled: Boolean = false,
+    val isSmartDownloadsEnabled: Boolean = true,
     val lastFocusedRowId: Int? = null
 )
 
@@ -41,6 +42,7 @@ sealed interface SettingsEvent {
     data class SetAutoFrameRate(val enabled: Boolean) : SettingsEvent
     data class SetMatchDynamicRange(val enabled: Boolean) : SettingsEvent
     data class SetPredictiveBuffering(val enabled: Boolean) : SettingsEvent
+    data class SetSmartDownloads(val enabled: Boolean) : SettingsEvent
     data class SetMalSync(val enabled: Boolean) : SettingsEvent
     data class SetTheme(val theme: AppTheme) : SettingsEvent
     data class SetPlayer(val player: VideoPlayer) : SettingsEvent
@@ -49,6 +51,7 @@ sealed interface SettingsEvent {
     data class SaveMalCredentials(val clientId: String, val clientSecret: String) : SettingsEvent
     data class UpdateCacheSize(val sizeBytes: Long) : SettingsEvent
     object ResetSession : SettingsEvent
+    object DisconnectAllDriveDevices : SettingsEvent
 }
 
 sealed interface SettingsUiEffect {

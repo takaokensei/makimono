@@ -132,6 +132,13 @@ class PlaybackSettingsDelegate(
         binding.switchPredictiveBuffering?.setOnCheckedChangeListener { _, isChecked ->
             viewModel.onEvent(SettingsEvent.SetPredictiveBuffering(isChecked))
         }
+
+        binding.settingSmartDownloadsToggle?.setOnClickListener {
+            binding.switchSmartDownloads?.toggle()
+        }
+        binding.switchSmartDownloads?.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.onEvent(SettingsEvent.SetSmartDownloads(isChecked))
+        }
     }
 
     fun render(state: SettingsUiState) {
@@ -149,5 +156,6 @@ class PlaybackSettingsDelegate(
         binding.switchAutoFrameRate?.isChecked = state.isAutoFrameRateEnabled
         binding.switchMatchDynamicRange?.isChecked = state.isMatchDynamicRangeEnabled
         binding.switchPredictiveBuffering?.isChecked = state.isPredictiveBufferingEnabled
+        binding.switchSmartDownloads?.isChecked = state.isSmartDownloadsEnabled
     }
 }
