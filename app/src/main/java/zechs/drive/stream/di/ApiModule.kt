@@ -20,7 +20,7 @@ import zechs.drive.stream.data.remote.DriveApi
 import zechs.drive.stream.data.remote.GithubApi
 import zechs.drive.stream.data.remote.MalApi
 import zechs.drive.stream.data.remote.AnimePosterResolver
-import zechs.drive.stream.data.remote.TokenApi
+import zechs.drive.stream.data.remote.PairingApi
 import zechs.drive.stream.data.repository.AniSkipRepository
 import zechs.drive.stream.data.repository.DriveRepository
 import zechs.drive.stream.data.repository.GithubRepository
@@ -30,7 +30,6 @@ import zechs.drive.stream.utils.MalSessionManager
 import zechs.drive.stream.utils.SessionManager
 import zechs.drive.stream.utils.util.Constants.Companion.ANISKIP_API_BASE_URL
 import zechs.drive.stream.utils.util.Constants.Companion.GITHUB_API
-import zechs.drive.stream.utils.util.Constants.Companion.GOOGLE_ACCOUNTS_URL
 import zechs.drive.stream.utils.util.Constants.Companion.GOOGLE_API
 import zechs.drive.stream.utils.util.Constants.Companion.MAL_API_BASE_URL
 import javax.inject.Named
@@ -53,9 +52,9 @@ object ApiModule {
     @Singleton
     fun provideTokenProvider(
         sessionManager: SessionManager,
-        driveRepository: Lazy<DriveRepository>
+        pairingApi: PairingApi
     ): zechs.drive.stream.data.repository.TokenProvider {
-        return zechs.drive.stream.data.repository.DefaultTokenProvider(sessionManager, driveRepository)
+        return zechs.drive.stream.data.repository.DefaultTokenProvider(sessionManager, pairingApi)
     }
 
     @Provides
@@ -124,17 +123,26 @@ object ApiModule {
 
     @Provides
     @Singleton
-    fun provideTokenApi(
+    @Named("PairingApiBaseUrl")
+    fun providePairingApiBaseUrl(): String = BuildConfig.PAIRING_API_BASE_URL.trim()
+
+    @Provides
+    @Singleton
+    fun providePairingApi(
         @Named("OkHttpClient")
         client: OkHttpClient,
-        moshi: Moshi
-    ): TokenApi {
+        moshi: Moshi,
+        @Named("PairingApiBaseUrl") pairingApiBaseUrl: String
+    ): PairingApi {
+        val pairingBaseUrl = pairingApiBaseUrl
+            .ifBlank { "https://localhost/" }
+            .let { if (it.endsWith("/")) it else "$it/" }
         return Retrofit.Builder()
-            .baseUrl(GOOGLE_ACCOUNTS_URL)
+            .baseUrl(pairingBaseUrl)
             .client(client)
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
-            .create(TokenApi::class.java)
+            .create(PairingApi::class.java)
     }
 
     @Provides
@@ -156,11 +164,10 @@ object ApiModule {
     @Singleton
     fun provideDriveRepository(
         driveApi: DriveApi,
-        tokenApi: Lazy<TokenApi>,
-        sessionManager: SessionManager,
+        tokenProvider: zechs.drive.stream.data.repository.TokenProvider,
         @ApplicationContext appContext: Context
     ): DriveRepository {
-        return DriveRepository(driveApi, tokenApi, sessionManager, appContext)
+        return DriveRepository(driveApi, tokenProvider, appContext)
     }
 
     @Provides
