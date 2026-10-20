@@ -7,6 +7,16 @@ import org.junit.Test
 import zechs.drive.stream.data.local.WatchListDatabase
 
 class RoomMigrationTest {
+    @Test
+    fun migration_12_13_registersPreservedDownloadsWithoutDroppingData() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+        WatchListDatabase.MIGRATION_12_13.migrate(db)
+        verify(exactly = 1) { db.execSQL(match { it.contains("CREATE TABLE IF NOT EXISTS download_items") }) }
+        verify(exactly = 1) { db.execSQL(match { it.contains("CREATE INDEX IF NOT EXISTS `index_download_items_profileId`") }) }
+        verify(exactly = 1) { db.execSQL(match { it.contains("CREATE INDEX IF NOT EXISTS `index_download_items_folderId`") }) }
+        verify(exactly = 0) { db.execSQL(match { it.contains("DROP TABLE", ignoreCase = true) }) }
+    }
+
 
     @Test
     fun migration_1_2_addsThumbnailLinkColumn() {

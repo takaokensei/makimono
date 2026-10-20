@@ -15,9 +15,10 @@ import zechs.drive.stream.data.model.WatchQueueItem
         WatchQueueItem::class,
         CatalogEntry::class,
         FollowedFolder::class,
-        ProfileEntity::class
+        ProfileEntity::class,
+        zechs.drive.stream.data.model.DownloadItem::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = true
 )
 abstract class WatchListDatabase : RoomDatabase() {
@@ -31,8 +32,18 @@ abstract class WatchListDatabase : RoomDatabase() {
     abstract fun getCatalogDao(): CatalogDao
     abstract fun getFollowedFolderDao(): FollowedFolderDao
     abstract fun getProfileCleanupDao(): ProfileCleanupDao
+    abstract fun getDownloadDao(): DownloadDao
 
     companion object {
+        /** Register preserved download records with Room without deleting existing downloads. */
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                MIGRATION_10_11.migrate(db)
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_download_items_profileId` ON `download_items` (`profileId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_download_items_folderId` ON `download_items` (`folderId`)")
+            }
+        }
+
         /**
          * Some installed v11 builds created this table outside the current Room entities.
          * Preserve it for existing installs, and create the observed v11 table for v10 installs

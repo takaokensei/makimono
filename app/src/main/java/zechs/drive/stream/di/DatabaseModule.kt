@@ -49,7 +49,8 @@ object DatabaseModule {
             WatchListDatabase.MIGRATION_8_9,
             WatchListDatabase.MIGRATION_9_10,
             WatchListDatabase.MIGRATION_10_11,
-            WatchListDatabase.MIGRATION_11_12
+            WatchListDatabase.MIGRATION_11_12,
+            WatchListDatabase.MIGRATION_12_13
         )
         .build()
 
@@ -138,5 +139,18 @@ object DatabaseModule {
         followedFolderDao: FollowedFolderDao,
         profileManager: ProfileManager
     ) = FollowedFolderRepository(followedFolderDao, profileManager)
+
+    @Singleton
+    @Provides
+    fun provideDownloadDao(db: WatchListDatabase): zechs.drive.stream.data.local.DownloadDao =
+        db.getDownloadDao()
+
+    @Singleton
+    @Provides
+    fun provideDownloadRepository(
+        downloadDao: zechs.drive.stream.data.local.DownloadDao,
+        profileManager: ProfileManager,
+        @ApplicationContext context: Context
+    ) = zechs.drive.stream.data.repository.DownloadRepository(downloadDao, profileManager, context)
 
 }
