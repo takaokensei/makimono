@@ -60,7 +60,7 @@
                     android:paddingEnd="6dp"
                     android:paddingBottom="2dp"
                     android:textColor="@color/obsidian_ice_white"
-                    android:textSize="11sp"
+                    android:textSize="12sp"
                     android:textStyle="bold"
                     tools:text="EP 01" />
 
@@ -78,7 +78,7 @@
                     android:paddingBottom="2dp"
                     android:text="@string/series_episode_watched_badge"
                     android:textColor="@color/obsidian_text_primary"
-                    android:textSize="10sp"
+                    android:textSize="12sp"
                     android:textStyle="bold"
                     android:visibility="gone"
                     tools:visibility="visible" />
@@ -171,7 +171,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textColor="@color/obsidian_ice_white"
-                        android:textSize="10sp"
+                        android:textSize="12sp"
                         tools:text="16+" />
                 </LinearLayout>
 
@@ -195,9 +195,55 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textColor="@color/obsidian_link_blue_gray"
-                        android:textSize="10sp"
+                        android:textSize="12sp"
                         tools:text="PT-BR" />
                 </LinearLayout>
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <!-- Download percent label (e.g. "45%") -->
+                <TextView
+                    android:id="@+id/tvDownloadPercent"
+                    style="@style/TextAppearance.Makimono.TV.Badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    android:textColor="@color/obsidian_accent"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    tools:text="45%" />
+
+                <!-- Download status / action button -->
+                <FrameLayout
+                    android:id="@+id/btnEpisodeDownload"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:background="@drawable/glass_meta_pill_bg"
+                    android:clickable="true"
+                    android:focusable="false"
+                    android:contentDescription="@string/download_episode">
+
+                    <ImageView
+                        android:id="@+id/ivDownloadIcon"
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:layout_gravity="center"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_download_24"
+                        app:tint="@color/obsidian_link_blue_gray" />
+
+                    <ProgressBar
+                        android:id="@+id/pbDownloadProgress"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:layout_gravity="center"
+                        android:indeterminate="true"
+                        android:visibility="gone"
+                        android:indeterminateTint="@color/obsidian_accent" />
+                </FrameLayout>
 
             </LinearLayout>
 
@@ -213,7 +259,7 @@
                 android:lineSpacingExtra="1dp"
                 android:maxLines="2"
                 android:textColor="@color/obsidian_link_blue_gray"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 tools:text="Araragi encontra Hitagi, uma garota que parece ter um problema sobrenatural." />
 
             <!-- Dummy view for tvEpisodeProgressPercent to satisfy binding without showing -->

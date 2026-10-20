@@ -34,7 +34,11 @@ class SeriesDetailLayoutTest {
                     root.layout(0, 0, width, height)
                     val backdrop = root.findViewById<View>(R.id.ivHeroBackdrop)
                     assertTrue(backdrop.height > 0)
-                    for (id in listOf(R.id.viewHeroScrim, R.id.viewHeroVignette, R.id.viewDynamicColorTint)) {
+                    for (id in listOf(
+                        R.id.viewHeroScrimHorizontal,
+                        R.id.viewHeroScrimVertical,
+                        R.id.viewDynamicColorTint
+                    )) {
                         val overlay = root.findViewById<View>(id)
                         assertEquals("Overlay top at $widthDp", backdrop.top, overlay.top)
                         assertEquals("Overlay bottom at $widthDp", backdrop.bottom, overlay.bottom)
