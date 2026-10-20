@@ -70,16 +70,19 @@ android {
         applicationId "zechs.drive.stream"
         minSdk 21
         targetSdk 33
-        versionCode 72
-        versionName "1.9.2"
+        versionCode 73
+        versionName "1.9.3"
         archivesBaseName = "makimono-v${versionName}"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
-        def driveClientId = localProperties.getProperty("drive.clientId", "") ?: (System.getenv("DRIVE_CLIENT_ID") ?: (System.getenv("GOOGLE_DRIVE_CLIENT_ID") ?: ""))
+        // The pairing service URL is public configuration, never an OAuth credential.
+        def firstNonBlank = { values -> values.find { it != null && !it.trim().isEmpty() }?.trim() ?: "" }
         def distributionBuild = project.hasProperty("distributionBuild")
-        def driveClientSecret = distributionBuild ? "" : (localProperties.getProperty("drive.clientSecret", "") ?: (System.getenv("DRIVE_CLIENT_SECRET") ?: (System.getenv("GOOGLE_DRIVE_CLIENT_SECRET") ?: "")))
-        def driveRefreshToken = distributionBuild ? "" : (localProperties.getProperty("drive.refreshToken", "") ?: (System.getenv("DRIVE_REFRESH_TOKEN") ?: (System.getenv("GOOGLE_DRIVE_REFRESH_TOKEN") ?: "")))
+        def pairingApiBaseUrl = firstNonBlank([
+                project.findProperty("PAIRING_API_BASE_URL"),
+                System.getenv("PAIRING_API_BASE_URL")
+        ])
         def malClientId = localProperties.getProperty("mal.clientId", "") ?: (System.getenv("MAL_CLIENT_ID") ?: "")
         def malClientSecret = distributionBuild ? "" : (localProperties.getProperty("mal.clientSecret", "") ?: (System.getenv("MAL_CLIENT_SECRET") ?: ""))
         def rawGithubToken = localProperties.getProperty("github.releaseReadToken", "") ?: localProperties.getProperty("github.apiToken", "") ?: (System.getenv("API_TOKEN_GITHUB") ?: (System.getenv("GITHUB_API_TOKEN") ?: ""))
@@ -93,9 +96,7 @@ android {
             tmdbApiKey = (System.getenv("TMDB_API_KEY") ?: "").trim()
         }
 
-        buildConfigField "String", "DRIVE_CLIENT_ID", "\"${driveClientId}\""
-        buildConfigField "String", "DRIVE_CLIENT_SECRET", "\"${driveClientSecret}\""
-        buildConfigField "String", "DRIVE_REFRESH_TOKEN", "\"${driveRefreshToken}\""
+        buildConfigField "String", "PAIRING_API_BASE_URL", "\"${pairingApiBaseUrl}\""
         buildConfigField "String", "MAL_CLIENT_ID", "\"${malClientId}\""
         buildConfigField "String", "MAL_CLIENT_SECRET", "\"${malClientSecret}\""
         buildConfigField "String", "GITHUB_API_TOKEN", "\"${githubApiToken}\""
@@ -117,7 +118,7 @@ android {
         // Keep the debug-only visual fixture installable beside the signed app.
         // This avoids uninstalling the user's build and losing its Drive session.
         debug {
-            applicationIdSuffix ".visualreview"
+            applicationIdSuffix project.findProperty("debugApplicationIdSuffix") ?: ".visualreview"
             enableUnitTestCoverage true
         }
         release {
