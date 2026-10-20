@@ -91,4 +91,20 @@ class SeriesEpisodePresentationTest {
         )
         assertEquals("Filme Completo", fallback.displayTitle)
     }
+
+    @Test
+    fun formatDurationMinutesAndMillisHandlesDiverseDurations() {
+        assertEquals("2h 25m", formatDurationMinutes(145))
+        assertEquals("2h", formatDurationMinutes(120))
+        assertEquals("1h", formatDurationMinutes(60))
+        assertEquals("59 min", formatDurationMinutes(59))
+        assertEquals("24 min", formatDurationMinutes(24))
+        assertEquals("", formatDurationMinutes(0))
+        assertEquals("", formatDurationMinutes(-5))
+
+        assertEquals("2h 25m", formatDurationMillis(145 * 60 * 1000L))
+        assertEquals("24 min", formatDurationMillis(24 * 60 * 1000L))
+        assertEquals("", formatDurationMillis(0L))
+        assertEquals("", formatDurationMillis(-1000L))
+    }
 }

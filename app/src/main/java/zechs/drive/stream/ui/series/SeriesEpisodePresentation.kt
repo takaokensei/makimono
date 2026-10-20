@@ -78,3 +78,21 @@ internal fun formatRating(rating: String?): String? {
         else -> null
     }
 }
+
+/** Formats duration into streaming display convention: '24 min' for shorts, '2h 25m' for feature-lengths. */
+internal fun formatDurationMillis(durationMillis: Long): String {
+    if (durationMillis <= 0L) return ""
+    val totalMin = (durationMillis / 1000) / 60
+    return formatDurationMinutes(totalMin.toInt())
+}
+
+internal fun formatDurationMinutes(totalMin: Int): String {
+    if (totalMin <= 0) return ""
+    return if (totalMin >= 60) {
+        val hours = totalMin / 60
+        val mins = totalMin % 60
+        if (mins > 0) "${hours}h ${mins}m" else "${hours}h"
+    } else {
+        "$totalMin min"
+    }
+}

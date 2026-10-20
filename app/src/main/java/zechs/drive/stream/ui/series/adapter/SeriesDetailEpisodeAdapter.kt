@@ -12,6 +12,7 @@ import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.databinding.ItemSeriesEpisodeCardBinding
 import zechs.drive.stream.domain.library.MediaItemCategory
 import zechs.drive.stream.ui.series.EpisodeCardAccessibilityLabel
+import zechs.drive.stream.data.model.DownloadStatus
 import zechs.drive.stream.utils.FocusEngine
 import zechs.drive.stream.utils.MediaImageLoader
 
@@ -28,12 +29,15 @@ data class SeriesEpisodeItem(
     val fallbackThumbnailUrl: String? = null,
     val category: MediaItemCategory = MediaItemCategory.STORY,
     val synopsis: String? = null,
-    val ageRating: String? = null
+    val ageRating: String? = null,
+    val downloadStatus: DownloadStatus? = null,
+    val downloadProgress: Int = 0
 )
 
 class SeriesDetailEpisodeAdapter(
     private val onEpisodeClick: (SeriesEpisodeItem) -> Unit,
-    private val onEpisodeLongClick: ((SeriesEpisodeItem, View) -> Unit)? = null
+    private val onEpisodeLongClick: ((SeriesEpisodeItem, View) -> Unit)? = null,
+    private val onDownloadClick: ((SeriesEpisodeItem) -> Unit)? = null
 ) : ListAdapter<SeriesEpisodeItem, SeriesDetailEpisodeAdapter.EpisodeViewHolder>(DiffCallback) {
 
     init {
@@ -54,6 +58,18 @@ class SeriesDetailEpisodeAdapter(
 
     override fun onBindViewHolder(holder: EpisodeViewHolder, position: Int) {
         holder.bind(getItem(position))
+    }
+
+    override fun onBindViewHolder(
+        holder: EpisodeViewHolder,
+        position: Int,
+        payloads: MutableList<Any>
+    ) {
+        if (payloads.contains(PAYLOAD_DOWNLOAD_UPDATE)) {
+            holder.bindDownloadState(getItem(position))
+        } else {
+            super.onBindViewHolder(holder, position, payloads)
+        }
     }
 
     inner class EpisodeViewHolder(
@@ -84,58 +100,6 @@ class SeriesDetailEpisodeAdapter(
             ) { _, hasFocus ->
                 binding.ivPlayOverlay.visibility = if (hasFocus) View.VISIBLE else View.GONE
                 updateSynopsisVisibility(hasFocus)
-            }
-
-            binding.cardEpisodeItem.setOnKeyListener { _, keyCode, event ->
-                if (event.action == android.view.KeyEvent.ACTION_DOWN) {
-                    val position = bindingAdapterPosition
-                    if (position != RecyclerView.NO_POSITION) {
-                        when (keyCode) {
-                            android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                                if (position < itemCount - 1) {
-                                    val nextPos = position + 1
-                                    val rv = binding.cardEpisodeItem.parent as? RecyclerView
-                                    rv?.smoothScrollToPosition(nextPos)
-                                    val nextHolder = rv?.findViewHolderForAdapterPosition(nextPos)
-                                    if (nextHolder != null) {
-                                        nextHolder.itemView.findViewById<View>(R.id.cardEpisodeItem)?.requestFocus()
-                                    } else {
-                                        rv?.post {
-                                            rv.findViewHolderForAdapterPosition(nextPos)?.itemView
-                                                ?.findViewById<View>(R.id.cardEpisodeItem)?.requestFocus()
-                                                ?: rv.postDelayed({
-                                                    rv.findViewHolderForAdapterPosition(nextPos)?.itemView
-                                                        ?.findViewById<View>(R.id.cardEpisodeItem)?.requestFocus()
-                                                }, 50)
-                                        }
-                                    }
-                                }
-                                return@setOnKeyListener true
-                            }
-                            android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
-                                if (position > 0) {
-                                    val prevPos = position - 1
-                                    val rv = binding.cardEpisodeItem.parent as? RecyclerView
-                                    rv?.smoothScrollToPosition(prevPos)
-                                    val prevHolder = rv?.findViewHolderForAdapterPosition(prevPos)
-                                    if (prevHolder != null) {
-                                        prevHolder.itemView.findViewById<View>(R.id.cardEpisodeItem)?.requestFocus()
-                                    } else {
-                                        rv?.post {
-                                            rv.findViewHolderForAdapterPosition(prevPos)?.itemView
-                                                ?.findViewById<View>(R.id.cardEpisodeItem)?.requestFocus()
-                                        }
-                                    }
-                                    return@setOnKeyListener true
-                                }
-                            }
-                            android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                return@setOnKeyListener true
-                            }
-                        }
-                    }
-                }
-                false
             }
         }
 
@@ -226,6 +190,72 @@ class SeriesDetailEpisodeAdapter(
                 ?: item.fallbackThumbnailUrl
                 ?: item.file.posterUrl
             MediaImageLoader.card(binding.ivEpisodeThumb, thumbUrl)
+            bindDownloadState(item)
+        }
+
+        fun bindDownloadState(item: SeriesEpisodeItem) {
+            val context = binding.root.context
+            // Download status & action (Netflix & Crunchyroll style)
+            when (item.downloadStatus) {
+                DownloadStatus.DOWNLOADING -> {
+                    binding.btnEpisodeDownload.visibility = View.VISIBLE
+                    binding.ivDownloadIcon.visibility = View.GONE
+                    binding.pbDownloadProgress.visibility = View.VISIBLE
+                    binding.pbDownloadProgress.isIndeterminate = false
+                    binding.pbDownloadProgress.progress = item.downloadProgress
+                    binding.tvDownloadPercent.visibility = View.VISIBLE
+                    binding.tvDownloadPercent.text = "${item.downloadProgress}%"
+                    binding.btnEpisodeDownload.contentDescription = context.getString(
+                        R.string.download_status_downloading,
+                        item.downloadProgress
+                    )
+                }
+                DownloadStatus.QUEUED -> {
+                    binding.btnEpisodeDownload.visibility = View.VISIBLE
+                    binding.ivDownloadIcon.visibility = View.GONE
+                    binding.pbDownloadProgress.visibility = View.VISIBLE
+                    binding.pbDownloadProgress.isIndeterminate = true
+                    binding.tvDownloadPercent.visibility = View.GONE
+                    binding.btnEpisodeDownload.contentDescription = context.getString(R.string.download_status_queued)
+                }
+                DownloadStatus.COMPLETED -> {
+                    binding.btnEpisodeDownload.visibility = View.VISIBLE
+                    binding.ivDownloadIcon.visibility = View.VISIBLE
+                    binding.pbDownloadProgress.visibility = View.GONE
+                    binding.tvDownloadPercent.visibility = View.GONE
+                    binding.ivDownloadIcon.setImageResource(R.drawable.ic_download_done_24)
+                    binding.ivDownloadIcon.imageTintList = ContextCompat.getColorStateList(
+                        context, R.color.obsidian_accent
+                    )
+                    binding.btnEpisodeDownload.contentDescription = context.getString(R.string.download_status_completed)
+                }
+                DownloadStatus.FAILED -> {
+                    binding.btnEpisodeDownload.visibility = View.VISIBLE
+                    binding.ivDownloadIcon.visibility = View.VISIBLE
+                    binding.pbDownloadProgress.visibility = View.GONE
+                    binding.tvDownloadPercent.visibility = View.GONE
+                    binding.ivDownloadIcon.setImageResource(R.drawable.ic_download_24)
+                    binding.ivDownloadIcon.imageTintList = ContextCompat.getColorStateList(
+                        context, R.color.obsidian_danger
+                    )
+                    binding.btnEpisodeDownload.contentDescription = context.getString(R.string.download_status_failed)
+                }
+                else -> {
+                    binding.btnEpisodeDownload.visibility = View.VISIBLE
+                    binding.ivDownloadIcon.visibility = View.VISIBLE
+                    binding.pbDownloadProgress.visibility = View.GONE
+                    binding.tvDownloadPercent.visibility = View.GONE
+                    binding.ivDownloadIcon.setImageResource(R.drawable.ic_download_24)
+                    binding.ivDownloadIcon.imageTintList = ContextCompat.getColorStateList(
+                        context, R.color.obsidian_gray
+                    )
+                    binding.btnEpisodeDownload.contentDescription = context.getString(R.string.download_episode)
+                }
+            }
+
+            binding.btnEpisodeDownload.setOnClickListener {
+                onDownloadClick?.invoke(item)
+            }
         }
 
         private fun updateSynopsisVisibility(hasFocus: Boolean) {
@@ -235,13 +265,30 @@ class SeriesDetailEpisodeAdapter(
         }
     }
 
-    companion object DiffCallback : DiffUtil.ItemCallback<SeriesEpisodeItem>() {
+    companion object {
+        const val PAYLOAD_DOWNLOAD_UPDATE = "payload_download_update"
         private const val MAX_DESCRIPTION_LENGTH = 600
+    }
+
+    object DiffCallback : DiffUtil.ItemCallback<SeriesEpisodeItem>() {
 
         override fun areItemsTheSame(oldItem: SeriesEpisodeItem, newItem: SeriesEpisodeItem): Boolean =
             oldItem.file.id == newItem.file.id
 
         override fun areContentsTheSame(oldItem: SeriesEpisodeItem, newItem: SeriesEpisodeItem): Boolean =
             oldItem == newItem
+
+        override fun getChangePayload(oldItem: SeriesEpisodeItem, newItem: SeriesEpisodeItem): Any? {
+            val isOnlyDownloadChanged = oldItem.copy(
+                downloadStatus = newItem.downloadStatus,
+                downloadProgress = newItem.downloadProgress
+            ) == newItem
+
+            return if (isOnlyDownloadChanged) {
+                PAYLOAD_DOWNLOAD_UPDATE
+            } else {
+                super.getChangePayload(oldItem, newItem)
+            }
+        }
     }
 }
