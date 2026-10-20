@@ -286,7 +286,8 @@ class SettingsFragment : BaseFragment() {
                     R.id.settingCheckForUpdate,
                     R.id.settingExportBackup,
                     R.id.settingImportBackup,
-                    R.id.settingLogOut
+                    R.id.settingLogOut,
+                    R.id.settingDisconnectAll
                 )
             )
         )
@@ -502,7 +503,8 @@ class SettingsFragment : BaseFragment() {
         binding.settingPredictiveBufferingToggle,
         binding.settingExportBackup,
         binding.settingImportBackup,
-        binding.settingLogOut
+        binding.settingLogOut,
+        binding.settingDisconnectAll
     )
 
     private fun updateSettingsFocusOrder(rows: List<View>? = null) {
