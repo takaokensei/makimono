@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/cardDownloadItem"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="8dp"
+    android:layout_marginTop="4dp"
+    android:layout_marginEnd="8dp"
+    android:layout_marginBottom="4dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="@drawable/item_series_episode_focus_border"
+    app:cardBackgroundColor="@color/obsidian_surface"
+    app:cardCornerRadius="10dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/obsidian_border_glass"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="8dp">
+
+        <!-- 16:9 Thumbnail -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="120dp"
+            android:layout_height="68dp"
+            app:cardBackgroundColor="@color/obsidian_bg"
+            app:cardCornerRadius="6dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp">
+
+            <ImageView
+                android:id="@+id/ivDownloadThumb"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@null"
+                android:scaleType="centerCrop"
+                tools:src="@drawable/kodi_primary_bg" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Information Column -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvDownloadTitle"
+                style="@style/TextAppearance.Makimono.TV.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/obsidian_text_primary"
+                android:textStyle="bold"
+                tools:text="Episódio 01 - O Começo" />
+
+            <TextView
+                android:id="@+id/tvDownloadSeries"
+                style="@style/TextAppearance.Makimono.TV.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/obsidian_accent"
+                tools:text="Frieren: Beyond Journey's End" />
+
+            <TextView
+                android:id="@+id/tvDownloadSize"
+                style="@style/TextAppearance.Makimono.TV.Badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/obsidian_text_secondary"
+                tools:text="450 MB • ✓ Baixado" />
+
+            <ProgressBar
+                android:id="@+id/pbDownloadProgress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:layout_marginTop="6dp"
+                android:max="100"
+                android:progressTint="@color/obsidian_accent"
+                android:progressBackgroundTint="@color/obsidian_border_glass"
+                android:visibility="gone"
+                tools:progress="45"
+                tools:visibility="visible" />
+
+        </LinearLayout>
+
+        <!-- Play Button -->
+        <ImageView
+            android:id="@+id/btnDownloadPlay"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:contentDescription="@string/player_next_episode_play_now"
+            android:focusable="false"
+            android:padding="8dp"
+            android:src="@drawable/ic_play_24"
+            app:tint="@color/obsidian_accent" />
+
+        <!-- Delete Button -->
+        <ImageView
+            android:id="@+id/btnDownloadDelete"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:contentDescription="@string/download_delete"
+            android:focusable="false"
+            android:padding="8dp"
+            android:src="@drawable/ic_delete_24"
+            app:tint="@color/obsidian_text_tertiary" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>
