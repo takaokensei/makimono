@@ -1,11 +1,8 @@
 package zechs.drive.stream.data.repository
 
 import zechs.drive.stream.utils.AppLog
-import dagger.Lazy
 import zechs.drive.stream.data.model.*
 import zechs.drive.stream.data.remote.DriveApi
-import zechs.drive.stream.data.remote.TokenApi
-import zechs.drive.stream.utils.SessionManager
 import zechs.drive.stream.utils.state.Resource
 import zechs.drive.stream.utils.state.ResourceErrorKind
 import kotlinx.coroutines.CancellationException
@@ -21,8 +18,7 @@ import javax.inject.Singleton
 @Singleton
 class DriveRepository @Inject constructor(
     private val driveApi: DriveApi,
-    private val tokenApi: Lazy<TokenApi>,
-    private val sessionManager: SessionManager,
+    private val tokenProvider: TokenProvider,
     @ApplicationContext private val context: Context? = null
 ) {
 
@@ -66,20 +62,27 @@ class DriveRepository @Inject constructor(
     }
 
     private suspend fun getOrFetchAccessToken(): Resource<String> {
-        val client = sessionManager.fetchClient()
-            ?: return Resource.Error(
+        return accessToken()
+    }
+
+    suspend fun accessToken(forceRefresh: Boolean = false): Resource<String> {
+        val token = if (forceRefresh) tokenProvider.refresh() else tokenProvider.validToken()
+        return if (token.isNullOrBlank()) {
+            Resource.Error(
                 "Conecte sua conta do Google Drive para continuar.",
                 errorKind = ResourceErrorKind.AUTHENTICATION
             )
-        return when (val tokenResponse = fetchAccessToken(client)) {
-            is Resource.Success -> Resource.Success(tokenResponse.data.accessToken)
-            is Resource.Error -> Resource.Error(
-                tokenResponse.message,
-                errorKind = tokenResponse.errorKind ?: ResourceErrorKind.UNKNOWN
-            )
-            is Resource.Loading -> Resource.Loading()
+        } else {
+            Resource.Success(token)
         }
     }
+
+    suspend fun getValidAccessToken(forceRefresh: Boolean = false): String? =
+        (accessToken(forceRefresh) as? Resource.Success)?.data
+
+    suspend fun logoutCurrentDevice() = tokenProvider.logoutCurrentDevice()
+
+    suspend fun disconnectAllDevices() = tokenProvider.disconnectAllDevices()
 
     suspend fun getFiles(
         query: String,
@@ -101,13 +104,11 @@ class DriveRepository @Inject constructor(
         } catch (unauthorized: HttpException) {
             if (unauthorized.code() != 401) return doOnError(unauthorized)
 
-            val client = sessionManager.fetchClient()
-                ?: return doOnError(unauthorized)
-            val refreshed = fetchAccessToken(client, forceRefresh = true)
+            val refreshed = accessToken(forceRefresh = true)
             if (refreshed is Resource.Success) {
                 try {
                     Resource.Success(
-                        requestFiles(refreshed.data.accessToken, query, pageToken, pageSize, orderBy)
+                        requestFiles(refreshed.data, query, pageToken, pageSize, orderBy)
                     )
                 } catch (retryError: Exception) {
                     doOnError(retryError)
@@ -310,90 +311,6 @@ class DriveRepository @Inject constructor(
      * @param forceRefresh forcefully refresh the token.
      *
      */
-    suspend fun fetchAccessToken(
-        client: DriveClient,
-        forceRefresh: Boolean = false
-    ): Resource<TokenResponse> {
-        if (!forceRefresh) {
-            val tokenResponse = sessionManager.fetchAccessToken()
-            tokenResponse?.let {
-                val currentTimeInSeconds = System.currentTimeMillis() / 1000
-                if (currentTimeInSeconds >= it.expiresIn) {
-                    AppLog.d(TAG, "Access token has expired. Trying to refresh")
-                } else {
-                    AppLog.d(TAG, "Access token is valid")
-                    return Resource.Success(data = it)
-                }
-            }
-        } else {
-            AppLog.d(TAG, "Force refreshing access token")
-        }
-
-        val refreshToken = sessionManager.fetchRefreshToken()
-            ?: return Resource.Error(
-                "Sessão do Google Drive ausente ou expirada. Conecte sua conta para continuar.",
-                errorKind = ResourceErrorKind.AUTHENTICATION
-            )
-
-        return try {
-            val token = tokenApi.get().getAccessToken(
-                clientId = client.clientId,
-                clientSecret = client.clientSecret,
-                refreshToken = refreshToken
-            )
-            AppLog.d(TAG, "Received access token (len=${token.accessToken.length})")
-            sessionManager.saveAccessToken(token)
-            Resource.Success(token)
-        } catch (e: Exception) {
-            if (e is HttpException && e.code() == 400) {
-                val errorBody = try { e.response()?.errorBody()?.string() } catch (_: Exception) { null }
-                AppLog.e(TAG, "Google OAuth 400 Bad Request: $errorBody", e)
-                Resource.Error(
-                    "Sessão do Google Drive expirada ou revogada. Faça login novamente para continuar.",
-                    errorKind = ResourceErrorKind.AUTHENTICATION
-                )
-            } else {
-                doOnError(e)
-            }
-        }
-    }
-
-    /**
-     *
-     * Exchange authorization code for refresh token.
-     *
-     * Note: Refresh token and access token both
-     * are saved in datastore upon successfully request.
-     *
-     * @param authorizationCode Auth code received from Sign-in flow.
-     *
-     */
-    suspend fun fetchRefreshToken(
-        client: DriveClient,
-        authorizationCode: String
-    ): Resource<AuthorizationResponse> {
-        return try {
-            AppLog.d(TAG, "Requesting refresh token from authorization code")
-            val token = tokenApi.get().getRefreshToken(
-                clientId = client.clientId,
-                clientSecret = client.clientSecret,
-                redirectUri = client.redirectUri,
-                authCode = authorizationCode
-            )
-
-            AppLog.d(TAG, "Received refresh token (len=${token.refreshToken.length})")
-
-            // saving in data store
-            sessionManager.saveClient(client)
-            sessionManager.saveRefreshToken(token.refreshToken)
-            sessionManager.saveAccessToken(token.toTokenResponse())
-
-            Resource.Success(token)
-        } catch (e: Exception) {
-            doOnError(e)
-        }
-    }
-
     private inline fun <reified T> doOnError(e: Exception): Resource<T> {
         if (e is CancellationException) throw e
         AppLog.e(TAG, "Drive API call failed: ${e.message}", e)
@@ -434,10 +351,10 @@ class DriveRepository @Inject constructor(
             block(accessToken)
         } catch (unauthorized: HttpException) {
             if (unauthorized.code() != 401) throw unauthorized
-            val client = sessionManager.fetchClient() ?: throw unauthorized
-            val refreshed = fetchAccessToken(client, forceRefresh = true)
+            tokenProvider.invalidateToken()
+            val refreshed = accessToken(forceRefresh = true)
             if (refreshed is Resource.Success) {
-                block(refreshed.data.accessToken)
+                block(refreshed.data)
             } else {
                 throw unauthorized
             }

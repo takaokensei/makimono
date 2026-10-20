@@ -1,6 +1,5 @@
 package zechs.drive.stream
 
-import dagger.Lazy
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
@@ -17,40 +16,26 @@ import zechs.drive.stream.data.model.FileCollectionResult
 import zechs.drive.stream.data.model.DriveQueryContext
 import zechs.drive.stream.data.model.FileDetailsResponse
 import zechs.drive.stream.data.model.FilesResponse
-import zechs.drive.stream.data.model.TokenResponse
 import zechs.drive.stream.data.remote.DriveApi
-import zechs.drive.stream.data.remote.TokenApi
 import zechs.drive.stream.data.repository.DriveRepository
-import zechs.drive.stream.utils.SessionManager
+import zechs.drive.stream.data.repository.TokenProvider
 import zechs.drive.stream.utils.state.Resource
 import zechs.drive.stream.utils.state.ResourceErrorKind
-import zechs.drive.stream.utils.util.Constants
 
 class DriveRepositoryTest {
 
     private lateinit var driveApi: DriveApi
-    private lateinit var tokenApi: TokenApi
-    private lateinit var tokenApiLazy: Lazy<TokenApi>
-    private lateinit var sessionManager: SessionManager
+    private lateinit var tokenProvider: TokenProvider
     private lateinit var repository: DriveRepository
 
     @Before
     fun setUp() {
         driveApi = mockk()
-        tokenApi = mockk()
-        tokenApiLazy = Lazy { tokenApi }
-        val testToken = TokenResponse(
-            accessToken = "valid_test_access_token",
-            expiresIn = (System.currentTimeMillis() / 1000) + 3600L,
-            tokenType = "Bearer",
-            scope = Constants.DEFAULT_DRIVE_SCOPE
-        )
-        sessionManager = mockk {
-            coEvery { fetchClient() } returns Constants.DEFAULT_CLIENT
-            coEvery { fetchAccessToken() } returns testToken
-            coEvery { fetchRefreshToken() } returns "valid_test_refresh_token"
+        tokenProvider = mockk {
+            coEvery { validToken() } returns "valid_test_access_token"
+            coEvery { refresh() } returns "refreshed_test_access_token"
         }
-        repository = DriveRepository(driveApi, tokenApiLazy, sessionManager)
+        repository = DriveRepository(driveApi, tokenProvider)
     }
 
     private fun createFile(id: String, name: String) = File(
@@ -284,13 +269,7 @@ class DriveRepositoryTest {
             401,
             "{\"error\":\"Unauthorized\"}".toResponseBody()
         )
-        val tokenErrorResponse = Response.error<TokenResponse>(
-            400,
-            "{\"error\":\"invalid_grant\"}".toResponseBody()
-        )
-        coEvery {
-            tokenApi.getAccessToken(any(), any(), any(), any())
-        } throws HttpException(tokenErrorResponse)
+        coEvery { tokenProvider.refresh() } returns null
         coEvery {
             driveApi.getFiles(
                 accessToken = any(),
@@ -308,16 +287,15 @@ class DriveRepositoryTest {
         assertTrue(result is Resource.Error)
         assertEquals(ResourceErrorKind.AUTHENTICATION, result.errorKind)
         val message = (result as Resource.Error).message
-        assertTrue(message.contains("Sessão") || message.contains("expirada"))
+        assertTrue(message.contains("conecte sua conta", ignoreCase = true))
     }
 
     @Test
     fun getFiles_nullAccessToken_returnsError() = runBlocking {
-        val nullTokenSessionManager = mockk<SessionManager> {
-            coEvery { fetchAccessToken() } returns null
-            coEvery { fetchClient() } returns null
+        val nullTokenProvider = mockk<TokenProvider> {
+            coEvery { validToken() } returns null
         }
-        val repo = DriveRepository(driveApi, tokenApiLazy, nullTokenSessionManager)
+        val repo = DriveRepository(driveApi, nullTokenProvider)
 
         val result = repo.getFiles(query = "trashed=false", pageToken = null, pageSize = 25)
         assertTrue(result is Resource.Error)

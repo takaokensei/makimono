@@ -21,7 +21,9 @@ interface DriveApi {
         @Query("pageToken")
         pageToken: String? = null,
         @Query("fields")
-        fields: String = "nextPageToken, files(id, name, size, mimeType, iconLink, thumbnailLink, shortcutDetails, starred, modifiedTime, description)",
+        fields: String = "nextPageToken, files(" +
+            "id, name, size, mimeType, iconLink, thumbnailLink, shortcutDetails, starred, " +
+            "modifiedTime, description, md5Checksum, videoMediaMetadata(durationMillis))",
         @Query("orderBy")
         orderBy: String = "folder, name",
         @Query("q")
@@ -71,7 +73,9 @@ interface DriveApi {
         @Header("Authorization")
         accessToken: String,
         @Path("fileId")
-        fileId: String
+        fileId: String,
+        @Header("Range")
+        range: String? = null
     ): Response<okhttp3.ResponseBody>
 
 }
