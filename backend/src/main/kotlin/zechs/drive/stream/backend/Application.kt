@@ -37,19 +37,19 @@ private val pairingJson = Json {
     encodeDefaults = true
 }
 
-/** Loopback-only development host. Production hosting is intentionally not configured here. */
+/** Local development host and Cloud Run entry point. Pairing OAuth is not production-ready yet. */
 fun main() {
-    val port = System.getenv("MAKIMONO_PAIRING_DEV_PORT")?.toIntOrNull() ?: 8097
-    require(port in 1024..65535) { "Development port must be between 1024 and 65535" }
-    val dataSource = configuredPairingDataSource()
+    val environment = System.getenv()
+    val config = PairingServerConfiguration.from(environment)
+    val dataSource = configuredPairingDataSource(environment, config.databasePoolSize)
     val store = if (dataSource == null) {
         InMemoryPairingChallengeStore()
     } else {
         migratePairingDatabase(dataSource)
         PostgresPairingChallengeStore(dataSource)
     }
-    val protocol = PairingProtocol(verificationBaseUrl = "https://pairing.invalid", store = store)
-    val server = embeddedServer(Netty, host = "127.0.0.1", port = port) {
+    val protocol = PairingProtocol(verificationBaseUrl = config.publicBaseUrl, store = store)
+    val server = embeddedServer(Netty, host = config.host, port = config.port) {
         pairingModule(protocol)
     }
     Runtime.getRuntime().addShutdownHook(Thread {
@@ -59,15 +59,17 @@ fun main() {
     server.start(wait = true)
 }
 
-private fun configuredPairingDataSource(): HikariDataSource? {
-    val url = System.getenv("MAKIMONO_DATABASE_URL")
-    val user = System.getenv("MAKIMONO_DATABASE_USER")
-    val password = System.getenv("MAKIMONO_DATABASE_PASSWORD")
+private fun configuredPairingDataSource(
+    environment: Map<String, String>,
+    poolSize: Int
+): HikariDataSource? {
+    val url = environment["MAKIMONO_DATABASE_URL"]
+    val user = environment["MAKIMONO_DATABASE_USER"]
+    val password = environment["MAKIMONO_DATABASE_PASSWORD"]
     if (url.isNullOrBlank() && user.isNullOrBlank() && password.isNullOrBlank()) return null
     require(!url.isNullOrBlank() && !user.isNullOrBlank() && !password.isNullOrBlank()) {
         "Set MAKIMONO_DATABASE_URL, MAKIMONO_DATABASE_USER, and MAKIMONO_DATABASE_PASSWORD together"
     }
-    val poolSize = System.getenv("MAKIMONO_DATABASE_POOL_SIZE")?.toIntOrNull() ?: 8
     return createPairingDataSource(url, user, password, poolSize)
 }
 
@@ -80,6 +82,11 @@ internal fun Application.pairingModule(
     }
 
     routing {
+        get("/healthz") {
+            call.response.header(HttpHeaders.CacheControl, "no-store")
+            call.respond(HttpStatusCode.OK, mapOf("status" to "ok"))
+        }
+
         get("/pair/{challengeId}") {
             call.response.header(HttpHeaders.CacheControl, "no-store")
             if (!call.allow(rateLimiter, PairingRateLimiter.Operation.PREVIEW)) return@get
