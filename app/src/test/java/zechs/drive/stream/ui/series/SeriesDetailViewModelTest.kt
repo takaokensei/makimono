@@ -53,6 +53,7 @@ class SeriesDetailViewModelTest {
     private val watchQueueRepository = mockk<WatchQueueRepository>(relaxed = true)
     private val franchiseGroupingManager = mockk<FranchiseGroupingManager>(relaxed = true)
     private val episodeMetadataResolver = mockk<EpisodeMetadataResolver>(relaxed = true)
+    private val catalogRepository = mockk<zechs.drive.stream.data.repository.CatalogRepository>(relaxed = true)
 
     private lateinit var viewModel: SeriesDetailViewModel
 
@@ -65,6 +66,7 @@ class SeriesDetailViewModelTest {
         coEvery { folderMetadataRepository.getMetadata(any()) } returns null
         coEvery { watchListRepository.getAllWatches(any()) } returns emptyList()
         coEvery { episodeMetadataResolver.fetchShowEpisodes(any()) } returns emptyList()
+        coEvery { catalogRepository.getChildren(any()) } returns emptyList()
 
         viewModel = SeriesDetailViewModel(
             driveRepository,
@@ -76,7 +78,8 @@ class SeriesDetailViewModelTest {
             followedFolderRepository,
             watchQueueRepository,
             franchiseGroupingManager,
-            episodeMetadataResolver
+            episodeMetadataResolver,
+            catalogRepository
         )
     }
 
@@ -236,5 +239,64 @@ class SeriesDetailViewModelTest {
         assertTrue(successState.isMovie)
         assertEquals("Filme", successState.continueWatchingSubtitle)
         assertTrue(successState.seasonTabs.isEmpty())
+    }
+
+    @Test
+    fun strictCacheFirstBypassesNetworkWhenRoomMetadataIsComplete() = runBlocking {
+        val completeMeta = zechs.drive.stream.data.local.FolderMetadata(
+            folderId = "folder1",
+            folderName = "Frieren",
+            posterUrl = "https://example.com/poster.jpg",
+            bannerUrl = "https://example.com/banner.jpg",
+            synopsis = "Frieren journeys beyond journey's end.",
+            score = 9.2f,
+            titleRomaji = "Sousou no Frieren",
+            year = 2023
+        )
+        coEvery { folderMetadataRepository.getMetadata("folder1") } returns completeMeta
+        coEvery {
+            driveRepository.getAllFilesDetailed(any(), any())
+        } returns Resource.Success(
+            FileCollectionResult(
+                files = listOf(
+                    File(
+                        id = "ep1",
+                        name = "Frieren E01.mkv",
+                        size = 1000L,
+                        iconLink = "",
+                        mimeType = "video/x-matroska"
+                    )
+                ),
+                isComplete = true,
+                nextPageToken = null,
+                pagesFetched = 1,
+                queryContext = DriveQueryContext("query", 100, "name")
+            )
+        )
+
+        viewModel.loadSeriesDetails("folder1", "Frieren")
+
+        withTimeout(3_000) {
+            while (viewModel.uiState.value is SeriesDetailUiState.Loading) {
+                delay(10)
+            }
+        }
+
+        val state = viewModel.uiState.value
+        assertTrue(state is SeriesDetailUiState.Success)
+        val successState = state as SeriesDetailUiState.Success
+        assertEquals("Frieren journeys beyond journey's end.", successState.aniListMetadata?.synopsis)
+        assertEquals(9.2f, successState.aniListMetadata?.score)
+
+        // Strict cache-first verification: zero network calls to Tenrai or AniList!
+        io.mockk.coVerify(exactly = 0) { tenraiAnimeService.searchAnime(any()) }
+        io.mockk.coVerify(exactly = 0) { animePosterResolver.resolveMetadata(any()) }
+    }
+
+    @Test
+    fun getCompletedDownloadPathReturnsNullWhenRepositoryNull() {
+        org.junit.Assert.assertNull(viewModel.getCompletedDownloadPath("test_file"))
+        org.junit.Assert.assertFalse(viewModel.isEpisodeDownloaded("test_file"))
+        org.junit.Assert.assertFalse(viewModel.isEpisodeDownloading("test_file"))
     }
 }

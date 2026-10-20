@@ -25,6 +25,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import zechs.drive.stream.R
+import zechs.drive.stream.data.model.DownloadStatus
 import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.data.model.PlaylistItem
 import zechs.drive.stream.databinding.FragmentSeriesDetailBinding
@@ -189,11 +190,62 @@ class SeriesDetailFragment : BaseFragment() {
                 if (pos >= 0) viewModel.onEvent(SeriesDetailEvent.SaveFocus(pos))
                 FocusMemory.remember("details.episodes.${args.folderId}", pos.coerceAtLeast(0), episodeItem.file.id)
                 showEpisodeContextMenu(episodeItem, focusAnchor)
+            },
+            onDownloadClick = { episodeItem ->
+                handleEpisodeDownloadAction(episodeItem)
             }
         )
+        val episodeLayoutManager = object : androidx.recyclerview.widget.LinearLayoutManager(
+            requireContext(),
+            HORIZONTAL,
+            false
+        ) {
+            override fun onInterceptFocusSearch(focused: View, direction: Int): View? {
+                val b = _binding ?: return super.onInterceptFocusSearch(focused, direction)
+                if (direction == View.FOCUS_RIGHT) {
+                    val currentChild = findContainingItemView(focused) ?: return null
+                    val pos = getPosition(currentChild)
+                    if (pos != androidx.recyclerview.widget.RecyclerView.NO_POSITION) {
+                        if (pos < (episodeAdapter.itemCount - 1)) {
+                            val nextPos = pos + 1
+                            val nextView = findViewByPosition(nextPos)
+                            if (nextView != null) {
+                                return nextView
+                            } else {
+                                scrollToPosition(nextPos)
+                                b.rvEpisodes.post {
+                                    findViewByPosition(nextPos)?.requestFocus()
+                                }
+                                return currentChild
+                            }
+                        } else {
+                            // At last item: trap focus inside carousel; do not escape upwards to "Assistir"
+                            return currentChild
+                        }
+                    }
+                } else if (direction == View.FOCUS_LEFT) {
+                    val currentChild = findContainingItemView(focused) ?: return null
+                    val pos = getPosition(currentChild)
+                    if (pos == 0) {
+                        val seasonRv = b.rvSeasonTabs
+                        if (seasonRv.visibility == View.VISIBLE) {
+                            val selectedPos = (seasonRv.adapter as? SeriesDetailSeasonAdapter)
+                                ?.currentList?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 } ?: 0
+                            val seasonHolder = seasonRv.findViewHolderForAdapterPosition(selectedPos)
+                            return seasonHolder?.itemView ?: seasonRv
+                        }
+                    }
+                } else if (direction == View.FOCUS_DOWN) {
+                    return focused
+                }
+                return super.onInterceptFocusSearch(focused, direction)
+            }
+        }
+        episodeLayoutManager.initialPrefetchItemCount = 8
+        binding.rvEpisodes.layoutManager = episodeLayoutManager
         binding.rvEpisodes.adapter = episodeAdapter
         binding.rvEpisodes.setItemViewCacheSize(15)
-        (binding.rvEpisodes.layoutManager as? androidx.recyclerview.widget.LinearLayoutManager)?.initialPrefetchItemCount = 8
+        (binding.rvEpisodes.itemAnimator as? androidx.recyclerview.widget.SimpleItemAnimator)?.supportsChangeAnimations = false
     }
 
     private fun setupFocusAnimations() {
@@ -256,7 +308,7 @@ class SeriesDetailFragment : BaseFragment() {
             binding.btnMoreActions,
             binding.btnMarkWatched
         ).forEach {
-            it.nextFocusDownId = binding.tabButtonEpisodes.id
+            it.nextFocusDownId = if (isMovie) binding.rvEpisodes.id else binding.tabButtonEpisodes.id
             it.nextFocusUpId = upTarget
         }
 
@@ -268,7 +320,9 @@ class SeriesDetailFragment : BaseFragment() {
             it.nextFocusUpId = binding.btnPrimaryAction.id
         }
 
-        if (!isMovie) {
+        if (isMovie) {
+            binding.rvEpisodes.nextFocusUpId = binding.btnPrimaryAction.id
+        } else {
             val downTarget = if (hasSeasonTabs) binding.rvSeasonTabs.id else binding.rvEpisodes.id
             binding.tabButtonEpisodes.nextFocusDownId = downTarget
             binding.rvSeasonTabs.nextFocusUpId = binding.tabButtonEpisodes.id
@@ -347,7 +401,13 @@ class SeriesDetailFragment : BaseFragment() {
                                 else -> StateView.StateType.ERROR_GENERIC
                             }
                             binding.stateView.setState(stateType) {
-                                viewModel.loadSeriesDetails(args.folderId, args.name, args.posterUrl)
+                                if (state.error is AppError.Authentication) {
+                                    findNavController().navigate(
+                                        R.id.action_seriesDetailFragment_to_signInFragment
+                                    )
+                                } else {
+                                    viewModel.loadSeriesDetails(args.folderId, args.name, args.posterUrl)
+                                }
                             }
                         }
 
@@ -482,7 +542,7 @@ class SeriesDetailFragment : BaseFragment() {
             binding.tvReleaseYear.visibility = View.GONE
         }
 
-        val airingStatus = SeriesAiringStatusPolicy.classify(state.animeEntry?.status)
+        val airingStatus = if (isMovie) null else SeriesAiringStatusPolicy.classify(state.animeEntry?.status)
         val airingStatusLabel = when (airingStatus) {
             SeriesAiringStatus.COMPLETED -> R.string.anime_status_completed
             SeriesAiringStatus.AIRING -> R.string.anime_status_airing
@@ -491,10 +551,16 @@ class SeriesDetailFragment : BaseFragment() {
             SeriesAiringStatus.CANCELLED -> R.string.anime_status_cancelled
             null -> null
         }
-        binding.tvSeriesStatus.visibility = if (airingStatusLabel == null) View.GONE else View.VISIBLE
-        airingStatusLabel?.let(binding.tvSeriesStatus::setText)
+        val movieDuration = state.currentEpisodes.firstOrNull()?.durationText?.takeIf { isMovie && it.isNotBlank() }
+        binding.tvSeriesStatus.visibility = if (movieDuration != null) View.VISIBLE else if (airingStatusLabel == null) View.GONE else View.VISIBLE
+        if (movieDuration != null) binding.tvSeriesStatus.text = movieDuration
+        else airingStatusLabel?.let(binding.tvSeriesStatus::setText)
 
-        val scoreVal = state.activeArcScore ?: state.aniListMetadata?.score ?: state.animeEntry?.score
+        val scoreVal = if (state.isFranchiseHub) {
+            state.activeArcScore
+        } else {
+            state.activeArcScore ?: state.aniListMetadata?.score ?: state.animeEntry?.score
+        }
         binding.layoutRating.visibility = if (scoreVal != null) View.VISIBLE else View.GONE
         val genres = state.aniListMetadata?.genres ?: state.animeEntry?.genres.orEmpty()
         val hasMetaRow1 = ageRating != null || releaseYear != null ||
@@ -544,6 +610,19 @@ class SeriesDetailFragment : BaseFragment() {
             binding.tvGenres?.text = joinedGenres
         } else {
             binding.tvGenres?.visibility = View.GONE
+        }
+
+        // Dynamic bullet separator management to prevent floating double bullets
+        val hasItemBeforeGenres = binding.tvAgeRating.visibility == View.VISIBLE || binding.audioBadgeContainer.visibility == View.VISIBLE
+        val hasGenres = binding.tvGenres?.visibility == View.VISIBLE
+        val hasItemAfterGenres = binding.tvReleaseYear.visibility == View.VISIBLE || binding.tvSeriesStatus.visibility == View.VISIBLE
+
+        if (hasGenres) {
+            binding.sepAfterAudio?.visibility = if (hasItemBeforeGenres) View.VISIBLE else View.GONE
+            binding.sepAfterGenres?.visibility = if (hasItemAfterGenres) View.VISIBLE else View.GONE
+        } else {
+            binding.sepAfterAudio?.visibility = View.GONE
+            binding.sepAfterGenres?.visibility = if (hasItemBeforeGenres && hasItemAfterGenres) View.VISIBLE else View.GONE
         }
 
         // 5. Synopsis
@@ -625,7 +704,9 @@ class SeriesDetailFragment : BaseFragment() {
 
         binding.tvDetailsFullSynopsis.text = cleanSynopsis ?: ""
 
-        if (isMovie) {
+        val isStandaloneMovie = isMovie && state.seasonTabs.isEmpty()
+
+        if (isStandaloneMovie) {
             binding.tabsContainer.visibility = View.GONE
             binding.panelEpisodesTab.visibility = View.VISIBLE
             binding.rvSeasonTabs.visibility = View.GONE
@@ -651,7 +732,7 @@ class SeriesDetailFragment : BaseFragment() {
             }
         }
 
-        updateFocusChain(isMovie, hasSeasonTabs = !isMovie && state.seasonTabs.isNotEmpty())
+        updateFocusChain(isStandaloneMovie, hasSeasonTabs = !isStandaloneMovie && state.seasonTabs.isNotEmpty())
 
         // Do not steal focus again when the metadata enrichment state arrives, unless focus was lost.
         if (!hasRestoredInitialFocus) {
@@ -746,6 +827,28 @@ class SeriesDetailFragment : BaseFragment() {
         options.add(getString(R.string.add_to_queue))
         actions.add { viewModel.addToQueue(item.file) }
 
+        val isDownloaded = viewModel.isEpisodeDownloaded(item.file.id)
+        val isDownloading = viewModel.isEpisodeDownloading(item.file.id)
+        if (isDownloaded) {
+            options.add(getString(R.string.download_delete))
+            actions.add {
+                viewModel.deleteDownload(item.file.id)
+                Toast.makeText(requireContext(), getString(R.string.download_deleted_toast), Toast.LENGTH_SHORT).show()
+            }
+        } else if (isDownloading) {
+            options.add(getString(R.string.download_cancel))
+            actions.add {
+                viewModel.deleteDownload(item.file.id)
+                Toast.makeText(requireContext(), getString(R.string.download_deleted_toast), Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            options.add(getString(R.string.download_episode))
+            actions.add {
+                viewModel.startDownload(item, args.name, args.folderId)
+                Toast.makeText(requireContext(), getString(R.string.download_started_toast), Toast.LENGTH_SHORT).show()
+            }
+        }
+
         SeriesEpisodeContextMenu.show(
             context = requireContext(),
             focusAnchor = focusAnchor,
@@ -753,6 +856,39 @@ class SeriesDetailFragment : BaseFragment() {
             options = options
         ) { which ->
             actions.getOrNull(which)?.invoke()
+        }
+    }
+
+    private fun handleEpisodeDownloadAction(episodeItem: SeriesEpisodeItem) {
+        val isDownloaded = viewModel.isEpisodeDownloaded(episodeItem.file.id) ||
+            episodeItem.downloadStatus == DownloadStatus.COMPLETED
+        val isDownloading = viewModel.isEpisodeDownloading(episodeItem.file.id) ||
+            episodeItem.downloadStatus == DownloadStatus.DOWNLOADING ||
+            episodeItem.downloadStatus == DownloadStatus.QUEUED
+        if (isDownloaded) {
+            MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+                .setTitle(R.string.download_delete)
+                .setMessage(R.string.download_delete_confirm)
+                .setPositiveButton(R.string.download_delete) { _, _ ->
+                    viewModel.deleteDownload(episodeItem.file.id)
+                    Toast.makeText(requireContext(), R.string.download_deleted_toast, Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton(R.string.exit_dialog_cancel, null)
+                .show()
+        } else if (isDownloading) {
+            MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+                .setTitle(R.string.download_cancel)
+                .setMessage(R.string.download_cancel_confirm)
+                .setPositiveButton(R.string.download_cancel) { _, _ ->
+                    viewModel.deleteDownload(episodeItem.file.id)
+                    Toast.makeText(requireContext(), R.string.download_canceled_toast, Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton(R.string.exit_dialog_cancel, null)
+                .show()
+        } else {
+            val activeFolder = (viewModel.uiState.value as? SeriesDetailUiState.Success)?.activeMemberFolderId ?: args.folderId
+            viewModel.startDownload(episodeItem, args.name, activeFolder)
+            Toast.makeText(requireContext(), R.string.download_started_toast, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -768,16 +904,19 @@ class SeriesDetailFragment : BaseFragment() {
         // A trailer must not inherit the narrative playlist or autoplay into an episode.
         val playlistEpisodes = if (standalone) listOf(item) else currentState.currentEpisodes
         val playlist = ArrayList(playlistEpisodes.map { ep ->
+            val localPath = viewModel.getCompletedDownloadPath(ep.file.id)
             PlaylistItem(
                 fileId = ep.file.id,
                 title = ep.file.name,
-                thumbnailLink = ep.file.thumbnailLarge ?: ep.file.thumbnailLink
+                thumbnailLink = ep.file.thumbnailLarge ?: ep.file.thumbnailLink,
+                localUri = localPath?.let { "file://$it" }
             )
         })
 
         val file = item.file
         val fileId = file.id
         val thumb = file.thumbnailLarge ?: file.thumbnailLink ?: file.posterUrl
+        val localUri = viewModel.getCompletedDownloadPath(fileId)?.let { "file://$it" }
         val startPos = if (startFromBeginning || item.progressPercent >= 95) {
             0L
         } else if (item.progressPercent in 1..94) {
@@ -812,7 +951,9 @@ class SeriesDetailFragment : BaseFragment() {
             themeIndex = mainViewModel.currentThemeIndex,
             playlist = playlist,
             startPosition = startPos,
-            isMovie = isMovie
+            isMovie = isMovie,
+            siblingFolderId = args.folderId,
+            localUri = localUri
         )
     }
 

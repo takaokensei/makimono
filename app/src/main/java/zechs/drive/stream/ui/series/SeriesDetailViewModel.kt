@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zechs.drive.stream.R
+import zechs.drive.stream.data.local.CatalogEntry
 import zechs.drive.stream.data.local.toAnimeMetadata
 import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.data.model.WatchList
@@ -35,6 +36,7 @@ import zechs.drive.stream.domain.library.EpisodeCategorizer
 import zechs.drive.stream.domain.library.EpisodeParser
 import zechs.drive.stream.domain.library.SeriesMediaCategory
 import zechs.drive.stream.domain.library.SeriesMediaClassifier
+import zechs.drive.stream.domain.library.EpisodeDeduplicationPolicy
 import zechs.drive.stream.utils.PlaybackProgressPolicy
 import zechs.drive.stream.utils.SeasonEpisodeGrouper
 import zechs.drive.stream.utils.SeasonGroup
@@ -121,7 +123,9 @@ class SeriesDetailViewModel @Inject constructor(
     private val followedFolderRepository: FollowedFolderRepository,
     private val watchQueueRepository: WatchQueueRepository,
     private val franchiseGroupingManager: FranchiseGroupingManager,
-    private val episodeMetadataResolver: EpisodeMetadataResolver
+    private val episodeMetadataResolver: EpisodeMetadataResolver,
+    private val catalogRepository: zechs.drive.stream.data.repository.CatalogRepository? = null,
+    private val downloadRepository: zechs.drive.stream.data.repository.DownloadRepository? = null
 ) : ViewModel() {
 
     companion object {
@@ -132,6 +136,14 @@ class SeriesDetailViewModel @Inject constructor(
         fun clearCache() {
             seriesDetailCache.clear()
             folderEpisodesCache.clear()
+        }
+
+        fun getCachedEpisodes(folderId: String): List<SeriesEpisodeItem>? {
+            return folderEpisodesCache[folderId]
+        }
+
+        fun cacheEpisodes(folderId: String, episodes: List<SeriesEpisodeItem>) {
+            folderEpisodesCache[folderId] = episodes
         }
     }
 
@@ -207,6 +219,7 @@ class SeriesDetailViewModel @Inject constructor(
     fun loadSeriesDetails(folderId: String, seriesTitle: String, initialPoster: String? = null) {
         currentFolderId = folderId
         currentSeriesTitle = seriesTitle
+        observeDownloads(folderId)
 
         val cachedSuccess = seriesDetailCache[folderId]
         if (cachedSuccess != null) {
@@ -241,31 +254,94 @@ class SeriesDetailViewModel @Inject constructor(
                 // Record folder opened for Home screen Recents / Continue
                 folderMetadataRepository.recordFolderOpened(folderId, seriesTitle)
 
-                // 1. Concurrently fetch Tenrai metadata & AniList high-res metadata
-                val tenraiDeferred = async {
-                    try {
-                        val searchResults = tenraiAnimeService.searchAnime(seriesTitle)
-                        val bestMatch = searchResults.firstOrNull {
-                            it.title.contains(seriesTitle, ignoreCase = true) || seriesTitle.contains(it.title, ignoreCase = true)
-                        } ?: searchResults.firstOrNull()
+                val hasCompleteMetadata = initialCached != null && !initialCached.synopsis.isNullOrBlank() && initialCached.score != null
 
-                        val details = bestMatch?.let { tenraiAnimeService.getAnimeDetails(it.malId) } ?: bestMatch
-                        val arcs = tenraiAnimeService.resolveFranchiseArcs(seriesTitle)
-                        details to arcs
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        AppLog.w(TAG, "Tenrai fetch error: ${e.message}")
+                // 1.5 Offline-First check: if catalogRepository already has cached videos, emit immediate success state!
+                val cachedEntries = catalogRepository?.getChildren(folderId).orEmpty()
+                val cachedVideoFiles = cachedEntries
+                    .filter { entry ->
+                        val lower = entry.name.lowercase()
+                        val isVideoMime = entry.mimeType.startsWith("video/") || entry.mimeType == "application/x-matroska"
+                        val isVideoExt = lower.endsWith(".mkv") || lower.endsWith(".mp4") || lower.endsWith(".webm") || lower.endsWith(".avi")
+                        isVideoMime || isVideoExt
+                    }
+                    .map { entry ->
+                        DriveFile(
+                            id = entry.id,
+                            name = entry.name,
+                            size = null,
+                            mimeType = entry.mimeType,
+                            iconLink = null,
+                            thumbnailLink = entry.posterUrl,
+                            posterUrl = entry.posterUrl,
+                            shortcutDetails = zechs.drive.stream.data.model.ShortcutDetails(),
+                            starred = zechs.drive.stream.data.model.Starred.UNSTARRED
+                        )
+                    }
+
+                if (cachedVideoFiles.isNotEmpty() && initialCached != null) {
+                    val quickVideoIds = cachedVideoFiles.map { it.id }
+                    val quickWatchList = watchListRepository.getWatches(quickVideoIds)
+                    val quickWatchMap = quickWatchList.associateBy { it.videoId }
+                    val isLocalFav = favoriteRepository.isFavorite(folderId)
+                    isFolderStarred = isLocalFav || (cachedVideoFiles.firstOrNull()?.starred == zechs.drive.stream.data.model.Starred.STARRED)
+                    isFolderFollowed = followedFolderRepository.isFollowed(folderId)
+
+                    val quickEpisodes = try {
+                        episodeMetadataResolver.fetchShowEpisodes(seriesTitle)
+                    } catch (_: Exception) {
+                        emptyList()
+                    }
+                    val immediateState = buildSuccessState(
+                        folderId = folderId,
+                        seriesTitle = seriesTitle,
+                        driveFiles = cachedVideoFiles,
+                        watchMap = quickWatchMap,
+                        fetchedAnime = null,
+                        aniListMeta = initialCached.toAnimeMetadata(),
+                        arcs = emptyList(),
+                        fallbackPosterUrl = initialPoster ?: initialCached.posterUrl,
+                        hasIncompleteDriveListing = false,
+                        resolvedEpisodes = quickEpisodes
+                    )
+                    withContext(Dispatchers.Main) {
+                        _uiState.value = immediateState
+                    }
+                }
+
+                // 1. Concurrently fetch Tenrai metadata & AniList high-res metadata (bypassed if already cached)
+                val tenraiDeferred = async {
+                    if (hasCompleteMetadata) {
                         null to emptyList()
+                    } else {
+                        try {
+                            val searchResults = tenraiAnimeService.searchAnime(seriesTitle)
+                            val bestMatch = searchResults.firstOrNull {
+                                it.title.contains(seriesTitle, ignoreCase = true) || seriesTitle.contains(it.title, ignoreCase = true)
+                            } ?: searchResults.firstOrNull()
+
+                            val details = bestMatch?.let { tenraiAnimeService.getAnimeDetails(it.malId) } ?: bestMatch
+                            val arcs = tenraiAnimeService.resolveFranchiseArcs(seriesTitle)
+                            details to arcs
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
+                            AppLog.w(TAG, "Tenrai fetch error: ${e.message}")
+                            null to emptyList()
+                        }
                     }
                 }
 
                 val aniListDeferred = async {
-                    try {
-                        animePosterResolver.resolveMetadata(seriesTitle)
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        AppLog.w(TAG, "AniList metadata fetch error: ${e.message}")
-                        null
+                    if (hasCompleteMetadata) {
+                        initialCached?.toAnimeMetadata()
+                    } else {
+                        try {
+                            animePosterResolver.resolveMetadata(seriesTitle)
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
+                            AppLog.w(TAG, "AniList metadata fetch error: ${e.message}")
+                            null
+                        }
                     }
                 }
 
@@ -339,7 +415,7 @@ class SeriesDetailViewModel @Inject constructor(
 
                 // If this is a movie or non-anime from TMDB, verify fetchedAnime similarity before trusting it
                 val cleanTitle = AnimePosterResolver.cleanAnimeTitle(seriesTitle)
-                val isLegitAnime = fetchedAnime != null && !isNonAnime && AnimePosterResolver.calculateSimilarity(cleanTitle, fetchedAnime.title) >= 0.45
+                val isLegitAnime = fetchedAnime != null && !isNonAnime && AnimePosterResolver.calculateSimilarity(cleanTitle, fetchedAnime.title) >= 0.58
                 val validAnime = if (isLegitAnime) fetchedAnime else null
                 val validArcs = if (isLegitAnime) fetchedArcs else emptyList()
 
@@ -452,9 +528,7 @@ class SeriesDetailViewModel @Inject constructor(
         val movieCanonical = if (isMovie) {
             aniListMeta?.titleRomaji ?: aniListMeta?.titleEnglish ?: seriesTitle
         } else null
-        val fallbackThumb = if (isMovie) {
-            aniListMeta?.bannerUrl ?: aniListMeta?.posterUrl ?: fallbackPosterUrl
-        } else null
+        val fallbackThumb = aniListMeta?.bannerUrl ?: aniListMeta?.posterUrl ?: fallbackPosterUrl
         val seriesAgeRating = formatRating(aniListMeta?.ageRating)
             ?: formatRating(fetchedAnime?.rating)
 
@@ -467,7 +541,8 @@ class SeriesDetailViewModel @Inject constructor(
                 canonicalMovieTitle = movieCanonical,
                 fallbackThumbnail = fallbackThumb,
                 resolvedEpisodes = resolvedEpisodes,
-                seriesAgeRating = seriesAgeRating
+                seriesAgeRating = seriesAgeRating,
+                fallbackRuntimeMinutes = aniListMeta?.runtime
             )
         }
 
@@ -556,7 +631,13 @@ class SeriesDetailViewModel @Inject constructor(
         val continueSubtitle = PrimaryEpisodeSelection.formatContinueSubtitle(continueItem, isMovie)
 
         val isFranchise = hub != null && hub.members.size > 1
-        val franchiseTitle = if (isFranchise && hub != null) hub.canonicalTitle else (aniListMeta?.titleRomaji ?: seriesTitle)
+        val knownFranchiseKey = franchiseGroupingManager.resolveFranchiseKey(seriesTitle)
+            ?.takeIf(String::isNotBlank)
+        val franchiseTitle = when {
+            isFranchise && hub != null -> hub.canonicalTitle
+            knownFranchiseKey != null -> franchiseGroupingManager.getCanonicalTitle(knownFranchiseKey)
+            else -> aniListMeta?.titleRomaji?.takeIf(String::isNotBlank) ?: seriesTitle
+        }
         val hubSynopsis = hub?.synopsis
         val effectiveAniListMeta = if (isFranchise && !hubSynopsis.isNullOrBlank()) {
             aniListMeta?.copy(synopsis = hubSynopsis) ?: AnimeMetadata(
@@ -598,7 +679,7 @@ class SeriesDetailViewModel @Inject constructor(
             activeArcId = activeTab?.id ?: folderId,
             activeArcTitle = activeTab?.title ?: seriesTitle,
             activeArcYear = activeTab?.releaseYear ?: aniListMeta?.year,
-            activeArcScore = activeTab?.score ?: aniListMeta?.score,
+            activeArcScore = if (isFranchise) activeTab?.score else activeTab?.score ?: aniListMeta?.score,
             activeArcScoreSource = activeTab?.scoreSource ?: if (aniListMeta?.isAnime == false) "TMDB" else "MAL",
             categoryChips = initialChips,
             selectedCategory = defaultCategory,
@@ -640,6 +721,34 @@ class SeriesDetailViewModel @Inject constructor(
                 ResourceErrorKind.SERVER -> AppError.Server(message)
                 else -> AppError.Unknown(message)
             }
+
+            // Offline-first fallback: check if local catalog cache has files before failing
+            val cachedEntries = catalogRepository?.getChildren(folderId).orEmpty()
+            val cachedVideos = cachedEntries
+                .filter { entry ->
+                    val lower = entry.name.lowercase()
+                    val isVideoMime = entry.mimeType.startsWith("video/") || entry.mimeType == "application/x-matroska"
+                    val isVideoExt = lower.endsWith(".mkv") || lower.endsWith(".mp4") || lower.endsWith(".webm") || lower.endsWith(".avi")
+                    isVideoMime || isVideoExt
+                }
+                .map { entry ->
+                    DriveFile(
+                        id = entry.id,
+                        name = entry.name,
+                        size = null,
+                        mimeType = entry.mimeType,
+                        iconLink = null,
+                        thumbnailLink = entry.posterUrl,
+                        posterUrl = entry.posterUrl,
+                        shortcutDetails = zechs.drive.stream.data.model.ShortcutDetails(),
+                        starred = zechs.drive.stream.data.model.Starred.UNSTARRED
+                    )
+                }
+
+            if (cachedVideos.isNotEmpty()) {
+                return DriveVideoFetch(cachedVideos, isIncomplete = true)
+            }
+
             return DriveVideoFetch(emptyList(), isIncomplete = true, appError = appError, errorMessage = message)
         }
 
@@ -680,7 +789,41 @@ class SeriesDetailViewModel @Inject constructor(
             }
         }
 
-        return DriveVideoFetch(videoFiles.sortedWith { a, b ->
+        val deduplicatedVideos = EpisodeDeduplicationPolicy.removeDuplicates(
+            videoFiles.map { file ->
+                EpisodeDeduplicationPolicy.Candidate(
+                    id = if (file.isShortcut) file.shortcutDetails.targetId ?: file.id else file.id,
+                    title = file.name,
+                    sizeBytes = file.size,
+                    durationMillis = file.durationMillis,
+                    checksum = file.md5Checksum
+                )
+            }
+        ).mapNotNull { candidate ->
+            videoFiles.firstOrNull { file ->
+                (if (file.isShortcut) file.shortcutDetails.targetId ?: file.id else file.id) == candidate.id &&
+                    file.name == candidate.title
+            }
+        }
+
+        if (deduplicatedVideos.isNotEmpty()) {
+            try {
+                catalogRepository?.cacheFolderContents(
+                    parentId = folderId,
+                    entries = deduplicatedVideos.map {
+                        CatalogEntry(
+                            id = it.id,
+                            name = it.name,
+                            mimeType = it.mimeType,
+                            parentId = folderId,
+                            posterUrl = it.thumbnailLink ?: it.posterUrl
+                        )
+                    }
+                )
+            } catch (_: Exception) {}
+        }
+
+        return DriveVideoFetch(deduplicatedVideos.sortedWith { a, b ->
             SeasonEpisodeGrouper.compareItems(
                 a.name, EpisodeParser.parse(a.name),
                 b.name, EpisodeParser.parse(b.name)
@@ -701,7 +844,8 @@ class SeriesDetailViewModel @Inject constructor(
         canonicalMovieTitle: String? = null,
         fallbackThumbnail: String? = null,
         resolvedEpisodes: List<EpisodeDetails> = emptyList(),
-        seriesAgeRating: String? = null
+        seriesAgeRating: String? = null,
+        fallbackRuntimeMinutes: Int? = null
     ): SeriesEpisodeItem {
         val parsed = EpisodeParser.parse(file.name)
         // OP/ED and other extras can contain a number (for example OP4a), but that
@@ -740,9 +884,11 @@ class SeriesDetailViewModel @Inject constructor(
         val presentation = presentSeriesEpisode(file.name, resolvedTitle, isMovie = isMovie)
 
         val progress = watch?.watchProgress() ?: 0
-        val durationText = if (watch != null && watch.totalDuration > 0) {
-            val totalMin = (watch.totalDuration / 1000) / 60
-            "$totalMin min"
+        val durationMillis = watch?.totalDuration?.takeIf { it > 0 } ?: file.durationMillis ?: 0L
+        val durationText = if (durationMillis > 0) {
+            formatDurationMillis(durationMillis)
+        } else if (fallbackRuntimeMinutes != null && fallbackRuntimeMinutes > 0) {
+            formatDurationMinutes(fallbackRuntimeMinutes)
         } else {
             ""
         }
@@ -759,7 +905,7 @@ class SeriesDetailViewModel @Inject constructor(
             audioBadgeText = audioText,
             progressPercent = progress,
             watchedDuration = watch?.watchedDuration ?: 0L,
-            totalDuration = watch?.totalDuration ?: 0L,
+            totalDuration = durationMillis,
             badgeText = badge,
             fallbackThumbnailUrl = epThumbnail,
             synopsis = epSynopsis,
@@ -768,6 +914,7 @@ class SeriesDetailViewModel @Inject constructor(
     }
 
     fun selectSeasonTab(tab: SeasonTab) {
+        observeDownloads(tab.id)
         val currentState = _uiState.value as? SeriesDetailUiState.Success ?: return
 
         val hub = currentState.franchiseHub
@@ -809,7 +956,7 @@ class SeriesDetailViewModel @Inject constructor(
                     activeArcId = tab.id,
                     activeArcTitle = tab.title,
                     activeArcYear = tab.releaseYear ?: currentState.activeArcYear,
-                    activeArcScore = tab.score ?: currentState.activeArcScore,
+                    activeArcScore = if (currentState.isFranchiseHub) tab.score else tab.score ?: currentState.activeArcScore,
                     activeArcScoreSource = tab.scoreSource,
                     categoryChips = chips,
                     selectedCategory = defaultCategory
@@ -825,7 +972,7 @@ class SeriesDetailViewModel @Inject constructor(
                     activeArcId = tab.id,
                     activeArcTitle = tab.title,
                     activeArcYear = tab.releaseYear ?: currentState.activeArcYear,
-                    activeArcScore = tab.score ?: currentState.activeArcScore,
+                    activeArcScore = if (currentState.isFranchiseHub) tab.score else tab.score ?: currentState.activeArcScore,
                     activeArcScoreSource = tab.scoreSource
                 )
                 viewModelScope.launch(Dispatchers.IO) {
@@ -859,7 +1006,8 @@ class SeriesDetailViewModel @Inject constructor(
                             canonicalMovieTitle = if (isMovieTab) tab.title else null,
                             fallbackThumbnail = fallbackThumb,
                             resolvedEpisodes = resolved,
-                            seriesAgeRating = arcRating
+                            seriesAgeRating = arcRating,
+                            fallbackRuntimeMinutes = arcMeta?.runtime ?: currentState.aniListMetadata?.runtime
                         )
                     }
                     folderEpisodesCache[tab.id] = newEpisodes
@@ -899,7 +1047,7 @@ class SeriesDetailViewModel @Inject constructor(
                             activeArcId = tab.id,
                             activeArcTitle = tab.title,
                             activeArcYear = tab.releaseYear ?: currentState.activeArcYear,
-                            activeArcScore = tab.score ?: currentState.activeArcScore,
+                            activeArcScore = if (currentState.isFranchiseHub) tab.score else tab.score ?: currentState.activeArcScore,
                             activeArcScoreSource = tab.scoreSource,
                             categoryChips = chips,
                             selectedCategory = defaultCategory
@@ -922,7 +1070,7 @@ class SeriesDetailViewModel @Inject constructor(
                 activeArcId = tab.id,
                 activeArcTitle = tab.title,
                 activeArcYear = tab.releaseYear ?: currentState.activeArcYear,
-                activeArcScore = tab.score ?: currentState.activeArcScore,
+                activeArcScore = if (currentState.isFranchiseHub) tab.score else tab.score ?: currentState.activeArcScore,
                 activeArcScoreSource = tab.scoreSource
             )
         }
@@ -1070,6 +1218,119 @@ class SeriesDetailViewModel @Inject constructor(
 
     fun resetEpisodeProgress(file: DriveFile) = viewModelScope.launch(Dispatchers.IO) {
         setEpisodeWatched(file, false)
+    }
+
+    private var downloadObserverJob: kotlinx.coroutines.Job? = null
+
+    fun observeDownloads(folderId: String) {
+        downloadObserverJob?.cancel()
+        downloadObserverJob = viewModelScope.launch(Dispatchers.Main) {
+            downloadRepository?.getDownloadsForFolderFlow(folderId)?.collect { downloads ->
+                updateEpisodesWithDownloads(downloads)
+            }
+        }
+    }
+
+    private fun updateEpisodesWithDownloads(downloads: List<zechs.drive.stream.data.model.DownloadItem>) {
+        val downloadMap = downloads.associateBy { it.fileId }
+
+        allEpisodeItems = allEpisodeItems.map { ep ->
+            val dl = downloadMap[ep.file.id]
+            if (dl != null) {
+                ep.copy(
+                    downloadStatus = dl.downloadStatus,
+                    downloadProgress = dl.progressPercent
+                )
+            } else {
+                ep.copy(
+                    downloadStatus = null,
+                    downloadProgress = 0
+                )
+            }
+        }
+
+        val currentSuccess = _uiState.value as? SeriesDetailUiState.Success ?: return
+        val updatedCurrentEpisodes = currentSuccess.currentEpisodes.map { ep ->
+            val dl = downloadMap[ep.file.id]
+            if (dl != null) {
+                ep.copy(
+                    downloadStatus = dl.downloadStatus,
+                    downloadProgress = dl.progressPercent
+                )
+            } else {
+                ep.copy(
+                    downloadStatus = null,
+                    downloadProgress = 0
+                )
+            }
+        }
+        _uiState.value = currentSuccess.copy(currentEpisodes = updatedCurrentEpisodes)
+    }
+
+    fun getCompletedDownloadPath(fileId: String): String? {
+        val download = kotlinx.coroutines.runBlocking { downloadRepository?.getDownload(fileId) }
+        return if (download != null && download.isComplete && java.io.File(download.localPath).exists()) {
+            download.localPath
+        } else null
+    }
+
+    fun isEpisodeDownloaded(fileId: String): Boolean {
+        return getCompletedDownloadPath(fileId) != null
+    }
+
+    fun isEpisodeDownloading(fileId: String): Boolean {
+        val download = kotlinx.coroutines.runBlocking { downloadRepository?.getDownload(fileId) }
+        return download?.downloadStatus == zechs.drive.stream.data.model.DownloadStatus.DOWNLOADING ||
+            download?.downloadStatus == zechs.drive.stream.data.model.DownloadStatus.QUEUED
+    }
+
+    fun startDownload(episode: SeriesEpisodeItem, seriesTitle: String, folderId: String) {
+        // Optimistic UI update: immediate visual feedback on click (Netflix style)
+        val currentSuccess = _uiState.value as? SeriesDetailUiState.Success
+        if (currentSuccess != null) {
+            val updated = currentSuccess.currentEpisodes.map { ep ->
+                if (ep.file.id == episode.file.id) {
+                    ep.copy(
+                        downloadStatus = zechs.drive.stream.data.model.DownloadStatus.QUEUED,
+                        downloadProgress = 0
+                    )
+                } else ep
+            }
+            _uiState.value = currentSuccess.copy(currentEpisodes = updated)
+        }
+
+        viewModelScope.launch {
+            downloadRepository?.enqueueDownload(
+                fileId = episode.file.id,
+                folderId = folderId,
+                seriesTitle = seriesTitle,
+                name = episode.displayTitle,
+                seasonNumber = null,
+                episodeNumber = episode.episodeNumber,
+                thumbnailUrl = episode.file.thumbnailLarge ?: episode.file.thumbnailLink ?: episode.fallbackThumbnailUrl,
+                expectedSize = episode.file.size ?: 0L
+            )
+        }
+    }
+
+    fun deleteDownload(fileId: String) {
+        // Optimistic UI update
+        val currentSuccess = _uiState.value as? SeriesDetailUiState.Success
+        if (currentSuccess != null) {
+            val updated = currentSuccess.currentEpisodes.map { ep ->
+                if (ep.file.id == fileId) {
+                    ep.copy(
+                        downloadStatus = null,
+                        downloadProgress = 0
+                    )
+                } else ep
+            }
+            _uiState.value = currentSuccess.copy(currentEpisodes = updated)
+        }
+
+        viewModelScope.launch {
+            downloadRepository?.deleteDownload(fileId)
+        }
     }
 
 }
