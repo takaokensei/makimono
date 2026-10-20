@@ -275,30 +275,31 @@
         android:elevation="24dp"
         android:orientation="vertical"
         android:paddingStart="0dp"
-        android:paddingTop="20dp"
+        android:paddingTop="12dp"
         android:paddingEnd="0dp"
-        android:paddingBottom="20dp"
+        android:paddingBottom="12dp"
         android:translationZ="24dp">
 
         <!-- Profile Pill -->
         <LinearLayout
             android:id="@+id/userProfilePill"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="@dimen/tv_nav_item_height"
             android:layout_marginTop="2dp"
             android:background="@drawable/user_profile_pill_bg"
             android:clickable="true"
             android:focusable="true"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="18dp"
-            android:paddingEnd="18dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:nextFocusDown="@+id/filesBusca"
             android:nextFocusRight="@+id/rvList">
 
             <ImageView
                 android:id="@+id/ivUserAvatar"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
                 android:contentDescription="@null"
                 android:src="@drawable/ic_person_24" />
 
@@ -341,28 +342,70 @@
             android:layout_height="1dp"
             android:layout_marginStart="8dp"
             android:layout_marginEnd="8dp"
-            android:layout_marginTop="12dp"
-            android:layout_marginBottom="12dp"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="6dp"
             android:background="@color/swiss_border_specular_subtle" />
 
-        <!-- 1. Início -->
+        <!-- 1. Buscar -->
         <LinearLayout
-            android:id="@+id/filesHome"
+            android:id="@+id/filesBusca"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="@dimen/tv_nav_item_height"
             android:background="@drawable/rail_item_focus_bg"
             android:clickable="true"
             android:focusable="true"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:nextFocusUp="@+id/userProfilePill"
+            android:nextFocusDown="@+id/filesHome"
+            android:nextFocusRight="@+id/rvList">
+
+            <ImageView
+                android:id="@+id/ivFilesBuscaIcon"
+                android:layout_width="@dimen/tv_nav_icon_size"
+                android:layout_height="@dimen/tv_nav_icon_size"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_search_24"
+                app:tint="@color/obsidian_text_secondary" />
+
+            <TextView
+                android:id="@+id/tvFilesBusca"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:fontFamily="@font/inter"
+                android:text="@string/search"
+                android:textColor="@color/obsidian_text_secondary"
+                style="@style/TextAppearance.Makimono.TV.Body"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- 2. Início -->
+        <LinearLayout
+            android:id="@+id/filesHome"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/tv_nav_item_height"
+            android:layout_marginTop="2dp"
+            android:background="@drawable/rail_item_focus_bg"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:nextFocusUp="@+id/filesBusca"
+            android:nextFocusDown="@+id/filesFavorites"
             android:nextFocusRight="@+id/rvList">
 
             <ImageView
                 android:id="@+id/ivFilesHomeIcon"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="@dimen/tv_nav_icon_size"
+                android:layout_height="@dimen/tv_nav_icon_size"
                 android:contentDescription="@string/nav_home"
                 android:src="@drawable/ic_home_24"
                 app:tint="@color/obsidian_text_secondary" />
@@ -382,25 +425,27 @@
                 android:visibility="gone" />
         </LinearLayout>
 
-        <!-- 2. Favoritos -->
+        <!-- 3. Favoritos (Minha lista) -->
         <LinearLayout
             android:id="@+id/filesFavorites"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="4dp"
+            android:layout_height="@dimen/tv_nav_item_height"
+            android:layout_marginTop="2dp"
             android:background="@drawable/rail_item_focus_bg"
             android:clickable="true"
             android:focusable="true"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:nextFocusUp="@+id/filesHome"
+            android:nextFocusDown="@+id/filesHistory"
             android:nextFocusRight="@+id/rvList">
 
             <ImageView
                 android:id="@+id/ivFilesFavoritesIcon"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="@dimen/tv_nav_icon_size"
+                android:layout_height="@dimen/tv_nav_icon_size"
                 android:contentDescription="@string/nav_favorites"
                 android:src="@drawable/ic_star_filled_24"
                 app:tint="@color/obsidian_text_secondary" />
@@ -420,25 +465,107 @@
                 android:visibility="gone" />
         </LinearLayout>
 
-        <!-- 3. Catálogo -->
+        <!-- 4. Histórico -->
         <LinearLayout
-            android:id="@+id/filesCatalog"
+            android:id="@+id/filesHistory"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="4dp"
+            android:layout_height="@dimen/tv_nav_item_height"
+            android:layout_marginTop="2dp"
             android:background="@drawable/rail_item_focus_bg"
             android:clickable="true"
             android:focusable="true"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:nextFocusUp="@+id/filesFavorites"
+            android:nextFocusDown="@+id/filesDownloads"
+            android:nextFocusRight="@+id/rvList">
+
+            <ImageView
+                android:id="@+id/ivFilesHistoryIcon"
+                android:layout_width="@dimen/tv_nav_icon_size"
+                android:layout_height="@dimen/tv_nav_icon_size"
+                android:contentDescription="@string/nav_history"
+                android:src="@drawable/ic_history_24"
+                app:tint="@color/obsidian_text_secondary" />
+
+            <TextView
+                android:id="@+id/tvFilesHistory"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:fontFamily="@font/inter"
+                android:text="@string/nav_history"
+                android:textColor="@color/obsidian_text_secondary"
+                style="@style/TextAppearance.Makimono.TV.Body"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- 5. Downloads -->
+        <LinearLayout
+            android:id="@+id/filesDownloads"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/tv_nav_item_height"
+            android:layout_marginTop="2dp"
+            android:background="@drawable/rail_item_focus_bg"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:nextFocusUp="@+id/filesHistory"
+            android:nextFocusDown="@+id/filesCatalog"
+            android:nextFocusRight="@+id/rvList">
+
+            <ImageView
+                android:id="@+id/ivFilesDownloadsIcon"
+                android:layout_width="@dimen/tv_nav_icon_size"
+                android:layout_height="@dimen/tv_nav_icon_size"
+                android:contentDescription="@string/downloads_title"
+                android:src="@drawable/ic_download_24"
+                app:tint="@color/obsidian_text_secondary" />
+
+            <TextView
+                android:id="@+id/tvFilesDownloads"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:fontFamily="@font/inter"
+                android:text="@string/downloads_title"
+                android:textColor="@color/obsidian_text_secondary"
+                style="@style/TextAppearance.Makimono.TV.Body"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- 6. Catálogo -->
+        <LinearLayout
+            android:id="@+id/filesCatalog"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/tv_nav_item_height"
+            android:layout_marginTop="2dp"
+            android:background="@drawable/rail_item_focus_bg"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:nextFocusUp="@+id/filesDownloads"
+            android:nextFocusDown="@+id/filesFilmes"
             android:nextFocusRight="@+id/rvList">
 
             <ImageView
                 android:id="@+id/ivFilesCatalogIcon"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="@dimen/tv_nav_icon_size"
+                android:layout_height="@dimen/tv_nav_icon_size"
                 android:contentDescription="@string/nav_catalog"
                 android:src="@drawable/ic_grid_view_24"
                 app:tint="@color/obsidian_text_secondary" />
@@ -458,25 +585,27 @@
                 android:visibility="gone" />
         </LinearLayout>
 
-        <!-- 4. Filmes -->
+        <!-- 7. Filmes -->
         <LinearLayout
             android:id="@+id/filesFilmes"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="4dp"
+            android:layout_height="@dimen/tv_nav_item_height"
+            android:layout_marginTop="2dp"
             android:background="@drawable/rail_item_focus_bg"
             android:clickable="true"
             android:focusable="true"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:nextFocusUp="@+id/filesCatalog"
+            android:nextFocusDown="@+id/filesFolders"
             android:nextFocusRight="@+id/rvList">
 
             <ImageView
                 android:id="@+id/ivFilesFilmesIcon"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="@dimen/tv_nav_icon_size"
+                android:layout_height="@dimen/tv_nav_icon_size"
                 android:contentDescription="@string/nav_movies"
                 android:src="@drawable/ic_movie_24"
                 app:tint="@color/obsidian_text_secondary" />
@@ -496,25 +625,27 @@
                 android:visibility="gone" />
         </LinearLayout>
 
-        <!-- 5. Pastas (Active screen) -->
+        <!-- 8. Pastas (Active screen) -->
         <LinearLayout
             android:id="@+id/filesFolders"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="4dp"
+            android:layout_height="@dimen/tv_nav_item_height"
+            android:layout_marginTop="2dp"
             android:background="@drawable/nav_item_active_bg"
             android:clickable="true"
             android:focusable="true"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:nextFocusUp="@+id/filesFilmes"
+            android:nextFocusDown="@+id/filesSettings"
             android:nextFocusRight="@+id/rvList">
 
             <ImageView
                 android:id="@+id/ivFilesFoldersIcon"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="@dimen/tv_nav_icon_size"
+                android:layout_height="@dimen/tv_nav_icon_size"
                 android:contentDescription="@string/nav_folders"
                 android:src="@drawable/ic_folder_24"
                 app:tint="@color/obsidian_text_primary" />
@@ -541,25 +672,26 @@
             android:layout_height="0dp"
             android:layout_weight="1" />
 
-        <!-- 6. Configurações -->
+        <!-- 9. Configurações -->
         <LinearLayout
             android:id="@+id/filesSettings"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="4dp"
+            android:layout_height="@dimen/tv_nav_item_height"
+            android:layout_marginTop="2dp"
             android:background="@drawable/rail_item_focus_bg"
             android:clickable="true"
             android:focusable="true"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:nextFocusUp="@+id/filesFolders"
             android:nextFocusRight="@+id/rvList">
 
             <ImageView
                 android:id="@+id/ivFilesSettingsIcon"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="@dimen/tv_nav_icon_size"
+                android:layout_height="@dimen/tv_nav_icon_size"
                 android:contentDescription="@string/nav_settings"
                 android:src="@drawable/ic_settings_24"
                 app:tint="@color/obsidian_text_secondary" />
@@ -575,7 +707,7 @@
                 android:fontFamily="@font/inter"
                 android:text="@string/nav_settings"
                 android:textColor="@color/obsidian_text_secondary"
-                style="@style/TextAppearance.Makimono.TV.Caption"
+                style="@style/TextAppearance.Makimono.TV.Body"
                 android:visibility="gone" />
         </LinearLayout>
 
