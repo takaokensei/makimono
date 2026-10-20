@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import androidx.navigation.NavController
+import androidx.core.widget.TextViewCompat
 import zechs.drive.stream.R
 import zechs.drive.stream.databinding.FragmentHomeBinding
 import zechs.drive.stream.ui.home.HomeFragmentDirections
@@ -31,8 +32,17 @@ class RailController(
     private val animateFocus: (View, Boolean, Float, Float) -> Unit,
     private val onContentFocusRequested: () -> Unit,
     private val onCancelFeaturedPreview: () -> Unit,
-    private val onRefreshShelvesRequested: () -> Unit
+    private val onRefreshShelvesRequested: () -> Unit,
+    private val onShowHistoryRequested: () -> Unit
 ) {
+
+    private var historyNavItem: android.widget.LinearLayout? = null
+    private var historyNavLabel: android.widget.TextView? = null
+    private var historyNavIcon: android.widget.ImageView? = null
+
+    private var downloadsNavItem: android.widget.LinearLayout? = null
+    private var downloadsNavLabel: android.widget.TextView? = null
+    private var downloadsNavIcon: android.widget.ImageView? = null
 
     var currentTab: String = "Início"
         private set
@@ -58,6 +68,8 @@ class RailController(
 
     fun setup() {
         val hasOverlay = usesOverlaySidebar()
+        if (DeviceUi.isTenFootExperience(binding.root.context)) createHistoryNavItem()
+        createDownloadsNavItem()
 
         if (hasOverlay) {
             binding.navRail.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
@@ -164,6 +176,13 @@ class RailController(
                 if (hasOverlay) collapseSidebar()
             }
 
+            historyNavItem?.setOnClickListener {
+                currentTab = "Histórico"
+                updateRailItemColors()
+                if (hasOverlay) collapseSidebar()
+                onShowHistoryRequested()
+            }
+
             btnNavPastas.setOnClickListener {
                 previousTabBeforeSearch = null
                 selectTab("Pastas")
@@ -208,6 +227,8 @@ class RailController(
                 btnNavBusca,
                 btnNavInicio,
                 btnNavFavoritos,
+                historyNavItem,
+                downloadsNavItem,
                 btnNavAnimes,
                 btnNavFilmes,
                 btnNavPastas,
@@ -439,6 +460,8 @@ class RailController(
             styleNavItem(btnNavBusca, tvNavBusca, ivNavBuscaIcon, tab == "Buscar")
             styleNavItem(btnNavInicio, tvNavInicio, ivNavInicioIcon, tab == "Início")
             styleNavItem(btnNavFavoritos, tvNavFavoritos, ivNavFavoritosIcon, tab == "Favoritos")
+            styleNavItem(historyNavItem, historyNavLabel, historyNavIcon, tab == "Histórico")
+            styleNavItem(downloadsNavItem, downloadsNavLabel, downloadsNavIcon, tab == "Downloads")
             styleNavItem(btnNavAnimes, tvNavAnimes, ivNavAnimesIcon, tab == "Animes")
             styleNavItem(btnNavFilmes, tvNavFilmes, ivNavFilmesIcon, tab == "Filmes")
             styleNavItem(btnNavPastas, tvNavPastas, ivNavPastasIcon, tab == "Pastas")
@@ -456,6 +479,8 @@ class RailController(
             "Filmes" -> binding.btnNavFilmes
             "Pastas" -> binding.btnNavPastas
             "Favoritos" -> binding.btnNavFavoritos
+            "Histórico" -> historyNavItem
+            "Downloads" -> downloadsNavItem
             "Configurações" -> binding.btnNavConfig
             else -> binding.btnNavInicio
         }
@@ -472,6 +497,8 @@ class RailController(
             binding.btnNavAnimes,
             binding.btnNavFilmes,
             binding.btnNavPastas,
+            historyNavItem,
+            downloadsNavItem,
             binding.btnNavConfig
         )
         navItems.forEach { item ->
@@ -665,11 +692,135 @@ class RailController(
             tvNavFilmes?.visibility = visibility
             tvNavPastas.visibility = visibility
             tvNavFavoritos.visibility = visibility
+            historyNavLabel?.visibility = visibility
+            downloadsNavLabel?.visibility = visibility
             tvNavConfig.visibility = visibility
             tvUserName?.visibility = visibility
             tvSwitchProfileSubtitle?.visibility = visibility
         }
         updateRailItemColors()
+    }
+
+    private fun createHistoryNavItem() {
+        if (historyNavItem != null) return
+        val context = binding.root.context
+        val density = context.resources.displayMetrics.density
+        val iconSize = context.resources.getDimensionPixelSize(R.dimen.tv_nav_icon_size)
+        val itemHeight = context.resources.getDimensionPixelSize(R.dimen.tv_nav_item_height)
+        val label = android.widget.TextView(context).apply {
+            text = context.getString(R.string.nav_history)
+            setTextColor(context.resolveThemeColor(R.attr.colorTextSecondary))
+            TextViewCompat.setTextAppearance(this, R.style.TextAppearance_Makimono_TV_Body)
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            visibility = View.GONE
+            layoutParams = android.widget.LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                marginStart = (14 * density).toInt()
+            }
+        }
+        val icon = android.widget.ImageView(context).apply {
+            setImageResource(R.drawable.ic_history_24)
+            imageTintList = ColorStateList.valueOf(context.resolveThemeColor(R.attr.colorTextSecondary))
+            layoutParams = android.widget.LinearLayout.LayoutParams(iconSize, iconSize)
+            contentDescription = null
+        }
+        val item = android.widget.LinearLayout(context).apply {
+            id = View.generateViewId()
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding((16 * density).toInt(), 0, (16 * density).toInt(), 0)
+            setBackgroundResource(R.drawable.rail_item_focus_bg)
+            isClickable = true
+            isFocusable = true
+            contentDescription = context.getString(R.string.nav_history)
+            layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, itemHeight).apply {
+                topMargin = (2 * density).toInt()
+            }
+            addView(icon)
+            addView(label)
+        }
+        val configIndex = (0 until binding.navRail.childCount)
+            .firstOrNull { binding.navRail.getChildAt(it).id == R.id.btnNavAnimes }
+            ?: binding.navRail.childCount
+        binding.navRail.addView(item, configIndex)
+        historyNavItem = item
+        historyNavLabel = label
+        historyNavIcon = icon
+        item.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) expandTvRail()
+            updateRailItemColors()
+        }
+        item.setOnKeyListener { _, keyCode, event ->
+            if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                collapseTvRail()
+                onContentFocusRequested()
+                true
+            } else false
+        }
+        SingleTapActivation.install(item)
+    }
+
+    private fun createDownloadsNavItem() {
+        if (downloadsNavItem != null) return
+        val context = binding.root.context
+        val density = context.resources.displayMetrics.density
+        val iconSize = context.resources.getDimensionPixelSize(R.dimen.tv_nav_icon_size)
+        val itemHeight = context.resources.getDimensionPixelSize(R.dimen.tv_nav_item_height)
+        val label = android.widget.TextView(context).apply {
+            text = context.getString(R.string.downloads_title)
+            setTextColor(context.resolveThemeColor(R.attr.colorTextSecondary))
+            TextViewCompat.setTextAppearance(this, R.style.TextAppearance_Makimono_TV_Body)
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            visibility = View.GONE
+            layoutParams = android.widget.LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                marginStart = (14 * density).toInt()
+            }
+        }
+        val icon = android.widget.ImageView(context).apply {
+            setImageResource(R.drawable.ic_download_24)
+            imageTintList = ColorStateList.valueOf(context.resolveThemeColor(R.attr.colorTextSecondary))
+            layoutParams = android.widget.LinearLayout.LayoutParams(iconSize, iconSize)
+            contentDescription = null
+        }
+        val item = android.widget.LinearLayout(context).apply {
+            id = View.generateViewId()
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding((16 * density).toInt(), 0, (16 * density).toInt(), 0)
+            setBackgroundResource(R.drawable.rail_item_focus_bg)
+            isClickable = true
+            isFocusable = true
+            contentDescription = context.getString(R.string.downloads_title)
+            layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, itemHeight).apply {
+                topMargin = (2 * density).toInt()
+            }
+            addView(icon)
+            addView(label)
+        }
+        val configIndex = (0 until binding.navRail.childCount)
+            .firstOrNull { binding.navRail.getChildAt(it).id == R.id.btnNavAnimes }
+            ?: binding.navRail.childCount
+        binding.navRail.addView(item, configIndex)
+        downloadsNavItem = item
+        downloadsNavLabel = label
+        downloadsNavIcon = icon
+        item.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) expandTvRail()
+            updateRailItemColors()
+        }
+        item.setOnKeyListener { _, keyCode, event ->
+            if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                collapseTvRail()
+                onContentFocusRequested()
+                true
+            } else false
+        }
+        item.setOnClickListener {
+            if (usesOverlaySidebar()) collapseSidebar()
+            navController.navigateSafe(R.id.action_homeFragment_to_downloadsFragment)
+        }
+        SingleTapActivation.install(item)
     }
 }
 

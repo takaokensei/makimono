@@ -117,6 +117,7 @@ class HomeFragment : BaseFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         _binding = FragmentHomeBinding.bind(view)
+        binding.tvShelfViewHistory?.visibility = View.GONE
 
         focusCoordinator = FocusCoordinator(binding)
         heroController = HeroController(
@@ -151,7 +152,8 @@ class HomeFragment : BaseFragment() {
                 )
             },
             onCancelFeaturedPreview = { },
-            onRefreshShelvesRequested = { refreshInicioShelfUi() }
+            onRefreshShelvesRequested = { refreshInicioShelfUi() },
+            onShowHistoryRequested = { actionHandler.showWatchHistoryDialog() }
         )
         actionHandler = HomeActionHandler(
             context = requireContext(),
@@ -211,7 +213,6 @@ class HomeFragment : BaseFragment() {
         focusCoordinator.setupTenFootFocusChain(requireContext())
         shelvesController.observeShelves { refreshInicioShelfUi() }
 
-        binding.tvShelfViewHistory?.setOnClickListener { actionHandler.showWatchHistoryDialog() }
         binding.tvShelfViewQueue?.setOnClickListener { actionHandler.showWatchQueueDialog() }
         binding.btnExploreAnimes?.setOnClickListener { railController.selectTab("Animes") }
 
@@ -225,7 +226,36 @@ class HomeFragment : BaseFragment() {
         observeLogOutState()
         observeMpv()
 
-        railController.selectTab("Início")
+        fun applyRequestedTab(tab: String) {
+            when (tab) {
+                "Buscar" -> binding.btnNavBusca?.performClick() ?: railController.selectTab("Buscar")
+                "Início" -> binding.btnNavInicio.performClick()
+                "Favoritos" -> binding.btnNavFavoritos.performClick()
+                "Animes" -> binding.btnNavAnimes.performClick()
+                "Filmes" -> binding.btnNavFilmes?.performClick() ?: railController.selectTab("Filmes")
+                "Histórico" -> {
+                    railController.selectTab("Início")
+                    actionHandler.showWatchHistoryDialog()
+                }
+                else -> railController.selectTab(tab)
+            }
+        }
+
+        val nav = findNavController()
+        val pendingTab = nav.currentBackStackEntry?.savedStateHandle?.remove<String>("homeTab")
+        if (pendingTab != null) {
+            applyRequestedTab(pendingTab)
+        } else {
+            railController.selectTab("Início")
+        }
+
+        nav.currentBackStackEntry?.savedStateHandle?.getLiveData<String>("homeTab")
+            ?.observe(viewLifecycleOwner) { tab ->
+                if (tab != null) {
+                    nav.currentBackStackEntry?.savedStateHandle?.remove<String>("homeTab")
+                    applyRequestedTab(tab)
+                }
+            }
 
         if (viewModel.animeLibrary.value.isEmpty()) {
             viewModel.loadAnimeLibrary()
@@ -327,7 +357,6 @@ class HomeFragment : BaseFragment() {
         binding.rvContinueWatchingShelf.visibility = if (hasRecent) View.VISIBLE else View.GONE
         binding.shelfHeaderRow?.visibility = if (hasRecent || hasQueue) View.VISIBLE else View.GONE
         binding.tvShelfLabel?.visibility = if (hasRecent) View.VISIBLE else View.GONE
-        binding.tvShelfViewHistory?.visibility = if (hasRecent) View.VISIBLE else View.GONE
         binding.tvShelfViewQueue?.visibility = if (hasQueue) View.VISIBLE else View.GONE
     }
 
@@ -527,7 +556,13 @@ class HomeFragment : BaseFragment() {
                                     else -> StateView.StateType.ERROR_GENERIC
                                 }
                                 binding.stateView.setState(stateType) {
-                                    viewModel.onEvent(HomeEvent.Refresh)
+                                    if (state.error is AppError.Authentication) {
+                                        findNavController().navigate(
+                                            R.id.action_homeFragment_to_signInFragment
+                                        )
+                                    } else {
+                                        viewModel.onEvent(HomeEvent.Refresh)
+                                    }
                                 }
                             }
                         }
