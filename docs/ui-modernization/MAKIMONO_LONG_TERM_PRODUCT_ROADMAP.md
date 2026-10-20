@@ -1,5 +1,7 @@
 # Makimono TV — Roadmap de produto e qualidade de longo prazo
 
+**Avaliação atualizada — 20/10/2026:** [Plano de qualidade visual](MAKIMONO_VISUAL_QUALITY_PLAN_2026-10-20.md) prioriza direção de arte, tipografia, foco e apresentação dos estados vazios, com observações feitas no emulador TV atual. O [plano de lacunas funcionais](MAKIMONO_REFERENCE_GAP_PLAN_2026-10-19.md) cobre dados, jornadas, downloads, reprodução e validação. As evidências Netflix disponíveis são móveis; não comprovam paridade visual com a versão TV. As observações históricas abaixo permanecem datadas.
+
 **Plano complementar — 15/10/2026:** [Reconstrução abrangente da experiência de referência](PLANO_RECONSTRUCAO_ABRANGENTE_CRUNCHYROLL_TV.md) detalha R00–R14, o inventário de funcionalidades, a investigação dirigida por REA/JADX, a rastreabilidade e os critérios de integração/homologação. Deve ser executado junto ao plano Q00–Q10, começando pela correção dos resultados artificiais de teste e das lacunas de raiz/foco. A inclusão do plano não declara essas tarefas concluídas.
 
 ## Objetivo
