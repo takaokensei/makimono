@@ -14,8 +14,10 @@ import zechs.drive.stream.data.model.DriveFolderListing
 import zechs.drive.stream.data.model.PlaylistItem
 import zechs.drive.stream.data.model.SubtitleItem
 import zechs.drive.stream.data.model.WatchList
+import zechs.drive.stream.data.repository.DownloadRepository
 import zechs.drive.stream.data.repository.DriveRepository
 import zechs.drive.stream.data.repository.WatchListRepository
+import zechs.drive.stream.utils.AppSettings
 import zechs.drive.stream.utils.ProfileManager
 import zechs.drive.stream.ui.player.PlayerActivity.Companion.TAG
 import javax.inject.Inject
@@ -24,6 +26,8 @@ import javax.inject.Inject
 class PlayerViewModel @Inject constructor(
     private val watchListRepository: WatchListRepository,
     private val driveRepository: Lazy<DriveRepository>,
+    private val downloadRepository: Lazy<DownloadRepository>,
+    private val appSettings: AppSettings,
     savedStateHandle: SavedStateHandle,
     profileManager: ProfileManager
 ) : ViewModel() {
@@ -152,6 +156,23 @@ class PlayerViewModel @Inject constructor(
             thumbnailLink = thumbnailLink,
             audioDelayMs = audioDelayMs,
             subtitleDelayMs = subtitleDelayMs
+        )
+    }
+
+    fun handleSmartDownloads(
+        finishedFileId: String,
+        nextEpisode: PlaylistItem?,
+        folderId: String? = null,
+        seriesTitle: String? = null
+    ) = viewModelScope.launch(Dispatchers.IO) {
+        val isSmartEnabled = runCatching { appSettings.fetchSmartDownloads(playbackProfileId) }.getOrDefault(true)
+        if (!isSmartEnabled) return@launch
+        downloadRepository.get().handleSmartDownloads(
+            finishedFileId = finishedFileId,
+            nextEpisode = nextEpisode,
+            folderId = folderId,
+            seriesTitle = seriesTitle,
+            isSmartDownloadsEnabled = true
         )
     }
 }

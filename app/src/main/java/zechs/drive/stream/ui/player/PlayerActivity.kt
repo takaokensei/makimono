@@ -2186,6 +2186,10 @@ class PlayerActivity : BasePlayerActivity() {
 
         saveProgress()
 
+        val folderId = intent.getStringExtra(PlayerLauncher.EXTRA_SIBLING_FOLDER_ID)
+        val seriesTitle = intent.getStringExtra(PlayerLauncher.EXTRA_SERIES_TITLE)
+        viewModel.handleSmartDownloads(currentFileId, next, folderId, seriesTitle)
+
         currentFileId = next.fileId
         currentLocalUri = next.localUri
         currentTitle = next.title
@@ -3659,6 +3663,12 @@ class PlayerActivity : BasePlayerActivity() {
             audioDelayMs = audioDelayMs,
             subtitleDelayMs = subtitleDelayMs
         )
+    }
+
+    override fun onPlaybackFinished(finishedFileId: String) {
+        val folderId = intent.getStringExtra(PlayerLauncher.EXTRA_SIBLING_FOLDER_ID)
+        val seriesTitle = intent.getStringExtra(PlayerLauncher.EXTRA_SERIES_TITLE)
+        viewModel.handleSmartDownloads(finishedFileId, nextEpisode, folderId, seriesTitle)
     }
 
     @RequiresApi(Build.VERSION_CODES.O)

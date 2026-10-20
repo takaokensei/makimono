@@ -140,6 +140,11 @@ abstract class BasePlayerActivity : AppCompatActivity(), PlayerModalHost {
                 audioDelayMs = getAudioDelayMs(),
                 subtitleDelayMs = getSubtitleDelayMs()
             )
+            if (zechs.drive.stream.utils.PlaybackProgressPolicy.isFinished(watchedDuration, totalDuration)) {
+                onPlaybackFinished(fileId)
+            }
         }
     }
+
+    protected open fun onPlaybackFinished(finishedFileId: String) {}
 }

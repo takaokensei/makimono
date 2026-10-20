@@ -2510,6 +2510,12 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
         )
     }
 
+    override fun onPlaybackFinished(finishedFileId: String) {
+        val folderId = intent.getStringExtra(PlayerLauncher.EXTRA_SIBLING_FOLDER_ID)
+        val seriesTitle = intent.getStringExtra(PlayerLauncher.EXTRA_SERIES_TITLE)
+        viewModel.handleSmartDownloads(finishedFileId, nextEpisode, folderId, seriesTitle)
+    }
+
     private fun checkAutoPlayNextEpisode(timePosSeconds: Long, durationSeconds: Long) {
         if (durationSeconds > 60 && timePosSeconds >= (durationSeconds * 0.75).toLong()) {
             val next = nextEpisode
@@ -2649,6 +2655,10 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
         binding.nextEpisodeCard.root.visibility = View.GONE
 
         saveProgress()
+
+        val folderId = intent.getStringExtra(PlayerLauncher.EXTRA_SIBLING_FOLDER_ID)
+        val seriesTitle = intent.getStringExtra(PlayerLauncher.EXTRA_SERIES_TITLE)
+        viewModel.handleSmartDownloads(currentFileId, next, folderId, seriesTitle)
 
         currentFileId = next.fileId
         currentLocalUri = next.localUri
