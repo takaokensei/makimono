@@ -35,11 +35,9 @@ class ProfileManager @Inject constructor(
         private const val PREFS_NAME = "makimono_profiles_prefs"
         private const val KEY_PROFILES = "profiles_list"
         private const val KEY_ACTIVE_ID = "active_profile_id"
+        private const val KEY_INITIAL_PROFILE_SETUP_PENDING = "initial_profile_setup_pending"
 
-        val DEFAULT_PROFILES = listOf(
-            UserProfile(id = "profile-1", name = "Perfil principal", avatarResName = "avatar_anime", isDefault = true, isAdmin = true),
-            UserProfile(id = "profile-2", name = "Perfil secundário", avatarResName = "avatar_anime", isDefault = false)
-        )
+
     }
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -54,43 +52,78 @@ class ProfileManager @Inject constructor(
     private val _activeProfileFlow = MutableStateFlow<UserProfile>(loadActiveProfile())
     val activeProfileFlow = _activeProfileFlow.asStateFlow()
 
+    private var initialProfileSetupTarget: UserProfile? = null
+    @Volatile private var initialProfileSetupPending =
+        prefs.getBoolean(KEY_INITIAL_PROFILE_SETUP_PENDING, false)
     private val mutationMutex = Mutex()
     private val initialized = cleanerScope.async {
         val stored = database.getProfileDao().getAll()
         val profiles = if (stored.isEmpty()) {
             val legacy = _profilesFlow.value
-            database.getProfileDao().replaceAll(legacy.map(ProfileEntity::from))
+            if (legacy.isNotEmpty()) database.getProfileDao().replaceAll(legacy.map(ProfileEntity::from))
             legacy
         } else stored.map { it.toProfile() }
         _activeProfileFlow.value = profiles.firstOrNull { it.id == prefs.getString(KEY_ACTIVE_ID, null) }
-            ?: profiles.first()
+            ?: profiles.firstOrNull() ?: ProfileBootstrapPolicy.pendingProfile()
         _profilesFlow.value = profiles
     }
 
     suspend fun awaitReady() { initialized.await() }
 
-    private fun getDefaultProfiles(): List<UserProfile> = listOf(
-        UserProfile(
-            id = "profile-1",
-            name = runCatching { context.getString(R.string.profile_default_main_name) }.getOrDefault("Perfil principal"),
-            avatarResName = "avatar_anime",
-            isDefault = true,
-            isAdmin = true
-        ),
-        UserProfile(
-            id = "profile-2",
-            name = runCatching { context.getString(R.string.profile_default_secondary_name) }.getOrDefault("Perfil secundário"),
-            avatarResName = "avatar_anime",
-            isDefault = false
+    /** Converts only the exact untouched starter pair from older builds into first-run setup. */
+    suspend fun prepareFirstProfileAfterPairing() {
+        awaitReady()
+        mutationMutex.withLock {
+            val current = _profilesFlow.value
+            if (current.isEmpty()) {
+                initialProfileSetupTarget = getActiveProfile()
+                initialProfileSetupPending = true
+                prefs.edit().putBoolean(KEY_INITIAL_PROFILE_SETUP_PENDING, true).apply()
+                return@withLock
+            }
+            if (!ProfileBootstrapPolicy.isLegacyStarterPair(current)) return@withLock
+
+            val primary = current.first { it.id == "profile-1" }
+            val secondary = current.first { it.id == "profile-2" }
+            database.withTransaction {
+                profileDataCleaner.get().deleteAllDataForProfile(secondary.id)
+                database.getProfileDao().replaceAll(listOf(ProfileEntity.from(primary)))
+            }
+            initialProfileSetupTarget = primary.copy(
+                name = "",
+                avatarResName = "profile_placeholder",
+                avatarUrl = null,
+                backgroundUrl = null
+            )
+            initialProfileSetupPending = true
+            prefs.edit().putBoolean(KEY_INITIAL_PROFILE_SETUP_PENDING, true).apply()
+            _profilesFlow.value = listOf(primary)
+            _activeProfileFlow.value = primary
+            saveProfilesInternal(listOf(primary))
+            prefs.edit().putString(KEY_ACTIVE_ID, primary.id).apply()
+        }
+    }
+
+    fun isInitialProfileSetupPending(): Boolean = initialProfileSetupPending
+
+    fun getInitialProfileSetupTarget(): UserProfile? {
+        if (!initialProfileSetupPending) return null
+        val target = initialProfileSetupTarget
+            ?: _profilesFlow.value.firstOrNull()
+            ?: getActiveProfile()
+        val current = _profilesFlow.value.firstOrNull { it.id == target.id } ?: target
+        return current.copy(
+            name = "",
+            avatarResName = "profile_placeholder",
+            avatarUrl = null,
+            backgroundUrl = null
         )
-    )
+    }
 
     private fun loadProfiles(): List<UserProfile> {
         val raw = prefs.getString(KEY_PROFILES, null)
         if (raw.isNullOrBlank()) {
-            val defaults = getDefaultProfiles()
-            saveProfilesInternal(defaults)
-            return defaults
+            return emptyList()
         }
         return try {
             val jsonArray = JSONArray(raw)
@@ -113,16 +146,16 @@ class ProfileManager @Inject constructor(
                     )
                 )
             }
-            if (list.isEmpty()) DEFAULT_PROFILES else list
+            list
         } catch (_: Exception) {
-            DEFAULT_PROFILES
+            emptyList()
         }
     }
 
     private fun loadActiveProfile(): UserProfile {
         val activeId = prefs.getString(KEY_ACTIVE_ID, null)
         val profiles = loadProfiles()
-        return profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull() ?: DEFAULT_PROFILES.first()
+        return profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull() ?: ProfileBootstrapPolicy.pendingProfile()
     }
 
     private fun saveProfilesInternal(profiles: List<UserProfile>) {
@@ -136,6 +169,10 @@ class ProfileManager @Inject constructor(
                 put("libraryRootId", p.libraryRootId ?: "")
                 put("libraryRootName", p.libraryRootName ?: "")
                 put("createdAt", p.createdAt)
+                put("avatarUrl", p.avatarUrl ?: "")
+                put("backgroundUrl", p.backgroundUrl ?: "")
+                put("isAdmin", p.isAdmin)
+                put("isKids", p.isKids)
             }
             jsonArray.put(obj)
         }
@@ -165,6 +202,7 @@ class ProfileManager @Inject constructor(
                 ?: updated.first()
             _profilesFlow.value = updated
             prefs.edit().putString(KEY_ACTIVE_ID, _activeProfileFlow.value.id).apply()
+            saveProfilesInternal(updated)
         }
     }
 
@@ -172,7 +210,14 @@ class ProfileManager @Inject constructor(
         require(profile.name.isNotBlank())
         mutate { current ->
             if (current.any { it.id == profile.id }) current.map { if (it.id == profile.id) profile else it }
-            else current + profile
+            else current + if (current.isEmpty()) {
+                ProfileBootstrapPolicy.firstProfile(profile, _activeProfileFlow.value)
+            } else profile
+        }
+        if (initialProfileSetupPending) {
+            initialProfileSetupTarget = null
+            initialProfileSetupPending = false
+            prefs.edit().remove(KEY_INITIAL_PROFILE_SETUP_PENDING).apply()
         }
     }
 
@@ -191,6 +236,10 @@ class ProfileManager @Inject constructor(
 
     suspend fun setLibraryRoot(id: String?, name: String?) {
         awaitReady()
+        if (getProfiles().isEmpty()) {
+            _activeProfileFlow.value = getActiveProfile().copy(libraryRootId = id, libraryRootName = name)
+            return
+        }
         val activeId = getActiveProfile().id
         AppLog.d("ProfileManager", "setLibraryRoot: profileId=$activeId, rootId=$id, rootName=$name")
         mutate { list -> list.map {
@@ -224,6 +273,7 @@ class ProfileManager @Inject constructor(
         return when (avatarName) {
             "avatar_caua" -> R.drawable.avatar_caua
             "avatar_anime" -> R.drawable.avatar_anime
+            "profile_placeholder" -> R.drawable.ic_person_24
             else -> R.drawable.avatar_anime
         }
     }
