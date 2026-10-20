@@ -494,18 +494,14 @@ class FilesViewModel @Inject constructor(
             return@launch
         }
 
-        val client = sessionManager.fetchClient() ?: run {
-            _token.postValue(Event(Resource.Error("Client not found")))
-            return@launch
-        }
-        val tokenResponse = driveRepository.fetchAccessToken(client)
+        val tokenResponse = driveRepository.accessToken()
 
         when (tokenResponse) {
             is Resource.Success -> {
                 val fileToken = FileToken(
                     fileId = file.id,
                     fileName = file.name,
-                    accessToken = tokenResponse.data.accessToken,
+                    accessToken = tokenResponse.data,
                     thumbnailLink = file.thumbnailLink
                 )
                 _token.postValue(Event(Resource.Success(fileToken)))

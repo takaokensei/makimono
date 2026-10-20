@@ -111,10 +111,15 @@ class FilesFragment : BaseFragment() {
             requireContext(),
             view.findViewById(R.id.filesNavRail),
             listOf(
+                view.findViewById(R.id.userProfilePill),
+                view.findViewById(R.id.filesBusca),
                 view.findViewById(R.id.filesHome),
-                view.findViewById(R.id.filesCatalog),
-                view.findViewById(R.id.filesFolders),
                 view.findViewById(R.id.filesFavorites),
+                view.findViewById(R.id.filesHistory),
+                view.findViewById(R.id.filesDownloads),
+                view.findViewById(R.id.filesCatalog),
+                view.findViewById(R.id.filesFilmes),
+                view.findViewById(R.id.filesFolders),
                 view.findViewById(R.id.filesSettings)
             ),
             view.findViewById(R.id.searchContainer),
@@ -186,6 +191,9 @@ class FilesFragment : BaseFragment() {
             onContentReady = { files ->
                 paginationHandler.isLoading = false
                 searchFilterHandler.onFilesLoaded(files)
+            },
+            onReauthenticate = {
+                findNavController().navigateSafe(R.id.action_filesFragment_to_signInFragment)
             }
         )
     }
@@ -306,8 +314,11 @@ class FilesFragment : BaseFragment() {
                 icon?.imageTintList = android.content.res.ColorStateList.valueOf(iconColor)
             }
 
+            styleItem(R.id.filesBusca, R.id.tvFilesBusca, R.id.ivFilesBuscaIcon, false)
             styleItem(R.id.filesHome, R.id.tvFilesHome, R.id.ivFilesHomeIcon, false)
             styleItem(R.id.filesFavorites, R.id.tvFilesFavorites, R.id.ivFilesFavoritesIcon, false)
+            styleItem(R.id.filesHistory, R.id.tvFilesHistory, R.id.ivFilesHistoryIcon, false)
+            styleItem(R.id.filesDownloads, R.id.tvFilesDownloads, R.id.ivFilesDownloadsIcon, false)
             styleItem(R.id.filesCatalog, R.id.tvFilesCatalog, R.id.ivFilesCatalogIcon, false)
             styleItem(R.id.filesFilmes, R.id.tvFilesFilmes, R.id.ivFilesFilmesIcon, false)
             styleItem(R.id.filesFolders, R.id.tvFilesFolders, R.id.ivFilesFoldersIcon, true)
@@ -321,8 +332,11 @@ class FilesFragment : BaseFragment() {
                 R.id.tvBrandLogoText,
                 R.id.tvUserName,
                 R.id.tvSwitchProfileSubtitle,
+                R.id.tvFilesBusca,
                 R.id.tvFilesHome,
                 R.id.tvFilesFavorites,
+                R.id.tvFilesHistory,
+                R.id.tvFilesDownloads,
                 R.id.tvFilesCatalog,
                 R.id.tvFilesFilmes,
                 R.id.tvFilesFolders,
@@ -421,10 +435,15 @@ class FilesFragment : BaseFragment() {
             }
         })
 
+        binding.root.findViewById<View>(R.id.filesBusca)?.setOnClickListener { returnHome("Buscar") }
         binding.root.findViewById<View>(R.id.filesHome)?.setOnClickListener { returnHome("Início") }
+        binding.root.findViewById<View>(R.id.filesFavorites)?.setOnClickListener { returnHome("Favoritos") }
+        binding.root.findViewById<View>(R.id.filesHistory)?.setOnClickListener { returnHome("Histórico") }
+        binding.root.findViewById<View>(R.id.filesDownloads)?.setOnClickListener {
+            findNavController().navigateSafe(R.id.action_filesFragment_to_downloadsFragment)
+        }
         binding.root.findViewById<View>(R.id.filesCatalog)?.setOnClickListener { returnHome("Animes") }
         binding.root.findViewById<View>(R.id.filesFilmes)?.setOnClickListener { returnHome("Filmes") }
-        binding.root.findViewById<View>(R.id.filesFavorites)?.setOnClickListener { returnHome("Favoritos") }
         binding.root.findViewById<View>(R.id.filesFolders)?.setOnClickListener {
             collapseRail()
             focusFilesContent(forceToList = true)
@@ -438,8 +457,11 @@ class FilesFragment : BaseFragment() {
 
         val navItems = listOfNotNull(
             binding.root.findViewById<View>(R.id.userProfilePill),
+            binding.root.findViewById<View>(R.id.filesBusca),
             binding.root.findViewById<View>(R.id.filesHome),
             binding.root.findViewById<View>(R.id.filesFavorites),
+            binding.root.findViewById<View>(R.id.filesHistory),
+            binding.root.findViewById<View>(R.id.filesDownloads),
             binding.root.findViewById<View>(R.id.filesCatalog),
             binding.root.findViewById<View>(R.id.filesFilmes),
             binding.root.findViewById<View>(R.id.filesFolders),

@@ -20,7 +20,8 @@ import zechs.drive.stream.utils.ShimmerController
 class FilesStateHandler(
     private val binding: FragmentFilesBinding,
     private val viewModel: FilesViewModel,
-    private val onContentReady: (List<FilesDataModel>) -> Unit
+    private val onContentReady: (List<FilesDataModel>) -> Unit,
+    private val onReauthenticate: () -> Unit
 ) {
 
     private var shimmerAnimator: ValueAnimator? = null
@@ -87,7 +88,11 @@ class FilesStateHandler(
                         else -> StateView.StateType.ERROR_GENERIC
                     }
                     binding.stateView.setState(stateType) {
-                        viewModel.onEvent(FilesEvent.Retry)
+                        if (state.error is AppError.Authentication) {
+                            onReauthenticate()
+                        } else {
+                            viewModel.onEvent(FilesEvent.Retry)
+                        }
                     }
                 }
             }
