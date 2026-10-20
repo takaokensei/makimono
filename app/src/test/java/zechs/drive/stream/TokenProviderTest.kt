@@ -12,10 +12,9 @@ import okhttp3.Response
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import zechs.drive.stream.data.model.DriveClient
-import zechs.drive.stream.data.model.TokenResponse
+import zechs.drive.stream.data.model.DriveAccessTokenResponse
+import zechs.drive.stream.data.remote.PairingApi
 import zechs.drive.stream.data.repository.DefaultTokenProvider
-import zechs.drive.stream.data.repository.DriveRepository
 import zechs.drive.stream.data.repository.TokenAuthenticator
 import zechs.drive.stream.data.repository.TokenProvider
 import zechs.drive.stream.ui.player.utils.AuthenticatingDataSource
@@ -25,19 +24,17 @@ import zechs.drive.stream.utils.state.Resource
 class TokenProviderTest {
 
     private val sessionManager: SessionManager = mockk(relaxed = true)
-    private val driveRepository: DriveRepository = mockk(relaxed = true)
+    private val pairingApi: PairingApi = mockk(relaxed = true)
     private lateinit var tokenProvider: DefaultTokenProvider
 
-    private val testClient = DriveClient("id", "secret", "http://localhost", listOf("drive.readonly"))
-    private val token1 = TokenResponse("token-abc-1", 3600, "Bearer", "drive.readonly")
-    private val token2 = TokenResponse("token-xyz-2", 3600, "Bearer", "drive.readonly")
+    private val token1 = DriveAccessTokenResponse("token-abc-1", 3600)
+    private val token2 = DriveAccessTokenResponse("token-xyz-2", 3600)
 
     @Before
     fun setUp() {
-        coEvery { sessionManager.fetchClient() } returns testClient
-        coEvery { driveRepository.fetchAccessToken(testClient, forceRefresh = false) } returns Resource.Success(token1)
-        coEvery { driveRepository.fetchAccessToken(testClient, forceRefresh = true) } returns Resource.Success(token2)
-        tokenProvider = DefaultTokenProvider(sessionManager, dagger.Lazy { driveRepository })
+        coEvery { sessionManager.fetchPairingSessionToken() } returns "makimono-session-token"
+        coEvery { pairingApi.getDriveToken("Bearer makimono-session-token") } returns token1 andThen token2
+        tokenProvider = DefaultTokenProvider(sessionManager, pairingApi)
     }
 
     @Test
@@ -49,7 +46,7 @@ class TokenProviderTest {
         // Second call should return cached token without calling fetchAccessToken again
         val second = tokenProvider.validToken()
         assertEquals("token-abc-1", second)
-        coVerify(exactly = 1) { driveRepository.fetchAccessToken(testClient, forceRefresh = false) }
+        coVerify(exactly = 1) { pairingApi.getDriveToken("Bearer makimono-session-token") }
     }
 
     @Test
@@ -61,7 +58,7 @@ class TokenProviderTest {
         }
         val results = jobs.awaitAll()
         assertTrue(results.all { it == "token-abc-1" })
-        coVerify(exactly = 1) { driveRepository.fetchAccessToken(testClient, forceRefresh = false) }
+        coVerify(exactly = 1) { pairingApi.getDriveToken("Bearer makimono-session-token") }
     }
 
     @Test
@@ -72,7 +69,7 @@ class TokenProviderTest {
         val refreshed = tokenProvider.refresh()
         assertEquals("token-xyz-2", refreshed)
         assertEquals("token-xyz-2", tokenProvider.getCachedToken())
-        coVerify(exactly = 1) { driveRepository.fetchAccessToken(testClient, forceRefresh = true) }
+        coVerify(exactly = 2) { pairingApi.getDriveToken("Bearer makimono-session-token") }
     }
 
     @Test
