@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 import zechs.drive.stream.R
 import zechs.drive.stream.data.model.UserProfile
 import zechs.drive.stream.data.remote.ProfileArtCatalog
+import zechs.drive.stream.data.repository.DriveRepository
 import zechs.drive.stream.databinding.FragmentProfileSelectionBinding
 import zechs.drive.stream.ui.BaseFragment
 import zechs.drive.stream.utils.ProfileManager
@@ -54,6 +55,13 @@ class ProfileSelectionFragment : BaseFragment() {
     @Inject
     lateinit var sessionManager: zechs.drive.stream.utils.SessionManager
 
+    @Inject
+    lateinit var driveRepository: DriveRepository
+
+    @Inject
+    lateinit var mediaPreloadManager: zechs.drive.stream.data.repository.MediaPreloadManager
+
+    private var initialCreateShown = false
     private var focusedProfileId: String? = null
     private var bgDebounceJob: Job? = null
     private lateinit var profilesAdapter: ProfilesAdapter
@@ -202,7 +210,7 @@ class ProfileSelectionFragment : BaseFragment() {
                 .setPositiveButton(R.string.profile_logout_action_confirm) { _, _ ->
                     viewLifecycleOwner.lifecycleScope.launch {
                         try {
-                            sessionManager.resetDataStore()
+                            driveRepository.logoutCurrentDevice()
                             Glide.get(requireContext().applicationContext).clearMemory()
                             findNavController().navigateSafe(R.id.action_profileSelectionFragment_to_signInFragment)
                         } catch (e: CancellationException) {
@@ -228,6 +236,24 @@ class ProfileSelectionFragment : BaseFragment() {
                     return@repeatOnLifecycle
                 }
                 profileManager.profilesFlow.collect { profiles ->
+                    binding.tvProfilesTitle.setText(if (profiles.isEmpty())
+                        R.string.profile_create_first_title else R.string.profile_selection_title)
+                    if (profiles.isEmpty() && !initialCreateShown) {
+                        initialCreateShown = true
+                        binding.root.post {
+                            if (_binding != null && isAdded) {
+                                showAddProfileDialog(required = profileManager.isInitialProfileSetupPending())
+                            }
+                        }
+                    } else if (profileManager.isInitialProfileSetupPending() && !initialCreateShown) {
+                        initialCreateShown = true
+                        val setupProfile = profileManager.getInitialProfileSetupTarget()
+                        binding.root.post {
+                            if (_binding != null && isAdded && setupProfile != null) {
+                                showRequiredProfileSetup(setupProfile)
+                            }
+                        }
+                    }
                     val activeProfile = profileManager.getActiveProfile()
                     val motionPreference = try {
                         appSettings.fetchMotionPreference(activeProfile.id)
@@ -272,8 +298,17 @@ class ProfileSelectionFragment : BaseFragment() {
         }
     }
 
-    private fun showAddProfileDialog() {
-        ProfileEditorDialog(this, profileManager, posterResolver).show(null)
+    private fun showAddProfileDialog(required: Boolean = false) {
+        val firstProfile = profileManager.getProfiles().isEmpty()
+        ProfileEditorDialog(this, profileManager, posterResolver).show(null, required) { saved ->
+            if ((firstProfile || required) && isAdded && _binding != null) showProfileWelcomeScreen(saved)
+        }
+    }
+
+    private fun showRequiredProfileSetup(profile: UserProfile) {
+        ProfileEditorDialog(this, profileManager, posterResolver).show(profile, required = true) { saved ->
+            if (isAdded && _binding != null) showProfileWelcomeScreen(saved)
+        }
     }
 
     private fun showEditProfileDialog(profile: UserProfile) {
@@ -288,6 +323,7 @@ class ProfileSelectionFragment : BaseFragment() {
 
         // 1. Immediately activate profile in data layer
         profileManager.setActiveProfile(profile.id)
+        mediaPreloadManager.startPreload()
 
         // 2. Disable interactions on other views
         binding.btnLogOut.isEnabled = false
@@ -303,7 +339,7 @@ class ProfileSelectionFragment : BaseFragment() {
         // 4. Prepare circular avatar
         val avatarUrl = profile.avatarUrl?.takeIf { it.isNotBlank() }
         Glide.with(this)
-            .load(avatarUrl ?: R.drawable.bg_profile_fantasy)
+            .load(avatarUrl ?: profileManager.getAvatarDrawableRes(profile.avatarResName))
             .circleCrop()
             .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
             .into(binding.ivWelcomeAvatar)

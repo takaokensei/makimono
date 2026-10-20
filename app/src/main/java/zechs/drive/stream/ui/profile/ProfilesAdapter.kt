@@ -212,7 +212,8 @@ class ProfilesAdapter(
                     binding.tvProfileName.text = profile.name
 
                     val avatarSource: Any? = profile.avatarUrl
-                        ?: if (profile.avatarResName == "avatar_caua") R.drawable.avatar_caua
+                        ?: if (profile.avatarResName == "profile_placeholder") R.drawable.ic_person_24
+                        else if (profile.avatarResName == "avatar_caua") R.drawable.avatar_caua
                         else profileArtCatalog?.defaultAvatarForProfile(profile.id)?.url
                     com.bumptech.glide.Glide.with(binding.ivProfileAvatar)
                         .load(avatarSource).placeholder(R.drawable.avatar_caua).error(R.drawable.avatar_caua)

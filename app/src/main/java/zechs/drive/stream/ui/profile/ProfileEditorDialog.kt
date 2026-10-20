@@ -50,26 +50,22 @@ class ProfileEditorDialog(
     private val manager: ProfileManager,
     private val resolver: ProfileArtCatalog
 ) {
-    fun show(profile: UserProfile?) {
+    fun show(profile: UserProfile?, required: Boolean = false, onSaved: (UserProfile) -> Unit = {}) {
         val context = fragment.requireContext()
         val density = context.resources.displayMetrics.density
         fun dp(value: Int) = (value * density).toInt()
 
         val b = DialogProfileEditorBinding.inflate(LayoutInflater.from(context))
 
-        var currentName = profile?.name.orEmpty().ifBlank {
-            context.getString(R.string.profile_name_hint)
-        }
-        var selectedAvatarUrl = profile?.avatarUrl.orEmpty().ifBlank {
-            resolver.defaultAvatarForProfile(profile?.id ?: UUID.randomUUID().toString())?.url.orEmpty()
-        }
-        var selectedBackgroundUrl = profile?.backgroundUrl.orEmpty().ifBlank {
-            resolver.getPresetWallpapers().firstOrNull()?.url.orEmpty()
-        }
+        var currentName = profile?.name.orEmpty()
+        var selectedAvatarUrl = profile?.avatarUrl.orEmpty()
+        var selectedBackgroundUrl = profile?.backgroundUrl.orEmpty()
 
         val themedContext = ContextThemeWrapper(context, R.style.Theme_DriveStream_Obsidian)
         val dialog = Dialog(themedContext, R.style.Theme_DriveStream_Obsidian).apply {
             setContentView(b.root)
+            setCancelable(!required)
+            setCanceledOnTouchOutside(!required)
             window?.apply {
                 setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                 setBackgroundDrawable(ColorDrawable(Color.BLACK))
@@ -104,7 +100,7 @@ class ProfileEditorDialog(
             val currentAvatar = if (activeAvatarIsA) b.ivPreviewAvatarA else b.ivPreviewAvatarB
             val nextAvatar = if (activeAvatarIsA) b.ivPreviewAvatarB else b.ivPreviewAvatarA
             val avatarTarget: Any = selectedAvatarUrl.takeIf { it.isNotBlank() }
-                ?: if (profile?.avatarResName == "avatar_caua") R.drawable.avatar_caua else R.drawable.avatar_caua
+                ?: manager.getAvatarDrawableRes(profile?.avatarResName ?: "profile_placeholder")
 
             if (!smoothTransition) {
                 Glide.with(context)
@@ -500,7 +496,7 @@ class ProfileEditorDialog(
             b.btnDone.isEnabled = false
             fragment.viewLifecycleOwner.lifecycleScope.launch {
                 try {
-                    val targetProfile = (profile ?: UserProfile(UUID.randomUUID().toString(), name, "avatar_anime"))
+                    val targetProfile = (profile ?: UserProfile(UUID.randomUUID().toString(), name, "profile_placeholder"))
                         .copy(
                             name = name,
                             avatarUrl = selectedAvatarUrl.ifBlank { null },
@@ -509,7 +505,9 @@ class ProfileEditorDialog(
                             isKids = profile?.isKids ?: false
                         )
                     manager.saveProfile(targetProfile)
+                    val saved = manager.getProfiles().first { it.id == targetProfile.id }
                     dialog.dismiss()
+                    onSaved(saved)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (_: Exception) {
