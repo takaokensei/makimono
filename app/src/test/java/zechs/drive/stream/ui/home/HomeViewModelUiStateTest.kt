@@ -56,6 +56,7 @@ class HomeViewModelUiStateTest {
     private val watchQueueRepository = mockk<WatchQueueRepository>(relaxed = true)
     private val profileManager = mockk<ProfileManager>(relaxed = true)
     private val franchiseGroupingManager = mockk<zechs.drive.stream.data.repository.FranchiseGroupingManager>(relaxed = true)
+    private val mediaPreloadManager = mockk<zechs.drive.stream.data.repository.MediaPreloadManager>(relaxed = true)
 
     private val testDispatcher = UnconfinedTestDispatcher()
 
@@ -71,7 +72,8 @@ class HomeViewModelUiStateTest {
             catalogRepository = catalogRepository,
             watchQueueRepository = watchQueueRepository,
             profileManager = profileManager,
-            franchiseGroupingManager = franchiseGroupingManager
+            franchiseGroupingManager = franchiseGroupingManager,
+            mediaPreloadManager = mediaPreloadManager
         )
     }
 

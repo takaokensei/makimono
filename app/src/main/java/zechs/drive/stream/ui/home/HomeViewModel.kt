@@ -58,7 +58,8 @@ class HomeViewModel @Inject constructor(
     private val catalogRepository: CatalogRepository,
     private val watchQueueRepository: WatchQueueRepository,
     private val profileManager: ProfileManager,
-    private val franchiseGroupingManager: zechs.drive.stream.data.repository.FranchiseGroupingManager
+    private val franchiseGroupingManager: zechs.drive.stream.data.repository.FranchiseGroupingManager,
+    private val mediaPreloadManager: zechs.drive.stream.data.repository.MediaPreloadManager? = null
 ) : ViewModel() {
 
     companion object {
@@ -249,6 +250,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 folderMetadataRepository.cleanCorruptedMetadata(animePosterResolver)
+                mediaPreloadManager?.startPreload()
             } catch (e: Exception) {
                 zechs.drive.stream.utils.AppLog.w("HomeViewModel", "cleanCorruptedMetadata error: ${e.message}")
             }
@@ -538,18 +540,14 @@ class HomeViewModel @Inject constructor(
     ) = viewModelScope.launch {
         _token.postValue(Event(Resource.Loading()))
 
-        val client = sessionManager.get().fetchClient() ?: run {
-            _token.postValue(Event(Resource.Error("Client not found")))
-            return@launch
-        }
-        val tokenResponse = driveRepository.get().fetchAccessToken(client)
+        val tokenResponse = driveRepository.get().accessToken()
 
         when (tokenResponse) {
             is Resource.Success -> {
                 val fileToken = FileToken(
                     fileId = fileId,
                     fileName = fileName,
-                    accessToken = tokenResponse.data.accessToken,
+                    accessToken = tokenResponse.data,
                     thumbnailLink = thumbnailLink
                 )
                 _token.postValue(Event(Resource.Success(fileToken)))
@@ -565,7 +563,7 @@ class HomeViewModel @Inject constructor(
 
     fun logOut() = viewModelScope.launch {
         delay(250L)
-        sessionManager.get().resetDataStore()
+        driveRepository.get().logoutCurrentDevice()
         _hasLoggedOut.value = true
     }
 
@@ -608,6 +606,7 @@ class HomeViewModel @Inject constructor(
                             _animeLibrary.value = groupedCached
                             _filteredAnimes.value = groupedCached
                             resolveFeaturedSpotlight(groupedCached)
+                            mediaPreloadManager?.startPreload(cachedDriveFiles)
                         }
 
                         val query = "'$folderId' in parents and trashed=false"
@@ -730,7 +729,7 @@ class HomeViewModel @Inject constructor(
                                     val meta = allMeta[targetId] ?: allMeta[file.id]
                                     val isFolderType = file.isFolder || file.isShortcutFolder
                                     val isCorrupted = meta != null && meta.titleRomaji != null &&
-                                        AnimePosterResolver.calculateSimilarity(cleanName, meta.titleRomaji) < 0.35
+                                        AnimePosterResolver.calculateSimilarity(cleanName, meta.titleRomaji) < 0.58
                                     isFolderType && (meta == null || isCorrupted)
                                 }
                             }
@@ -799,6 +798,10 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun preloadLibraryMetadata(files: List<DriveFile>) {
+        if (mediaPreloadManager != null) {
+            mediaPreloadManager.startPreload(files)
+            return
+        }
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val targetFolders = files.filter { it.isFolder || it.isShortcutFolder }
@@ -954,19 +957,29 @@ class HomeViewModel @Inject constructor(
         featuredSpotlightJob = viewModelScope.launch(Dispatchers.IO) {
             try {
                 val dbMeta = cachedHero ?: folderMetadataRepository.getMetadata(targetId)
-                val isCorrupted = dbMeta != null && dbMeta.titleRomaji != null &&
-                    AnimePosterResolver.calculateSimilarity(cleanTitle, dbMeta.titleRomaji) < 0.35
+                val isCorrupted = dbMeta != null && (
+                    (dbMeta.titleRomaji != null && AnimePosterResolver.calculateSimilarity(cleanTitle, dbMeta.titleRomaji) < 0.58) ||
+                    (dbMeta.isMovie && (dbMeta.episodeCount ?: 0) > 1) ||
+                    (dbMeta.synopsis?.contains("Tsunayoshi Sawada", ignoreCase = true) == true && !cleanTitle.contains("reborn", ignoreCase = true)) ||
+                    (dbMeta.titleJapanese?.contains("REBORN", ignoreCase = true) == true && !cleanTitle.contains("reborn", ignoreCase = true)) ||
+                    (cleanTitle.equals("Monogatari Series", ignoreCase = true) && dbMeta.titleRomaji?.contains("Second Season", ignoreCase = true) == true)
+                )
                 val aniListMeta = if (dbMeta != null && !isCorrupted && !dbMeta.bannerUrl.isNullOrBlank() && !dbMeta.synopsis.isNullOrBlank()) {
                     null
                 } else {
-                    animePosterResolver.resolveMetadata(cleanTitle)
+                    animePosterResolver.resolveMetadata(chosenFolder.name)
                 }
                 val results = if (aniListMeta == null && dbMeta?.synopsis.isNullOrBlank() != false) {
                     tenraiAnimeService.searchAnime(cleanTitle)
                 } else {
                     emptyList()
                 }
-                val entry = results.firstOrNull()
+                val entry = results.firstOrNull { candidate ->
+                    AnimePosterResolver.calculateSimilarity(cleanTitle, candidate.title) >= 0.58 ||
+                        candidate.titleEnglish?.let { title ->
+                            AnimePosterResolver.calculateSimilarity(cleanTitle, title) >= 0.58
+                        } == true
+                }
                 if (requestId != featuredRequestId) return@launch
 
                 if (aniListMeta != null) {
