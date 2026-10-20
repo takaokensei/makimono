@@ -18,10 +18,8 @@ class MalSessionManager private constructor(
     private val prefs: SharedPreferences
 ) {
 
-    // MAL access/refresh tokens are long-lived OAuth credentials; store them in
-    // EncryptedSharedPreferences (AES256-GCM, key held in the Android Keystore)
-    // instead of plain SharedPreferences. Keystore failure is fatal for this
-    // store: silently persisting OAuth credentials in clear text is unsafe.
+    // MAL access/refresh tokens remain in AndroidX encrypted preferences until
+    // their storage migration is handled separately; never fall back to plaintext.
     @Inject
     constructor(@ApplicationContext context: Context) : this(createSecurePreferences(context))
 

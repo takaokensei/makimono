@@ -36,6 +36,7 @@ class AppSettings @Inject constructor(
         fun profileAutoFrameRateKey(profileId: String) = androidx.datastore.preferences.core.booleanPreferencesKey("profile_${profileId}_afr")
         fun profileMatchDynamicRangeKey(profileId: String) = androidx.datastore.preferences.core.booleanPreferencesKey("profile_${profileId}_hdr")
         fun profilePredictiveBufferingKey(profileId: String) = androidx.datastore.preferences.core.booleanPreferencesKey("profile_${profileId}_binge_buffer")
+        fun profileSmartDownloadsKey(profileId: String) = androidx.datastore.preferences.core.booleanPreferencesKey("profile_${profileId}_smart_downloads")
     }
 
     private val gson = Gson()
@@ -192,6 +193,25 @@ class AppSettings @Inject constructor(
             preferences[profileKey] ?: true
         } catch (e: Exception) {
             AppLog.w(TAG, "fetchPredictiveBuffering error, fallback to true", e)
+            true
+        }
+    }
+
+    suspend fun saveSmartDownloads(enabled: Boolean, profileId: String = currentProfileId()) {
+        val dataStoreKey = profileSmartDownloadsKey(profileId)
+        sessionStore.edit { settings ->
+            settings[dataStoreKey] = enabled
+        }
+        AppLog.d(TAG, "saveSmartDownloads [profile=$profileId]: $enabled")
+    }
+
+    suspend fun fetchSmartDownloads(profileId: String = currentProfileId()): Boolean {
+        return try {
+            val profileKey = profileSmartDownloadsKey(profileId)
+            val preferences = sessionStore.data.first()
+            preferences[profileKey] ?: true
+        } catch (e: Exception) {
+            AppLog.w(TAG, "fetchSmartDownloads error, fallback to true", e)
             true
         }
     }
