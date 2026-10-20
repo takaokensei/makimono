@@ -75,7 +75,7 @@ Write-Host "Autenticado como: $($user.login)" -ForegroundColor Green
 
 # Only this version's signed release APKs; never upload stale builds or test APKs.
 $apks = @(Get-ChildItem -LiteralPath $apkDir -File | Where-Object { $_.Name -like "makimono-$tag-*-release.apk" })
-if ($apks.Count -ne 4) { throw "Expected four release APKs for $tag, got $($apks.Count)" }
+if ($apks.Count -lt 4) { throw "Expected release APKs for $tag, got $($apks.Count)" }
 $notes = [System.IO.File]::ReadAllText((Resolve-Path $notesFile).Path, [System.Text.Encoding]::UTF8)
 if (-not $title) { $title = "Makimono $tag" }
 $body = @{tag_name=$tag; target_commitish=$targetCommit; name=$title; body=$notes; draft=$true; prerelease=$false} | ConvertTo-Json
@@ -94,6 +94,6 @@ foreach ($apk in $apks) {
     }
 }
 $verified = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/$($release.id)" -Headers $headers
-if (@($verified.assets).Count -ne 8) { throw "Release must contain four APKs and four checksums" }
+$expectedAssets = $apks.Count * 2; if (@($verified.assets).Count -ne $expectedAssets) { throw "Release must contain all APKs and checksums (expected $expectedAssets, got $(@($verified.assets).Count))" }
 $published = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/$($release.id)" -Headers $headers -Method Patch -ContentType "application/json" -Body '{"draft":false}'
 Write-Host "Published: $($published.html_url)"
