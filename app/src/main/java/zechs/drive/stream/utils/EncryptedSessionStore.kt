@@ -1,72 +1,56 @@
-﻿package zechs.drive.stream.utils
+package zechs.drive.stream.utils
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * SEC-02: Android Keystore-backed encrypted storage for Google Drive OAuth credentials.
- * Protects access tokens, refresh tokens, and client secrets with hardware/AES-256 encryption.
- * Fails closed if Keystore-backed storage is unavailable. JVM tests must inject an
- * explicit in-memory preference implementation through the internal constructor.
- */
+/** SecretStore backed by an app-private AES-GCM payload whose key is held in Android Keystore. */
 @Singleton
 class EncryptedSessionStore private constructor(
-    private val prefs: SharedPreferences
+    private val prefs: SharedPreferences,
+    private val testOnly: Boolean,
+    @Suppress("UNUSED_PARAMETER") marker: Int
 ) : SecretStore {
 
     @Inject
-    constructor(@ApplicationContext context: Context) : this(createSecurePreferences(context))
+    constructor(@ApplicationContext context: Context) : this(
+        KeystoreEncryptedPreferences(context, PREFS_NAME),
+        false,
+        0
+    )
 
-    @Suppress("UNUSED_PARAMETER")
-    internal constructor(testPreferences: SharedPreferences, testOnly: Boolean = true) : this(testPreferences)
-
-    companion object {
-        private const val TAG = "EncryptedSessionStore"
-        private const val PREFS_NAME = "encrypted_drive_session"
-
-        private fun createSecurePreferences(context: Context): SharedPreferences {
-            return try {
-                val masterKey = MasterKey.Builder(context)
-                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                    .build()
-
-                EncryptedSharedPreferences.create(
-                    context,
-                    PREFS_NAME,
-                    masterKey,
-                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-                )
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to create encrypted Drive session store", e)
-                throw IllegalStateException(
-                    "Secure credential storage is unavailable; refusing to store Drive credentials in plain text",
-                    e
-                )
-            }
-        }
-    }
+    /** Test-only constructor. Production callers must use the Keystore-backed constructor. */
+    internal constructor(testPreferences: SharedPreferences, testOnly: Boolean = true) : this(
+        testPreferences,
+        testOnly,
+        0
+    )
 
     override suspend fun put(key: String, value: String) = withContext(Dispatchers.IO) {
-        prefs.edit().putString(key, value).apply()
+        check(testOnly || prefs is KeystoreEncryptedPreferences) { "Production session storage must use Android Keystore" }
+        check(prefs.edit().putString(key, value).commit()) { "Could not persist encrypted session data" }
     }
 
     override suspend fun get(key: String): String? = withContext(Dispatchers.IO) {
+        check(testOnly || prefs is KeystoreEncryptedPreferences) { "Production session storage must use Android Keystore" }
         prefs.getString(key, null)
     }
 
     override suspend fun remove(key: String) = withContext(Dispatchers.IO) {
-        prefs.edit().remove(key).apply()
+        check(testOnly || prefs is KeystoreEncryptedPreferences) { "Production session storage must use Android Keystore" }
+        check(prefs.edit().remove(key).commit()) { "Could not update encrypted session data" }
     }
 
     override suspend fun clear() = withContext(Dispatchers.IO) {
-        prefs.edit().clear().apply()
+        check(testOnly || prefs is KeystoreEncryptedPreferences) { "Production session storage must use Android Keystore" }
+        check(prefs.edit().clear().commit()) { "Could not clear encrypted session data" }
+    }
+
+    companion object {
+        private const val PREFS_NAME = "makimono_drive_session_v3"
     }
 }
