@@ -5,163 +5,116 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.first
-import zechs.drive.stream.data.model.DriveClient
-import zechs.drive.stream.data.model.TokenResponse
 import javax.inject.Inject
 import javax.inject.Singleton
+
+data class PendingSessionAction(val action: String, val token: String)
 
 @Singleton
 class SessionManager @Inject constructor(
     @ApplicationContext private val appContext: Context,
-    private val gson: Gson,
+    @Suppress("UNUSED_PARAMETER") gson: Gson,
     private val secretStore: EncryptedSessionStore
 ) {
+    constructor(appContext: Context, gson: Gson) : this(appContext, gson, EncryptedSessionStore(appContext))
 
-    // Secondary constructor for non-DI convenience
-    constructor(
-        appContext: Context,
-        gson: Gson
-    ) : this(appContext, gson, EncryptedSessionStore(appContext))
-
-    // Test constructor allowing mock/in-memory SecretStore
-    constructor(
-        appContext: Context,
-        gson: Gson,
-        customSecretStore: SecretStore
-    ) : this(
+    constructor(appContext: Context, gson: Gson, customSecretStore: SecretStore) : this(
         appContext,
         gson,
         customSecretStore as? EncryptedSessionStore ?: EncryptedSessionStore(appContext)
     ) {
-        this.fallbackSecretStore = customSecretStore
+        fallbackSecretStore = customSecretStore
     }
 
     private var fallbackSecretStore: SecretStore? = null
     private val activeSecretStore: SecretStore get() = fallbackSecretStore ?: secretStore
-
     private val sessionStore = appContext.sessionDataStore
+    private val legacyEncryptedDrivePreferences = appContext.getSharedPreferences(
+        LEGACY_ENCRYPTED_DRIVE_PREFERENCES,
+        Context.MODE_PRIVATE
+    )
 
-    suspend fun saveClient(client: DriveClient) {
-        val serialized = gson.toJson(client)
-        activeSecretStore.put(DRIVE_CLIENT, serialized)
-        // Clean legacy plaintext
-        val dataStoreKey = stringPreferencesKey(DRIVE_CLIENT)
-        sessionStore.edit { it.remove(dataStoreKey) }
-        AppLog.d(TAG, "saveClient: id=${client.clientId.take(6)}..., scopes=${client.scopes.joinToString()}")
+    suspend fun savePairingSessionToken(token: String) {
+        require(token.isNotBlank()) { "Pairing session token must not be blank" }
+        migrateAwayFromLegacyGoogleCredentials()
+        activeSecretStore.put(PAIRING_SESSION_TOKEN, token)
     }
 
-    suspend fun fetchClient(): DriveClient? {
-        val type = object : TypeToken<DriveClient?>() {}.type
-        // 1. Try secure encrypted store first
-        val encryptedValue = activeSecretStore.get(DRIVE_CLIENT)
-        if (!encryptedValue.isNullOrEmpty()) {
-            val client: DriveClient? = gson.fromJson(encryptedValue, type)
-            if (client != null) {
-                AppLog.d(TAG, "fetchClient: found in encrypted store")
-                return client
-            }
-        }
-
-        // 2. Fallback to legacy DataStore (one-time migration)
-        val dataStoreKey = stringPreferencesKey(DRIVE_CLIENT)
-        val preferences = sessionStore.data.first()
-        val legacyValue = preferences[dataStoreKey]
-        val client: DriveClient? = legacyValue?.let {
-            gson.fromJson(legacyValue, type)
-        }
-
-        if (client != null) {
-            AppLog.d(TAG, "fetchClient: migrating legacy DataStore client to encrypted store")
-            saveClient(client)
-            return client
-        }
-
-        return zechs.drive.stream.utils.util.Constants.DEFAULT_CLIENT.takeIf { it.clientId.isNotEmpty() }
+    suspend fun fetchPairingSessionToken(): String? {
+        migrateAwayFromLegacyGoogleCredentials()
+        return activeSecretStore.get(PAIRING_SESSION_TOKEN)?.takeIf(String::isNotBlank)
     }
 
-    suspend fun saveAccessToken(data: TokenResponse) {
-        val currentTimeInSeconds = System.currentTimeMillis() / 1000
-        val newData = data.copy(
-            expiresIn = currentTimeInSeconds + data.expiresIn
-        )
-        val serialized = gson.toJson(newData)
-        activeSecretStore.put(ACCESS_TOKEN, serialized)
-        // Clean legacy plaintext
-        val dataStoreKey = stringPreferencesKey(ACCESS_TOKEN)
-        sessionStore.edit { it.remove(dataStoreKey) }
-        AppLog.d(TAG, "saveAccessToken: expiresIn=${newData.expiresIn}")
-    }
-
-    suspend fun fetchAccessToken(): TokenResponse? {
-        val type = object : TypeToken<TokenResponse?>() {}.type
-        // 1. Try secure encrypted store
-        val encryptedValue = activeSecretStore.get(ACCESS_TOKEN)
-        if (!encryptedValue.isNullOrEmpty()) {
-            val token: TokenResponse? = gson.fromJson(encryptedValue, type)
-            if (token != null) return token
-        }
-
-        // 2. Fallback & migrate legacy DataStore
-        val dataStoreKey = stringPreferencesKey(ACCESS_TOKEN)
-        val preferences = sessionStore.data.first()
-        val legacyValue = preferences[dataStoreKey]
-        val token: TokenResponse? = legacyValue?.let {
-            gson.fromJson(legacyValue, type)
-        }
-
-        if (token != null) {
-            AppLog.d(TAG, "fetchAccessToken: migrating legacy DataStore access token to encrypted store")
-            activeSecretStore.put(ACCESS_TOKEN, legacyValue)
-            sessionStore.edit { it.remove(dataStoreKey) }
-            return token
-        }
-
-        return null
-    }
-
-    suspend fun saveRefreshToken(refreshToken: String) {
-        activeSecretStore.put(REFRESH_TOKEN, refreshToken)
-        // Clean legacy plaintext
-        val dataStoreKey = stringPreferencesKey(REFRESH_TOKEN)
-        sessionStore.edit { it.remove(dataStoreKey) }
-        AppLog.d(TAG, "saveRefreshToken: stored securely")
-    }
-
-    suspend fun fetchRefreshToken(): String? {
-        // 1. Try secure encrypted store
-        val encryptedValue = activeSecretStore.get(REFRESH_TOKEN)
-        if (!encryptedValue.isNullOrEmpty()) {
-            return encryptedValue
-        }
-
-        // 2. Fallback & migrate legacy DataStore
-        val dataStoreKey = stringPreferencesKey(REFRESH_TOKEN)
-        val preferences = sessionStore.data.first()
-        val legacyValue = preferences[dataStoreKey]
-        if (!legacyValue.isNullOrEmpty()) {
-            AppLog.d(TAG, "fetchRefreshToken: migrating legacy DataStore refresh token to encrypted store")
-            saveRefreshToken(legacyValue)
-            return legacyValue
-        }
-
-        return zechs.drive.stream.utils.util.Constants.DEFAULT_REFRESH_TOKEN.ifEmpty { null }
-    }
+    suspend fun hasPairingSession(): Boolean = !fetchPairingSessionToken().isNullOrBlank()
 
     suspend fun resetDataStore() {
-        activeSecretStore.clear()
-        sessionStore.edit { it.clear() }
+        migrateAwayFromLegacyGoogleCredentials()
+        activeSecretStore.remove(PAIRING_SESSION_TOKEN)
+        sessionStore.edit { preferences ->
+            preferences.remove(stringPreferencesKey(LEGACY_DRIVE_CLIENT))
+            preferences.remove(stringPreferencesKey(LEGACY_ACCESS_TOKEN))
+            preferences.remove(stringPreferencesKey(LEGACY_REFRESH_TOKEN))
+        }
+    }
+
+    suspend fun addPendingSessionAction(action: String, token: String) {
+        require(action == ACTION_LOGOUT || action == ACTION_DISCONNECT_ALL)
+        if (token.isBlank()) return
+        val actions = readPendingActions().toMutableList()
+        val pending = PendingSessionAction(action, token)
+        if (pending !in actions) actions += pending
+        activeSecretStore.put(PENDING_SESSION_ACTIONS, actions.joinToString("\n") { "${it.action}:${it.token}" })
+    }
+
+    suspend fun getPendingSessionActions(): List<PendingSessionAction> = readPendingActions()
+
+    suspend fun removePendingSessionAction(action: PendingSessionAction) {
+        val remaining = readPendingActions().filterNot { it == action }
+        if (remaining.isEmpty()) activeSecretStore.remove(PENDING_SESSION_ACTIONS)
+        else activeSecretStore.put(PENDING_SESSION_ACTIONS, remaining.joinToString("\n") { "${it.action}:${it.token}" })
+    }
+
+    private suspend fun readPendingActions(): List<PendingSessionAction> {
+        val serialized = activeSecretStore.get(PENDING_SESSION_ACTIONS).orEmpty()
+        return serialized.lineSequence().mapNotNull { line ->
+            val separator = line.indexOf(':')
+            if (separator <= 0 || separator == line.lastIndex) return@mapNotNull null
+            val action = line.substring(0, separator)
+            if (action != ACTION_LOGOUT && action != ACTION_DISCONNECT_ALL) return@mapNotNull null
+            PendingSessionAction(action, line.substring(separator + 1))
+        }.toList()
+    }
+
+    private suspend fun migrateAwayFromLegacyGoogleCredentials() {
+        if (activeSecretStore.get(MIGRATION_MARKER) == MIGRATION_COMPLETE) return
+        activeSecretStore.remove(LEGACY_DRIVE_CLIENT)
+        activeSecretStore.remove(LEGACY_ACCESS_TOKEN)
+        activeSecretStore.remove(LEGACY_REFRESH_TOKEN)
+        sessionStore.edit { preferences ->
+            preferences.remove(stringPreferencesKey(LEGACY_DRIVE_CLIENT))
+            preferences.remove(stringPreferencesKey(LEGACY_ACCESS_TOKEN))
+            preferences.remove(stringPreferencesKey(LEGACY_REFRESH_TOKEN))
+        }
+        check(legacyEncryptedDrivePreferences.edit().clear().commit()) {
+            "Could not remove the retired encrypted Google Drive credentials"
+        }
+        activeSecretStore.put(MIGRATION_MARKER, MIGRATION_COMPLETE)
+        AppLog.i(TAG, "Removed legacy Google OAuth credentials; TV sessions now use the pairing service")
     }
 
     companion object {
-        private val Context.sessionDataStore by preferencesDataStore(
-            "DRIVE_SESSION_V2"
-        )
+        private val Context.sessionDataStore by preferencesDataStore("DRIVE_SESSION_V2")
         const val TAG = "SessionManager"
-        const val DRIVE_CLIENT = "DRIVE_CLIENT"
-        const val ACCESS_TOKEN = "ACCESS_TOKEN"
-        const val REFRESH_TOKEN = "REFRESH_TOKEN"
+        const val PAIRING_SESSION_TOKEN = "PAIRING_SESSION_TOKEN"
+        const val PENDING_SESSION_ACTIONS = "PENDING_SESSION_ACTIONS"
+        const val LEGACY_DRIVE_CLIENT = "DRIVE_CLIENT"
+        const val LEGACY_ACCESS_TOKEN = "ACCESS_TOKEN"
+        const val LEGACY_REFRESH_TOKEN = "REFRESH_TOKEN"
+        private const val LEGACY_ENCRYPTED_DRIVE_PREFERENCES = "encrypted_drive_session"
+        private const val MIGRATION_MARKER = "PAIRING_SESSION_MIGRATION_V1"
+        private const val MIGRATION_COMPLETE = "complete"
+        const val ACTION_LOGOUT = "logout"
+        const val ACTION_DISCONNECT_ALL = "disconnect_all"
     }
 }
