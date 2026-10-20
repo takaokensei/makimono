@@ -177,7 +177,7 @@ class TvFocusChecklistTest {
         val profileRows = listOf("settingSelectProfile", "settingLibraryRoot")
         val appearanceRows = listOf("settingSelectTheme", "settingReduceMotion")
         val playbackRows = listOf("settingDefaultPlayer", "settingSubtitleSize", "settingAutoSkipToggle")
-        val dataRows = listOf("settingClearCache", "settingCheckForUpdate", "settingExportBackup", "settingLogOut")
+        val dataRows = listOf("settingClearCache", "settingCheckForUpdate", "settingExportBackup", "settingLogOut", "settingDisconnectAll")
 
         val categories = listOf(profileRows, appearanceRows, playbackRows, dataRows)
 

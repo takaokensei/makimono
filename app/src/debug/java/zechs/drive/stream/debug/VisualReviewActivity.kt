@@ -94,7 +94,9 @@ class VisualReviewActivity : AppCompatActivity(), zechs.drive.stream.ui.player.P
     private fun files(count: Int, video: Boolean) = (1..count).map {
         FilesDataModel.File(DriveFile("fixture-$it", if(video) "Frieren - E${it.toString().padStart(2,'0')} - O fim da viagem.mkv" else "Sousou no Frieren",
             if(video) 1400000000L else null, if(video) "video/x-matroska" else "application/vnd.google-apps.folder",
-            null, if(video) backdrop else poster, ShortcutDetails(), Starred.UNSTARRED, if(video) null else poster))
+            null, if(video) backdrop else poster, ShortcutDetails(), Starred.UNSTARRED, if(video) null else poster,
+            modifiedTime = null, description = null, md5Checksum = null, durationMillis = null,
+            isMovie = false, source = MediaSource.DRIVE, localUri = null))
     }
     private fun homeFolders(count: Int, starred: Boolean = false) = listOf(
         "Sousou no Frieren", "Jujutsu Kaisen", "Chainsaw Man", "Bakemonogatari",
@@ -169,6 +171,7 @@ class VisualReviewActivity : AppCompatActivity(), zechs.drive.stream.ui.player.P
                     "theme" -> showThemeDialog()
                     "glass_menu" -> showGlassMenu()
                     "profile_editor" -> showProfileEditorFixture()
+                    "history" -> showWatchHistoryFixture()
                 }
             }, 800)
         }
@@ -183,6 +186,33 @@ class VisualReviewActivity : AppCompatActivity(), zechs.drive.stream.ui.player.P
         setIntent(intent)
         recreate()
     }
+
+    private fun showWatchHistoryFixture() {
+        val syntheticHistory = listOf(
+            "Sousou no Frieren S01E01.mkv",
+            "Jujutsu Kaisen S02E03.mkv",
+            "Mushoku Tensei S02E01.mkv",
+            "Bakemonogatari E01.mkv",
+            "Frieren S01E02.mkv",
+            "Jujutsu Kaisen S02E04.mkv",
+            "Mushoku Tensei S02E02.mkv",
+            "Sousou no Frieren S01E03.mkv",
+            "Kizumonogatari Movie.mkv",
+            "Bakemonogatari E02.mkv"
+        ).mapIndexed { index, title ->
+            WatchList(
+                name = title,
+                videoId = "visual-history-$index",
+                watchedDuration = if (index % 3 == 0) 1_440_000L else 600_000L + index * 60_000L,
+                totalDuration = if (index == 8) 5_400_000L else 1_440_000L,
+                thumbnailLink = if (index % 2 == 0) backdrop else jujutsuBackdrop,
+                profileId = "visual-review",
+                id = 100 - index
+            )
+        }
+        zechs.drive.stream.ui.home.WatchHistoryDialog(this, syntheticHistory) { }.show()
+    }
+
     private fun signInScreen() {
         val container = FrameLayout(this).apply {
             id = View.generateViewId()
@@ -615,10 +645,15 @@ class VisualReviewActivity : AppCompatActivity(), zechs.drive.stream.ui.player.P
             this,
             findViewById(R.id.filesNavRail),
             listOf(
+                findViewById(R.id.userProfilePill),
+                findViewById(R.id.filesBusca),
                 findViewById(R.id.filesHome),
-                findViewById(R.id.filesCatalog),
-                findViewById(R.id.filesFolders),
                 findViewById(R.id.filesFavorites),
+                findViewById(R.id.filesHistory),
+                findViewById(R.id.filesDownloads),
+                findViewById(R.id.filesCatalog),
+                findViewById(R.id.filesFilmes),
+                findViewById(R.id.filesFolders),
                 findViewById(R.id.filesSettings)
             ),
             findViewById(R.id.searchContainer),
@@ -724,10 +759,15 @@ class VisualReviewActivity : AppCompatActivity(), zechs.drive.stream.ui.player.P
             this,
             findViewById(R.id.filesNavRail),
             listOf(
+                findViewById(R.id.userProfilePill),
+                findViewById(R.id.filesBusca),
                 findViewById(R.id.filesHome),
-                findViewById(R.id.filesCatalog),
-                findViewById(R.id.filesFolders),
                 findViewById(R.id.filesFavorites),
+                findViewById(R.id.filesHistory),
+                findViewById(R.id.filesDownloads),
+                findViewById(R.id.filesCatalog),
+                findViewById(R.id.filesFilmes),
+                findViewById(R.id.filesFolders),
                 findViewById(R.id.filesSettings)
             ),
             findViewById(R.id.searchContainer),
@@ -753,10 +793,15 @@ class VisualReviewActivity : AppCompatActivity(), zechs.drive.stream.ui.player.P
             this,
             findViewById(R.id.filesNavRail),
             listOf(
+                findViewById(R.id.userProfilePill),
+                findViewById(R.id.filesBusca),
                 findViewById(R.id.filesHome),
-                findViewById(R.id.filesCatalog),
-                findViewById(R.id.filesFolders),
                 findViewById(R.id.filesFavorites),
+                findViewById(R.id.filesHistory),
+                findViewById(R.id.filesDownloads),
+                findViewById(R.id.filesCatalog),
+                findViewById(R.id.filesFilmes),
+                findViewById(R.id.filesFolders),
                 findViewById(R.id.filesSettings)
             ),
             findViewById(R.id.searchContainer),
@@ -779,10 +824,15 @@ class VisualReviewActivity : AppCompatActivity(), zechs.drive.stream.ui.player.P
             this,
             findViewById(R.id.filesNavRail),
             listOf(
+                findViewById(R.id.userProfilePill),
+                findViewById(R.id.filesBusca),
                 findViewById(R.id.filesHome),
-                findViewById(R.id.filesCatalog),
-                findViewById(R.id.filesFolders),
                 findViewById(R.id.filesFavorites),
+                findViewById(R.id.filesHistory),
+                findViewById(R.id.filesDownloads),
+                findViewById(R.id.filesCatalog),
+                findViewById(R.id.filesFilmes),
+                findViewById(R.id.filesFolders),
                 findViewById(R.id.filesSettings)
             ),
             findViewById(R.id.searchContainer),
