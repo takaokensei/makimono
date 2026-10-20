@@ -25,7 +25,11 @@ data class File(
     @Json(name = "modifiedTime")
     val modifiedTime: String? = null,
     @Json(name = "description")
-    val description: String? = null
+    val description: String? = null,
+    @Json(name = "md5Checksum")
+    val md5Checksum: String? = null,
+    @Json(name = "videoMediaMetadata")
+    val videoMediaMetadata: VideoMediaMetadata? = null
 ) {
     fun toDriveFile() = DriveFile(
         id = id,
@@ -37,9 +41,16 @@ data class File(
         shortcutDetails = shortcutDetails,
         starred = starred,
         modifiedTime = modifiedTime,
-        description = description
+        description = description,
+        md5Checksum = md5Checksum,
+        durationMillis = videoMediaMetadata?.durationMillis
     )
 }
+
+@Keep
+data class VideoMediaMetadata(
+    @Json(name = "durationMillis") val durationMillis: Long? = null
+)
 
 @Keep
 data class ShortcutDetails(

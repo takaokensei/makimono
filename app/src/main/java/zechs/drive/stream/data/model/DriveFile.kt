@@ -19,6 +19,9 @@ data class DriveFile(
     val modifiedTime: String? = null,
     /** Optional user-authored Drive description; never inferred from a filename. */
     val description: String? = null,
+    /** Drive checksum and duration are absent for shortcuts and synthetic entries. */
+    val md5Checksum: String? = null,
+    val durationMillis: Long? = null,
     val isMovie: Boolean = false,
     /** Where the bytes live; defaults to DRIVE so legacy call sites are unaffected. */
     val source: MediaSource = MediaSource.DRIVE,
