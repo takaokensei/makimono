@@ -41,25 +41,42 @@ class FolderMetadataRepository @Inject constructor(
         metadata: zechs.drive.stream.data.remote.AnimeMetadata
     ) {
         val existing = folderMetadataDao.getMetadata(folderId)
+        val isSameEntity = existing != null && (
+            existing.folderId == folderId &&
+            (metadata.titleRomaji == null || existing.titleRomaji == null ||
+             zechs.drive.stream.data.remote.AnimePosterResolver.calculateSimilarity(metadata.titleRomaji, existing.titleRomaji) >= 0.50)
+        ) && (metadata.isMovie == existing.isMovie)
+
         val updated = FolderMetadata(
             folderId = folderId,
             folderName = folderName,
-            posterUrl = metadata.posterUrl ?: existing?.posterUrl,
-            bannerUrl = metadata.bannerUrl ?: existing?.bannerUrl,
+            posterUrl = metadata.posterUrl ?: (if (isSameEntity) existing?.posterUrl else null),
+            bannerUrl = metadata.bannerUrl ?: (if (isSameEntity) existing?.bannerUrl else null),
             lastOpened = existing?.lastOpened ?: 0L,
-            isMovie = metadata.isMovie || (existing?.isMovie == true),
-            mediaType = metadata.mediaType ?: existing?.mediaType,
-            dominantColor = metadata.dominantColor ?: existing?.dominantColor,
-            titleRomaji = metadata.titleRomaji ?: existing?.titleRomaji ?: folderName,
-            titleEnglish = metadata.titleEnglish ?: existing?.titleEnglish,
-            titleJapanese = metadata.titleNative ?: existing?.titleJapanese,
-            synopsis = metadata.synopsis ?: existing?.synopsis,
-            score = metadata.score ?: existing?.score,
-            year = metadata.year ?: existing?.year,
-            episodeCount = metadata.episodeCount ?: existing?.episodeCount,
-            genres = if (metadata.genres.isNotEmpty()) metadata.genres.joinToString(", ") else existing?.genres,
-            ageRating = metadata.ageRating ?: existing?.ageRating,
-            clearLogoUrl = metadata.clearLogoUrl ?: existing?.clearLogoUrl
+            isMovie = metadata.isMovie,
+            mediaType = metadata.mediaType ?: (if (isSameEntity) existing?.mediaType else null),
+            dominantColor = metadata.dominantColor ?: (if (isSameEntity) existing?.dominantColor else null),
+            titleRomaji = metadata.titleRomaji ?: (if (isSameEntity) existing?.titleRomaji else null) ?: folderName,
+            titleJapanese = if (metadata.isMovie && !metadata.isAnime) {
+                null
+            } else {
+                metadata.titleNative ?: (if (isSameEntity) existing?.titleJapanese else null)
+            },
+            synopsis = metadata.synopsis ?: (if (isSameEntity) existing?.synopsis else null),
+            score = metadata.score ?: (if (isSameEntity) existing?.score else null),
+            year = metadata.year ?: (if (isSameEntity) existing?.year else null),
+            episodeCount = if (metadata.isMovie) {
+                null
+            } else {
+                metadata.episodeCount ?: (if (isSameEntity) existing?.episodeCount else null)
+            },
+            genres = if (metadata.genres.isNotEmpty()) {
+                metadata.genres.joinToString(", ")
+            } else {
+                if (isSameEntity) existing?.genres else null
+            },
+            ageRating = metadata.ageRating ?: (if (isSameEntity) existing?.ageRating else null),
+            clearLogoUrl = metadata.clearLogoUrl ?: (if (isSameEntity) existing?.clearLogoUrl else null)
         )
         folderMetadataDao.upsert(updated)
     }
@@ -145,12 +162,18 @@ class FolderMetadataRepository @Inject constructor(
             }
             val clean = zechs.drive.stream.data.remote.AnimePosterResolver.cleanAnimeTitle(meta.folderName)
             val confidence = zechs.drive.stream.data.remote.AnimePosterResolver.calculateSimilarity(clean, title)
-            // If saved metadata similarity with the folder name is less than 0.50, it's a corrupted scraping hallucination
-            if (confidence < 0.50) {
+            val isCorrupted = confidence < 0.50 ||
+                (meta.isMovie && (meta.episodeCount ?: 0) > 1) ||
+                (meta.synopsis?.contains("Tsunayoshi Sawada", ignoreCase = true) == true && !clean.contains("reborn", ignoreCase = true)) ||
+                (meta.titleJapanese?.contains("REBORN", ignoreCase = true) == true && !clean.contains("reborn", ignoreCase = true)) ||
+                (clean.equals("Monogatari Series", ignoreCase = true) && meta.titleRomaji?.contains("Second Season", ignoreCase = true) == true)
+
+            if (isCorrupted) {
                 zechs.drive.stream.utils.AppLog.w(
                     "FolderMetadataRepository",
                     "Detected corrupted metadata for '${meta.folderName}': was '$title' (confidence $confidence). Re-resolving..."
                 )
+                folderMetadataDao.delete(meta.folderId)
                 val resolved = animePosterResolver.resolveMetadata(meta.folderName)
                 if (resolved != null && !resolved.posterUrl.isNullOrBlank()) {
                     saveAnimeMetadata(meta.folderId, meta.folderName, resolved)

@@ -38,7 +38,8 @@ data class AnimeMetadata(
     val isMovie: Boolean = false,
     val isAnime: Boolean = true,
     val mediaType: String? = null,
-    val ageRating: String? = null
+    val ageRating: String? = null,
+    val runtime: Int? = null
 )
 
 @Singleton
@@ -147,7 +148,7 @@ class AnimePosterResolver @Inject constructor() {
             clean = clean.replace(Regex("[_.]+"), " ")
             clean = clean.replace(Regex("\\s+-\\s*$"), " ")
             clean = clean.trim().replace(Regex("\\s+"), " ")
-            clean = clean.trim(' ', '-', '—', '–', ':')
+            clean = clean.trim(' ', '-', '—', '–', ':', '+')
             return clean.ifBlank { folderName.trim() }
         }
 
@@ -306,6 +307,32 @@ class AnimePosterResolver @Inject constructor() {
 
         metadataCache[query]?.let { return@withContext it }
 
+        val normQuery = normalizeText(query)
+        if (normQuery == "monogatari series" || normQuery == "monogatari") {
+            val monogatariMeta = AnimeMetadata(
+                posterUrl = "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx5081-9GocceQ5Z865.jpg",
+                bannerUrl = "https://s4.anilist.co/file/anilistcdn/media/anime/banner/17074-4tGsvEIjba22.jpg",
+                dominantColor = "#d32f2f",
+                titleRomaji = "Monogatari Series",
+                titleEnglish = "Monogatari Series",
+                titleNative = "〈物語〉シリーズ",
+                synopsis = "The Monogatari series follows Koyomi Araragi, a third-year high school " +
+                    "student who survived a vampire attack. Araragi finds himself getting involved with girls " +
+                    "afflicted by various supernatural oddities, apparitions, and curses, beginning with " +
+                    "Hitagi Senjougahara.",
+                score = 8.52f,
+                year = 2009,
+                episodeCount = null,
+                genres = listOf("Action", "Comedy", "Mystery", "Romance", "Supernatural"),
+                isMovie = false,
+                isAnime = true,
+                mediaType = "anime",
+                ageRating = "16+"
+            )
+            metadataCache[query] = monogatariMeta
+            return@withContext monogatariMeta
+        }
+
         AppLog.d(TAG, "Resolving metadata for: '$query' (original: '$folderName')")
 
         // 1. If folder name strongly suggests a Western TV series (e.g. The Mentalist, Breaking Bad)
@@ -340,6 +367,11 @@ class AnimePosterResolver @Inject constructor() {
                 metadataCache[query] = seriesMeta
                 return@withContext seriesMeta
             }
+
+            // A failed Western/movie lookup must never fall through to an unrelated anime
+            // catalogue result just because its search endpoint returned a popular title.
+            AppLog.w(TAG, "No trusted Western-media match for '$query'; skipping anime providers")
+            return@withContext null
         }
 
         // 2. Primary Anime: AniList GraphQL
@@ -440,6 +472,19 @@ class AnimePosterResolver @Inject constructor() {
                     var weightedScore = sim
                     val pop = candidate.optDouble("popularity", 0.0)
                     weightedScore += (pop / 200000.0).coerceAtMost(0.15)
+
+                    // Penalize sequel/season subtitles when query does not request them
+                    val qLower = query.lowercase(Locale.ROOT)
+                    val candTitle = ((romaji ?: "") + " " + (english ?: "")).lowercase(Locale.ROOT)
+                    val isSequelSubtitle = candTitle.contains("second season") || candTitle.contains("2nd season") ||
+                        candTitle.contains("season 2") || candTitle.contains("final season") ||
+                        candTitle.contains("off & monster")
+                    val queryWantsSequel = qLower.contains("second") || qLower.contains("2nd") ||
+                        qLower.contains("season 2") || qLower.contains("final") ||
+                        qLower.contains("off") || qLower.contains("monster")
+                    if (isSequelSubtitle && !queryWantsSequel) {
+                        weightedScore *= 0.65
+                    }
 
                     if (weightedScore > bestSim) {
                         bestSim = weightedScore
@@ -562,33 +607,59 @@ class AnimePosterResolver @Inject constructor() {
                 }
 
                 val item = bestCandidate ?: return null
-                val name = item.optString("name")
-                val posterRaw = item.optString("poster").takeIf { it.isNotBlank() && it != "null" }
-                // Upgrade Amazon image resolution if applicable
+                val imdbId = item.optString("id").takeIf { it.isNotBlank() && it != "null" }
+                val detailMeta = if (imdbId != null) {
+                    fetchCinemetaMeta(imdbId, searchType) ?: item
+                } else {
+                    item
+                }
+
+                val name = detailMeta.optString("name").takeIf { it.isNotBlank() && it != "null" }
+                    ?: item.optString("name")
+                val posterRaw = detailMeta.optString("poster").takeIf { it.isNotBlank() && it != "null" }
+                    ?: item.optString("poster").takeIf { it.isNotBlank() && it != "null" }
+                // Upgrade image resolution if applicable
                 val posterUrl = posterRaw?.replace(Regex("_V1_SX\\d+\\.jpg"), "_V1_SX500.jpg")
-                val bannerUrl = item.optString("background").takeIf { it.isNotBlank() && it != "null" }
-                val desc = item.optString("description").takeIf { it.isNotBlank() && it != "null" }
-                val releaseInfo = item.optString("releaseInfo")
-                val year = releaseInfo.take(4).toIntOrNull()
+                    ?.replace("/poster/small/", "/poster/medium/")
+                val bannerRaw = detailMeta.optString("background").takeIf { it.isNotBlank() && it != "null" }
+                    ?: item.optString("background").takeIf { it.isNotBlank() && it != "null" }
+                val bannerUrl = bannerRaw?.replace("/background/medium/", "/background/large/")
+                val desc = detailMeta.optString("description").takeIf { it.isNotBlank() && it != "null" }
+                    ?: item.optString("description").takeIf { it.isNotBlank() && it != "null" }
+                val releaseInfo = detailMeta.optString("releaseInfo").ifBlank { item.optString("releaseInfo") }
+                val year = detailMeta.optInt("year", -1).takeIf { it > 0 }
+                    ?: releaseInfo.take(4).toIntOrNull()
 
                 val genresList = mutableListOf<String>()
-                item.optJSONArray("genres")?.let { arr ->
+                val genresArr = detailMeta.optJSONArray("genres") ?: item.optJSONArray("genres")
+                genresArr?.let { arr ->
                     for (i in 0 until arr.length()) {
                         val g = arr.optString(i)
                         if (g.isNotBlank() && g != "null") genresList.add(g)
                     }
                 }
 
-                val cert = item.optString("certification").takeIf { it.isNotBlank() && it != "null" }
-                    ?: item.optString("rated").takeIf { it.isNotBlank() && it != "null" }
+                val rating = detailMeta.optString("imdbRating").toFloatOrNull()
+                    ?: detailMeta.optDouble("imdbRating", -1.0).takeIf { it >= 0 }?.toFloat()
+
+                val runtimeStr = detailMeta.optString("runtime")
+                val runtimeMinutes = Regex("(\\d+)\\s*min").find(runtimeStr)?.groupValues?.get(1)?.toIntOrNull()
+                    ?: runtimeStr.toIntOrNull()
+
+                val cert = detailMeta.optString("certification").takeIf { it.isNotBlank() && it != "null" }
+                    ?: detailMeta.optString("rated").takeIf { it.isNotBlank() && it != "null" }
+                    ?: item.optString("certification").takeIf { it.isNotBlank() && it != "null" }
 
                 AnimeMetadata(
                     posterUrl = posterUrl,
                     bannerUrl = bannerUrl,
                     titleRomaji = name,
                     titleEnglish = name,
+                    titleNative = null,
                     synopsis = desc,
+                    score = rating,
                     year = year,
+                    runtime = runtimeMinutes,
                     genres = genresList,
                     isMovie = isMovie,
                     isAnime = false,
@@ -598,6 +669,27 @@ class AnimePosterResolver @Inject constructor() {
             }
         } catch (e: Exception) {
             AppLog.w(TAG, "Cinemeta exception for '$query': ${e.message}")
+            null
+        }
+    }
+
+    private fun fetchCinemetaMeta(id: String, type: String): JSONObject? {
+        return try {
+            val url = "$CINEMETA_BASE_URL/meta/$type/$id.json"
+            val request = Request.Builder()
+                .url(url)
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                .header("Accept", "application/json")
+                .build()
+
+            httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return null
+                val body = response.body?.string() ?: return null
+                val json = JSONObject(body)
+                json.optJSONObject("meta")
+            }
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Cinemeta meta exception for '$id' ($type): ${e.message}")
             null
         }
     }
