@@ -16,8 +16,7 @@ import zechs.drive.stream.ui.home.ContinueWatchingContextMenu
 import zechs.drive.stream.ui.home.HomeFragmentDirections
 import zechs.drive.stream.ui.home.HomeViewModel
 import zechs.drive.stream.ui.main.MainViewModel
-import zechs.drive.stream.ui.player.GlassMenuItem
-import zechs.drive.stream.ui.player.PlayerGlassMenuDialog
+import zechs.drive.stream.ui.home.WatchHistoryDialog
 import zechs.drive.stream.ui.player.PlayerLauncher
 import zechs.drive.stream.utils.VideoPlayer
 import zechs.drive.stream.utils.ext.navigateSafe
@@ -102,26 +101,7 @@ class HomeActionHandler(
     }
 
     fun showWatchHistoryDialog() {
-        val items = viewModel.watchHistory.value
-        if (items.isEmpty()) {
-            Toast.makeText(context, R.string.home_history_empty, Toast.LENGTH_SHORT).show()
-            return
-        }
-        val menuItems = items.mapIndexed { index, watch ->
-            GlassMenuItem(
-                id = "history_$index",
-                title = watch.name,
-                subtitle = watch.watchProgress().let { if (it > 0) "$it% assistido" else null },
-                tag = watch
-            )
-        }
-        PlayerGlassMenuDialog(
-            context = context,
-            title = "Histórico recente",
-            items = menuItems
-        ) { selected ->
-            (selected.tag as? WatchList)?.let { playWatchItem(it) }
-        }.show()
+        WatchHistoryDialog(context, viewModel.watchHistory.value, ::playWatchItem).show()
     }
 
     fun showWatchQueueDialog() {

@@ -25,6 +25,7 @@ import zechs.drive.stream.ui.home.HomeViewModel
 import zechs.drive.stream.utils.EpisodeParser
 import zechs.drive.stream.utils.ProfileManager
 import zechs.drive.stream.utils.ext.navigateSafe
+import zechs.drive.stream.utils.ext.resolveThemeColor
 
 /**
  * Controlador de destaque (Hero Banner) e perfil do usuário na Home.
@@ -79,6 +80,7 @@ class HeroController(
         }
 
         binding.btnFeaturedInfo?.setOnFocusChangeListener { v, hasFocus ->
+            applyHeroActionForeground(v, hasFocus)
             animateFocus(v, hasFocus, 1.03f, 6f)
             if (hasFocus) {
                 viewModel.clearFocusedFeaturedFolder()
@@ -87,6 +89,7 @@ class HeroController(
                 activeTabProvider?.let { startHeroAutoCycle(it) }
             }
         }
+        binding.btnFeaturedInfo?.let { applyHeroActionForeground(it, it.hasFocus()) }
 
         binding.userProfilePill?.setOnClickListener {
             navController.navigateSafe(R.id.action_homeFragment_to_profileSelectionFragment)
@@ -110,6 +113,21 @@ class HeroController(
                             .circleCrop()
                             .into(avatar)
                     }
+                }
+            }
+        }
+    }
+
+    private fun applyHeroActionForeground(container: View, focused: Boolean) {
+        val context = container.context
+        val color = context.resolveThemeColor(
+            if (focused) R.attr.colorOnPrimary else R.attr.colorTextPrimary
+        )
+        if (container is android.view.ViewGroup) {
+            for (index in 0 until container.childCount) {
+                when (val child = container.getChildAt(index)) {
+                    is android.widget.TextView -> child.setTextColor(color)
+                    is android.widget.ImageView -> child.imageTintList = android.content.res.ColorStateList.valueOf(color)
                 }
             }
         }
