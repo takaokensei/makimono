@@ -59,7 +59,7 @@ class MainViewModelUpdateTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakeApkFile = File.createTempFile("makimono-test", ".apk").also { it.writeBytes(ByteArray(1024)) }
-        coEvery { sessionManager.fetchClient() } returns null
+        coEvery { sessionManager.hasPairingSession() } returns false
         coEvery { githubRepository.getLatestRelease() } returns mockk(relaxed = true)
         coEvery { appSettings.fetchLastUpdated() } returns null
         coEvery { appSettings.fetchTheme() } returns mockk(relaxed = true)

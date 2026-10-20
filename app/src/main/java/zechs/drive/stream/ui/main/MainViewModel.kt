@@ -78,10 +78,13 @@ class MainViewModel @Inject constructor(
         getLatestRelease() // check for update
     }
 
+    fun onPairingCompleted() {
+        _hasLoggedIn.value = true
+        _isLoading.value = false
+    }
+
     private suspend fun getLoginStatus(): Boolean {
-        sessionManager.fetchClient() ?: return false
-        sessionManager.fetchRefreshToken() ?: return false
-        return true
+        return sessionManager.hasPairingSession()
     }
 
     fun getLatestRelease() = viewModelScope.launch {

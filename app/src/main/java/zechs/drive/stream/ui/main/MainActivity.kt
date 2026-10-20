@@ -38,12 +38,15 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import zechs.drive.stream.R
 import zechs.drive.stream.data.local.CatalogEntry
@@ -77,10 +80,12 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val TAG = "MainActivity"
         const val NOTIFICATION_PERMISSION_CODE = 2000
-        private var hasPlayedVinheta = false
     }
 
     private var vinhetaPlayer: ExoPlayer? = null
+    private var authenticatedPreparationInProgress = false
+    private var startupRoutingInProgress = false
+    private var vinhetaSafetyJob: kotlinx.coroutines.Job? = null
     private var isVinhetaDismissed = false
     private var isVideoFinished = false
     private var isPreloadFinished = false
@@ -105,6 +110,12 @@ class MainActivity : AppCompatActivity() {
 
     @Inject
     lateinit var sessionManager: Lazy<SessionManager>
+
+    @Inject
+    lateinit var mediaPreloadManager: zechs.drive.stream.data.repository.MediaPreloadManager
+
+    @Inject
+    lateinit var profileArtCatalog: zechs.drive.stream.data.remote.ProfileArtCatalog
 
     private val viewModel by viewModels<MainViewModel>()
     private lateinit var binding: ActivityMainBinding
@@ -156,6 +167,27 @@ class MainActivity : AppCompatActivity() {
             createUpdateNotificationChannel()
         }
 
+        val navHostFragment = supportFragmentManager.findFragmentById(
+            R.id.mainNavHostFragment
+        ) as NavHostFragment
+        navController = navHostFragment.navController
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            if (destination.id == R.id.homeFragment && viewModel.hasLoggedIn.value) {
+                requestNotificationPermissionAfterOnboarding()
+            }
+            routeForSessionState(destination.id, viewModel.hasLoggedIn.value)
+        }
+
+
+        themeObserver()
+        updateObserver()
+        updateDownloadObserver()
+        redirectOnLogin()
+
+        handlePlaybackDeepLink(intent)
+    }
+
+    private fun requestNotificationPermissionAfterOnboarding() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ActivityCompat.checkSelfPermission(
                     this, Manifest.permission.POST_NOTIFICATIONS
@@ -163,18 +195,6 @@ class MainActivity : AppCompatActivity() {
             ) handlePermission()
         }
 
-        val navHostFragment = supportFragmentManager.findFragmentById(
-            R.id.mainNavHostFragment
-        ) as NavHostFragment
-        navController = navHostFragment.navController
-
-        themeObserver()
-        updateObserver()
-        updateDownloadObserver()
-        redirectOnLogin()
-
-        setupVinheta(savedInstanceState)
-        handlePlaybackDeepLink(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -194,6 +214,9 @@ class MainActivity : AppCompatActivity() {
 
         AppLog.d(TAG, "Handling deep link playback from Android TV Watch Next: fileId=$fileId, title=$title, isMovie=$isMovie")
         lifecycleScope.launch {
+            if (!sessionManager.get().hasPairingSession()) return@launch
+            profileManager.awaitReady()
+            if (profileManager.getProfiles().isEmpty()) return@launch
             PlayerLauncher.launch(
                 context = this@MainActivity,
                 fileId = fileId,
@@ -217,19 +240,58 @@ class MainActivity : AppCompatActivity() {
     private fun redirectOnLogin() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.hasLoggedIn.collect { hasLoggedIn ->
-                    AppLog.d(TAG, "hasLoggedIn=${hasLoggedIn}")
-                    if (hasLoggedIn) handleLogin()
-                }
+                combine(viewModel.hasLoggedIn, viewModel.isLoading) { paired, loading -> paired to loading }
+                    .collect { (paired, loading) ->
+                        if (!loading) navController.currentDestination?.id?.let {
+                            routeForSessionState(it, paired)
+                        }
+                    }
             }
         }
     }
 
-    private fun handleLogin() {
-        val currentFragment = navController.currentDestination?.id
-        if (currentFragment != null && currentFragment == R.id.signInFragment) {
-            navController.navigateSafe(R.id.action_signInFragment_to_homeFragment)
+    private fun routeForSessionState(destinationId: Int, paired: Boolean) {
+        if (viewModel.isLoading.value || authenticatedPreparationInProgress || startupRoutingInProgress) return
+        AppLog.d(TAG, "Startup route: paired=$paired destination=$destinationId")
+        when (StartupNavigationPolicy.destination(paired)) {
+            StartupNavigationPolicy.Destination.PAIRING -> {
+                if (destinationId != R.id.signInFragment) {
+                    navController.navigateSafe(R.id.action_global_signInFragment)
+                }
+            }
+            StartupNavigationPolicy.Destination.PROFILES -> {
+                if (destinationId != R.id.startupFragment &&
+                    destinationId != R.id.signInFragment &&
+                    destinationId != R.id.profileSelectionFragment) return
+                startupRoutingInProgress = true
+                lifecycleScope.launch {
+                    try {
+                        profileManager.prepareFirstProfileAfterPairing()
+                        val currentDestination = navController.currentDestination?.id
+                        if (currentDestination == R.id.startupFragment || currentDestination == R.id.signInFragment) {
+                            navController.navigateSafe(R.id.action_global_profileSelectionFragment)
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLog.logSwallowed(TAG, "preparing first profile after Drive pairing", e)
+                    } finally {
+                        startupRoutingInProgress = false
+                    }
+                }
+            }
+            StartupNavigationPolicy.Destination.PREPARATION -> Unit
         }
+    }
+
+    fun onPairingCompleted() {
+        if (authenticatedPreparationInProgress) return
+        if (StartupNavigationPolicy.destination(true, justPaired = true) !=
+            StartupNavigationPolicy.Destination.PREPARATION) return
+        authenticatedPreparationInProgress = true
+        viewModel.onPairingCompleted()
+        navController.navigateSafe(R.id.action_global_startupFragment)
+        setupVinheta()
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -506,18 +568,21 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupVinheta(savedInstanceState: Bundle?) {
-        if (savedInstanceState != null || hasPlayedVinheta) {
-            binding.vinhetaContainer.visibility = View.GONE
-            return
-        }
-        hasPlayedVinheta = true
-
+    private fun setupVinheta() {
         binding.vinhetaContainer.visibility = View.VISIBLE
         binding.vinhetaContainer.alpha = 1f
+        binding.mainNavHostFragment.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        binding.vinhetaContainer.requestFocus()
         isVinhetaDismissed = false
         isVideoFinished = false
         isPreloadFinished = false
+        vinhetaSafetyJob?.cancel()
+        vinhetaSafetyJob = lifecycleScope.launch {
+            delay(15_000L)
+            isVideoFinished = true
+            isPreloadFinished = true
+            checkDismissVinheta()
+        }
 
         try {
             val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -580,6 +645,13 @@ class MainActivity : AppCompatActivity() {
                 // Warm up profiles first so profile selection screen has zero delay
                 try {
                     profileManager.awaitReady()
+                    if (authenticatedPreparationInProgress) {
+                        profileManager.prepareFirstProfileAfterPairing()
+                    }
+                    (profileArtCatalog.getPresetAvatars().take(8) +
+                        profileArtCatalog.getPresetWallpapers().take(4)).forEach { art ->
+                        MediaImageLoader.preloadPoster(applicationContext, art.url)
+                    }
                     val profiles = profileManager.getProfiles()
                     profiles.forEach { profile ->
                         if (!profile.backgroundUrl.isNullOrBlank()) {
@@ -591,14 +663,14 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 // Check if user is logged into Google Drive
-                val client = try {
-                    sessionManager.get().fetchClient()
+                val hasPairingSession = try {
+                    sessionManager.get().hasPairingSession()
                 } catch (e: Exception) {
-                    AppLog.logSwallowed(TAG, "fetching client credentials during startup", e)
-                    null
+                    AppLog.logSwallowed(TAG, "checking the paired TV session during startup", e)
+                    false
                 }
 
-                if (client == null) {
+                if (!hasPairingSession) {
                     AppLog.d(TAG, "User not signed in, skipping library catalog preload")
                     withContext(Dispatchers.Main) {
                         isPreloadFinished = true
@@ -625,7 +697,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 } else {
                     withContext(Dispatchers.Main) {
-                        binding.tvVinhetaPreloadStatus.text = "Sincronizando biblioteca…"
+                        binding.tvVinhetaPreloadStatus.setText(R.string.startup_preparing_library)
                     }
                 }
 
@@ -716,54 +788,18 @@ class MainActivity : AppCompatActivity() {
                         folderMetadataRepository.retainOnlyLibraryFolders(animeFolderIds)
                     }
 
-                    val existingMeta = folderMetadataRepository.getAllMetadata().associateBy { it.folderId }
-                    val total = validMedia.size
-                    var processed = 0
-
                     withContext(Dispatchers.Main) {
-                        binding.tvVinhetaPreloadStatus.text = "Sincronizando capas e banners (0/$total)…"
+                        binding.tvVinhetaPreloadStatus.setText(R.string.startup_preparing_artwork)
                     }
-
-                    // Process concurrently in chunks of 6
-                    validMedia.chunked(6).forEach { chunk ->
-                        coroutineScope {
-                            chunk.map { file ->
-                                async {
-                                    val targetId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
-                                        file.shortcutDetails.targetId
-                                    } else file.id
-
-                                    val cached = existingMeta[targetId] ?: existingMeta[file.id]
-                                    val isComplete = cached != null &&
-                                        !cached.posterUrl.isNullOrBlank() &&
-                                        !cached.bannerUrl.isNullOrBlank() &&
-                                        !cached.synopsis.isNullOrBlank()
-
-                                    if (isComplete) {
-                                        // Already cached in Room: ensure Glide memory and disk cache are warm
-                                        MediaImageLoader.preloadPoster(applicationContext, cached!!.posterUrl)
-                                        MediaImageLoader.preloadBackdrop(applicationContext, cached.bannerUrl)
-                                    } else {
-                                        // Missing poster, banner, or synopsis: resolve from AniList/TMDB
-                                        val meta = animePosterResolver.resolveMetadata(file.name)
-                                        if (meta != null) {
-                                            folderMetadataRepository.saveAnimeMetadata(targetId, file.name, meta)
-                                            MediaImageLoader.preloadPoster(applicationContext, meta.posterUrl)
-                                            MediaImageLoader.preloadBackdrop(applicationContext, meta.bannerUrl)
-                                        }
-                                    }
-                                }
-                            }.awaitAll()
-                        }
-                        processed += chunk.size
-                        withContext(Dispatchers.Main) {
-                            binding.tvVinhetaPreloadStatus.text = "Sincronizando capas e banners ($processed/$total)…"
-                        }
+                    // Warm the first visible items; larger libraries continue outside the intro.
+                    withTimeoutOrNull(8_000L) {
+                        mediaPreloadManager.preloadMetadataParallel(validMedia.take(8))
                     }
+                    mediaPreloadManager.startPreload(validMedia)
                 }
 
                 withContext(Dispatchers.Main) {
-                    binding.tvVinhetaPreloadStatus.text = "Biblioteca pronta!"
+                    binding.tvVinhetaPreloadStatus.setText(R.string.startup_library_ready)
                 }
             } catch (e: Exception) {
                 AppLog.w(TAG, "Catalog preload error: ${e.message}")
@@ -780,6 +816,7 @@ class MainActivity : AppCompatActivity() {
     private fun dismissVinheta() {
         if (isVinhetaDismissed) return
         isVinhetaDismissed = true
+        vinhetaSafetyJob?.cancel()
 
         try {
             vinhetaPlayer?.pause()
@@ -796,13 +833,20 @@ class MainActivity : AppCompatActivity() {
                 binding.pvVinheta.player = null
                 vinhetaPlayer?.release()
                 vinhetaPlayer = null
+                binding.mainNavHostFragment.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
+                if (authenticatedPreparationInProgress) {
+                    authenticatedPreparationInProgress = false
+                    navController.navigateSafe(R.id.action_global_profileSelectionFragment)
+                }
             }
             .start()
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (binding.vinhetaContainer.isVisible) {
-            // Unskippable intro: absorb all key events until intro completes naturally
+            if (event.keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_UP) {
+                dismissVinheta()
+            }
             return true
         }
         return super.dispatchKeyEvent(event)
@@ -810,9 +854,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        if (binding.vinhetaContainer.isVisible) {
-            dismissVinheta()
-        }
+        if (binding.vinhetaContainer.isVisible) vinhetaPlayer?.pause()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::binding.isInitialized && binding.vinhetaContainer.isVisible) vinhetaPlayer?.play()
     }
 
     override fun onDestroy() {
