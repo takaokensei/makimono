@@ -3,7 +3,17 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph.xml"
-    app:startDestination="@id/profileSelectionFragment">
+    app:startDestination="@id/startupFragment">
+
+    <action android:id="@+id/action_global_signInFragment"
+        app:destination="@id/signInFragment" app:popUpTo="@id/nav_graph.xml" />
+    <action android:id="@+id/action_global_profileSelectionFragment"
+        app:destination="@id/profileSelectionFragment" app:popUpTo="@id/nav_graph.xml" />
+    <action android:id="@+id/action_global_startupFragment"
+        app:destination="@id/startupFragment" app:popUpTo="@id/nav_graph.xml" />
+    <fragment android:id="@+id/startupFragment"
+        android:name="zechs.drive.stream.ui.main.StartupFragment"
+        android:label="StartupFragment" tools:layout="@layout/fragment_startup" />
 
     <fragment
         android:id="@+id/profileSelectionFragment"
@@ -61,6 +71,9 @@
         <action
             android:id="@+id/action_filesFragment_to_profileSelectionFragment"
             app:destination="@id/profileSelectionFragment" />
+        <action
+            android:id="@+id/action_filesFragment_to_downloadsFragment"
+            app:destination="@id/downloadsFragment" />
     </fragment>
 
     <fragment
@@ -97,8 +110,14 @@
             android:id="@+id/action_homeFragment_to_profileSelectionFragment"
             app:destination="@id/profileSelectionFragment" />
         <action
+            android:id="@+id/action_homeFragment_to_signInFragment"
+            app:destination="@id/signInFragment" />
+        <action
             android:id="@+id/action_homeFragment_to_queueFragment"
             app:destination="@id/queueFragment" />
+        <action
+            android:id="@+id/action_homeFragment_to_downloadsFragment"
+            app:destination="@id/downloadsFragment" />
     </fragment>
 
     <fragment
@@ -106,6 +125,12 @@
         android:name="zechs.drive.stream.ui.queue.QueueFragment"
         android:label="QueueFragment"
         tools:layout="@layout/fragment_queue" />
+
+    <fragment
+        android:id="@+id/downloadsFragment"
+        android:name="zechs.drive.stream.ui.downloads.DownloadsFragment"
+        android:label="DownloadsFragment"
+        tools:layout="@layout/fragment_downloads" />
 
     <fragment
         android:id="@+id/settingsFragment"
@@ -135,6 +160,9 @@
         <action
             android:id="@+id/action_seriesDetailFragment_to_filesFragment"
             app:destination="@id/filesFragment" />
+        <action
+            android:id="@+id/action_seriesDetailFragment_to_signInFragment"
+            app:destination="@id/signInFragment" />
     </fragment>
 
 </navigation>
