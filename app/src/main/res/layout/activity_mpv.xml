@@ -35,7 +35,7 @@
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:text="@string/player_skip_intro"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/obsidian_ice_white"
             style="@style/TextAppearance.Makimono.TV.Callout"
             android:textStyle="bold"
             android:elevation="6dp"
@@ -43,7 +43,7 @@
             app:icon="@drawable/ic_skip_next_24"
             app:iconGravity="textStart"
             app:iconSize="16dp"
-            app:iconTint="#FFFFFF" />
+            app:iconTint="@color/obsidian_ice_white" />
     </LinearLayout>
 
     <!-- Next Episode Countdown Card -->
