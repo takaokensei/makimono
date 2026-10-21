@@ -34,7 +34,7 @@ function Run-Step($name, $commandBlock) {
 }
 
 # 1. Testes unitários
-Run-Step "1/4: Testes Unitários (testDebugUnitTest)" {
+Run-Step "1/6: Testes Unitários (testDebugUnitTest)" {
     if (Test-Path "gradlew.bat") {
         .\gradlew.bat testDebugUnitTest --no-daemon
     } else {
@@ -43,7 +43,7 @@ Run-Step "1/4: Testes Unitários (testDebugUnitTest)" {
 }
 
 # 2. Linter Android
-Run-Step "2/4: Android Lint (lintDebug)" {
+Run-Step "2/6: Android Lint (lintDebug)" {
     if (Test-Path "gradlew.bat") {
         .\gradlew.bat lintDebug --no-daemon
     } else {
@@ -53,7 +53,7 @@ Run-Step "2/4: Android Lint (lintDebug)" {
 
 # 3. Compilação do APK Debug
 if (-not $isQuick) {
-    Run-Step "3/4: Compilação do APK (assembleDebug)" {
+    Run-Step "3/6: Compilação do APK (assembleDebug)" {
         if (Test-Path "gradlew.bat") {
             .\gradlew.bat assembleDebug --no-daemon
         } else {
@@ -61,12 +61,26 @@ if (-not $isQuick) {
         }
     }
 } else {
-    Write-Host "`n==> 3/4: Compilação do APK (assembleDebug) [IGNORADO via --quick]" -ForegroundColor Yellow
+    Write-Host "`n==> 3/6: Compilação do APK (assembleDebug) [IGNORADO via --quick]" -ForegroundColor Yellow
 }
 
-# 4. Verificações estáticas e de paridade do repositório
-Run-Step "4/4: Verificações Estáticas e de Design (scripts/verify-checks.ps1)" {
+# 4. Alegações do repositório
+Run-Step "4/6: Verificação de Alegações (scripts/verify-claims.ps1)" {
+    powershell -ExecutionPolicy Bypass -File scripts/verify-claims.ps1
+}
+
+# 5. Verificações estáticas e de design (9 guards)
+Run-Step "5/6: Verificações Estáticas e de Design (scripts/verify-checks.ps1)" {
     powershell -ExecutionPolicy Bypass -File scripts/verify-checks.ps1
+}
+
+# 6. Testes do Cloudflare Worker (Vitest)
+if (Get-Command npm -ErrorAction SilentlyContinue) {
+    Run-Step "6/6: Testes do Cloudflare Worker (Vitest)" {
+        npm --prefix backend/cloudflare-worker test
+    }
+} else {
+    Write-Host "`n==> 6/6: Testes do Cloudflare Worker (Vitest) [IGNORADO: npm não encontrado no PATH]" -ForegroundColor Yellow
 }
 
 $sw.Stop()

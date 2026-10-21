@@ -50,12 +50,20 @@ jobs:
       - name: Run static quality guards
         run: |
           python3 tools/checks/check_strings.py
+          python3 tools/checks/check_contrast.py
+          python3 tools/checks/check_layout_colors.py
+          python3 tools/checks/check_typography.py
           python3 tools/checks/check_no_direct_log.py
           python3 tools/checks/check_readme_claims.py
           python3 tools/checks/check_kotlin_literals.py
           python3 tools/checks/check_kotlin_style.py
           python3 tools/checks/check_immutable_tag.py --self-test
           python3 tools/checks/baseline_diff.py app/lint-baseline.xml
+
+      - name: Run Cloudflare Worker unit tests
+        run: |
+          npm --prefix backend/cloudflare-worker ci
+          npm --prefix backend/cloudflare-worker test
 
       - name: Run lint checks
         run: ./gradlew lintDebug --no-daemon

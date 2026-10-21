@@ -9,5 +9,8 @@ python3 tools/checks/check_layout_colors.py
 python3 tools/checks/check_typography.py
 python3 tools/checks/check_no_direct_log.py
 python3 tools/checks/check_readme_claims.py
+python3 tools/checks/check_kotlin_literals.py
+python3 tools/checks/check_kotlin_style.py
+python3 tools/checks/check_immutable_tag.py --self-test
 
 echo "==> All static verification checks passed!"
