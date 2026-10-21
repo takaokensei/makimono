@@ -15,11 +15,12 @@
     android:layout_marginEnd="16dp"
     android:clickable="true"
     android:focusable="true"
-    app:cardBackgroundColor="?attr/colorBgSurface"
-    app:cardCornerRadius="2dp"
+    android:foreground="@drawable/item_series_episode_focus_border"
+    app:cardBackgroundColor="@color/obsidian_surface"
+    app:cardCornerRadius="12dp"
     app:cardElevation="0dp"
-    app:strokeColor="@color/shelf_card_stroke_color"
-    app:strokeWidth="3dp">
+    app:strokeColor="@color/obsidian_border_glass"
+    app:strokeWidth="1dp">
 
     <FrameLayout
         android:layout_width="match_parent"
