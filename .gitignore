@@ -1,5 +1,7 @@
 # Local configuration (SDK path, drive.clientId/clientSecret/refreshToken)
 local.properties
+.dev.vars
+**/.dev.vars
 
 # Android Studio / Gradle
 .gradle/
@@ -25,11 +27,11 @@ captures/
 *.apk
 *.zip
 *.diff
-!makimono-final.diff
 *.class
 scratch/
 __pycache__/
 docs/ui-audit/
+.sentinel-tmp/
 
 # Graphify local output
 graphify-out/

@@ -5,4 +5,10 @@ makimono-dossie/
 backend/
 benchmark/
 mpv/build/
+mpv/src/main/libs/
+local.properties
+**/.dev.vars
+*.jks
+*.keystore
+.sentinel-tmp/
 docs/archive/
