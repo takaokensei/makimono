@@ -1,79 +1,49 @@
 # 🤖 Diretrizes e Regras para Agentes (Makimono)
 
-Guia canônico para agentes de IA (Antigravity, Codex) operando no repositório Makimono.
+Guia canônico para agentes de IA operando no repositório Makimono (`takaokensei/makimono`).
 
 ---
 
-## 1. O Projeto
-- **Nome & Plataforma:** Makimono — Cliente de streaming do Google Drive para Android e Android TV (10-foot experience).
-- **Stack:** Kotlin, ViewBinding + XML, Media3 (1.4.1) + libmpv nativo, Room (2.6.1), Hilt (2.51.1).
-- **Pacote Base:** `zechs.drive.stream`
-- **Módulos:**
-  - `:app` — Interface móvel/TV, repositórios, banco de dados Room e casos de uso.
-  - `:mpv` — Wrapper C++ JNI e binding Kotlin da libmpv para renderização precisa de legendas ASS/SSA.
-  - `:benchmark` — Macrobenchmarks e Baseline Profiles.
-  - `:backend` — Serviços auxiliares e proxies quando aplicável.
-- **Estrutura de `app/src/main/java/zechs/drive/stream`:**
-  - `data/` — Modelos remotos/locais, Room DAOs, cliente Drive API, repositórios.
-  - `domain/` — Modelos puros, contratos e regras de negócio sem dependência de framework Android.
-  - `playback/` — Motores `PlayerEngine` (Media3 e MPV), gerenciamento de sessão e skip.
-  - `ui/` — Telas e adaptadores (`home`, `series`, `player`, `files`, `settings`, `profile`).
-  - `utils/` — Utilitários, gerenciamento de estado e `AppLog`.
-  - `worker/` — Background workers periódicos (WorkManager).
+## 1. Regras Invioláveis de Segurança e Escopo
+1. **Segredos:** Proibição absoluta de ler, copiar ou imprimir `local.properties`, `.dev.vars`, keystores (`*.jks`, `*.keystore`) ou segredos. Zero credenciais no Git.
+2. **Sem Push Automático:** Trabalhe direto na `main` local; nunca faça `git push`, nunca publique releases. Tags locais `checkpoint-*` são permitidas.
+3. **Integridade de Testes:** Proibido pular, enfraquecer ou apagar testes. Se quebrou, o código é o problema.
+4. **C++ / libmpv:** `mpv/src/main/libs/*.so` e arquivos JNI gerados não se editam sem consultar `docs/architecture/native-mpv.md` e `ADR-002`.
 
 ---
 
-## 2. Regras Invioláveis
-1. **Nunca remover sem aviso:** Jamais remova feature, função, saída, comportamento ou teste sem avisar antes. Mudanças devem somar ou substituir com aviso explícito.
-2. **Nunca enfraquecer testes:** Proibido pular, enfraquecer ou apagar testes para fazê-los passar. Se quebrou, o código é o problema.
-3. **Segredos & Propriedades:** Nunca toque em segredos, tokens ou em `local.properties`. Repositório público: zero credenciais no Git.
-4. **Escopo Estrito:** Sem refatorações fora do escopo da tarefa solicitada.
+## 2. Comandos de Verificação Canônica
+- **Android / App:** `.\scripts\verify-all.ps1` (Windows) ou `bash scripts/verify-all.sh` (Linux). Use `--quick` apenas para iterações intermediárias.
+- **Worker Backend:** `npm --prefix backend/cloudflare-worker test` (`vitest`).
+- Toda mudança lógica exige `verify-all` 100% verde antes de commit.
 
 ---
 
-## 3. Fluxo de Commits e Git
-- **Direto na `main`:** Não crie branches. Mantenha o working tree limpo antes de iniciar.
-- **Commits Pequenos:** Faça um commit pequeno por etapa/subtarefa apenas com o `verify-all` verde.
-- **Sem Push Automático:** Nunca faça `git push`. O usuário faz o push.
-- **Apenas um Agente:** Nunca rode múltiplos agentes simultaneamente no mesmo working tree.
-- **Convenção:** Conventional Commits imperativos em minúsculas (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, `test:`), com escopo quando útil (ex: `feat(series): adiciona pills de metadados`).
+## 3. Releases, APKs e ABIs
+- **Convenção de Nomes:** `makimono-v<versao>-<abi>-release.apk` (ou `-debug.apk`).
+- **Checksums:** Cada APK publicado deve possuir seu hash SHA-256 em `<apk>.sha256`.
+- **Regra de ABI:** Casamento exato por ABI (`arm64-v8a`, `armeabi-v7a`, `x86_64`, `x86`). `x86` nunca deve casar com `x86_64`.
 
 ---
 
-## 4. Design System & Android TV (Canônico: `docs/design/DESIGN.md`)
-Consulte sempre [`docs/design/DESIGN.md`](docs/design/DESIGN.md). Erros mais comuns a evitar:
-- **Um único foco visível por vez:** Nunca mantenha dois elementos com anel de foco simultaneamente.
-- **Selecionado ≠ Focado:** Aba/item selecionado é estado persistente; foco é o cursor ativo do D-pad.
-- **Sem Blur Real:** Evite renderscript/blur dinâmico pesado em TV (baixa GPU). Use gradientes direcionais (`obsidian_media_scrim`).
-- **Margens Seguras (Overscan):** 48dp nas laterais e 27dp no topo/base. Elementos interativos nunca tocam a borda.
-- **Fontes do App:** Use apenas fontes existentes no projeto (Outfit/Space Grotesk); não invente Inter nem pesos inexistentes.
-- **Tokens Obsidian:** Use cores semânticas (`@color/obsidian_*`). Proibido hexadecimais brutos e proibido misturar a paleta inteira num componente.
+## 4. Testes Manuais Insubstituíveis
+Nenhum teste unitário substitui a validação humana nos seguintes cenários:
+1. Reprodução real de streaming com o Google Drive (troca de tokens e preaquecimento).
+2. Renderização precisa de legendas SSA/ASS complexas via `libmpv`.
+3. Navegação física por D-pad em Android TV (1 foco ativo por vez, overscan de 48dp/27dp, design Obsidian).
 
 ---
 
-## 5. Padrão de Arquitetura para Regras de Apresentação e Negócio
-- Isole toda regra de negócio ou de visibilidade condicional em classes de política puras e testáveis (ex: `PillVisibilityPolicy`, `SeriesMediaMetadataPolicy`).
-- Escreva testes unitários cobrindo todos os ramos e casos de borda antes de plugar a política na UI.
+## 5. Documentação e Design System
+- **Para APIs Android, consulte a documentação oficial.** Consulte Context7 para versões canônicas (`docs/dev/TOOLS.md`).
+- **Design Obsidian:** Siga [`docs/design/DESIGN.md`](docs/design/DESIGN.md). Proibido hexadecimais brutos e blur dinâmico em TV.
+- **Fidelidade a ADRs:** Cite `ADR-003` (aceite histórico para app pessoal), `ADR-004` (pareamento Cloudflare) e `ADR-005` (classificação de chaves) estritamente pelo que dizem.
+- **Ambiente Windows:** Use caminho curto/ASCII (ex: `L:\makimono` ou `subst`) para evitar quebras de daemon do Gradle com acentos.
 
 ---
 
-## 6. Consulta Obrigatória de Documentação (Context7)
-- Antes de usar APIs de Media3, Room, Glide ou TV, consulte o Context7 para a versão exata configurada em `app/build.gradle` (guia em [`docs/dev/TOOLS.md`](docs/dev/TOOLS.md)). Não confie em assinaturas ou métodos de memória pré-treinada desatualizada.
-
----
-
-## 7. Ambiente de Desenvolvimento Windows
-- **Caminho Curto via `subst`:** Como caminhos com acentos (ex: `Cauã V`) podem quebrar workers do Gradle, use uma unidade virtual ASCII (ex: `subst Z: .` e rode a partir de `Z:\`).
-- **Emulador TV:** 1920×1080 @320dpi (xhdpi), canvas base 960×540dp.
-- **Screenshots:** Utilize a `VisualReviewActivity` (`zechs.drive.stream.visualreview`) para capturar telas de forma isolada.
-
----
-
-## 8. Definição de Pronto (DoD)
-Toda tarefa de código só é considerada pronta quando:
-1. O código compila perfeitamente sem erros.
-2. O script de verificação unificada `./scripts/verify-all.ps1` (ou `./scripts/verify-all.sh`) executar 100% verde (testes unitários, linter Android, compilação debug e guardas estáticas); use `--quick` apenas para iterações rápidas durante o desenvolvimento.
-3. O linter Android (`lintDebug`) passa sem violações novas em relação à baseline.
-4. O checklist de navegação D-pad de TV (`docs/qa/focus-checklist.md`) é respeitado, com evidência visual via `VisualReviewActivity` (`docs/qa/visual-review-screenshots.md`) para mudanças de UI.
-5. Sem novos warnings introduzidos no build.
-6. Commit pequeno criado com mensagem convencional descritiva.
+## 6. Definição de Pronto (DoD)
+1. Código compila sem erros nem novos warnings.
+2. `verify-all` verde (testes unitários, linter Android `lintDebug` dentro da baseline e 9 quality guards).
+3. Testes do Worker (`vitest`) aprovados se `backend/` for tocado.
+4. Commits atômicos na `main` com mensagens imperativas convencionais (`feat:`, `fix:`, `refactor:`, `chore:`).
