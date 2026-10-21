@@ -504,7 +504,7 @@
     <string name="exit_dialog_message">Deseja realmente sair do aplicativo?</string>
     <string name="exit_dialog_confirm">Sair</string>
     <string name="exit_dialog_cancel">Cancelar</string>
-    <string name="series_episode_watched_badge">✓ ASSISTIDO</string>
+    <string name="series_episode_watched_badge">WATCHED</string>
     <string name="player_skip_intro">Pular abertura</string>
     <string name="player_skip_outro">Pular encerramento</string>
     <string name="player_next_episode_countdown">A SEGUIR • %1$ds</string>
