@@ -59,11 +59,13 @@ class PairingViewModel @Inject constructor(
     private var pairingExpiresAtMs: Long = 0
     private var pollingJob: Job? = null
     private var screenActive = false
+    private var currentDeviceName: String = "Makimono TV"
 
-    fun startPairingIfNeeded() {
+    fun startPairingIfNeeded(deviceName: String = "Makimono TV") {
         screenActive = true
+        currentDeviceName = deviceName
         when (_uiState.value) {
-            PairingUiState.Idle -> createPairing()
+            PairingUiState.Idle -> createPairing(deviceName)
             is PairingUiState.Ready -> startPolling()
             else -> Unit
         }
@@ -80,7 +82,7 @@ class PairingViewModel @Inject constructor(
                 runCatching { pairingApi.cancelPairing(previous.pairingId, previous.deviceSecret) }
             }
         }
-        createPairing()
+        createPairing(currentDeviceName)
     }
 
     fun stopPolling() {
@@ -93,7 +95,7 @@ class PairingViewModel @Inject constructor(
         _uiState.value = PairingUiState.Error(R.string.pairing_create_failed)
     }
 
-    private fun createPairing() {
+    private fun createPairing(deviceName: String = currentDeviceName) {
         if (_uiState.value == PairingUiState.Loading) return
         _uiState.value = PairingUiState.Loading
         viewModelScope.launch {
@@ -105,7 +107,7 @@ class PairingViewModel @Inject constructor(
                 }
                 val response = pairingApi.createPairing(
                     PairingCreateRequest(
-                        deviceName = "Makimono TV",
+                        deviceName = deviceName,
                         clientVersion = BuildConfig.VERSION_NAME
                     )
                 )

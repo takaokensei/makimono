@@ -65,6 +65,7 @@ class VisualReviewActivity : AppCompatActivity(), zechs.drive.stream.ui.player.P
     private val jujutsuBackdrop = "https://images.justwatch.com/backdrop/300823240/s1440/jujutsu-kaisen.jpg"
     private var playerFixtureControls: View? = null
     private var homePreviewScheduler: FeaturedPreviewScheduler? = null
+    private var seasonPickerFixture: zechs.drive.stream.ui.series.SeasonPickerController? = null
     private var restorePlayerFixtureControls = false
     private var playerFixtureFocus: View? = null
 
@@ -137,6 +138,7 @@ class VisualReviewActivity : AppCompatActivity(), zechs.drive.stream.ui.player.P
             "library_root_picker" -> libraryRootPickerFixture()
             "files_auth_error" -> filesAuthError()
             "details" -> details()
+            "details_many_seasons" -> detailsManySeasons()
             "details_episode_focus" -> details(focusEpisode = true)
             "details_episode_description" -> details(focusEpisode = true, episodeDescriptions = true)
             "details_episode_names" -> details(episodeNameVariants = true)
@@ -890,6 +892,42 @@ class VisualReviewActivity : AppCompatActivity(), zechs.drive.stream.ui.player.P
                 Toast.makeText(this, "Pasta de teste selecionada: $label", Toast.LENGTH_SHORT).show()
             }
         ).show()
+    }
+
+    private fun detailsManySeasons() {
+        details()
+        val seasonsView = findViewById<RecyclerView>(R.id.rvSeasonTabs)
+        var tabs = (1..12).map { number ->
+            zechs.drive.stream.ui.series.adapter.SeasonTab(
+                id = "season-$number",
+                title = getString(R.string.series_season_fixture_title, number),
+                isSelected = number == 6,
+                chips = listOf(zechs.drive.stream.domain.library.CategoryChip(
+                    zechs.drive.stream.domain.library.SeriesMediaCategory.EPISODES, 12, true
+                ))
+            )
+        }
+        val adapter = zechs.drive.stream.ui.series.adapter.SeriesDetailSeasonAdapter(onTabClick = {})
+        seasonsView.adapter = adapter
+        val trigger = findViewById<TextView>(R.id.btnSeasonPicker)
+        val controller = zechs.drive.stream.ui.series.SeasonPickerController(trigger, adapter) { selected ->
+            tabs = tabs.map { it.copy(isSelected = it.id == selected.id) }
+            seasonPickerFixture?.bind(tabs)
+        }
+        seasonPickerFixture = controller
+        controller.bind(tabs)
+        trigger.nextFocusUpId = R.id.tabButtonEpisodes
+        trigger.nextFocusDownId = R.id.rvSeasonTabs
+        trigger.nextFocusRightId = R.id.rvEpisodes
+        findViewById<View>(R.id.tabButtonEpisodes).nextFocusDownId = trigger.id
+        seasonsView.nextFocusUpId = trigger.id
+        trigger.postDelayed({ trigger.requestFocus() }, 500)
+    }
+
+    override fun onDestroy() {
+        seasonPickerFixture?.close()
+        seasonPickerFixture = null
+        super.onDestroy()
     }
 
     private fun folderFixture(id: String, name: String) = zechs.drive.stream.data.model.File(

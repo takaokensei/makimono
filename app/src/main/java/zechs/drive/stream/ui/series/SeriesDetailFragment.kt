@@ -58,6 +58,7 @@ class SeriesDetailFragment : BaseFragment() {
     private val args: SeriesDetailFragmentArgs by navArgs()
 
     private lateinit var seasonAdapter: SeriesDetailSeasonAdapter
+    private lateinit var seasonPicker: SeasonPickerController
     private lateinit var episodeAdapter: SeriesDetailEpisodeAdapter
     private lateinit var synopsisDisclosure: SeriesSynopsisDisclosure
     private var hasRestoredInitialFocus = false
@@ -189,6 +190,7 @@ class SeriesDetailFragment : BaseFragment() {
             }
         )
         binding.rvSeasonTabs.adapter = seasonAdapter
+        seasonPicker = SeasonPickerController(binding.btnSeasonPicker, seasonAdapter, viewModel::selectSeasonTab)
 
         episodeAdapter = SeriesDetailEpisodeAdapter(
             onEpisodeClick = { episodeItem ->
@@ -239,6 +241,7 @@ class SeriesDetailFragment : BaseFragment() {
                     val currentChild = findContainingItemView(focused) ?: return null
                     val pos = getPosition(currentChild)
                     if (pos == 0) {
+                        if (seasonPicker.isCompact) return b.btnSeasonPicker
                         val seasonRv = b.rvSeasonTabs
                         if (seasonRv.visibility == View.VISIBLE) {
                             val selectedPos = (seasonRv.adapter as? SeriesDetailSeasonAdapter)
@@ -335,11 +338,18 @@ class SeriesDetailFragment : BaseFragment() {
         if (isMovie) {
             binding.rvEpisodes.nextFocusUpId = binding.btnPrimaryAction.id
         } else {
-            val downTarget = if (hasSeasonTabs) binding.rvSeasonTabs.id else binding.rvEpisodes.id
+            val downTarget = when {
+                !hasSeasonTabs -> binding.rvEpisodes.id
+                seasonPicker.isCompact -> binding.btnSeasonPicker.id
+                else -> binding.rvSeasonTabs.id
+            }
             binding.tabButtonEpisodes.nextFocusDownId = downTarget
-            binding.rvSeasonTabs.nextFocusUpId = binding.tabButtonEpisodes.id
+            binding.btnSeasonPicker.nextFocusUpId = binding.tabButtonEpisodes.id
+            binding.btnSeasonPicker.nextFocusDownId = binding.rvSeasonTabs.id
+            binding.btnSeasonPicker.nextFocusRightId = binding.rvEpisodes.id
+            binding.rvSeasonTabs.nextFocusUpId = if (seasonPicker.isCompact) binding.btnSeasonPicker.id else binding.tabButtonEpisodes.id
             binding.rvSeasonTabs.nextFocusRightId = binding.rvEpisodes.id
-            binding.rvEpisodes.nextFocusLeftId = if (hasSeasonTabs) binding.rvSeasonTabs.id else binding.rvEpisodes.id
+            binding.rvEpisodes.nextFocusLeftId = if (hasSeasonTabs) downTarget else binding.rvEpisodes.id
             binding.rvEpisodes.nextFocusUpId = binding.tabButtonEpisodes.id
         }
     }
@@ -723,6 +733,7 @@ class SeriesDetailFragment : BaseFragment() {
             binding.panelEpisodesTab.visibility = View.VISIBLE
             binding.rvSeasonTabs.visibility = View.GONE
             binding.layoutSeasonsColumn.visibility = View.GONE
+            seasonPicker.bind(emptyList())
             binding.tvEpisodesHeading?.visibility = View.GONE
             binding.rvEpisodes.visibility = View.VISIBLE
             episodeAdapter.submitList(state.currentEpisodes)
@@ -733,7 +744,7 @@ class SeriesDetailFragment : BaseFragment() {
             val hasSeasons = state.seasonTabs.isNotEmpty()
             binding.layoutSeasonsColumn.visibility = if (hasSeasons) View.VISIBLE else View.GONE
             binding.rvSeasonTabs.visibility = if (hasSeasons) View.VISIBLE else View.GONE
-            seasonAdapter.submitList(state.seasonTabs)
+            seasonPicker.bind(state.seasonTabs)
 
             binding.rvEpisodes.visibility = View.VISIBLE
             episodeAdapter.submitList(state.currentEpisodes)
@@ -1047,6 +1058,7 @@ class SeriesDetailFragment : BaseFragment() {
         super.onDestroyView()
         shimmerAnimator?.cancel()
         shimmerAnimator = null
+        seasonPicker.close()
         binding.rvEpisodes.adapter = null
         binding.rvSeasonTabs.adapter = null
         context?.let { ctx ->

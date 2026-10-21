@@ -1,105 +1,53 @@
-# Referência de UX e Features: Netflix & Crunchyroll (REF-01)
+# Referência de UX e features — Netflix e Crunchyroll
 
-Documento de análise comparativa e inventário de padrões de UX e funcionalidades observáveis nos aplicativos **Netflix** (Android TV / Ninja) e **Crunchyroll** (Android TV), com classificação para replicação incremental no Makimono.
+Revisão: 21/10/2026. Base: `57d88b9`, branch `main`, working tree limpo antes da tarefa. O inventário anterior foi reconciliado com o código e com P-10 a P-18 e D-50; as entregas anteriores permanecem no histórico Git. Esta revisão distingue existência de código de homologação humana.
 
----
+## Evidência e decisões
 
-## 1. Diretrizes de Replicação no Makimono
-- **Origem Assumida:** O comportamento observável da Netflix e da Crunchyroll constitui a especificação de produto.
-- **Identidade Visual:** Aplicação estrita dos tokens semânticos do **Obsidian Design System** (`docs/design/DESIGN.md`), sem hexadecimais brutos e sem blur dinâmico na TV.
-- **TV-First (10-Foot Experience):** Margens seguras de overscan (48dp lateral, 27dp vertical), um único elemento com anel de foco visível por vez, navegação D-pad fluida sem aprisionamento de foco.
-- **Não-Duplicação:** Recursos já propostos ou implementados em `P-10` a `P-18` e `D-50` são mapeados e não duplicados.
+- Crunchyroll TV: capturas identificadas em `makimono-dossie/reconstruicao/evidencias/runtime/cr_ref_*.png`, especialmente detalhes, episódios e rail. Essas capturas são referência histórica do serviço, não retrato da build atual do Makimono.
+- Netflix: [seleção de temporadas e episódios](https://help.netflix.com/en/node/125348), [busca por gênero e idioma](https://help.netflix.com/en/node/47765) e as propostas P-10–P-18 documentam os comportamentos usados. O APK Netflix disponível no dossiê é móvel; não se atribuem a ele medidas ou animações de TV.
+- Código atual: HomeFragment, ContinueWatchingContextMenu, FocusEngine, SeriesDetailFragment, SeriesDetailViewModel, ProfileManager, DownloadRepository e políticas indicadas nas propostas.
+- Regras visuais: `docs/design/DESIGN.md`, tokens Obsidian, sem blur dinâmico; 48dp/27dp nas bordas de TV e foco único.
+- Context7 não está exposto nesta sessão. A API usada será conferida na [fonte oficial de MaterialAlertDialogBuilder 1.9.0](https://github.com/material-components/material-components-android/blob/1.9.0/lib/java/com/google/android/material/dialog/MaterialAlertDialogBuilder.java) e na [documentação Android de dialogs](https://developer.android.com/develop/ui/views/components/dialogs). Não se adicionará uma biblioteca para o seletor.
 
----
+“Copiar” significa preservar o comportamento; “adaptar” significa ajustar a interação ao catálogo Drive/local e ao design Obsidian; “descartar” significa não introduzir essa variante. Recursos presentes serão mantidos sem nova implementação duplicada. Não são necessários código, logos ou assets dos serviços para os dois incrementos selecionados.
 
-## 2. Matriz de Inventário e Classificação de Features
+## Inventário reconciliado
 
-| ID | Funcionalidade / Padrão de UX | Origem | Benefício para o Usuário | Esforço | Impacto em Android TV (D-pad & Overscan) | Dependências | Já existe no Makimono? | Classificação | Justificativa |
-|---|---|:---:|---|:---:|---|---|:---:|:---:|---|
-| **REF-01** | **Badges de Áudio e Dublagem ("DUB" / "DUAL" / "LEG") nos Cards de Episódios** | Crunchyroll | O usuário identifica instantaneamente se o episódio possui áudio dublado ou apenas legendas em japonês antes de iniciar o play. | **Baixo** | Visível a 3m sem poluir o layout do card; respeita o piso de 12sp. | `EpisodeParser`, metadados de arquivos MKV | **Sim** | **IMPLEMENTADO** | Commit `4cf8327`: política pura `EpisodeAudioBadgePolicy`, 8 testes unitários, coloração semântica (`obsidian_accent` para dub, `obsidian_link_blue_gray` para sub). |
-| **REF-02** | **Selo Semântico "Assistido" (Checkmark Badge) nos Cards de Episódios Concluídos** | Netflix & Crunchyroll | Distinção visual imediata entre episódios não vistos, em andamento e concluídos (>=90%). | **Baixo** | Foco D-pad inalterado; badge com checkmark vetorial sobre miniatura 16:9. | `WatchListDao`, Room | **Sim** | **IMPLEMENTADO** | Commit `2541266`: ícone vetorial `ic_check_12`, tokens Obsidian no background (`obsidian_media_scrim`/`obsidian_border_glass`), barra 100% verde Obsidian. |
-| **REF-03** | **Menu de Contexto / Ações Rápidas no Card de "Continuar Assistindo" (Long-Press / More Actions)** | Netflix | Permite "Remover da Linha", "Assistir do Início" ou "Ver Detalhes da Série" direto da Home sem abrir o player. | **Médio** | Modal com foco automático e restauração de foco no card após dispensa. | `WatchListDao`, `HomeFragment` | **Sim** | **IMPLEMENTADO** | Implementado via `ContinueWatchingContextMenu` e `ContinueWatchingInputPolicy` com suporte a `KEYCODE_MENU` e long-click. |
-| **REF-04** | **Linha de Filtro Rápido por Gênero / Categoria na Home (Genre Chips / Pills)** | Crunchyroll | Navegação por categorias populares de anime ("Ação", "Isekai", "Shonen", "Romance", "Fantasia") com 1 clique. | **Médio** | Linha horizontal de pills com navegação D-pad suave (esquerda/direita) integrada ao foco vertical. | Metadados Room / TMDB / AniList | **Sim** | **IMPLEMENTADO** | Commit `0a45d53`: política pura `AnimeGenrePolicy`, 8 testes unitários, `GenreFilterAdapter`, tokens Obsidian nos 5 layouts de Home. |
-| **REF-05** | **Seletor de Temporadas em Modal Dropdown Compacto na Tela de Detalhe** | Netflix | Para séries com muitas temporadas (ex: Monogatari, Fate), evita navegação horizontal infinita por abas. | **Médio** | Diálogo vertical com foco inicial na temporada atual, rolagem suave e seleção instantânea. | `SeriesDetailFragment` | **Não** (usa abas horizontais) | **ADAPTAR** | Complementa as abas horizontais quando a série ultrapassar 4 temporadas/partes. |
-| **REF-06** | **Efeito de Foco Expandido (Scale 1.06x com Mola Física e Elevação Depth)** | Netflix & Crunchyroll | Feedback tátil e visual instantâneo indicando exatamente qual card está ativo na TV. | **Baixo** | `FocusEngine` com `SpringAnimation` física (1.06x cards, 1.04x buttons, elevação 12dp/6dp). | `FocusEngine`, `SpringForce` | **Sim** | **IMPLEMENTADO** | Padronizado transversalmente em cards de episódios, prateleiras de histórico/fila/favoritos, botões e chips. |
-| **REF-07** | **Pílula de Toggle Rápido "+ Minha Lista" / "✓ Na Lista" com Feedback Visual** | Netflix | Adicionar ou remover da lista de favoritos com animação de ícone e atualização instantânea da Home. | **Baixo** | Botão secundário na barra de ações da série; acessível por D-pad logo após o botão principal "Assistir". | `WatchListDao`, `SeriesDetailViewModel` | **Sim** | **IMPLEMENTADO** | Commit `a5311cf`: alternância entre `+ Minha Lista` e `✓ Na Lista`, ícones vetoriais `ic_add_24`/`ic_check_24`, remoção de `amber_500` e suporte nativo ao D-pad. |
-| **REF-08** | **Banner Hero com Título em Logo Transparente (Clearlogo) e Pílulas de Gênero** | Netflix | Visual cinematográfico premium no topo da tela com logo em PNG transparente sobre backdrop com gradiente direcional. | **Médio** | Botões e pílulas de gênero em vidro fosco (`tag_genre_pill_bg`) respeitando overscan. | API TMDB / AniList / Fanart.tv | **Sim** | **IMPLEMENTADO** | Commits `c80d30f` e `2f99756`: ClearLogo e renderização dinâmica de até 4 tags de gênero translúcidas no destaque. |
-| **REF-09** | **Reprodução Automática de Vídeo com Áudio no Hero da Home** | Netflix | Reproduzir trailer em tela cheia silencioso/com som enquanto o foco permanece parado no destaque. | **Alto** | Disputa decodificador de hardware (`MediaCodec`) com o player e consome cota de API Google Drive. | `PlayerEngine`, Google Drive API | **Não** (avaliado em P-18) | **DESCARTAR** | Descartado conforme P-18 Opção B: satura cota de requisições do Drive e prejudica TVs de entrada de baixa RAM/GPU. |
-| **REF-10** | **Download Offline de Episódios para Armazenamento Local** | Netflix & Crunchyroll | Baixar vídeos do Drive diretamente para a memória interna da TV ou celular para reprodução sem internet. | **Alto** | Exige gerenciador de downloads robusto com background service, pausar/retomar e armazenamento. | `DownloadManager`, `WorkManager` | **Parcial** (`item_download_card.xml` existe) | **DESCARTAR (temporariamente)** | Foco atual é streaming ágil no ecossistema Android TV local-first; postergar para fase de mobilidade. |
+| ID | Feature e origem | Benefício | Esforço incremental | Impacto TV | Dependências / estado atual | Decisão e justificativa |
+|---|---|---|---|---|---|---|
+| REF-01 | Badges de áudio — Crunchyroll | Conhecer idiomas antes do play | Já entregue | Texto >=12sp, sem novo foco | EpisodeAudioBadgePolicy; commit 4cf8327 | Adaptar, existente. Inferência de nome não equivale a inspeção de faixas; não ampliar nesta execução. |
+| REF-02 | Assistido/progresso — ambos | Diferenciar episódios concluídos | Já entregue | Badge não interativo | WatchList e SeriesDetailEpisodeAdapter; 2541266 | Copiar, existente; preservar os testes. |
+| REF-03 | Ações em Continuar assistindo — Netflix | Retomar, reiniciar, abrir série e remover sem abrir player | Já entregue | Menu/long-press; foco volta ao card; Desfazer | ContinueWatchingContextMenu e HomeActionHandler, incluindo Snackbar | Adaptar, existente; manter remoção reversível e isolamento por perfil. |
+| REF-04 | Filtros de gênero — Crunchyroll | Reduzir a procura no catálogo | Já entregue | Pills com D-pad; selecionado distinto de foco | AnimeGenrePolicy e GenreFilterAdapter; 0a45d53 | Adaptar, existente, sem criar segunda linha de filtros. |
+| REF-05 | Seletor compacto de temporadas — Netflix | Saltar direto para uma parte em franquias extensas | 3–5 h | Modal rolável; temporada atual marcada e focada; Back restaura gatilho | SeasonTab e selectSeasonTab existem; falta gatilho/modal | Adaptar e implementar. Mais de 4 partes usam seletor + card da parte atual, preservando seus chips de categoria. Até 4 mantêm lista atual. Limite é decisão Makimono. |
+| REF-06 | Escala e realce de foco — ambos | Cursor de TV identificável | Já entregue | Um anel ativo; redução de movimento | FocusEngine já compartilhado | Adaptar, existente; não reescrever engine nem inventar parâmetros das referências. |
+| REF-07 | Toggle Minha Lista — Netflix | Feedback imediato ao favoritar | Já entregue | Ação secundária próxima do play | SeriesDetailFragment/ViewModel; a5311cf | Copiar, existente; persistência e recursos do Makimono. |
+| REF-08 | Hero, clearlogo e gêneros — ambos | Destaque editorial com identidade da obra | Já entregue | Scrim, overscan e ações legíveis | FeaturedHeroBinder/HeroController; c80d30f e 2f99756 | Adaptar, existente; aproveitar fontes de imagem já integradas. |
+| REF-09 | Prévia de vídeo automática — Netflix | Descobrir conteúdo sem abrir detalhe | Alto | Decodificador, rede e movimento reduzido | P-18, sem fonte de preview confiável | Descartar nesta execução conforme P-18; manter a prévia estática e não duplicar proposta. |
+| REF-10 | Downloads offline — Netflix/Crunchyroll móvel | Assistir sem conexão | Já existe, escopo maior para refinamentos | Cards e operações acessíveis por controle | DownloadRepository, DownloadWorker, DownloadsFragment e testes existem | Adaptar, existente. Corrige o inventário antigo que dizia haver só XML. Homologação offline real continua manual. |
+| REF-11 | Três ações de Detalhes e menu contextual — ambos | Hero limpo sem perder opções | 2–4 h | Play, Minha Lista, Mais; menu com foco/restauração; margens seguras | Menu existente; Marcar assistido ainda é duplicado na barra; trailer aparece indisponível | Adaptar e implementar. Mover a ação direta duplicada para Mais, incluir Recomeçar para item em andamento e mostrar só opções disponíveis. |
+| REF-12 | Tempo restante na retomada — Netflix | Saber quanto falta | Já entregue | Rótulo curto sem novo foco | P-10, PrimaryEpisodeSelection | Copiar, existente; não duplicar. |
+| REF-13 | Pular abertura/recap/créditos — ambos | Reduzir ações repetidas | Já entregue | Foco sem roubar OSD | P-11, SkipController | Adaptar, existente; validar intervalos reais manualmente. |
+| REF-14 | Próximo episódio e Ainda assistindo — ambos/Netflix | Maratona com cancelamento | Já entregue | Contagem, cancelar e retorno previsíveis | P-12/P-13, NextEpisodePolicy/PlaybackCoordinator | Copiar, existente; não alterar motores. |
+| REF-15 | Idioma e atraso lembrados — Crunchyroll/Kodi | Evitar configurar todo episódio | Já entregue | Menus de faixa/arquivo | P-14/P-15, TrackPreferencePolicy | Adaptar, existente; ASS/SSA requer validação humana. |
+| REF-16 | Capítulos/informação técnica — complemento local | Navegar e diagnosticar a mídia | Já entregue | OSD utilizável por D-pad | P-16/P-17 | Adaptar, existente; não replicar superfície técnica de outro serviço. |
+| REF-17 | Perfis, busca, categorias e recomendações locais — ambos | Descoberta e personalização | Já entregue | Fluxos independentes e restauração de foco | Perfis persistidos, SearchFragment, prateleiras e Mais como este existem | Adaptar, existente. Não prometer recomendação de backend comercial; usar catálogo acessível. |
+| REF-18 | Progresso entre aparelhos — ambos | Continuar em outro dispositivo | Alto | Sessão/conta e conflitos | D-50; backend/grants exigem desenho próprio | Descartar nesta execução: preservar contrato somente leitura, sem mudanças sensíveis de autenticação. |
+| REF-19 | Assinatura, banners Premium, marca/arte dos serviços | Sem benefício para biblioteca pessoal | Desnecessário | Ruído visual | Não fazem parte do Makimono | Descartar; manter identidade, ícones e textos próprios existentes. |
 
----
+## Ordem de execução e arquivos previstos
 
-## 3. Detalhamento dos Itens Selecionados para Execução Imediata
+1. **REF-05:** SeasonPickerPolicy + testes; SeasonPickerDialog; SeriesDetailFragment; fragment_series_detail.xml em layout e layout-land (únicas variantes atuais); strings values/values-pt; VisualReviewActivity e testes de integração da UI para evidência sintética isolada.
+2. **REF-11:** SeriesDetailActionsPolicy + testes; SeriesMoreActionsDialog; SeriesDetailFragment; os mesmos layouts e fixture se necessário; strings em ambos os idiomas; testes instrumentados para modal/Back/foco.
 
-### Item Prioritário 1 (REF-01): Badges de Áudio e Dublagem ("DUB" / "SUB" / "DUBLADO") nos Cards
-- **Origem:** Crunchyroll.
-- **Arquivos Tocáveis:**
-  - `app/src/main/java/zechs/drive/stream/ui/series/adapter/SeriesEpisodeAdapter.kt`
-  - `app/src/main/java/zechs/drive/stream/ui/series/EpisodeAudioBadgePolicy.kt` (Nova classe pura de política)
-  - `app/src/test/java/zechs/drive/stream/ui/series/EpisodeAudioBadgePolicyTest.kt` (Testes unitários)
-  - `app/src/main/res/values/strings.xml` & `app/src/main/res/values-pt/strings.xml`
-- **Comportamento:**
-  - Inspeciona o nome do arquivo, metadados ou tracks de áudio disponíveis:
-    - Se contiver termos como `Dual`, `Dub`, `PT-BR`, `Dublado`, `Multi-Audio` -> exibe badge `@string/badge_dubbed` ("DUB").
-    - Se contiver apenas faixas em japonês com legendas -> exibe badge `@string/badge_subtitled` ("SUB").
-  - Formatação com fundo translúcido `obsidian_surface` e borda `obsidian_border_glass`, texto em 12sp.
+Sem alterar módulos, rotas, Drive, JNI ou libmpv. Nenhuma dependência nova é necessária. Uma tag local checkpoint-* antecede cada item. Cada commit exige verify-all completo verde; a base também será verificada. Testes lógicos antecedem a integração. O relatório consolidado seguirá WORKFLOW.md ao fim, incluindo limites e validações físicas pendentes.
 
-### Item Prioritário 2 (REF-02): Selo Semântico "Assistido" (Checkmark Badge) Concluído
-- **Origem:** Netflix & Crunchyroll.
-- **Arquivos Tocáveis:**
-  - `app/src/main/java/zechs/drive/stream/ui/series/adapter/SeriesEpisodeAdapter.kt`
-  - `app/src/main/res/drawable/badge_episode_watched.xml`
-  - `app/src/test/java/zechs/drive/stream/ui/series/SeriesEpisodePresentationTest.kt`
-- **Comportamento:**
-  - Quando o progresso registrado no `watch_list` for $\ge 95\%$ (conforme regra `hasFinished()`), exibe o badge "✓ Assistido" no canto superior direito da miniatura, ocultando a barra de progresso linear para manter o visual limpo como na Netflix.
+## Contratos de aceite
 
-### Item Prioritário 3 (REF-07): Ação "+ Minha Lista" / "✓ Na Lista" com Sincronização Instantânea
-- **Origem:** Netflix.
-- **Arquivos Tocáveis:**
-  - `app/src/main/java/zechs/drive/stream/ui/series/SeriesDetailFragment.kt`
-  - `app/src/main/java/zechs/drive/stream/ui/series/SeriesDetailViewModel.kt`
-  - `app/src/main/res/drawable/btn_favorite_selector.xml`
-  - `app/src/test/java/zechs/drive/stream/ui/series/SeriesDetailViewModelTest.kt`
-- **Comportamento:**
-  - No detalhe da série, clicar no botão de lista alterna entre `+ Minha Lista` e `✓ Na Lista`, com animação de escala e atualização imediata do estado nos favoritos em Room.
-
----
-
-## 4. Status de Implementação (Fase 2 Concluída)
-
-A implementação dos itens selecionados foi realizada com estrito rigor de arquitetura e conformidade com o DoD:
-
-1. **REF-01 (Badges de Áudio Crunchyroll-Style):**
-   - **Classe Pura:** `EpisodeAudioBadgePolicy` (`app/src/main/java/zechs/drive/stream/ui/series/EpisodeAudioBadgePolicy.kt`).
-   - **Suíte de Testes:** `EpisodeAudioBadgePolicyTest` com 8 testes unitários cobrindo áudio duplo, dublagens, legendas implícitas/explícitas, internacionalização e filtros de extensões não-vídeo.
-   - **Apresentação:** Integração no `SeriesDetailViewModel` e `SeriesDetailEpisodeAdapter`, com destaque semântico em `@color/obsidian_accent` para faixas dubladas e `@color/obsidian_link_blue_gray` para legendadas.
-   - **Commit:** `4cf8327` (`feat(series): add Crunchyroll-style DUB/DUAL/LEG audio badges to episode cards (REF-01)`).
-
-2. **REF-02 (Selo Semântico "Assistido" com Checkmark):**
-   - **Assets & Layouts:** Novo ícone vetorial `ic_check_12` integrado ao `badgeWatched` em `item_series_episode_card.xml` (portrait e landscape).
-   - **Design System:** Limpeza de cores raw em `badge_episode_watched.xml` substituídas pelos tokens `@color/obsidian_media_scrim` e `@color/obsidian_border_glass`.
-   - **Internacionalização:** String em inglês corrigida para `WATCHED` com paridade integral com `ASSISTIDO` em português.
-   - **Commit:** `2541266` (`feat(series): enhance completed episode watched badge with vector checkmark and obsidian tokens (REF-02)`).
-
-3. **REF-07 (Toggle "+ Minha Lista" / "✓ Na Lista"):**
-   - **UX & Iconografia:** Substituição de ícones de estrela genéricos por `ic_add_24` e `ic_check_24`, replicando o padrão visual da Netflix.
-   - **D-pad & Acessibilidade:** Remoção de `amber_500` hardcoded em favor de `btn_secondary_action_foreground` com suporte a estados de foco do D-pad e `contentDescription` dinâmico para TalkBack.
-   - **Commit:** `a5311cf` (`feat(series): add interactive Netflix-style watchlist toggle with dynamic iconography (REF-07)`).
-
----
-
-
-4. **REF-04 (Linha de Filtro Rápido por Gênero Crunchyroll-Style):**
-   - **Classe Pura:** `AnimeGenrePolicy` (`app/src/main/java/zechs/drive/stream/ui/home/AnimeGenrePolicy.kt`).
-   - **Suíte de Testes:** `AnimeGenrePolicyTest` com 8 testes unitários cobrindo normalização bilingue (PT-BR e EN), filtragem por keywords no título quando sem metadados, e seleção "Todos".
-   - **Métricas:** Total de 671 anotações `@Test` no repositório (679 execuções JUnit) 100% verdes.
-   - **Apresentação:** `GenreFilterAdapter` com pills cápsula e tokens Obsidian (`@drawable/bg_genre_chip_selector`, `@color/genre_chip_text_selector`) integrado em todas as 5 variantes de layout (`layout`, `layout-land`, `layout-port`, `layout-sw720dp-land`, `layout-television`) e cadeia de foco do D-pad em `FocusCoordinator`.
-   - **Commit:** `0a45d53` (`feat(home): add Crunchyroll-style genre filter pills row (REF-04)`).
-
----
-
-## 5. Próximos Passos
-Prosseguir para os próximos itens da matriz conforme prioridade de produto:
-- **REF-03:** Menu de contexto de ações rápidas no card de "Continuar Assistindo" (long-press).
-- **REF-05:** Seletor de temporadas em modal dropdown compacto para séries extensas.
-- **REF-06:** Padronização global da animação de escala (1.05x) com foco Obsidian.
+- Seletor lista todas as partes sem truncar acesso, identifica seleção por ID, foca a seleção atual ao abrir, permite navegar/selecionar com D-pad e restaura foco no botão ao cancelar/selecionar.
+- Seleção usa o fluxo existente do ViewModel, inclusive metadados, nota, episódios e chips de episódios/especiais/música/prévias; não cria outra fonte de estado.
+- Barra de Detalhes mostra no máximo três ações; a ação removida da barra permanece no menu Mais. Play/retomar e lista preservam comportamento.
+- Menu só oferece trailer se houver arquivo ou URL; Recomeçar inicia do zero sem apagar progresso antecipadamente; Marcar assistido mantém o comando existente; Follow continua disponível.
+- Dialogs cabem nas margens seguras da janela, fecham com Back e liberam referências ao destruir a view. Strings novas em resources com paridade.
+- Homologação final diferencia testes unitários, instrumentação/ADB no emulador e testes humanos pendentes do AGENTS.md §4.

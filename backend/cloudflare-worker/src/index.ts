@@ -289,12 +289,16 @@ async function showPairingForm(request: Request, env: PairingEnv, id: string): P
   const csrfProof = await hmac(`csrf:${id}:${csrf}`, env);
   const origin = originOf(request);
   const formAction = `${origin}/p/${encodeURIComponent(id)}/confirm`;
-  const form = `<form method="post" action="${formAction}"><label for="code">Código exibido na TV</label><input id="code" name="code" autocomplete="one-time-code" inputmode="numeric" maxlength="6" required><input type="hidden" name="csrf" value="${csrfProof}"><button type="submit">Continuar com Google</button></form>`;
+  const url = new URL(request.url);
+  const rawCode = (url.searchParams.get("code") || url.searchParams.get("c") || "").replace(/\s/g, "");
+  const prefillCode = /^[2-9]{6}$/.test(rawCode) ? rawCode : "";
+  const codeValueAttr = prefillCode ? ` value="${prefillCode}"` : "";
+  const form = `<form method="post" action="${formAction}"><label for="code">Código de confirmação</label><input id="code" name="code"${codeValueAttr} autocomplete="one-time-code" inputmode="numeric" maxlength="6" required><input type="hidden" name="csrf" value="${csrfProof}"><button type="submit">Continuar com Google</button></form>`;
   const csrfCookiePath = `/p/${id}`;
   // Chromium applies form-action to every hop of the redirect chain after the POST
   // (/confirm -> 303 /oauth/start -> 302 accounts.google.com), so Google must be allowed here.
   const csp = `default-src 'none'; style-src 'unsafe-inline'; form-action 'self' ${origin} https://accounts.google.com; base-uri 'none'; frame-ancestors 'none'`;
-  return html(page("Conectar esta TV", `Digite o código exibido em ${pairing.device_name}. Ele expira em cinco minutos.`, form), 200, {
+  return html(page(`Conectar ${pairing.device_name}`, `Confirme o código exibido em ${pairing.device_name}. Ele expira em cinco minutos.`, form), 200, {
     "set-cookie": secureCookie("makimono_pairing_csrf", csrf, csrfCookiePath),
     "content-security-policy": csp,
   });

@@ -883,6 +883,24 @@
                     android:textStyle="bold"
                     android:visibility="gone" />
 
+                <TextView
+                    android:id="@+id/btnSeasonPicker"
+                    style="@style/TextAppearance.Makimono.TV.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:layout_marginBottom="8dp"
+                    android:background="@drawable/btn_secondary_action_bg"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:maxLines="2"
+                    android:ellipsize="end"
+                    android:padding="12dp"
+                    android:text="@string/series_season_picker_title"
+                    android:textColor="@color/btn_secondary_action_foreground"
+                    android:visibility="gone" />
+
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvSeasonTabs"
                     android:layout_width="match_parent"

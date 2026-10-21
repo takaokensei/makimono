@@ -382,4 +382,12 @@ describe("Makimono TV pairing", () => {
     expect(malformed.status).toBe(400);
     expect(oversized.status).toBe(400);
   });
+
+  it("prefills confirmation code in the HTML form when provided via query parameter", async () => {
+    const pairing = await createPairing();
+    const withCode = await SELF.fetch(`https://makimono.test/p/${pairing.pairing_id}?code=${pairing.confirm_code}`);
+    expect(withCode.status).toBe(200);
+    const body = await withCode.text();
+    expect(body).toContain(`value="${pairing.confirm_code}"`);
+  });
 });

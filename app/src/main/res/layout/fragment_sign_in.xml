@@ -1,144 +1,208 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?attr/colorBgBase"
-    android:paddingStart="48dp"
-    android:paddingTop="27dp"
-    android:paddingEnd="48dp"
-    android:paddingBottom="27dp">
+    android:fillViewport="true">
 
-    <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/tvPairingTitle"
-        android:layout_width="0dp"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/signInContainer"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/pairing_title"
-        android:textAppearance="@style/TextAppearance.Makimono.TV.Display"
-        android:textColor="?attr/colorTextPrimary"
-        app:layout_constraintBottom_toTopOf="@id/tvPairingDescription"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_chainStyle="packed" />
+        android:paddingStart="@dimen/tv_overscan_margin"
+        android:paddingTop="@dimen/tv_overscan_margin_vertical"
+        android:paddingEnd="@dimen/tv_overscan_margin"
+        android:paddingBottom="@dimen/tv_overscan_margin_vertical">
 
-    <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/tvPairingDescription"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:layout_marginBottom="28dp"
-        android:gravity="center"
-        android:text="@string/pairing_description"
-        android:textAppearance="@style/TextAppearance.Makimono.TV.Body"
-        android:textColor="?attr/colorTextSecondary"
-        app:layout_constraintBottom_toTopOf="@id/pairingContent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvPairingTitle" />
-
-    <LinearLayout
-        android:id="@+id/pairingContent"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvPairingDescription">
-
-        <FrameLayout
-            android:layout_width="276dp"
-            android:layout_height="276dp"
-            android:background="@android:color/white"
-            android:padding="12dp">
-
-            <ImageView
-                android:id="@+id/ivPairingQrCode"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:contentDescription="@string/pairing_qr_description"
-                android:importantForAccessibility="yes"
-                android:scaleType="fitCenter"
-                android:visibility="gone"
-                tools:visibility="visible" />
-
-            <ProgressBar
-                android:id="@+id/pairingLoading"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_gravity="center"
-                android:visibility="gone"
-                tools:visibility="visible" />
-        </FrameLayout>
-
-        <LinearLayout
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/tvPairingTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="36dp"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:text="@string/pairing_title"
+            android:textAppearance="@style/TextAppearance.Makimono.TV.Display"
+            android:textColor="?attr/colorTextPrimary"
+            app:layout_constraintBottom_toTopOf="@id/tvPairingDescription"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_chainStyle="packed" />
 
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/tvPairingInstructions"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/pairing_instructions"
-                android:textAppearance="@style/TextAppearance.Makimono.TV.Title1"
-                android:textColor="?attr/colorTextPrimary" />
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/tvPairingDescription"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="28dp"
+            android:gravity="center"
+            android:text="@string/pairing_description"
+            android:textAppearance="@style/TextAppearance.Makimono.TV.Body"
+            android:textColor="?attr/colorTextSecondary"
+            app:layout_constraintBottom_toTopOf="@id/pairingContent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvPairingTitle" />
 
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/tvPairingUrl"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:breakStrategy="simple"
-                android:textColor="?attr/colorAccentPrimary"
-                android:textSize="20sp"
-                tools:text="makimono-pairing.workers.dev/p/…" />
+        <LinearLayout
+            android:id="@+id/pairingContent"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvPairingDescription">
 
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/tvPairingCodeLabel"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="@string/pairing_code_label"
-                android:textAppearance="@style/TextAppearance.Makimono.TV.Body"
-                android:textColor="?attr/colorTextSecondary" />
+            <FrameLayout
+                android:id="@+id/flQrContainer"
+                android:layout_width="276dp"
+                android:layout_height="276dp"
+                android:background="@android:color/white"
+                android:padding="12dp">
 
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/tvPairingCode"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:fontFamily="monospace"
-                android:letterSpacing="0.16"
-                android:textColor="?attr/colorTextPrimary"
-                android:textSize="54sp"
-                android:textStyle="bold"
-                tools:text="284 763" />
+                <ImageView
+                    android:id="@+id/ivPairingQrCode"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@string/pairing_qr_description"
+                    android:importantForAccessibility="yes"
+                    android:scaleType="fitCenter"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
 
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/tvPairingStatus"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:textAppearance="@style/TextAppearance.Makimono.TV.Body"
-                android:textColor="?attr/colorTextSecondary"
-                tools:text="Aguardando autorização pelo celular · expira em 4:59" />
+                <ProgressBar
+                    android:id="@+id/pairingLoading"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="center"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+            </FrameLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnGeneratePairing"
-                style="@style/Widget.Makimono.Button.Secondary"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:minWidth="220dp"
-                android:minHeight="56dp"
-                android:text="@string/pairing_generate_new_qr"
-                android:visibility="gone"
-                tools:visibility="visible" />
+                android:layout_marginStart="36dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnOpenBrowser"
+                    style="@style/Widget.Makimono.Button.Primary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:minHeight="56dp"
+                    android:text="@string/pairing_mobile_btn_login"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/tvPairingInstructions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/pairing_instructions"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Title1"
+                    android:textColor="?attr/colorTextPrimary" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/tvPairingUrl"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:breakStrategy="simple"
+                    android:textColor="?attr/colorAccentPrimary"
+                    android:textSize="20sp"
+                    tools:text="makimono-pairing.workers.dev/p/…" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/tvPairingCodeLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="@string/pairing_code_label"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Body"
+                    android:textColor="?attr/colorTextSecondary" />
+
+                <LinearLayout
+                    android:id="@+id/llCodeRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/tvPairingCode"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="monospace"
+                        android:letterSpacing="0.16"
+                        android:textColor="?attr/colorTextPrimary"
+                        android:textSize="54sp"
+                        android:textStyle="bold"
+                        tools:text="284 763" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCopyCode"
+                        style="@style/Widget.Makimono.Button.Secondary"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:text="@string/pairing_mobile_copy_code"
+                        android:visibility="gone"
+                        tools:visibility="visible" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/llSecondaryMobileRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCopyUrl"
+                        style="@style/Widget.Makimono.Button.Secondary"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:text="@string/pairing_mobile_copy_link"
+                        android:visibility="gone"
+                        tools:visibility="visible" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnToggleQr"
+                        style="@style/Widget.Makimono.Button.Secondary"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/pairing_mobile_show_qr"
+                        android:visibility="gone"
+                        tools:visibility="visible" />
+                </LinearLayout>
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/tvPairingStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Body"
+                    android:textColor="?attr/colorTextSecondary"
+                    tools:text="Aguardando autorização pelo celular · expira em 4:59" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnGeneratePairing"
+                    style="@style/Widget.Makimono.Button.Secondary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:minWidth="220dp"
+                    android:minHeight="56dp"
+                    android:text="@string/pairing_generate_new_qr"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+            </LinearLayout>
         </LinearLayout>
-    </LinearLayout>
-</androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>

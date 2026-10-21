@@ -65,6 +65,16 @@
     <string name="pairing_generate_new_qr">Gerar novo QR</string>
     <string name="pairing_expiration_status">%1$s · expira em %2$s</string>
     <string name="pairing_countdown">%1$02d:%2$02d</string>
+    <string name="pairing_mobile_title">Conectar ao Makimono</string>
+    <string name="pairing_mobile_description">Conecte sua conta do Google Drive para assistir aos seus animes neste celular.</string>
+    <string name="pairing_mobile_instructions">Toque abaixo para autorizar no navegador ou confirme o código:</string>
+    <string name="pairing_mobile_btn_login">Entrar com Google no Navegador</string>
+    <string name="pairing_mobile_copy_code">Copiar código</string>
+    <string name="pairing_mobile_copy_link">Copiar link</string>
+    <string name="pairing_mobile_code_copied">Código copiado (%1$s)! Conclua o login no navegador.</string>
+    <string name="pairing_mobile_link_copied">Link de ativação copiado para a área de transferência.</string>
+    <string name="pairing_mobile_show_qr">Escanear com outro aparelho</string>
+    <string name="pairing_mobile_hide_qr">Ocultar QR Code</string>
     <string name="no">Não</string>
     <string name="yes">Sim</string>
     <string name="rewind_10_seconds">Retroceder 10 segundos</string>
@@ -579,4 +589,8 @@
     <string name="startup_preparing_library">Preparando sua biblioteca…</string>
     <string name="startup_preparing_artwork">Carregando sinopses, capas e personalização…</string>
     <string name="startup_library_ready">Tudo pronto para criar seu perfil</string>
+    <string name="series_season_fixture_title">Season %1$d</string>
+    <string name="series_season_picker_title">Choose season</string>
+    <string name="series_season_picker_current">Seasons: %1$s</string>
+    <string name="series_season_picker_accessibility">Choose season. Current: %1$s</string>
 </resources>
