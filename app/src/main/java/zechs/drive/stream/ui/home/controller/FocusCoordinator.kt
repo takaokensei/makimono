@@ -59,7 +59,8 @@ class FocusCoordinator(
 
         val root = binding.root
         val focusLayoutListener = ViewTreeObserver.OnGlobalLayoutListener {
-            val rows = listOfNotNull(continueShelf, queueShelf, followedShelf, starredShelf, recentlyAddedShelf, catalog).filter { it.isShown }
+            val genreChips = binding.rvGenreFilterChips
+            val rows = listOfNotNull(continueShelf, queueShelf, followedShelf, starredShelf, recentlyAddedShelf, genreChips, catalog).filter { it.isShown }
             val heroTarget = play?.takeIf { it.isShown } ?: search
             val primaryTarget = play?.takeIf { it.isShown } ?: search.takeIf { it.isShown } ?: rows.firstOrNull() ?: catalog
             railItems.forEach { railItem ->
@@ -84,7 +85,7 @@ class FocusCoordinator(
 
         FocusedItemScroll.install(
             viewport = binding.contentScrollView,
-            rows = listOfNotNull(continueShelf, queueShelf, followedShelf, starredShelf, recentlyAddedShelf, catalog)
+            rows = listOfNotNull(continueShelf, queueShelf, followedShelf, starredShelf, recentlyAddedShelf, binding.rvGenreFilterChips, catalog)
         )
     }
 
@@ -100,6 +101,7 @@ class FocusCoordinator(
             binding.rvNewEpisodesShelf,
             binding.rvStarredShelf,
             binding.rvRecentlyAddedShelf,
+            binding.rvGenreFilterChips,
             binding.rvAnimeLibrary
         ).filter { it.isShown && (it.adapter?.itemCount ?: 0) > 0 }
         val sourceIndex = rows.indexOf(source)

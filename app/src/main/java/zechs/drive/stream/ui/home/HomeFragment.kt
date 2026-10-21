@@ -198,6 +198,7 @@ class HomeFragment : BaseFragment() {
         catalogController.setupHeaderSearch()
         catalogController.setupVoiceSearch()
         catalogController.setupViewToggle { setupAnimeGrid() }
+        catalogController.setupGenreFilterChips()
         railController.setup()
         setupBackPressedHandling()
         heroController.setup(railController.usesOverlaySidebar())

@@ -96,6 +96,23 @@ class CatalogPresentationController(
         }
     }
 
+    private var genreFilterAdapter: zechs.drive.stream.ui.home.adapter.GenreFilterAdapter? = null
+
+    fun setupGenreFilterChips() {
+        val rv = binding.rvGenreFilterChips ?: return
+        val standardGenres = zechs.drive.stream.ui.home.AnimeGenrePolicy.getStandardGenres()
+        val adapter = zechs.drive.stream.ui.home.adapter.GenreFilterAdapter(standardGenres) { selectedGenre ->
+            viewModel.filterByGenre(selectedGenre)
+            binding.rvAnimeLibrary.scrollToPosition(0)
+        }
+        genreFilterAdapter = adapter
+        rv.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(
+            context, androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false
+        )
+        rv.adapter = adapter
+        rv.visibility = View.VISIBLE
+    }
+
     fun setupVoiceSearch() {
         binding.btnVoiceSearch.setOnClickListener { launchVoiceSearch() }
         binding.btnVoiceSearch.setOnFocusChangeListener { v, hasFocus ->

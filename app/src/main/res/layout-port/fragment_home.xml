@@ -492,7 +492,23 @@
                     android:visibility="gone" />
 
                 <!-- Main Anime Library Grid (2 columns on phone) -->
-                <androidx.recyclerview.widget.RecyclerView
+                                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvGenreFilterChips"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
+                    android:descendantFocusability="afterDescendants"
+                    android:focusable="false"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/home_content_margin"
+                    android:paddingEnd="@dimen/home_content_margin"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+<androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvAnimeLibrary"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

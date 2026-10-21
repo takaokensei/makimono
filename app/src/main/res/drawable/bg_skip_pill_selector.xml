@@ -2,7 +2,7 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="@color/obsidian_focused_surface" />
+            <solid android:color="@color/obsidian_focus_fill" />
             <stroke android:width="2dp" android:color="@color/obsidian_ice_white" />
             <corners android:radius="20dp" />
         </shape>

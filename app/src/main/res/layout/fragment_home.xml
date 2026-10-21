@@ -619,7 +619,23 @@
 
                     <!-- Main Anime Library Grid (5 columns on TV / Landscape) -->
                                         <TextView android:id="@+id/tvRecentlyAddedShelfLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="@dimen/home_content_margin" android:layout_marginEnd="@dimen/home_content_margin" android:layout_marginBottom="10dp" android:text="@string/home_recently_added" android:textColor="@color/obsidian_text_primary" android:textAppearance="@style/TextAppearance.Makimono.TV.Title2" android:visibility="gone" />
-                    <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvRecentlyAddedShelf" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:clipChildren="false" android:clipToPadding="false" android:descendantFocusability="afterDescendants" android:focusable="false" android:orientation="horizontal" android:paddingStart="@dimen/home_content_margin" android:paddingEnd="@dimen/home_content_margin" android:paddingTop="6dp" android:paddingBottom="6dp" android:visibility="gone" /><androidx.recyclerview.widget.RecyclerView
+                    <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvRecentlyAddedShelf" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:clipChildren="false" android:clipToPadding="false" android:descendantFocusability="afterDescendants" android:focusable="false" android:orientation="horizontal" android:paddingStart="@dimen/home_content_margin" android:paddingEnd="@dimen/home_content_margin" android:paddingTop="6dp" android:paddingBottom="6dp" android:visibility="gone" />                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rvGenreFilterChips"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:clipChildren="false"
+                        android:clipToPadding="false"
+                        android:descendantFocusability="afterDescendants"
+                        android:focusable="false"
+                        android:orientation="horizontal"
+                        android:paddingStart="@dimen/home_content_margin"
+                        android:paddingEnd="@dimen/home_content_margin"
+                        android:paddingTop="4dp"
+                        android:paddingBottom="4dp"
+                        android:visibility="gone"
+                        tools:visibility="visible" />
+<androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/rvAnimeLibrary"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

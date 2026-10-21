@@ -110,6 +110,9 @@ class HomeViewModel @Inject constructor(
     private val _filteredAnimes = MutableStateFlow<List<DriveFile>>(emptyList())
     val filteredAnimes = _filteredAnimes.asStateFlow()
 
+    private val _selectedGenre = MutableStateFlow(AnimeGenrePolicy.GENRE_ALL)
+    val selectedGenre = _selectedGenre.asStateFlow()
+
     private val _isLoadingAnime = MutableStateFlow(false)
     val isLoadingAnime = _isLoadingAnime.asStateFlow()
 
@@ -1263,9 +1266,14 @@ class HomeViewModel @Inject constructor(
                 lower.contains("star wars")
     }
 
+    fun filterByGenre(genre: String) = viewModelScope.launch(Dispatchers.IO) {
+        _selectedGenre.value = genre
+        applyCurrentFilter()
+    }
+
     private suspend fun applyCurrentFilter() {
         val all = _animeLibrary.value
-        val filtered = when (currentFilter) {
+        val filteredByTab = when (currentFilter) {
             LibraryFilter.STARRED_ONLY -> {
                 val localFavs = favoriteRepository.getFavoritesSync().map { it.folderId }.toSet()
                 all.filter {
@@ -1275,6 +1283,19 @@ class HomeViewModel @Inject constructor(
             LibraryFilter.MOVIES_ONLY -> all.filter { isMovieFile(it) }
             LibraryFilter.ANIMES_ONLY -> all.filter { !isMovieFile(it) }
             LibraryFilter.ALL -> all
+        }
+        val currentGenre = _selectedGenre.value
+        val metaMap = cachedFolderMetaMap
+        val filtered = if (currentGenre == AnimeGenrePolicy.GENRE_ALL || currentGenre.isBlank()) {
+            filteredByTab
+        } else {
+            filteredByTab.filter { file ->
+                val targetId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
+                    file.shortcutDetails.targetId!!
+                } else file.id
+                val genres = metaMap[targetId]?.genres?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
+                AnimeGenrePolicy.matches(currentGenre, genres, file.name)
+            }
         }
         withContext(Dispatchers.Main) {
             _filteredAnimes.value = filtered
