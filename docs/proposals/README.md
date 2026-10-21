@@ -16,3 +16,4 @@ Este diretório armazena as propostas formais da Fase 4 (`P-10` a `P-18`) e port
 | P-17 | Painel de informação técnica | [P-17-painel-informacao-tecnica.md](P-17-painel-informacao-tecnica.md) | Implementado e testado |
 | P-18 | Prévia no destaque da Home | [P-18-previa-destaque-home.md](P-18-previa-destaque-home.md) | Só desenho (sem código) |
 | D-50 | Progresso entre aparelhos (escopo OAuth) | [D-50-sincronizacao-progresso.md](D-50-sincronizacao-progresso.md) | Proposta de arquitetura (sem código) |
+| REF-01 | Referência Netflix & Crunchyroll (UX & Features) | [REF-netflix-crunchyroll.md](REF-netflix-crunchyroll.md) | Em implementação incremental |
