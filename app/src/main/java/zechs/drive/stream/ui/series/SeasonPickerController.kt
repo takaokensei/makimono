@@ -4,8 +4,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.view.ContextThemeWrapper
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import zechs.drive.stream.R
+import zechs.drive.stream.ui.common.ModalFocusGuard
 import zechs.drive.stream.ui.series.adapter.SeasonTab
 import zechs.drive.stream.ui.series.adapter.SeriesDetailSeasonAdapter
 import zechs.drive.stream.utils.DeviceUi
@@ -19,6 +21,7 @@ internal class SeasonPickerController(
 ) {
     private var seasons: List<SeasonTab> = emptyList()
     private var dialog: AlertDialog? = null
+    private var focusGuard: ModalFocusGuard? = null
     var isCompact: Boolean = false
         private set
 
@@ -28,6 +31,7 @@ internal class SeasonPickerController(
     }
 
     fun bind(tabs: List<SeasonTab>) {
+        val restoreToList = trigger.hasFocus()
         seasons = tabs
         val presentation = SeasonPickerPolicy.present(tabs.map { it.id }, tabs.firstOrNull { it.isSelected }?.id)
         isCompact = presentation.compact
@@ -39,7 +43,12 @@ internal class SeasonPickerController(
         )
         adapter.submitList(presentation.visibleIndices.map { index ->
             tabs[index].copy(isSelected = index == presentation.selectedIndex)
-        })
+        }) {
+            if (restoreToList && !isCompact && tabs.isNotEmpty()) {
+                val list = trigger.parent as? ViewGroup
+                list?.findViewById<View>(R.id.rvSeasonTabs)?.requestFocus()
+            }
+        }
     }
 
     private fun showPicker() {
@@ -48,7 +57,8 @@ internal class SeasonPickerController(
         val selectedIndex = SeasonPickerPolicy.present(
             snapshot.map { it.id }, snapshot.firstOrNull { it.isSelected }?.id
         ).selectedIndex
-        val picker = MaterialAlertDialogBuilder(trigger.context, R.style.ThemeOverlay_DriveStream_Dialog)
+        val dialogContext = ContextThemeWrapper(trigger.context, R.style.Theme_DriveStream_Obsidian)
+        val picker = MaterialAlertDialogBuilder(dialogContext, R.style.ThemeOverlay_DriveStream_Dialog)
             .setTitle(R.string.series_season_picker_title)
             .setSingleChoiceItems(snapshot.map { it.title }.toTypedArray(), selectedIndex) { openedDialog, position ->
                 val selectedId = snapshot.getOrNull(position)?.id
@@ -59,15 +69,18 @@ internal class SeasonPickerController(
             .setNegativeButton(R.string.series_action_cancel, null)
             .create()
         dialog = picker
+        focusGuard = ModalFocusGuard(trigger)
         picker.setOnDismissListener {
             dialog = null
-            if (trigger.isAttachedToWindow && trigger.isShown) trigger.requestFocus()
+            focusGuard?.restore()
+            focusGuard = null
         }
         picker.show()
         constrainToSafeWindow(picker)
         picker.listView?.apply {
-            setSelection(selectedIndex)
+            setSelector(R.drawable.bg_modal_list_focus)
             requestFocus()
+            setSelection(selectedIndex)
         }
     }
 
@@ -93,6 +106,8 @@ internal class SeasonPickerController(
         dialog?.setOnDismissListener(null)
         dialog?.dismiss()
         dialog = null
+        focusGuard?.restore(requestFocus = false)
+        focusGuard = null
         seasons = emptyList()
         trigger.setOnClickListener(null)
     }
