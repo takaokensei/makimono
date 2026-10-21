@@ -511,8 +511,8 @@
     <string name="tab_episodes">EPISÓDIOS</string>
     <string name="tab_details">DETALHES</string>
     <string name="tab_more_like_this">MAIS COMO ESTE</string>
-    <string name="series_action_watchlist">Salvar na Lista</string>
-    <string name="series_action_in_watchlist">Na sua Lista</string>
+    <string name="series_action_watchlist">Minha Lista</string>
+    <string name="series_action_in_watchlist">Na Lista</string>
     <string name="details_studio_label">Estúdio</string>
     <string name="details_original_title_label">Título Original</string>
     <string name="details_media_specs_label">Especificações Técnicas</string>

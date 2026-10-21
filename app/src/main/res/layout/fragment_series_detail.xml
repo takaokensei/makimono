@@ -642,7 +642,7 @@
                         android:layout_height="18dp"
                         android:contentDescription="@null"
                         android:duplicateParentState="true"
-                        android:src="@drawable/ic_star_outline_24"
+                        android:src="@drawable/ic_add_24"
                         app:tint="@color/btn_secondary_action_foreground" />
 
                     <TextView
@@ -653,7 +653,7 @@
                         android:layout_marginStart="8dp"
                         android:duplicateParentState="true"
                         android:fontFamily="sans-serif-medium"
-                        android:text="@string/series_action_favorite"
+                        android:text="@string/series_action_watchlist"
                         android:textColor="@color/btn_secondary_action_foreground" />
                 </LinearLayout>
 

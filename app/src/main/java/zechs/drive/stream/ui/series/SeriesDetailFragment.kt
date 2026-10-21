@@ -766,17 +766,15 @@ class SeriesDetailFragment : BaseFragment() {
 
     private fun updateFavoriteButton(isStarred: Boolean) {
         if (isStarred) {
-            binding.ivFavoriteIcon.setImageDrawable(
-                ContextCompat.getDrawable(requireContext(), R.drawable.ic_star_filled_24)
-            )
-            binding.ivFavoriteIcon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.amber_500))
+            binding.ivFavoriteIcon.setImageResource(R.drawable.ic_check_24)
+            binding.ivFavoriteIcon.clearColorFilter()
             binding.tvFavoriteText.setText(R.string.series_action_in_watchlist)
+            binding.btnFavorite.contentDescription = getString(R.string.series_action_in_watchlist)
         } else {
-            binding.ivFavoriteIcon.setImageDrawable(
-                ContextCompat.getDrawable(requireContext(), R.drawable.ic_star_outline_24)
-            )
+            binding.ivFavoriteIcon.setImageResource(R.drawable.ic_add_24)
             binding.ivFavoriteIcon.clearColorFilter()
             binding.tvFavoriteText.setText(R.string.series_action_watchlist)
+            binding.btnFavorite.contentDescription = getString(R.string.series_action_watchlist)
         }
     }
 
