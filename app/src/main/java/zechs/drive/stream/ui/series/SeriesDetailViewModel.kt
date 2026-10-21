@@ -1232,7 +1232,16 @@ class SeriesDetailViewModel @Inject constructor(
         }
     }
 
+    private val completedDownloadPathCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+
     private fun updateEpisodesWithDownloads(downloads: List<zechs.drive.stream.data.model.DownloadItem>) {
+        downloads.forEach { dl ->
+            if (dl.isComplete && dl.localPath.isNotBlank()) {
+                completedDownloadPathCache[dl.fileId] = dl.localPath
+            } else {
+                completedDownloadPathCache.remove(dl.fileId)
+            }
+        }
         val downloadMap = downloads.associateBy { it.fileId }
 
         allEpisodeItems = allEpisodeItems.map { ep ->
@@ -1269,10 +1278,11 @@ class SeriesDetailViewModel @Inject constructor(
     }
 
     fun getCompletedDownloadPath(fileId: String): String? {
-        val download = kotlinx.coroutines.runBlocking { downloadRepository?.getDownload(fileId) }
-        return if (download != null && download.isComplete && java.io.File(download.localPath).exists()) {
-            download.localPath
-        } else null
+        val cached = completedDownloadPathCache[fileId]
+        if (cached != null && java.io.File(cached).exists()) {
+            return cached
+        }
+        return null
     }
 
     fun isEpisodeDownloaded(fileId: String): Boolean {
@@ -1280,9 +1290,10 @@ class SeriesDetailViewModel @Inject constructor(
     }
 
     fun isEpisodeDownloading(fileId: String): Boolean {
-        val download = kotlinx.coroutines.runBlocking { downloadRepository?.getDownload(fileId) }
-        return download?.downloadStatus == zechs.drive.stream.data.model.DownloadStatus.DOWNLOADING ||
-            download?.downloadStatus == zechs.drive.stream.data.model.DownloadStatus.QUEUED
+        val currentSuccess = _uiState.value as? SeriesDetailUiState.Success
+        val ep = currentSuccess?.currentEpisodes?.firstOrNull { it.file.id == fileId }
+        return ep?.downloadStatus == zechs.drive.stream.data.model.DownloadStatus.DOWNLOADING ||
+            ep?.downloadStatus == zechs.drive.stream.data.model.DownloadStatus.QUEUED
     }
 
     fun startDownload(episode: SeriesEpisodeItem, seriesTitle: String, folderId: String) {

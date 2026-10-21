@@ -87,6 +87,7 @@ class SeriesDetailFragment : BaseFragment() {
         )
         TvAccessibilityLayout.adaptDetailsSynopsis(requireContext(), binding.tvSynopsis)
         setupTopHeader()
+        setupBackPressedHandling()
         setupAdapters()
         setupNavigationTabs()
         setupFocusAnimations()
@@ -140,6 +141,17 @@ class SeriesDetailFragment : BaseFragment() {
         binding.tabButtonDetails.nextFocusLeftId = binding.tabButtonEpisodes.id
         binding.tabButtonDetails.nextFocusRightId = binding.tabButtonMoreLikeThis.id
         binding.tabButtonMoreLikeThis.nextFocusLeftId = binding.tabButtonDetails.id
+    }
+
+    private fun setupBackPressedHandling() {
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            object : androidx.activity.OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    findNavController().navigateUp()
+                }
+            }
+        )
     }
 
     private fun setupTopHeader() {
@@ -1035,6 +1047,12 @@ class SeriesDetailFragment : BaseFragment() {
         super.onDestroyView()
         shimmerAnimator?.cancel()
         shimmerAnimator = null
+        binding.rvEpisodes.adapter = null
+        binding.rvSeasonTabs.adapter = null
+        context?.let { ctx ->
+            com.bumptech.glide.Glide.with(ctx).clear(binding.ivHeroBackdrop)
+            com.bumptech.glide.Glide.with(ctx).clear(binding.ivSeriesPosterCard)
+        }
         _binding = null
     }
 }
