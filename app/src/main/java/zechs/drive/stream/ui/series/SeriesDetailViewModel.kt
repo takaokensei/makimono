@@ -893,7 +893,8 @@ class SeriesDetailViewModel @Inject constructor(
             ""
         }
 
-        val audioText = SeriesMediaMetadataPolicy.audioLabelForFile(file.name).orEmpty()
+        val audioBadge = EpisodeAudioBadgePolicy.resolve(file.name)
+        val audioText = audioBadge?.label.orEmpty()
         val badge = if (isMovie) "FILME" else null
         val resolvedAge = formatRating(epMeta?.ageRating) ?: formatRating(seriesAgeRating) ?: if (isMovie) null else "14+"
 

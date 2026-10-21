@@ -11,6 +11,7 @@ import zechs.drive.stream.R
 import zechs.drive.stream.data.model.DriveFile
 import zechs.drive.stream.databinding.ItemSeriesEpisodeCardBinding
 import zechs.drive.stream.domain.library.MediaItemCategory
+import zechs.drive.stream.ui.series.EpisodeAudioBadgePolicy
 import zechs.drive.stream.ui.series.EpisodeCardAccessibilityLabel
 import zechs.drive.stream.data.model.DownloadStatus
 import zechs.drive.stream.utils.FocusEngine
@@ -120,6 +121,9 @@ class SeriesDetailEpisodeAdapter(
             binding.layoutAudioBadge.visibility = if (hasAudio) View.VISIBLE else View.GONE
             binding.tvAudioBadge.text = item.audioBadgeText
             binding.tvAudioBadge.visibility = if (hasAudio) View.VISIBLE else View.GONE
+            val isDub = EpisodeAudioBadgePolicy.isDubbed(item.audioBadgeText)
+            val audioColorRes = if (isDub) R.color.obsidian_accent else R.color.obsidian_link_blue_gray
+            binding.tvAudioBadge.setTextColor(ContextCompat.getColor(context, audioColorRes))
             binding.tvEpisodeDot1.visibility = View.GONE
 
             // Episode description / synopsis (2 lines at rest, expands to 4 lines on focus)
