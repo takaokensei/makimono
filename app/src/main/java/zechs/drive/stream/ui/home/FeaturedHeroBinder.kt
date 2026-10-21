@@ -189,7 +189,37 @@ internal class FeaturedHeroBinder(
                 overline.setTextColor(context.resolveThemeColor(R.attr.colorAccentPrimary))
             }
         }
-        binding.layoutFeaturedGenres?.visibility = View.GONE
+        val genreContainer = binding.layoutFeaturedGenres
+        val topGenres = featured.genres.take(4)
+        if (genreContainer != null && topGenres.isNotEmpty()) {
+            genreContainer.removeAllViews()
+            genreContainer.visibility = View.VISIBLE
+            val density = context.resources.displayMetrics.density
+            for (genreName in topGenres) {
+                val tv = android.widget.TextView(context).apply {
+                    text = genreName
+                    androidx.core.widget.TextViewCompat.setTextAppearance(this, R.style.TextAppearance_Makimono_TV_Badge)
+                    setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.obsidian_text_secondary))
+                    setBackgroundResource(R.drawable.tag_genre_pill_bg)
+                    setPadding(
+                        (8 * density).toInt(),
+                        (3 * density).toInt(),
+                        (8 * density).toInt(),
+                        (3 * density).toInt()
+                    )
+                    val lp = android.widget.LinearLayout.LayoutParams(
+                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        marginEnd = (6 * density).toInt()
+                    }
+                    layoutParams = lp
+                }
+                genreContainer.addView(tv)
+            }
+        } else {
+            genreContainer?.visibility = View.GONE
+        }
 
         val separator = context.getString(R.string.home_featured_separator)
         val badgeLabel = featured.ageRating?.takeIf { it.isNotBlank() } ?: if (isTenFoot) "A14" else null
@@ -202,7 +232,7 @@ internal class FeaturedHeroBinder(
             featured.score?.let {
                 add(context.getString(R.string.home_featured_score, it))
             }
-            if (featured.genres.isNotEmpty()) {
+            if (topGenres.isEmpty() && featured.genres.isNotEmpty()) {
                 add(featured.genres.take(3).joinToString(", "))
             }
         }.joinToString(separator)
