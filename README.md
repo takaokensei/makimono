@@ -32,23 +32,16 @@ An open-source alternative to Netflix, Plex and Jellyfin for anyone who keeps mo
 
 **Makimono** (巻物, Japanese for "scroll") is a **streaming client for Android TV and Android that turns your Google Drive into a Netflix-style library**: artwork, episodes, "continue watching", profiles and playback straight from the cloud. Your files stay in your own Google account; the app only takes care of the watching experience.
 
-```python
-class Makimono:
-    def __init__(self):
-        self.name = "Makimono (巻物)"
-        self.type = "Google Drive media streaming client"
-        self.platforms = ["Android TV 11+ (1080p / 4K UHD)", "Android 5.0+ (phone / tablet)"]
-        self.engines = ["AndroidX Media3 (ExoPlayer)", "libmpv (native)"]
-        self.subtitles = "ASS/SSA with fansub styles preserved"
-        self.language = "Kotlin"
-        self.license = "Apache-2.0"
-
-    def alternative_to(self):
-        return ["Netflix", "Plex", "Jellyfin"]
-
-    def does_not_need(self):
-        return ["your own server", "a subscription", "cloud transcoding"]
-```
+| | |
+|---|---|
+| **Type** | Google Drive media streaming client |
+| **Platforms** | Android TV 11+ (1080p / 4K UHD) · Android 5.0+ (phone / tablet) |
+| **Playback engines** | AndroidX Media3 (ExoPlayer) · libmpv (native) |
+| **Subtitles** | ASS/SSA with fansub styles preserved |
+| **Alternative to** | Netflix · Plex · Jellyfin |
+| **Doesn't need** | Your own server · a subscription · cloud transcoding |
+| **Language** | Kotlin |
+| **License** | Apache-2.0 |
 
 <br/>
 
