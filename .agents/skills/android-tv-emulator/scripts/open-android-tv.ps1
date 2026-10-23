@@ -21,8 +21,10 @@ foreach ($requiredPath in @($emulator, $adb, $avdConfig)) {
 
 # 1. Ensure ANDROID_AVD_HOME is set in both Process and User environment
 $env:ANDROID_AVD_HOME = $AvdHome
+$env:ANDROID_ADB_SERVER_PORT = '5038'
 try {
     [Environment]::SetEnvironmentVariable("ANDROID_AVD_HOME", $AvdHome, "User")
+    [Environment]::SetEnvironmentVariable("ANDROID_ADB_SERVER_PORT", "5038", "User")
 } catch {}
 
 # 2. Mirror AVD pointer to default .android\avd directory so emulator can always resolve it
@@ -96,7 +98,8 @@ if (-not $isAlreadyRunning) {
     $batContent = @"
 @echo off
 set ANDROID_AVD_HOME=$AvdHome
-start "" "$emulator" -avd $AvdName -gpu swangle -no-snapshot -no-boot-anim -no-audio -memory 2048 -cores 2
+set ANDROID_ADB_SERVER_PORT=5038
+start "" "$emulator" -avd $AvdName -gpu host -no-snapshot -no-boot-anim -no-audio -memory 2048 -cores 2
 "@
     Set-Content -LiteralPath $launchBat -Value $batContent -Encoding ASCII
 

@@ -1131,7 +1131,25 @@ class VisualReviewActivity : AppCompatActivity(), zechs.drive.stream.ui.player.P
         val frame=android.widget.FrameLayout(this)
         val image=ImageView(this).apply { scaleType=ImageView.ScaleType.CENTER_CROP }
         frame.addView(image,ViewGroup.LayoutParams(-1,-1));Glide.with(this).load(backdrop).into(image)
+                val subtitle = TextView(this).apply {
+            text = "Era uma jornada de dez anos... Mas para mim, foi apenas um instante."
+            textSize = 24f
+            setTextColor(0xffffffff.toInt())
+            setShadowLayer(8f, 0f, 0f, 0xff000000.toInt())
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            gravity = android.view.Gravity.CENTER_HORIZONTAL
+        }
+        val density = resources.displayMetrics.density
         val controls=layoutInflater.inflate(R.layout.player_control_view,frame,false)
+        val subParams = FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            android.view.Gravity.BOTTOM or android.view.Gravity.CENTER_HORIZONTAL
+        ).apply {
+            bottomMargin = (175 * density).toInt()
+        }
+        subtitle.elevation = 20f
+        frame.addView(subtitle, subParams)
         playerFixtureControls = controls
         frame.addView(controls);setContentView(frame);PlayerQuickOptions.bind(controls)
         controls.findViewById<View>(R.id.btnPlayPause)?.postDelayed({
