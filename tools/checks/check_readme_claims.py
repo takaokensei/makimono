@@ -23,14 +23,14 @@ def main():
     readme_text = readme_path.read_text(encoding="utf-8")
     errors = []
 
-    # 1. Extrair afirmações do README
+    # 1. Extrair afirmações do README (compativel com portugues e ingles)
     compile_match = re.search(r"compileSdk\s+(\d+)", readme_text)
     target_match = re.search(r"targetSdk\s+(\d+)", readme_text)
     min_match = re.search(r"minSdk\s+(\d+)", readme_text)
-    test_match = re.search(r"(\d+)\s+anotações\s+`@Test`", readme_text)
-    lint_match = re.search(r"(\d+)\s+issues\s+catalogadas\s+em\s+`app/lint-baseline\.xml`", readme_text)
-    strings_total_match = re.search(r"(\d+)\s+tags\s+`<string>`\s+no\s+total", readme_text)
-    strings_trans_match = re.search(r"(\d+)\s+traduzíveis", readme_text)
+    test_match = re.search(r"(\d+)\s+(?:anotações\s+`@Test`|`@Test`\s+annotations)", readme_text)
+    lint_match = re.search(r"(\d+)\s+issues\s+(?:catalogadas\s+em|cataloged\s+in)\s+`app/lint-baseline\.xml`", readme_text)
+    strings_total_match = re.search(r"(\d+)\s+(?:tags\s+`<string>`|`<string>`\s+tags)\s+(?:no\s+total|in\s+total)", readme_text)
+    strings_trans_match = re.search(r"(\d+)\s+(?:traduzíveis|are\s+translatable)", readme_text)
 
     if not all([compile_match, target_match, min_match, test_match, lint_match, strings_total_match, strings_trans_match]):
         print("[FAIL] Não foi possível extrair todas as afirmações métricas do README.md.")

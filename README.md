@@ -53,7 +53,6 @@ Makimono (巻物, Japanese for "scroll") is a streaming client for Android TV an
 ## > preview
 
 <div align="center">
-  <!-- [TODO: Add a 10s GIF of D-pad navigation on Android TV at docs/screenshots/tv-hero-demo.gif] -->
   <img src="docs/screenshots/tv-hero-demo.gif" width="85%" alt="Makimono Android TV interface navigation demo" />
 </div>
 
@@ -62,24 +61,20 @@ Makimono (巻物, Japanese for "scroll") is a streaming client for Android TV an
 <table align="center">
   <tr>
     <td align="center" width="50%">
-      <!-- [TODO: Add home screen screenshot at docs/screenshots/tv-home.png] -->
       <img src="docs/screenshots/tv-home.png" alt="Home Screen & Continue Watching" /><br/>
       <sub><b>Home & Continue Watching</b> (Obsidian Design System)</sub>
     </td>
     <td align="center" width="50%">
-      <!-- [TODO: Add series/episodes detail screenshot at docs/screenshots/tv-details.png] -->
       <img src="docs/screenshots/tv-details.png" alt="Series Details & Episode Selection" /><br/>
       <sub><b>Series Details & Episodes</b> (10-foot D-pad layout)</sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <!-- [TODO: Add native MPV player with ASS/SSA subtitles screenshot at docs/screenshots/tv-player-ass.png] -->
       <img src="docs/screenshots/tv-player-ass.png" alt="Native MPV Player with ASS/SSA Subtitles" /><br/>
       <sub><b>Native libmpv Playback</b> (Styled ASS/SSA fansub subtitles)</sub>
     </td>
     <td align="center" width="50%">
-      <!-- [TODO: Add profile selection screen screenshot at docs/screenshots/tv-profiles.png] -->
       <img src="docs/screenshots/tv-profiles.png" alt="Isolated Household Profiles" /><br/>
       <sub><b>Isolated Profiles</b> (Separate watch history & progress)</sub>
     </td>
@@ -193,7 +188,7 @@ Download the latest signed APK directly from [**GitHub Releases**](https://githu
 ### 📺 Android TV / Google TV / TV Boxes
 1. Enable **Install unknown apps** for your file manager or downloader in your TV settings (`Settings → Apps → Security & Restrictions`).
 2. Install the APK using one of the following methods:
-   - **Via Downloader app:** Open *Downloader* and enter the release URL: `https://github.com/takaokensei/makimono/releases/latest` <!-- [TODO: Optionally add Downloader short code] -->
+   - **Via Downloader app:** Open *Downloader* and enter the release URL: `https://github.com/takaokensei/makimono/releases/latest` 
    - **Via USB drive or Local Network:** Copy the downloaded `.apk` to a USB drive (or send it to your TV via *LocalSend* / *Send Files to TV*) and open it with a file manager.
    - **Via ADB (over network or USB):**
      ```bash
@@ -216,8 +211,11 @@ Download the latest signed APK directly from [**GitHub Releases**](https://githu
 ## > getting_started
 
 1. **Select or create a profile:** On first launch, choose or create your household profile so your watch history and "Continue Watching" row stay isolated.
-2. **Connect your Google Drive:** Sign in with your Google account <!-- [TODO: specify if system Google Sign-In or OAuth device code] -->. Makimono accesses your files directly from Google Drive without routing media through intermediate servers.
-3. **Organize your folders:** <!-- [TODO: adjust the folder tree below if your scanner expects specific root folders or naming conventions] -->
+2. **Connect your Google Drive:**
+   - **On Android TV:** Scan the on-screen QR code with your phone or enter the 6-digit confirmation code at `makimono.online/p/<id>`.
+   - **On Android Mobile / Tablet:** Tap **"Sign in with Google in Browser"** for direct 1-tap authorization with automatic confirmation code prefill.
+   Makimono accesses your files directly via the official `drive.readonly` scope without routing media through intermediate servers.
+3. **Organize your folders:** Makimono recognizes standard movies and episodic anime/series naming structures:
    ```text
    Google Drive/
    ├── Movies/
@@ -228,12 +226,22 @@ Download the latest signed APK directly from [**GitHub Releases**](https://githu
            └── Season 01/
                ├── S01E01.mkv
                └── S01E02.mkv
-
-```
-
+   ```
 4. **Play your media:** Browse your library with locally cached metadata (Room). Switch seamlessly between **AndroidX Media3 (ExoPlayer)** and **native MPV (`libmpv`)** whenever you need full ASS/SSA subtitle rendering.
 
 ## > tech_stack
+
+| Layer / Domain | Technology | Role & Highlights |
+| :--- | :--- | :--- |
+| **Language & Core** | **Kotlin 1.9+** | 100% Kotlin codebase, strict null-safety, Coroutines & Flow reactive streams. |
+| **Dual Playback Engines** | **libmpv** & **Media3 (ExoPlayer)** | Unified behind a single `PlayerEngine` contract. Native C++ libmpv with `libass` preserves fansub typography, styles and vector positioning. |
+| **Android TV 10-Foot UI** | **Obsidian Design System** | OLED dark theme (`#080B12`), 12dp glassmorphism, 48dp/27dp overscan margins, and D-pad `FocusEngine` with physics spring animations. |
+| **Architecture** | **Layered Clean Architecture** | Decoupled into `domain`, `data`, `playback`, `platform`, and `ui` with Hilt dependency injection. |
+| **Local Storage & Cache** | **Room** · **EncryptedPrefs** · **DataStore** | Local-first metadata caching for fast offline boot, Android Keystore encryption for tokens, and proto DataStore preferences. |
+| **Cloud & Networking** | **Google Drive REST API v3** · **Cloudflare** | Direct streaming via HTTP chunked byte-range requests (`drive.readonly`). Cloudflare Worker proxy for pairing and OAuth token exchange. |
+| **Quality & Verification** | **JUnit 4** · **MockK** · **Turbine** · **Lint** | 683 unit tests, 0 lint regressions, 548 strictly validated bilingual string keys, and Vitest suite for Worker backend. |
+
+<br/>
 
 ## > architecture
 
@@ -249,9 +257,9 @@ The project follows a layered architecture focused on separation of concerns and
 
 For full details and design decisions:
 
-* [Canonical Architecture Document](https://www.google.com/search?q=docs/architecture/ARCHITECTURE.md) 
-* [Architecture Decision Records (ADRs)](https://www.google.com/search?q=docs/adr/) 
-* [Native MPV Guide](https://www.google.com/search?q=docs/playback/MPV.md) 
+* [Canonical Architecture Document](docs/architecture/ARCHITECTURE.md)
+* [Architecture Decision Records (ADRs)](docs/architecture/adr/)
+* [Native MPV Integration Guide](docs/architecture/native-mpv.md) 
 
 ## > quickstart
 
@@ -268,7 +276,7 @@ For full details and design decisions:
 
 1. Clone the repository:
 ```bash
-git clone [https://github.com/takaokensei/makimono.git](https://github.com/takaokensei/makimono.git)
+git clone https://github.com/takaokensei/makimono.git
 cd makimono
 
 ```
@@ -336,7 +344,7 @@ Run the validation and integrity-check tasks:
 ## > docs
 
 | Area | Links |
-| --- | --- |
-| **Design System & TV UX** | [Obsidian Design System](https://www.google.com/search?q=docs/design/obsidian-design-system.md) · [HIG References](https://www.google.com/search?q=docs/design/hig-references.md) |
-| **Quality Assurance** | [Device Matrix](https://www.google.com/search?q=docs/qa/device-matrix.md) · [TV Focus Checklist](https://www.google.com/search?q=docs/qa/tv-focus-checklist.md) · [Diagnostic Baseline](https://www.google.com/search?q=docs/qa/diagnostic-baseline.md) |
-| **History & Releases** | [Release Guidelines](https://www.google.com/search?q=docs/releases/RELEASE_GUIDELINES.md) · [Full Changelog](CHANGELOG.md) |
+| :--- | :--- |
+| **Design System & TV UX** | [Obsidian Design System](docs/design/DESIGN.md) · [HIG References](docs/design/hig-references.md) · [Motion Guidelines](docs/design/MOTION.md) |
+| **Quality Assurance** | [Device Matrix](docs/qa/device-matrix.md) · [TV Focus Checklist](docs/qa/focus-checklist.md) · [Performance Baseline](docs/qa/perf-baseline.md) |
+| **History & Releases** | [Release Guidelines](docs/releases/RELEASE_GUIDELINES.md) · [Full Changelog](CHANGELOG.md) |
