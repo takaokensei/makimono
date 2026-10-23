@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="docs/logo.png" align="center" width="160" alt="Makimono Emblem" />
+  <img src="docs/logo.png" align="center" width="160" alt="Makimono (巻物) — alternativa à Netflix para o seu Google Drive no Android TV" />
 </p>
 <h1 align="center">
   Makimono (巻物)
 </h1>
 <p align="center">
-  <b>Cliente de Streaming de Mídia do Google Drive para Android e Android TV</b><br>
-  Reprodução de alta performance direto da nuvem com suporte nativo a estilos de legendas fansub (ASS/SSA), controle por D-pad em telas de TV de 3 metros, isolamento por perfis e integração com MediaSession.
+  <b>Sua própria "Netflix" a partir do Google Drive — player de streaming para Android TV e Android</b><br>
+  Alternativa open source a Netflix, Plex e Jellyfin para quem guarda filmes, séries e anime no Google Drive: sem servidor, sem mensalidade, com legendas fansub ASS/SSA, controle por D-pad pensado para TV, perfis isolados e motor nativo MPV.
 </p>
 
 <p align="center">
@@ -20,9 +20,71 @@
   <a href="https://github.com/takaokensei/makimono/blob/main/LICENSE">
     <img alt="License" src="https://img.shields.io/github/license/takaokensei/makimono?style=for-the-badge">
   </a>
+  <img alt="Platform" src="https://img.shields.io/badge/Android%20%7C%20Android%20TV-3DDC84?style=for-the-badge&logo=android&logoColor=white">
+  <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white">
 </div>
 
+<p align="center">
+  <sub>
+    <b>Palavras-chave:</b> Netflix alternative · Google Drive media player · Google Drive streaming · Android TV media player · Plex alternative · Jellyfin alternative · self-hosted streaming · anime player · ASS/SSA subtitles · MPV Android TV · open source media player · player de vídeo Google Drive · alternativa à Netflix
+  </sub>
+</p>
+
 <br>
+
+---
+
+## 🎬 O que é o Makimono?
+
+**Makimono** (巻物, "pergaminho" em japonês) é um **cliente de streaming para Android TV e Android que transforma o seu Google Drive numa biblioteca estilo Netflix**: capas, episódios, "continuar assistindo", perfis e reprodução direto da nuvem.
+
+Se você já organiza filmes, séries e anime no Drive e procura uma **alternativa à Netflix, ao Plex ou ao Jellyfin** sem precisar manter servidor em casa, o Makimono foi feito para isso. Seus arquivos continuam na sua conta Google; o app só cuida da experiência de assistir.
+
+### ✨ Principais recursos
+
+- **Streaming direto do Google Drive** — sem servidor próprio, sem transcodificação em nuvem, sem assinatura.
+- **Feito para a TV** — navegação 100% por controle remoto (D-pad), foco previsível e interface pensada para leitura a 3 metros ("10-foot experience").
+- **Legendas fansub ASS/SSA com estilos preservados** — fontes, cores, posicionamento e efeitos renderizados pelo motor nativo **libmpv**.
+- **Dois motores de reprodução** sob o mesmo contrato (`PlayerEngine`): **AndroidX Media3 (ExoPlayer)** e **MPV nativo**, para cobrir a maior variedade de vídeos e codecs.
+- **Perfis com isolamento de dados** — cada pessoa da casa tem seu histórico e progresso.
+- **Integração com o sistema Android TV** — `MediaSession` (controles de mídia do sistema) e **Watch Next** (continuar assistindo na tela inicial da TV).
+- **Local-first** — metadados em cache local (Room) para abrir rápido e navegar sem depender da rede a cada tela.
+- **Interface bilíngue** — paridade completa de strings entre inglês e português.
+- **Design System "Obsidian"** — tema escuro OLED, glassmorphism e acento Electric Cyan, com contraste validado (WCAG).
+- **Open source (Apache 2.0)** e com suíte de testes e verificações automatizadas.
+
+### 🤔 Para quem é?
+
+| Se você... | O Makimono ajuda porque... |
+| --- | --- |
+| Guarda filmes, séries ou anime no Google Drive | Transforma as pastas do Drive em uma biblioteca navegável com capas e episódios |
+| Quer uma alternativa à Netflix sem pagar assinatura nem hospedar servidor | Toca direto do seu Drive, sem infraestrutura extra |
+| Assiste anime com legendas fansub | Renderiza ASS/SSA com os estilos originais via MPV |
+| Usa Android TV, TV Box ou Google TV | Foi desenhado primeiro para D-pad e telas grandes, com versão mobile também |
+| Divide a TV com a família | Perfis isolados mantêm histórico e progresso separados |
+
+### ❓ Perguntas frequentes
+
+**O Makimono é uma alternativa à Netflix?**
+Ele não oferece catálogo próprio: é o player e a biblioteca para o **seu** conteúdo no Google Drive, com experiência semelhante à de um serviço de streaming.
+
+**Preciso de servidor, como no Plex ou no Jellyfin?**
+Não. O app conversa diretamente com a Google Drive API; não há servidor para instalar ou manter.
+
+**Funciona em Android TV, Google TV e TV Box?**
+Sim, em Android TV 11+ (1080p / 4K UHD) e também em celulares e tablets com Android 5.0+.
+
+**Suporta legendas ASS/SSA de fansubs?**
+Sim. Os estilos são preservados pelo motor nativo libmpv.
+
+**Posso usar com várias pessoas na mesma TV?**
+Sim, com perfis isolados.
+
+---
+
+## 🌍 English summary
+
+**Makimono** is an open-source **Google Drive media player and Netflix-style streaming client for Android TV and Android**. It is a serverless **alternative to Plex and Jellyfin** for people who keep movies, TV shows and anime on Google Drive: native **MPV** playback, full **ASS/SSA fansub subtitle styling**, D-pad-first TV navigation, isolated user profiles, Android TV `MediaSession` and Watch Next integration, and a local-first metadata cache. No server to host, no subscription — your files stay in your own Google account.
 
 ---
 
