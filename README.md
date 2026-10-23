@@ -1,185 +1,288 @@
-<p align="center">
-  <img src="docs/logo.png" align="center" width="160" alt="Makimono (巻物) — alternativa à Netflix para o seu Google Drive no Android TV" />
-</p>
-<h1 align="center">
-  Makimono (巻物)
-</h1>
-<p align="center">
-  <b>Sua própria "Netflix" a partir do Google Drive — player de streaming para Android TV e Android</b><br>
-  Alternativa open source a Netflix, Plex e Jellyfin para quem guarda filmes, séries e anime no Google Drive: sem servidor, sem mensalidade, com legendas fansub ASS/SSA, controle por D-pad pensado para TV, perfis isolados e motor nativo MPV.
-</p>
-
-<p align="center">
-  Desenvolvido com <a href="https://developers.google.com/drive/api">Google Drive API</a>, <a href="https://developer.android.com/media/media3">AndroidX Media3</a> e <a href="docs/architecture/native-mpv.md">libmpv</a>.
-</p>
-
 <div align="center">
-  <a href="https://github.com/takaokensei/makimono/releases">
-    <img alt="GitHub release" src="https://img.shields.io/github/v/release/takaokensei/makimono?style=for-the-badge">
-  </a>
-  <a href="https://github.com/takaokensei/makimono/blob/main/LICENSE">
-    <img alt="License" src="https://img.shields.io/github/license/takaokensei/makimono?style=for-the-badge">
-  </a>
-  <img alt="Platform" src="https://img.shields.io/badge/Android%20%7C%20Android%20TV-3DDC84?style=for-the-badge&logo=android&logoColor=white">
-  <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white">
+
+<img src="docs/logo.png" width="140" alt="Makimono (巻物) — Netflix alternative for your Google Drive on Android TV" />
+
+# Makimono (巻物)
+
+<samp>Google Drive Media Streaming · Android TV & Android · Native MPV</samp>
+
+<br/>
+
+<b>Your own "Netflix" powered by Google Drive.</b><br/>
+An open-source alternative to Netflix, Plex and Jellyfin for anyone who keeps movies, TV shows and anime on Google Drive: no server, no subscription, native ASS/SSA fansub styling, D-pad navigation built for the living room and isolated profiles.
+
+<br/><br/>
+
+<a href="https://github.com/takaokensei/makimono/releases"><img alt="GitHub release" src="https://img.shields.io/github/v/release/takaokensei/makimono?style=for-the-badge"/></a>
+<a href="https://github.com/takaokensei/makimono/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/takaokensei/makimono?style=for-the-badge"/></a>
+<img alt="Platform" src="https://img.shields.io/badge/Android%20%7C%20Android%20TV-3DDC84?style=for-the-badge&logo=android&logoColor=white"/>
+<img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white"/>
+
+<br/><br/>
+
+<sub>
+<b>Keywords:</b> Netflix alternative · Google Drive media player · Google Drive streaming · Android TV media player · Plex alternative · Jellyfin alternative · self-hosted streaming · anime player · ASS/SSA subtitles · MPV Android TV · open source media player · Google Drive video player
+</sub>
+
 </div>
 
-<p align="center">
-  <sub>
-    <b>Palavras-chave:</b> Netflix alternative · Google Drive media player · Google Drive streaming · Android TV media player · Plex alternative · Jellyfin alternative · self-hosted streaming · anime player · ASS/SSA subtitles · MPV Android TV · open source media player · player de vídeo Google Drive · alternativa à Netflix
-  </sub>
-</p>
+<br/>
 
-<br>
+## `> overview`
 
----
+**Makimono** (巻物, Japanese for "scroll") is a **streaming client for Android TV and Android that turns your Google Drive into a Netflix-style library**: artwork, episodes, "continue watching", profiles and playback straight from the cloud. Your files stay in your own Google account; the app only takes care of the watching experience.
 
-## 🎬 O que é o Makimono?
+```python
+class Makimono:
+    def __init__(self):
+        self.name = "Makimono (巻物)"
+        self.type = "Google Drive media streaming client"
+        self.platforms = ["Android TV 11+ (1080p / 4K UHD)", "Android 5.0+ (phone / tablet)"]
+        self.engines = ["AndroidX Media3 (ExoPlayer)", "libmpv (native)"]
+        self.subtitles = "ASS/SSA with fansub styles preserved"
+        self.language = "Kotlin"
+        self.license = "Apache-2.0"
 
-**Makimono** (巻物, "pergaminho" em japonês) é um **cliente de streaming para Android TV e Android que transforma o seu Google Drive numa biblioteca estilo Netflix**: capas, episódios, "continuar assistindo", perfis e reprodução direto da nuvem.
+    def alternative_to(self):
+        return ["Netflix", "Plex", "Jellyfin"]
 
-Se você já organiza filmes, séries e anime no Drive e procura uma **alternativa à Netflix, ao Plex ou ao Jellyfin** sem precisar manter servidor em casa, o Makimono foi feito para isso. Seus arquivos continuam na sua conta Google; o app só cuida da experiência de assistir.
+    def does_not_need(self):
+        return ["your own server", "a subscription", "cloud transcoding"]
+```
 
-### ✨ Principais recursos
+<br/>
 
-- **Streaming direto do Google Drive** — sem servidor próprio, sem transcodificação em nuvem, sem assinatura.
-- **Feito para a TV** — navegação 100% por controle remoto (D-pad), foco previsível e interface pensada para leitura a 3 metros ("10-foot experience").
-- **Legendas fansub ASS/SSA com estilos preservados** — fontes, cores, posicionamento e efeitos renderizados pelo motor nativo **libmpv**.
-- **Dois motores de reprodução** sob o mesmo contrato (`PlayerEngine`): **AndroidX Media3 (ExoPlayer)** e **MPV nativo**, para cobrir a maior variedade de vídeos e codecs.
-- **Perfis com isolamento de dados** — cada pessoa da casa tem seu histórico e progresso.
-- **Integração com o sistema Android TV** — `MediaSession` (controles de mídia do sistema) e **Watch Next** (continuar assistindo na tela inicial da TV).
-- **Local-first** — metadados em cache local (Room) para abrir rápido e navegar sem depender da rede a cada tela.
-- **Interface bilíngue** — paridade completa de strings entre inglês e português.
-- **Design System "Obsidian"** — tema escuro OLED, glassmorphism e acento Electric Cyan, com contraste validado (WCAG).
-- **Open source (Apache 2.0)** e com suíte de testes e verificações automatizadas.
+## `> features`
 
-### 🤔 Para quem é?
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <b>☁️ Drive-native streaming</b><br/>
+      Plays straight from Google Drive. No server of your own, no cloud transcoding, no subscription.
+    </td>
+    <td width="33%" valign="top">
+      <b>📺 Built for the TV</b><br/>
+      100% remote-control (D-pad) navigation, predictable focus and an interface designed for the 10-foot experience.
+    </td>
+    <td width="33%" valign="top">
+      <b>💬 Fansub-grade subtitles</b><br/>
+      ASS/SSA with fonts, colors, positioning and effects preserved, rendered by the native <b>libmpv</b> engine.
+    </td>
+  </tr>
+  <tr>
+    <td width="33%" valign="top">
+      <b>⚙️ Dual playback engines</b><br/>
+      <b>AndroidX Media3 (ExoPlayer)</b> and <b>native MPV</b> behind a single <code>PlayerEngine</code> contract, covering the widest range of videos and codecs.
+    </td>
+    <td width="33%" valign="top">
+      <b>👥 Isolated profiles</b><br/>
+      Everyone in the household gets their own history and progress.
+    </td>
+    <td width="33%" valign="top">
+      <b>🏠 Android TV integration</b><br/>
+      <code>MediaSession</code> (system media controls) and <b>Watch Next</b> (continue watching from the TV home screen).
+    </td>
+  </tr>
+  <tr>
+    <td width="33%" valign="top">
+      <b>⚡ Local-first</b><br/>
+      Metadata cached locally (Room) so the app opens fast and doesn't depend on the network at every screen.
+    </td>
+    <td width="33%" valign="top">
+      <b>🌐 Bilingual UI</b><br/>
+      Full string parity between English and Portuguese.
+    </td>
+    <td width="33%" valign="top">
+      <b>🎨 Obsidian Design System</b><br/>
+      OLED dark theme, glassmorphism and an Electric Cyan accent, with WCAG-validated contrast.
+    </td>
+  </tr>
+</table>
 
-| Se você... | O Makimono ajuda porque... |
+<br/>
+
+## `> tech_stack`
+
+<table align="center">
+  <tr>
+    <td align="center" width="33%">
+      <strong>📱 App</strong>
+      <br/><br/>
+      <img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white"/>
+      <img src="https://img.shields.io/badge/Android-3DDC84?style=flat-square&logo=android&logoColor=white"/>
+      <img src="https://img.shields.io/badge/Android_TV-22D3EE?style=flat-square&logoColor=black"/>
+      <img src="https://img.shields.io/badge/Room-4285F4?style=flat-square"/>
+    </td>
+    <td align="center" width="33%">
+      <strong>🎬 Playback</strong>
+      <br/><br/>
+      <img src="https://img.shields.io/badge/AndroidX_Media3-3DDC84?style=flat-square"/>
+      <img src="https://img.shields.io/badge/libmpv-691F69?style=flat-square"/>
+      <img src="https://img.shields.io/badge/ASS%2FSSA-22D3EE?style=flat-square"/>
+    </td>
+    <td align="center" width="33%">
+      <strong>🔧 Tooling</strong>
+      <br/><br/>
+      <img src="https://img.shields.io/badge/Google_Drive_API-4285F4?style=flat-square&logo=googledrive&logoColor=white"/>
+      <img src="https://img.shields.io/badge/Gradle-02303A?style=flat-square&logo=gradle&logoColor=white"/>
+      <img src="https://img.shields.io/badge/Python_checks-3776AB?style=flat-square&logo=python&logoColor=white"/>
+      <img src="https://img.shields.io/badge/Git-F05032?style=flat-square&logo=git&logoColor=white"/>
+    </td>
+  </tr>
+</table>
+
+<br/>
+
+## `> who_is_it_for`
+
+| If you... | Makimono helps because... |
 | --- | --- |
-| Guarda filmes, séries ou anime no Google Drive | Transforma as pastas do Drive em uma biblioteca navegável com capas e episódios |
-| Quer uma alternativa à Netflix sem pagar assinatura nem hospedar servidor | Toca direto do seu Drive, sem infraestrutura extra |
-| Assiste anime com legendas fansub | Renderiza ASS/SSA com os estilos originais via MPV |
-| Usa Android TV, TV Box ou Google TV | Foi desenhado primeiro para D-pad e telas grandes, com versão mobile também |
-| Divide a TV com a família | Perfis isolados mantêm histórico e progresso separados |
+| Keep movies, TV shows or anime on Google Drive | It turns your Drive folders into a browsable library with artwork and episodes |
+| Want a Netflix alternative with no subscription and no server to host | It plays directly from your Drive, with no extra infrastructure |
+| Watch anime with fansub subtitles | It renders ASS/SSA with the original styles through MPV |
+| Use Android TV, a TV box or Google TV | It was designed D-pad-first for big screens, with a mobile version too |
+| Share the TV with your family | Isolated profiles keep history and progress separate |
 
-### ❓ Perguntas frequentes
+<details>
+<summary><b>❓ FAQ</b></summary>
 
-**O Makimono é uma alternativa à Netflix?**
-Ele não oferece catálogo próprio: é o player e a biblioteca para o **seu** conteúdo no Google Drive, com experiência semelhante à de um serviço de streaming.
+<br/>
 
-**Preciso de servidor, como no Plex ou no Jellyfin?**
-Não. O app conversa diretamente com a Google Drive API; não há servidor para instalar ou manter.
+**Is Makimono a Netflix alternative?**
+It doesn't ship its own catalog: it's the player and library for **your** content on Google Drive, with an experience similar to a streaming service.
 
-**Funciona em Android TV, Google TV e TV Box?**
-Sim, em Android TV 11+ (1080p / 4K UHD) e também em celulares e tablets com Android 5.0+.
+**Do I need a server, like with Plex or Jellyfin?**
+No. The app talks directly to the Google Drive API; there is nothing to install or maintain on a server.
 
-**Suporta legendas ASS/SSA de fansubs?**
-Sim. Os estilos são preservados pelo motor nativo libmpv.
+**Does it work on Android TV, Google TV and TV boxes?**
+Yes, on Android TV 11+ (1080p / 4K UHD), and also on phones and tablets running Android 5.0+.
 
-**Posso usar com várias pessoas na mesma TV?**
-Sim, com perfis isolados.
+**Does it support ASS/SSA fansub subtitles?**
+Yes. Styles are preserved by the native libmpv engine.
 
----
+**Can several people use it on the same TV?**
+Yes, with isolated profiles.
 
-## 🌍 English summary
+</details>
 
-**Makimono** is an open-source **Google Drive media player and Netflix-style streaming client for Android TV and Android**. It is a serverless **alternative to Plex and Jellyfin** for people who keep movies, TV shows and anime on Google Drive: native **MPV** playback, full **ASS/SSA fansub subtitle styling**, D-pad-first TV navigation, isolated user profiles, Android TV `MediaSession` and Watch Next integration, and a local-first metadata cache. No server to host, no subscription — your files stay in your own Google account.
+<br/>
 
----
+## `> architecture`
 
-## 📋 Requisitos de Ambiente
+The project follows a layered architecture focused on separation of concerns and local-first design:
 
-- **JDK:** OpenJDK 17 ou superior (`JAVA_HOME` configurado)
-- **Android SDK:** `compileSdk 34`, `targetSdk 33`, `minSdk 21`
-- **Build Tools:** Android SDK Build-Tools 34.0.0
-- **Dispositivo:** Android 5.0+ (Lollipop, API 21+) para celular/tablet ou Android TV 11+ (1080p / 4K UHD)
+| Layer | Responsibility |
+|---|---|
+| `domain` | Models and pure business rules (no Android framework dependencies). |
+| `data` | Repositories, Google Drive client, local Room database and metadata cache. |
+| `playback` | Decoupled playback engines under a single contract (`PlayerEngine`), managing Media3 and native MPV. |
+| `platform` | Android TV platform integrations (`MediaSession`, Watch Next). |
+| `ui` | Presentation for Android TV (D-pad 10-foot experience, 80dp rail) and mobile. |
 
----
+For full details and design decisions:
+- [Canonical Architecture Document](docs/architecture/ARCHITECTURE.md)
+- [Architecture Decision Records (ADRs)](docs/architecture/adr/)
+- [Native MPV Guide](docs/architecture/native-mpv.md)
 
-## 🛠️ Como Compilar do Zero
+<br/>
 
-1. **Clonar o repositório:**
+## `> quickstart`
+
+### Requirements
+
+| | |
+|---|---|
+| **JDK** | OpenJDK 17 or later (`JAVA_HOME` configured) |
+| **Android SDK** | `compileSdk 34`, `targetSdk 33`, `minSdk 21` |
+| **Build Tools** | Android SDK Build-Tools 34.0.0 |
+| **Device** | Android 5.0+ (Lollipop, API 21+) for phone/tablet, or Android TV 11+ (1080p / 4K UHD) |
+
+### Build from scratch
+
+1. **Clone the repository:**
    ```bash
    git clone https://github.com/takaokensei/makimono.git
    cd makimono
    ```
 
-2. **Configurar propriedades locais:**
-   Copie o modelo de propriedades para criar o seu `local.properties`:
+2. **Configure local properties:**
+   Copy the properties template to create your own `local.properties`:
    ```bash
    cp local.properties.example local.properties
    ```
-   Defina o caminho do Android SDK (`sdk.dir`) e as credenciais necessárias conforme descrito no arquivo de exemplo.
+   Set the Android SDK path (`sdk.dir`) and the required credentials as described in the example file.
 
    > [!NOTE]
-   > **Ambiente Windows:** Para evitar falhas de carregamento de classes de teste no Gradle decorrentes de caminhos com caracteres não-ASCII (ex: `C:\Users\Nome Com Acento\...`), execute o build e testes a partir de um caminho estritamente ASCII ou monte uma unidade virtual temporária (ex: `subst T: .` e acesse a partir de `T:\`).
+   > **Windows environment:** To avoid Gradle test-class loading failures caused by paths containing non-ASCII characters (e.g. `C:\Users\Name With Accent\...`), run the build and tests from a strictly ASCII path or mount a temporary virtual drive (e.g. `subst T: .` and work from `T:\`).
 
-3. **Compilar o APK de desenvolvimento:**
+3. **Build the debug APK:**
    ```bash
    ./gradlew assembleDebug
    ```
-   O binário gerado estará em `app/build/outputs/apk/debug/app-debug.apk`.
+   The generated binary will be at `app/build/outputs/apk/debug/app-debug.apk`.
 
----
+<br/>
 
-## 🧪 Como Rodar os Testes e o Lint
+## `> quality`
 
-Execute as tarefas de validação e verificação de integridade:
+Run the validation and integrity-check tasks:
 
 ```bash
-# Executar todos os testes unitários
+# Run all unit tests
 ./gradlew testDebugUnitTest
 
-# Executar verificação de qualidade de código (Lint com baseline ativa)
+# Run code quality checks (Lint with active baseline)
 ./gradlew lintDebug
 
-# Executar verificação completa em um único comando
+# Run the full verification in a single command
 ./gradlew testDebugUnitTest lintDebug assembleDebug
 ```
 
-### Métricas de Integridade do Código (v1.9.0)
+### Code integrity metrics (v1.9.0)
 
-- **Testes Unitários:** 683 anotações `@Test` no código-fonte e **691 execuções** registradas no relatório JUnit XML (0 falhas, 0 erros). A contagem estática e a execução são medidas distintas; testes herdados são reconciliados por `python tools/checks/count_tests.py`.
-- **Android Lint (Baseline):** 681 issues catalogadas em `app/lint-baseline.xml` com **0 erros bloqueantes** e **0 erros filtrados pela baseline**, além de paridade completa de internacionalização (`MissingTranslation`: 0, `MissingQuantity`: 0, `Untranslatable`: 0, `ContentDescription`: 0). Principais categorias: `HardcodedText` (286), `UnusedResources` (158), `SetTextI18n` (102), `InconsistentLayout` (18), `UnusedAttribute` (15). Verificação: `python tools/checks/count_lint_categories.py`.
-- **Ferramentas de Verificação Contínua (`tools/checks/`):**
-  - `check_strings.py`: Validação de paridade estrita de strings (551 tags `<string>` no total em `values/strings.xml`, sendo 548 traduzíveis validadas contra `values-pt/strings.xml` e 3 não-traduzíveis técnicas marcadas com `translatable="false"`).
-  - `check_kotlin_literals.py`: Guarda contra literais de UI hardcoded (`Toast.makeText`, `setTitle`, `setMessage`, `setText`) em arquivos Kotlin.
-  - `check_kotlin_style.py`: Verificação estática de estilo e higiene Kotlin com baseline versionada (`config/ktlint-baseline.json`).
-  - `check_immutable_tag.py`: Guarda de imutabilidade de tags de release com autoteste (`--self-test`).
-  - `check_contrast.py`: Validação de conformidade WCAG AAA/AA para todas as paletas de cores e gradientes sobre imagem.
-  - `check_layout_colors.py` & `check_typography.py`: Auditoria de uso de tokens semânticos e tipografia.
-  - `check_no_direct_log.py`: Guarda contra chamadas diretas a `android.util.Log` fora de `AppLog.kt`.
-  - `check_readme_claims.py`: Validação contínua de paridade entre as afirmações do README e os valores reais do código.
-  - `count_tests.py` & `count_lint_categories.py`: Auditoria automatizada de testes e baseline do Lint.
+| Metric | Result |
+|---|---|
+| **Unit tests** | 683 `@Test` annotations · **691 executions** · 0 failures · 0 errors |
+| **Android Lint** | 681 issues in baseline · **0 blocking errors** · **0 errors filtered by the baseline** |
+| **i18n parity** | `MissingTranslation`: 0 · `MissingQuantity`: 0 · `Untranslatable`: 0 · `ContentDescription`: 0 |
 
------
+- **Unit Tests:** 683 `@Test` annotations in the source code and **691 executions** recorded in the JUnit XML report (0 failures, 0 errors). The static count and the execution count are distinct measures; inherited tests are reconciled by `python tools/checks/count_tests.py`.
+- **Android Lint (Baseline):** 681 issues cataloged in `app/lint-baseline.xml` with **0 blocking errors** and **0 errors filtered by the baseline**, plus full internationalization parity (`MissingTranslation`: 0, `MissingQuantity`: 0, `Untranslatable`: 0, `ContentDescription`: 0). Main categories: `HardcodedText` (286), `UnusedResources` (158), `SetTextI18n` (102), `InconsistentLayout` (18), `UnusedAttribute` (15). Verification: `python tools/checks/count_lint_categories.py`.
 
-## 🏛️ Arquitetura
+<details>
+<summary><b>🧰 Continuous verification tools (<code>tools/checks/</code>)</b></summary>
 
-O projeto adota uma arquitetura em camadas focada em separação de preocupações e local-first:
+<br/>
 
-- **`domain`:** Modelos, regras de negócio puras (sem dependências de framework Android).
-- **`data`:** Repositórios, cliente Google Drive, Room local e cache de metadados.
-- **`playback`:** Motores de reprodução desacoplados sob contrato único (`PlayerEngine`), gerenciando Media3 e MPV nativo.
-- **`platform`:** Integrações de plataforma Android TV (`MediaSession`, Watch Next).
-- **`ui`:** Apresentação para Android TV (D-pad 10-foot experience, rail de 80dp) e mobile.
+- `check_strings.py`: Strict string parity validation (551 `<string>` tags in total in `values/strings.xml`, of which 548 are translatable and validated against `values-pt/strings.xml`, and 3 are technical non-translatable strings marked `translatable="false"`).
+- `check_kotlin_literals.py`: Guard against hardcoded UI literals (`Toast.makeText`, `setTitle`, `setMessage`, `setText`) in Kotlin files.
+- `check_kotlin_style.py`: Static Kotlin style and hygiene check with a versioned baseline (`config/ktlint-baseline.json`).
+- `check_immutable_tag.py`: Release tag immutability guard with a self-test (`--self-test`).
+- `check_contrast.py`: WCAG AAA/AA compliance validation for all color palettes and gradients over imagery.
+- `check_layout_colors.py` & `check_typography.py`: Audit of semantic token and typography usage.
+- `check_no_direct_log.py`: Guard against direct `android.util.Log` calls outside `AppLog.kt`.
+- `check_readme_claims.py`: Continuous parity validation between README claims and the actual values in the code.
+- `count_tests.py` & `count_lint_categories.py`: Automated audit of tests and the Lint baseline.
 
-Para detalhes completos e decisões de design:
-- [Documento Canônico de Arquitetura](docs/architecture/ARCHITECTURE.md)
-- [Decisões Arquiteturais (ADRs)](docs/architecture/adr/)
-- [Guia do MPV Nativo](docs/architecture/native-mpv.md)
+</details>
+
+<br/>
+
+## `> docs`
+
+| Area | Links |
+|---|---|
+| **Design System & TV UX** | [Obsidian Design System](docs/design/DESIGN.md) · [HIG References](docs/design/hig-references.md) |
+| **Quality Assurance** | [Device Matrix](docs/qa/device-matrix.md) · [TV Focus Checklist](docs/qa/focus-checklist.md) · [Diagnostic Baseline](docs/qa/baseline-0.md) |
+| **History & Releases** | [Release Guidelines](docs/releases/README.md) · [Full Changelog](CHANGELOG.md) |
+
+<br/>
 
 ---
 
-## 📚 Documentação do Projeto
-
-- **Design System & TV UX:** [Design System Obsidian](docs/design/DESIGN.md) e [Referências HIG](docs/design/hig-references.md)
-- **Garantia de Qualidade:** [Matriz de Dispositivos](docs/qa/device-matrix.md), [Checklist de Foco TV](docs/qa/focus-checklist.md) e [Baseline Diagnóstica](docs/qa/baseline-0.md)
-- **Histórico e Releases:** [Diretrizes de Release](docs/releases/README.md) e [Changelog Completo](CHANGELOG.md)
-
----
-
-## 📜 Licença
-
-Distribuído sob a licença Apache 2.0. Consulte [LICENSE](LICENSE) para mais informações.
+<div align="center">
+  <samp>
+    Your library. Your Drive. Your screen.<br/>
+    Distributed under the Apache 2.0 license. See <a href="LICENSE">LICENSE</a> for more information.
+  </samp>
+</div>
