@@ -39,3 +39,6 @@ graphify-out/
 # Cloudflare Wrangler & temporary XML dumps
 .wrangler/
 live_dump*.xml
+
+netflix-dossie/
+
