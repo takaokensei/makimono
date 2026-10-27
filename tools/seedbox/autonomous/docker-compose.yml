@@ -1,0 +1,14 @@
+services:
+  makimono-seedbox:
+    build: .
+    container_name: makimono-autonomous-seedbox
+    restart: always
+    environment:
+      - MAKIMONO_SEEDBOX_TOKEN=${MAKIMONO_SEEDBOX_TOKEN:-}
+      - MAKIMONO_WORKER_URL=https://makimono-pairing.cauavitorfigueredo.workers.dev
+      - OAUTH_CLIENT_ID=235586231139-672hsh1bsecejbjut4fkk80o394d23l5.apps.googleusercontent.com
+      - OAUTH_CLIENT_SECRET=
+      - OAUTH_REFRESH_TOKEN=
+      - POLL_INTERVAL=15
+    volumes:
+      - ./downloads:/app/downloads_seedbox
