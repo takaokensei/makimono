@@ -5,5 +5,6 @@ import androidx.annotation.Keep
 @Keep
 enum class MediaSource {
     DRIVE,
-    LOCAL
+    LOCAL,
+    CATALOG_SEEDBOX
 }

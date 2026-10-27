@@ -91,4 +91,7 @@ data class DriveFile(
     val thumbnailMedium = ThumbnailUrl.medium(thumbnailLink)
 
     val thumbnailLarge = ThumbnailUrl.large(thumbnailLink)
+
+    val isSeedboxCatalogItem: Boolean
+        get() = source == MediaSource.CATALOG_SEEDBOX
 }
