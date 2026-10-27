@@ -78,6 +78,8 @@ beforeEach(async () => {
     env.DB.prepare("DELETE FROM pairings"),
     env.DB.prepare("DELETE FROM accounts"),
     env.DB.prepare("DELETE FROM rate_limits"),
+    env.DB.prepare("DELETE FROM seedbox_jobs"),
+    env.DB.prepare("DELETE FROM seedbox_daemons"),
   ]);
 });
 
@@ -389,5 +391,68 @@ describe("Makimono TV pairing", () => {
     expect(withCode.status).toBe(200);
     const body = await withCode.text();
     expect(body).toContain(`value="${pairing.confirm_code}"`);
+  });
+
+  it("creates a seedbox daemon token and handles job queuing and polling", async () => {
+    const pairing = await createPairing();
+    await authorizeForTest(pairing.pairing_id);
+    const claim = await SELF.fetch(`https://makimono.test/v1/pairings/${pairing.pairing_id}`, { headers: { "x-device-secret": pairing.device_secret } });
+    const sessionToken = (await claim.json() as { session_token: string }).session_token;
+
+    // 1. Create daemon token
+    const tokenResp = await SELF.fetch("https://makimono.test/v1/seedbox/token", {
+      method: "POST",
+      headers: { authorization: `Bearer ${sessionToken}` }
+    });
+    expect(tokenResp.status).toBe(201);
+    const { daemon_token } = await tokenResp.json() as { daemon_token: string };
+    expect(daemon_token).toMatch(/^sk_makimono_/);
+
+    // 2. Initial status: offline
+    const statusResp = await SELF.fetch("https://makimono.test/v1/seedbox/status", {
+      headers: { authorization: `Bearer ${sessionToken}` }
+    });
+    expect(statusResp.status).toBe(200);
+    const statusBody = await statusResp.json() as { is_online: boolean; jobs: unknown[] };
+    expect(statusBody.is_online).toBe(false);
+    expect(statusBody.jobs).toHaveLength(0);
+
+    // 3. Queue a job from Makimono TV/Phone
+    const queueResp = await SELF.fetch("https://makimono.test/v1/seedbox/jobs", {
+      method: "POST",
+      headers: { authorization: `Bearer ${sessionToken}`, "content-type": "application/json" },
+      body: JSON.stringify({ anime_query: "Bakemonogatari", episodes_filter: "1-12", prefer_ptbr: true })
+    });
+    expect(queueResp.status).toBe(201);
+    const { job_id } = await queueResp.json() as { job_id: string };
+
+    // 4. Daemon polls for work
+    const pollResp = await SELF.fetch("https://makimono.test/v1/seedbox/daemon/poll", {
+      method: "POST",
+      headers: { authorization: `Bearer ${daemon_token}`, "content-type": "application/json" },
+      body: JSON.stringify({ free_disk_gb: 64.5, active_speed: "18.2 MB/s" })
+    });
+    expect(pollResp.status).toBe(200);
+    const { job } = await pollResp.json() as { job: { job_id: string; anime_query: string; status: string } };
+    expect(job.job_id).toBe(job_id);
+    expect(job.anime_query).toBe("Bakemonogatari");
+    expect(job.status).toBe("PENDING");
+
+    // 5. Daemon updates job progress
+    const patchResp = await SELF.fetch(`https://makimono.test/v1/seedbox/daemon/jobs/${job_id}`, {
+      method: "PATCH",
+      headers: { authorization: `Bearer ${daemon_token}`, "content-type": "application/json" },
+      body: JSON.stringify({ status: "DOWNLOADING", progress_pct: 75, transfer_speed: "25 MB/s" })
+    });
+    expect(patchResp.status).toBe(200);
+
+    // 6. User verifies updated status
+    const updatedStatusResp = await SELF.fetch("https://makimono.test/v1/seedbox/status", {
+      headers: { authorization: `Bearer ${sessionToken}` }
+    });
+    const updatedStatus = await updatedStatusResp.json() as { is_online: boolean; jobs: Array<{ status: string; progress_pct: number }> };
+    expect(updatedStatus.is_online).toBe(true);
+    expect(updatedStatus.jobs[0].status).toBe("DOWNLOADING");
+    expect(updatedStatus.jobs[0].progress_pct).toBe(75);
   });
 });

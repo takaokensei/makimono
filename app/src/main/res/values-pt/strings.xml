@@ -580,4 +580,29 @@
     <string name="series_season_picker_title">Escolher temporada</string>
     <string name="series_season_picker_current">Temporadas: %1$s</string>
     <string name="series_season_picker_accessibility">Escolher temporada. Atual: %1$s</string>
+    <!-- Subtitle Translation & Dual Subtitles -->
+    <string name="translate_subtitles_ai">Traduzir p/ Português (IA)</string>
+    <string name="translating_subtitles_in_progress">Traduzindo legendas simultaneamente…</string>
+    <string name="dual_subtitles_toggle">Legendas Duplas (Original + PT-BR)</string>
+    <string name="subtitles_translated_success">Legenda traduzida para PT-BR</string>
+    <string name="subtitles_translation_failed">Falha na tradução de legendas</string>
+
+    <!-- Modo Madrugada & Ambient Soundscape -->
+    <string name="nocturnal_mode_title">Modo Madrugada</string>
+    <string name="nocturnal_mode_desc">Conforto visual OLED, áudio noturno nivelado e ambiente de tranquilidade</string>
+    <string name="ambient_soundscape_title">Música Ambiente</string>
+    <string name="ambient_soundscape_desc">Piano suave de fundo ao navegar pela biblioteca e detalhes</string>
+    <string name="ambient_now_playing_prefix">♪ Tocando agora: %1$s</string>
+
+    <!-- Seedbox Colab P2P -->
+    <string name="seedbox_title">Seedbox Remota (Colab P2P)</string>
+    <string name="seedbox_desc">Baixe animes e séries via torrent na nuvem diretamente para o seu Google Drive</string>
+    <string name="seedbox_search_hint">Nome do anime ou link magnético…</string>
+    <string name="seedbox_enqueue_action">Pedir Download</string>
+    <string name="seedbox_status_colab_offline">Servidor Colab Adormecido</string>
+    <string name="seedbox_status_colab_online">Servidor Colab Online</string>
+    <string name="seedbox_open_colab_btn">Abrir Servidor no Colab</string>
+    <string name="seedbox_daemon_token_title">Token do Daemon (Colab)</string>
+    <string name="seedbox_prompt_message">Digite o nome do anime ou cole um link magnético:</string>
+    <string name="seedbox_queue_status_title">Status da Seedbox</string>
 </resources>

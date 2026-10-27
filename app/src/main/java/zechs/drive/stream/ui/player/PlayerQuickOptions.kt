@@ -6,7 +6,7 @@ import zechs.drive.stream.utils.DeviceUi
 
 /** Keeps the engine-specific handlers intact while removing secondary OSD stops. */
 object PlayerQuickOptions {
-    fun bind(root: View) {
+    fun bind(root: View, extraActions: List<Pair<String, () -> Unit>> = emptyList()) {
         zechs.drive.stream.utils.TvFocusRing.install(root)
         val more = root.findViewById<View>(R.id.btnMoreOptions)
         val actions = buildList {
@@ -22,12 +22,20 @@ object PlayerQuickOptions {
         root.findViewById<View>(R.id.btnPrevEp)?.nextFocusLeftId = R.id.btnAudio
         root.findViewById<View>(R.id.btnEpisodes)?.nextFocusRightId = R.id.btnEpisodes
         more.setOnClickListener {
-            lateinit var menu: PlayerGlassMenuDialog
-            menu = PlayerGlassMenuDialog(root.context, "Mais opções", actions.map { (id, title) ->
+            val menuItems = actions.map { (id, title) ->
                 GlassMenuItem(id.toString(), title, tag = id)
-            }) { selected ->
+            } + extraActions.mapIndexed { idx, (title, _) ->
+                GlassMenuItem("extra_$idx", title, tag = title)
+            }
+            lateinit var menu: PlayerGlassMenuDialog
+            menu = PlayerGlassMenuDialog(root.context, "Mais opções", menuItems) { selected ->
                 menu.dismiss()
-                root.findViewById<View>(selected.tag as Int).performClick()
+                val tag = selected.tag
+                if (tag is Int) {
+                    root.findViewById<View>(tag).performClick()
+                } else if (tag is String) {
+                    extraActions.firstOrNull { it.first == tag }?.second?.invoke()
+                }
             }.setOnDismiss { more.requestFocus() }
             menu.show()
         }

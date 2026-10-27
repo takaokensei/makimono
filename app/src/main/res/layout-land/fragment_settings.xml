@@ -763,6 +763,53 @@
                             android:checked="true" />
                     </LinearLayout>
 
+                    <!-- Seedbox Colab Row -->
+                    <LinearLayout
+                        android:id="@+id/settingSeedbox"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp">
+
+                        <ImageView
+                            android:id="@+id/ivSeedboxIcon"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_download_24"
+                            app:tint="?attr/colorAccentPrimary" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvSeedboxTitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/seedbox_title"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                                android:textColor="?attr/colorTextPrimary" />
+
+                            <TextView
+                                android:id="@+id/tvSeedboxSubtitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/seedbox_desc"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                                android:textColor="?attr/colorTextSecondary" />
+                        </LinearLayout>
+                    </LinearLayout>
+
                     <!-- Section Header: Data & System -->
                     <TextView
                         android:id="@+id/settingsSectionData"

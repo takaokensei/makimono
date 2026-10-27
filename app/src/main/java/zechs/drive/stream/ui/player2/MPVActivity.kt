@@ -161,6 +161,12 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
     @Inject
     lateinit var bingeBufferManager: dagger.Lazy<zechs.drive.stream.ui.player.predictive.BingeBufferManager>
 
+    @Inject
+    lateinit var subtitleTranslationEngine: dagger.Lazy<zechs.drive.stream.utils.SubtitleTranslationEngine>
+
+    @Inject
+    lateinit var culturalXRayEngine: dagger.Lazy<zechs.drive.stream.data.translation.CulturalXRayEngine>
+
     // States
     private var activityIsForeground = true
     private var userIsOperatingSeekbar = false
@@ -175,6 +181,7 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
     private val displayModeController = zechs.drive.stream.playback.display.DisplayModeController()
     private val currentAfrState get() = displayModeController.currentState
     private var currentHdrStatus: zechs.drive.stream.utils.HdrModeManager.HdrStatus? = null
+    private var lastExternalSubFile: java.io.File? = null
 
     // MediaSession
     private var mediaSessionHelper: MakimonoMediaSessionHelper? = null
@@ -574,7 +581,14 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
                         isInteractive = false
                     ) }) {}.show()
             }
-            zechs.drive.stream.ui.player.PlayerQuickOptions.bind(root)
+            zechs.drive.stream.ui.player.PlayerQuickOptions.bind(
+                root,
+                listOf(
+                    "X-Ray Cultural (IA)" to { showCulturalXRayDialog() },
+                    "✨ Traduzir Legenda p/ PT-BR (IA)" to { translateCurrentSubtitle() },
+                    "Filtro Deband (Anti-Banding)" to { showDebandMenu() }
+                )
+            )
 
             btnLock.setOnClickListener {
                 controlsLocked = true
@@ -1649,6 +1663,7 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
         val selectMode = if (isPortuguese) "select" else "auto"
         val subTag = if (sub.source == zechs.drive.stream.data.model.MediaSource.LOCAL) "[Local]" else "[Drive]"
         val trackTitle = if (sub.id.startsWith("saved_")) sub.name else "★ $subTag ${sub.languageLabel}"
+        lastExternalSubFile = cached
         AppLog.d(TAG, "Adding external subtitle to MPV: ${cached.absolutePath} (mode=$selectMode)")
         MPVLib.command(arrayOf("sub-add", cached.absolutePath, selectMode, trackTitle, sub.languageCode))
         if (isPortuguese) {
@@ -1930,6 +1945,20 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
             }
         }
 
+        if (lastExternalSubFile != null || folderSubtitles.isNotEmpty()) {
+            choices.add(
+                SubChoice(
+                    mpvTrackId = -99,
+                    folderSub = null,
+                    onlineSub = null,
+                    savedSub = null,
+                    label = "✨ Traduzir Legenda p/ PT-BR (IA)",
+                    subtitle = "Tradução simultânea via IA mantendo estilo original",
+                    isSelected = false
+                )
+            )
+        }
+
         fun buildMenuItems(sourceChoices: List<SubChoice>): List<GlassMenuItem> {
             return sourceChoices.mapIndexed { idx, c ->
                 GlassMenuItem(
@@ -1951,11 +1980,17 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
             items = menuItems
         ) { selected ->
             val choice = selected.tag as? SubChoice ?: return@PlayerGlassMenuDialog
+            if (choice.mpvTrackId == -99) {
+                glassDialog.dismiss()
+                translateCurrentSubtitle()
+                return@PlayerGlassMenuDialog
+            }
             if (choice.mpvTrackId != null) {
                 player.sid = choice.mpvTrackId
                 trackSwitchNotification { TrackData(choice.mpvTrackId, "sub") }
             } else if (choice.savedSub != null) {
                 val saved = choice.savedSub
+                lastExternalSubFile = saved.file
                 val trackTitle = "💾 [Salva] ${saved.langName}"
                 AppLog.d(TAG, "Manual add saved subtitle to MPV: ${saved.file.absolutePath}")
                 MPVLib.command(arrayOf("sub-add", saved.file.absolutePath, "select", trackTitle, saved.lang))
@@ -1968,6 +2003,7 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
                     val cached = viewModel.downloadSubtitle(sub, cacheDir)
                     if (cached != null && cached.exists()) {
                         withContext(Dispatchers.Main) {
+                            lastExternalSubFile = cached
                             val subTag = if (sub.source == zechs.drive.stream.data.model.MediaSource.LOCAL) "[Local]" else "[Drive]"
                             val trackTitle = "★ $subTag ${sub.languageLabel}"
                             AppLog.d(TAG, "Manual add external subtitle to MPV: ${cached.absolutePath}")
@@ -1993,6 +2029,7 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
                     val result = onlineSubtitleManager.get().downloadSubtitle(os, videoTitle)
                     withContext(Dispatchers.Main) {
                         result.onSuccess { cachedFile ->
+                            lastExternalSubFile = cachedFile
                             val trackTitle = "💾 [Salva] ${os.langName}"
                             MPVLib.command(arrayOf("sub-add", cachedFile.absolutePath, "select", trackTitle, os.lang))
                             player.loadTracks()
@@ -3166,4 +3203,130 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
         return String.format("#%02X%02X%02X%02X", a, r, g, b)
     }
 
+
+    private fun showCulturalXRayDialog() {
+        val title = currentTitle.ifBlank { intent.getStringExtra("title") ?: "Anime" }
+        configSnackbar("Analisando referências culturais e trocadilhos...", 1500)
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            val cues = folderSubtitles.firstOrNull()?.let { sub ->
+                val f = viewModel.downloadSubtitle(sub, cacheDir)
+                if (f != null && f.exists()) {
+                    if (f.extension.equals("ass", ignoreCase = true)) {
+                        zechs.drive.stream.data.translation.AssTagPreservingCodec.extractFromAss(f.readLines())
+                    } else {
+                        zechs.drive.stream.data.translation.AssTagPreservingCodec.extractFromSrt(f.readText())
+                    }
+                } else emptyList()
+            } ?: emptyList()
+
+            val currentPos = (player.timePos ?: 0).toLong() * 1000L
+            val res = culturalXRayEngine.get().explainSceneContext(title, currentEpNumber, currentPos, cues)
+
+            withContext(Dispatchers.Main) {
+                res.onSuccess { notes ->
+                    val items = notes.mapIndexed { idx, note ->
+                        zechs.drive.stream.ui.player.GlassMenuItem(
+                            id = "xray_$idx",
+                            title = "• $note",
+                            subtitle = null,
+                            isInteractive = false
+                        )
+                    }
+                    zechs.drive.stream.ui.player.PlayerGlassMenuDialog(this@MPVActivity, "X-Ray Cultural (Sem Spoilers)", items) {}.show()
+                }.onFailure {
+                    configSnackbar("Não foi possível analisar o contexto cultural no momento", 2000)
+                }
+            }
+        }
+    }
+
+    private fun showDebandMenu() {
+        val currentState = MPVLib.getPropertyString("deband") == "yes"
+        val items = listOf(
+            zechs.drive.stream.ui.player.GlassMenuItem(
+                "deband_off", "Desativado", "Imagem original sem filtro",
+                isSelected = !currentState
+            ),
+            zechs.drive.stream.ui.player.GlassMenuItem(
+                "deband_soft", "Modo Suave (Web / 1080p)", "Ideal para Crunchyroll e animes modernos",
+                isSelected = currentState
+            ),
+            zechs.drive.stream.ui.player.GlassMenuItem(
+                "deband_strong", "Modo Intenso (Hi10P / Blu-ray)",
+                "Remove gradientes severos em céus e sombras", isSelected = false
+            )
+        )
+        lateinit var dialog: zechs.drive.stream.ui.player.PlayerGlassMenuDialog
+        dialog = zechs.drive.stream.ui.player.PlayerGlassMenuDialog(this, "Filtro Deband (Anti-Banding)", items) { sel ->
+            dialog.dismiss()
+            when (sel.id) {
+                "deband_off" -> {
+                    MPVLib.setPropertyString("deband", "no")
+                    configSnackbar("Deband: Desativado")
+                }
+                "deband_soft" -> {
+                    MPVLib.setPropertyString("deband", "yes")
+                    MPVLib.setPropertyInt("deband-iterations", 1)
+                    MPVLib.setPropertyInt("deband-threshold", 48)
+                    MPVLib.setPropertyInt("deband-range", 16)
+                    MPVLib.setPropertyInt("deband-grain", 32)
+                    configSnackbar("Deband: Suave ativado")
+                }
+                "deband_strong" -> {
+                    MPVLib.setPropertyString("deband", "yes")
+                    MPVLib.setPropertyInt("deband-iterations", 2)
+                    MPVLib.setPropertyInt("deband-threshold", 64)
+                    MPVLib.setPropertyInt("deband-range", 20)
+                    MPVLib.setPropertyInt("deband-grain", 48)
+                    configSnackbar("Deband: Forte ativado")
+                }
+            }
+        }
+        dialog.show()
+    }
+
+    private fun translateCurrentSubtitle() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val targetFile = lastExternalSubFile ?: folderSubtitles.firstOrNull()?.let { sub ->
+                viewModel.downloadSubtitle(sub, cacheDir)
+            }
+
+            if (targetFile == null || !targetFile.exists()) {
+                withContext(Dispatchers.Main) {
+                    configSnackbar("Selecione ou baixe uma legenda antes de iniciar a tradução por IA", 2000)
+                }
+                return@launch
+            }
+
+            val safeTitle = currentTitle.ifBlank { "Anime" }.replace("[^a-zA-Z0-9]".toRegex(), "_")
+            val cacheKey = "${safeTitle}_ep${currentEpNumber}_${targetFile.nameWithoutExtension}"
+            withContext(Dispatchers.Main) {
+                configSnackbar("✨ Traduzindo legenda p/ Português (IA) em segundo plano...", 2000)
+            }
+
+            val currentPos = (player.timePos ?: 0).toLong() * 1000L
+            val result = subtitleTranslationEngine.get().translateFileProgressive(
+                sourceFile = targetFile,
+                cacheKey = cacheKey,
+                currentPositionMs = currentPos,
+                onProgressiveFileUpdated = { updatedFile ->
+                    withContext(Dispatchers.Main) {
+                        MPVLib.command(arrayOf("sub-add", updatedFile.absolutePath, "select", "✨ [IA PT-BR] Traduzida", "por"))
+                        player.loadTracks()
+                    }
+                }
+            )
+
+            withContext(Dispatchers.Main) {
+                result.onSuccess { finalFile ->
+                    MPVLib.command(arrayOf("sub-add", finalFile.absolutePath, "select", "✨ [IA PT-BR] Traduzida (Completa)", "por"))
+                    player.loadTracks()
+                    configSnackbar("✨ Legenda traduzida por IA ativada com sucesso!", 2000)
+                }.onFailure { err ->
+                    configSnackbar("Erro na tradução: ${err.message ?: "Falha ao processar"}", 2500)
+                }
+            }
+        }
+    }
 }

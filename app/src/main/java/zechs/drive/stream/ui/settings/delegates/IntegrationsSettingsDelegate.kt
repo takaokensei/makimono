@@ -5,8 +5,11 @@ import android.content.res.ColorStateList
 import android.widget.LinearLayout
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.LifecycleCoroutineScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.launch
 import zechs.drive.stream.R
+import zechs.drive.stream.data.repository.SeedboxRepository
 import zechs.drive.stream.databinding.FragmentSettingsBinding
 import zechs.drive.stream.ui.settings.MalAuthDialog
 import zechs.drive.stream.ui.settings.SettingsEvent
@@ -16,7 +19,7 @@ import zechs.drive.stream.utils.TvFocusRing
 import zechs.drive.stream.utils.ext.resolveThemeColor
 
 /**
- * Delegado responsável pela seção de Integrações (MyAnimeList OAuth, Scrobble e sincronização).
+ * Delegado responsável pela seção de Integrações (MyAnimeList OAuth, Scrobble e Seedbox Colab P2P).
  * Conforme Seção 4.10 do Plano v2.
  */
 class IntegrationsSettingsDelegate(
@@ -24,7 +27,9 @@ class IntegrationsSettingsDelegate(
     private val binding: FragmentSettingsBinding,
     private val viewModel: SettingsViewModel,
     private val fragmentManager: FragmentManager,
-    private val showSnackBar: (String) -> Unit
+    private val showSnackBar: (String) -> Unit,
+    private val lifecycleScope: LifecycleCoroutineScope,
+    private val seedboxRepoProvider: () -> SeedboxRepository
 ) {
 
     fun setup() {
@@ -42,6 +47,159 @@ class IntegrationsSettingsDelegate(
                 handleLoginClick()
             }
         }
+
+        binding.settingSeedbox?.setOnClickListener {
+            showSeedboxDialog()
+        }
+    }
+
+    private fun showSeedboxDialog() {
+        val options = arrayOf(
+            "📋 Obter Token do Daemon (MAKIMONO_SEEDBOX_TOKEN)",
+            "⚡ Novo Pedido de Download (Anime / Magnet)",
+            "📊 Ver Fila e Status do Servidor"
+        )
+
+        val dialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
+            .setTitle(R.string.seedbox_title)
+            .setItems(options) { d, which ->
+                d.dismiss()
+                when (which) {
+                    0 -> showDaemonTokenDialog()
+                    1 -> showNewJobPrompt()
+                    2 -> showQueueStatusDialog()
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.window?.let { w -> TvFocusRing.install(w.decorView) }
+        }
+        dialog.show()
+    }
+
+    private fun showDaemonTokenDialog() {
+        showSnackBar("Gerando token do daemon...")
+        lifecycleScope.launch {
+            val res = seedboxRepoProvider().generateDaemonToken()
+            res.onSuccess { token ->
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("Makimono Seedbox Token", token))
+
+                val msg = "Token gerado e copiado para a área de transferência:\n\n$token\n\nConfigure a variável MAKIMONO_SEEDBOX_TOKEN no seu notebook Colab."
+                val tokenDialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
+                    .setTitle(R.string.seedbox_daemon_token_title)
+                    .setMessage(msg)
+                    .setPositiveButton("OK", null)
+                    .create()
+                tokenDialog.setOnShowListener {
+                    tokenDialog.window?.let { w -> TvFocusRing.install(w.decorView) }
+                }
+                tokenDialog.show()
+            }.onFailure { err ->
+                showSnackBar("Erro ao gerar token: ${err.message}")
+            }
+        }
+    }
+
+    private fun showNewJobPrompt() {
+        val container = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 16, 48, 16)
+        }
+        val queryInput = android.widget.EditText(context).apply {
+            hint = context.getString(R.string.seedbox_search_hint)
+            isSingleLine = true
+            setBackgroundResource(R.drawable.glass_input_bg)
+            setPadding(32, 24, 32, 24)
+        }
+        container.addView(queryInput)
+
+        val dialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
+            .setTitle(R.string.seedbox_title)
+            .setMessage(R.string.seedbox_prompt_message)
+            .setView(container)
+            .setPositiveButton(R.string.seedbox_enqueue_action) { _, _ ->
+                val query = queryInput.text.toString().trim()
+                if (query.isBlank()) {
+                    showSnackBar("Informe o nome do anime ou o link magnet")
+                    return@setPositiveButton
+                }
+                showSnackBar("Adicionando pedido à fila...")
+                lifecycleScope.launch {
+                    val magnetUri = if (query.startsWith("magnet:?")) query else null
+                    val res = seedboxRepoProvider().enqueueJob(
+                        query = query,
+                        episodesFilter = "all",
+                        preferPtBr = true,
+                        magnetUri = magnetUri
+                    )
+                    res.onSuccess { jobId ->
+                        showSnackBar("Pedido adicionado à fila com sucesso (ID: ${jobId.take(8)})!")
+                    }.onFailure { err ->
+                        showSnackBar("Falha ao agendar download: ${err.message}")
+                    }
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.window?.let { w -> TvFocusRing.install(w.decorView) }
+            queryInput.requestFocus()
+        }
+        dialog.show()
+    }
+
+    private fun showQueueStatusDialog() {
+        showSnackBar("Consultando fila do Colab...")
+        lifecycleScope.launch {
+            val statusRes = seedboxRepoProvider().getStatus()
+            val jobsRes = seedboxRepoProvider().getJobs()
+
+            statusRes.onSuccess { status ->
+                val jobs = jobsRes.getOrDefault(emptyList())
+                val daemonState = if (status.isOnline) {
+                    val disk = status.freeDiskGb?.let { " • ${it}GB livres" } ?: ""
+                    val speed = status.activeSpeed?.let { " • $it" } ?: ""
+                    "● Servidor Colab: ONLINE$disk$speed"
+                } else {
+                    "○ Servidor Colab: OFFLINE / ADORMECIDO"
+                }
+
+                val jobsSummary = if (jobs.isEmpty()) {
+                    "Nenhum download pendente ou em andamento."
+                } else {
+                    jobs.take(8).joinToString("\n") { j ->
+                        val icon = when (j.status) {
+                            "completed" -> "✓"
+                            "downloading" -> "⬇"
+                            "uploading" -> "☁"
+                            "failed" -> "✗"
+                            else -> "⏳"
+                        }
+                        "$icon [${j.status}] ${j.animeQuery}"
+                    }
+                }
+
+                val activeCount = jobs.count { it.status == "downloading" || it.status == "uploading" || it.status == "pending" }
+                val completedCount = jobs.count { it.status == "completed" }
+                val msg = "$daemonState\nFila: $activeCount ativos • $completedCount concluídos\n\nÚltimos Pedidos:\n$jobsSummary"
+
+                val statDialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
+                    .setTitle(R.string.seedbox_queue_status_title)
+                    .setMessage(msg)
+                    .setPositiveButton("OK", null)
+                    .create()
+                statDialog.setOnShowListener {
+                    statDialog.window?.let { w -> TvFocusRing.install(w.decorView) }
+                }
+                statDialog.show()
+            }.onFailure { err ->
+                showSnackBar("Erro ao obter status da seedbox: ${err.message}")
+            }
+        }
     }
 
     private fun showDisconnectDialog() {
@@ -52,7 +210,7 @@ class IntegrationsSettingsDelegate(
                 viewModel.onEvent(SettingsEvent.DisconnectMal)
                 d.dismiss()
             }
-            .setNegativeButton("Cancelar") { d, _ -> d.dismiss() }
+            .setNegativeButton("Cancelar", null)
             .create()
 
         dialog.setOnShowListener {

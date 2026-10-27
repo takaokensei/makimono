@@ -587,6 +587,121 @@ async function cancelPairing(request: Request, env: PairingEnv, id: string): Pro
   return new Response(null, { status: 204, headers: { "cache-control": "no-store" } });
 }
 
+
+async function daemonAuth(request: Request, env: PairingEnv): Promise<{ google_sub: string } | null> {
+  const authorization = request.headers.get("authorization") ?? "";
+  if (!authorization.startsWith("Bearer ")) return null;
+  const token = authorization.slice(7).trim();
+  if (!token) return null;
+  const tokenHash = await sha256(token);
+  return env.DB.prepare("SELECT google_sub FROM seedbox_daemons WHERE daemon_token_hash = ?")
+    .bind(tokenHash).first<{ google_sub: string }>();
+}
+
+async function createSeedboxToken(request: Request, env: PairingEnv): Promise<Response> {
+  const session = await bearerSession(request, env);
+  if (!session) return json({ error: "session_invalid" }, 401);
+  const rawSecret = base64Url(randomBytes(24));
+  const daemonToken = `sk_makimono_${rawSecret}`;
+  const tokenHash = await sha256(daemonToken);
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare("INSERT INTO seedbox_daemons (daemon_token_hash, google_sub, last_heartbeat_at, free_disk_gb, active_speed, created_at) VALUES (?, ?, NULL, NULL, NULL, ?)")
+    .bind(tokenHash, session.google_sub, now).run();
+  return json({ daemon_token: daemonToken }, 201);
+}
+
+async function getSeedboxStatus(request: Request, env: PairingEnv): Promise<Response> {
+  const session = await bearerSession(request, env);
+  if (!session) return json({ error: "session_invalid" }, 401);
+  const daemon = await env.DB.prepare("SELECT last_heartbeat_at, free_disk_gb, active_speed FROM seedbox_daemons WHERE google_sub = ? ORDER BY last_heartbeat_at DESC LIMIT 1")
+    .bind(session.google_sub).first<{ last_heartbeat_at: number | null; free_disk_gb: number | null; active_speed: string | null }>();
+  const now = Math.floor(Date.now() / 1000);
+  const isOnline = daemon?.last_heartbeat_at != null && (now - daemon.last_heartbeat_at <= 75);
+  const jobs = await env.DB.prepare("SELECT job_id, anime_query, episodes_filter, prefer_ptbr, status, progress_pct, transfer_speed, drive_folder_id, status_detail, created_at, updated_at FROM seedbox_jobs WHERE google_sub = ? ORDER BY created_at DESC LIMIT 10")
+    .bind(session.google_sub).all();
+  return json({
+    is_online: isOnline,
+    last_heartbeat_at: daemon?.last_heartbeat_at ?? null,
+    free_disk_gb: daemon?.free_disk_gb ?? null,
+    active_speed: daemon?.active_speed ?? null,
+    jobs: jobs.results,
+  });
+}
+
+async function createSeedboxJob(request: Request, env: PairingEnv): Promise<Response> {
+  const session = await bearerSession(request, env);
+  if (!session) return json({ error: "session_invalid" }, 401);
+  let body: Record<string, unknown>;
+  try { body = await request.json() as Record<string, unknown>; } catch { return json({ error: "invalid_json" }, 400); }
+  const query = typeof body.anime_query === "string" ? body.anime_query.trim() : "";
+  if (!query || query.length > 256) return json({ error: "invalid_anime_query" }, 400);
+  const epFilter = typeof body.episodes_filter === "string" ? body.episodes_filter.trim() : "all";
+  const preferPtbr = body.prefer_ptbr !== false ? 1 : 0;
+  const magnet = typeof body.magnet_uri === "string" ? body.magnet_uri.trim() : null;
+  const jobId = `job_${base64Url(randomBytes(12))}`;
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare("INSERT INTO seedbox_jobs (job_id, google_sub, anime_query, episodes_filter, prefer_ptbr, magnet_uri, status, progress_pct, transfer_speed, drive_folder_id, status_detail, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'PENDING', 0, NULL, NULL, 'Na fila do servidor', ?, ?)")
+    .bind(jobId, session.google_sub, query, epFilter, preferPtbr, magnet, now, now).run();
+  return json({ job_id: jobId, status: "PENDING" }, 201);
+}
+
+async function getSeedboxJobs(request: Request, env: PairingEnv): Promise<Response> {
+  const session = await bearerSession(request, env);
+  if (!session) return json({ error: "session_invalid" }, 401);
+  const jobs = await env.DB.prepare("SELECT job_id, anime_query, episodes_filter, prefer_ptbr, status, progress_pct, transfer_speed, drive_folder_id, status_detail, created_at, updated_at FROM seedbox_jobs WHERE google_sub = ? ORDER BY created_at DESC LIMIT 25")
+    .bind(session.google_sub).all();
+  return json({ jobs: jobs.results });
+}
+
+async function pollSeedboxDaemon(request: Request, env: PairingEnv): Promise<Response> {
+  const auth = await daemonAuth(request, env);
+  if (!auth) return json({ error: "daemon_token_invalid" }, 401);
+  let body: Record<string, unknown> = {};
+  try { body = await request.json() as Record<string, unknown>; } catch { /* optional body */ }
+  const now = Math.floor(Date.now() / 1000);
+  const freeDisk = typeof body.free_disk_gb === "number" ? body.free_disk_gb : null;
+  const speed = typeof body.active_speed === "string" ? body.active_speed : null;
+  const token = (request.headers.get("authorization") ?? "").slice(7).trim();
+  const tokenHash = await sha256(token);
+  await env.DB.prepare("UPDATE seedbox_daemons SET last_heartbeat_at = ?, free_disk_gb = ?, active_speed = ? WHERE daemon_token_hash = ?")
+    .bind(now, freeDisk, speed, tokenHash).run();
+
+  const nextJob = await env.DB.prepare("SELECT * FROM seedbox_jobs WHERE google_sub = ? AND status = 'PENDING' ORDER BY created_at ASC LIMIT 1")
+    .bind(auth.google_sub).first();
+  return json({ job: nextJob ?? null });
+}
+
+async function updateSeedboxDaemonJob(request: Request, env: PairingEnv, jobId: string): Promise<Response> {
+  const auth = await daemonAuth(request, env);
+  if (!auth) return json({ error: "daemon_token_invalid" }, 401);
+  let body: Record<string, unknown>;
+  try { body = await request.json() as Record<string, unknown>; } catch { return json({ error: "invalid_json" }, 400); }
+  const status = typeof body.status === "string" ? body.status : null;
+  const allowedStatuses = ["PENDING", "SEARCHING", "DOWNLOADING", "UPLOADING", "COMPLETED", "FAILED", "CANCELLED"];
+  if (status && !allowedStatuses.includes(status)) return json({ error: "invalid_status" }, 400);
+  const progressPct = typeof body.progress_pct === "number" ? Math.max(0, Math.min(100, Math.floor(body.progress_pct))) : null;
+  const speed = typeof body.transfer_speed === "string" ? body.transfer_speed : null;
+  const folderId = typeof body.drive_folder_id === "string" ? body.drive_folder_id : null;
+  const detail = typeof body.status_detail === "string" ? body.status_detail : null;
+  const now = Math.floor(Date.now() / 1000);
+
+  const existing = await env.DB.prepare("SELECT * FROM seedbox_jobs WHERE job_id = ? AND google_sub = ?")
+    .bind(jobId, auth.google_sub).first();
+  if (!existing) return json({ error: "job_not_found" }, 404);
+
+  await env.DB.prepare(`UPDATE seedbox_jobs SET
+    status = COALESCE(?, status),
+    progress_pct = COALESCE(?, progress_pct),
+    transfer_speed = COALESCE(?, transfer_speed),
+    drive_folder_id = COALESCE(?, drive_folder_id),
+    status_detail = COALESCE(?, status_detail),
+    updated_at = ?
+    WHERE job_id = ? AND google_sub = ?`)
+    .bind(status, progressPct, speed, folderId, detail, now, jobId, auth.google_sub).run();
+
+  return json({ success: true });
+}
+
 async function handle(request: Request, env: PairingEnv): Promise<Response> {
   const url = new URL(request.url);
   const path = url.pathname;
@@ -610,6 +725,13 @@ async function handle(request: Request, env: PairingEnv): Promise<Response> {
   if (request.method === "GET" && path === "/v1/drive-token") return driveToken(request, env);
   if (request.method === "POST" && path === "/v1/logout") return logout(request, env);
   if (request.method === "POST" && path === "/v1/disconnect-all") return disconnectAll(request, env);
+  if (request.method === "POST" && path === "/v1/seedbox/token") return createSeedboxToken(request, env);
+  if (request.method === "GET" && path === "/v1/seedbox/status") return getSeedboxStatus(request, env);
+  if (request.method === "POST" && path === "/v1/seedbox/jobs") return createSeedboxJob(request, env);
+  if (request.method === "GET" && path === "/v1/seedbox/jobs") return getSeedboxJobs(request, env);
+  if (request.method === "POST" && path === "/v1/seedbox/daemon/poll") return pollSeedboxDaemon(request, env);
+  const daemonJobMatch = path.match(/^\/v1\/seedbox\/daemon\/jobs\/([A-Za-z0-9_-]+)$/);
+  if (request.method === "PATCH" && daemonJobMatch) return updateSeedboxDaemonJob(request, env, daemonJobMatch[1]);
   return json({ error: "not_found" }, 404);
 }
 

@@ -15,6 +15,46 @@
         app:defaultNavHost="true"
         app:navGraph="@navigation/nav_graph" />
 
+    <!-- Modo Madrugada: OLED Eye-Comfort Anti-Glare Veil -->
+    <View
+        android:id="@+id/nocturnalOledVeil"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/obsidian_bg_base"
+        android:alpha="0.0"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
+    <!-- Ambient Soundscape Whisper Indicator (Overscan protected 48dp/27dp) -->
+    <LinearLayout
+        android:id="@+id/ambientWhisperPill"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="48dp"
+        android:layout_marginBottom="27dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:background="@drawable/bg_surface_overlay"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:alpha="0.0"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no">
+
+        <TextView
+            android:id="@+id/tvAmbientTrackTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/obsidian_text_secondary"
+            android:textSize="12sp"
+            tools:text="♪ Solitude — Ryuichi Sakamoto" />
+    </LinearLayout>
+
     <!-- Vinheta Splash Video Overlay (Netflix-style intro on cold start) -->
     <FrameLayout
         android:id="@+id/vinhetaContainer"

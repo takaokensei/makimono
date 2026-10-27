@@ -593,4 +593,29 @@
     <string name="series_season_picker_title">Choose season</string>
     <string name="series_season_picker_current">Seasons: %1$s</string>
     <string name="series_season_picker_accessibility">Choose season. Current: %1$s</string>
+    <!-- Subtitle Translation & Dual Subtitles -->
+    <string name="translate_subtitles_ai">Translate to Portuguese (AI)</string>
+    <string name="translating_subtitles_in_progress">Translating subtitles simultaneously…</string>
+    <string name="dual_subtitles_toggle">Dual Subtitles (Original + PT-BR)</string>
+    <string name="subtitles_translated_success">Subtitles translated to PT-BR</string>
+    <string name="subtitles_translation_failed">Failed translating subtitles</string>
+
+    <!-- Modo Madrugada & Ambient Soundscape -->
+    <string name="nocturnal_mode_title">Late-Night Sanctuary</string>
+    <string name="nocturnal_mode_desc">OLED visual comfort, leveled night audio and peaceful atmosphere</string>
+    <string name="ambient_soundscape_title">Ambient Soundscape</string>
+    <string name="ambient_soundscape_desc">Soft background piano when browsing library and series details</string>
+    <string name="ambient_now_playing_prefix">♪ Now playing: %1$s</string>
+
+    <!-- Seedbox Colab P2P -->
+    <string name="seedbox_title">Remote Seedbox (Colab P2P)</string>
+    <string name="seedbox_desc">Download torrent anime and series in the cloud directly to your Google Drive</string>
+    <string name="seedbox_search_hint">Anime title or magnet link…</string>
+    <string name="seedbox_enqueue_action">Request Download</string>
+    <string name="seedbox_status_colab_offline">Colab Server Asleep</string>
+    <string name="seedbox_status_colab_online">Colab Server Online</string>
+    <string name="seedbox_open_colab_btn">Open Server on Colab</string>
+    <string name="seedbox_daemon_token_title">Colab Daemon Token</string>
+    <string name="seedbox_prompt_message">Enter anime title or paste a magnet link:</string>
+    <string name="seedbox_queue_status_title">Seedbox Status</string>
 </resources>

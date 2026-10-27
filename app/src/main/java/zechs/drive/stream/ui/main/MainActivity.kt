@@ -117,6 +117,9 @@ class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var profileArtCatalog: zechs.drive.stream.data.remote.ProfileArtCatalog
 
+    @Inject
+    lateinit var ambientSoundscapeController: dagger.Lazy<zechs.drive.stream.playback.ambient.AmbientSoundscapeController>
+
     private val viewModel by viewModels<MainViewModel>()
     private lateinit var binding: ActivityMainBinding
     private lateinit var navController: NavController
@@ -185,6 +188,32 @@ class MainActivity : AppCompatActivity() {
         redirectOnLogin()
 
         handlePlaybackDeepLink(intent)
+
+        // Modo Madrugada: Apply OLED Eye-Comfort Dim if scheduled
+        val isNocturnal = zechs.drive.stream.utils.NocturnalSanctuaryPolicy.isNocturnalActive(
+            zechs.drive.stream.utils.NocturnalSchedule.AUTOMATIC
+        )
+        binding.nocturnalOledVeil.alpha = zechs.drive.stream.utils.NocturnalSanctuaryPolicy.resolveOledDimAlpha(isNocturnal)
+
+        // Observe ambient soundscape track for discrete whisper HUD
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                ambientSoundscapeController.get().nowPlaying.collect { track ->
+                    if (track != null && isVinhetaDismissed) {
+                        binding.tvAmbientTrackTitle.text = getString(R.string.ambient_now_playing_prefix, track.displayLabel)
+                        binding.ambientWhisperPill.animate()
+                            .alpha(1.0f)
+                            .setDuration(400L)
+                            .withEndAction {
+                                binding.ambientWhisperPill.postDelayed({
+                                    binding.ambientWhisperPill.animate().alpha(0.0f).setDuration(800L).start()
+                                }, 4500L)
+                            }
+                            .start()
+                    }
+                }
+            }
+        }
     }
 
     private fun requestNotificationPermissionAfterOnboarding() {
@@ -852,6 +881,11 @@ class MainActivity : AppCompatActivity() {
         return super.dispatchKeyEvent(event)
     }
 
+    override fun onStop() {
+        super.onStop()
+        ambientSoundscapeController.get().fadeOut(500L)
+    }
+
     override fun onPause() {
         super.onPause()
         if (binding.vinhetaContainer.isVisible) vinhetaPlayer?.pause()
@@ -864,6 +898,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        ambientSoundscapeController.get().release()
         vinhetaPlayer?.release()
         vinhetaPlayer = null
         updateDialog?.dismiss()

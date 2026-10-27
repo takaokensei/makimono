@@ -40,6 +40,25 @@ object SubtitleCueComposer {
         return topSigns + bottomOut
     }
 
+    /**
+     * Composes dual subtitles simultaneously (primary PT-BR on bottom + secondary original above).
+     */
+    fun composeDual(
+        primaryCues: List<Cue>,
+        secondaryCues: List<Cue>,
+        style: SubtitleStyle
+    ): List<Cue> {
+        val primary = compose(primaryCues, style)
+        if (secondaryCues.isEmpty()) return primary
+
+        val secondaryStyle = style.copy(
+            positionFraction = (style.positionFraction - 0.08f).coerceAtLeast(0.12f),
+            bold = false
+        )
+        val secondary = compose(secondaryCues, secondaryStyle)
+        return primary + secondary
+    }
+
     private fun isTopSign(cue: Cue): Boolean =
         cue.lineType == Cue.LINE_TYPE_FRACTION &&
             cue.line in 0.0f..0.35f &&
@@ -59,20 +78,27 @@ object SubtitleCueComposer {
         val text = cue.text ?: return builder.build()
         if (text.isEmpty()) return builder.build()
 
-        val spannable = SpannableStringBuilder.valueOf(text)
-        if (style.bold) {
-            val hasBold = spannable.getSpans(0, spannable.length, StyleSpan::class.java)
-                .any { it.style == Typeface.BOLD }
-            if (!hasBold) {
-                spannable.setSpan(
-                    StyleSpan(Typeface.BOLD),
-                    0,
-                    spannable.length,
-                    Spanned.SPAN_INCLUSIVE_INCLUSIVE
-                )
+        val styledText: CharSequence = if (style.bold) {
+            try {
+                val spannable = SpannableStringBuilder.valueOf(text)
+                val hasBold = spannable?.getSpans(0, spannable.length, StyleSpan::class.java)
+                    ?.any { it.style == Typeface.BOLD } == true
+                if (!hasBold && spannable != null) {
+                    spannable.setSpan(
+                        StyleSpan(Typeface.BOLD),
+                        0,
+                        spannable.length,
+                        Spanned.SPAN_INCLUSIVE_INCLUSIVE
+                    )
+                }
+                spannable ?: text
+            } catch (_: Exception) {
+                text
             }
+        } else {
+            text
         }
-        builder.setText(spannable)
+        builder.setText(styledText)
         return builder.build()
     }
 
@@ -89,16 +115,23 @@ object SubtitleCueComposer {
             .setLine(style.positionFraction, Cue.LINE_TYPE_FRACTION)
             .setLineAnchor(Cue.ANCHOR_TYPE_END)
         if (combined.isNotBlank()) {
-            val spannable = SpannableStringBuilder(combined)
-            if (style.bold) {
-                spannable.setSpan(
-                    StyleSpan(Typeface.BOLD),
-                    0,
-                    spannable.length,
-                    Spanned.SPAN_INCLUSIVE_INCLUSIVE
-                )
+            val styledText: CharSequence = if (style.bold) {
+                try {
+                    val spannable = SpannableStringBuilder(combined)
+                    spannable.setSpan(
+                        StyleSpan(Typeface.BOLD),
+                        0,
+                        spannable.length,
+                        Spanned.SPAN_INCLUSIVE_INCLUSIVE
+                    )
+                    spannable
+                } catch (_: Exception) {
+                    combined
+                }
+            } else {
+                combined
             }
-            builder.setText(spannable)
+            builder.setText(styledText)
         }
         return builder.build()
     }

@@ -22,6 +22,7 @@ import com.bumptech.glide.Glide
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 import kotlinx.coroutines.launch
 import zechs.drive.stream.R
 import zechs.drive.stream.databinding.FragmentSettingsBinding
@@ -61,6 +62,9 @@ class SettingsFragment : BaseFragment() {
 
     private val mainViewModel by activityViewModels<MainViewModel>()
     private val viewModel by viewModels<SettingsViewModel>()
+
+    @Inject
+    lateinit var seedboxRepository: dagger.Lazy<zechs.drive.stream.data.repository.SeedboxRepository>
 
     private lateinit var profileLibraryDelegate: ProfileLibrarySettingsDelegate
     private lateinit var appearanceDelegate: AppearanceSettingsDelegate
@@ -158,7 +162,9 @@ class SettingsFragment : BaseFragment() {
             binding = binding,
             viewModel = viewModel,
             fragmentManager = parentFragmentManager,
-            showSnackBar = ::showSnackBar
+            showSnackBar = ::showSnackBar,
+            lifecycleScope = viewLifecycleOwner.lifecycleScope,
+            seedboxRepoProvider = { seedboxRepository.get() }
         )
 
         dataSessionDelegate = DataSessionSettingsDelegate(
@@ -275,7 +281,8 @@ class SettingsFragment : BaseFragment() {
                 listOf(
                     R.id.settingMalAccount,
                     R.id.settingMalTransferToTv,
-                    R.id.settingMalSyncToggle
+                    R.id.settingMalSyncToggle,
+                    R.id.settingSeedbox
                 )
             ),
             SettingsCategory(

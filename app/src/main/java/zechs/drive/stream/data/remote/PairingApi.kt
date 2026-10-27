@@ -11,6 +11,11 @@ import zechs.drive.stream.data.model.DriveAccessTokenResponse
 import zechs.drive.stream.data.model.PairingCreateRequest
 import zechs.drive.stream.data.model.PairingCreateResponse
 import zechs.drive.stream.data.model.PairingStatusResponse
+import zechs.drive.stream.data.model.SeedboxCreateJobRequest
+import zechs.drive.stream.data.model.SeedboxCreateJobResponse
+import zechs.drive.stream.data.model.SeedboxJobsListResponse
+import zechs.drive.stream.data.model.SeedboxStatusResponse
+import zechs.drive.stream.data.model.SeedboxTokenResponse
 
 interface PairingApi {
     @POST("v1/pairings")
@@ -36,4 +41,19 @@ interface PairingApi {
         @Path("pairingId") pairingId: String,
         @Header("X-Device-Secret") deviceSecret: String
     ): Response<Unit>
+
+    @POST("v1/seedbox/token")
+    suspend fun createSeedboxToken(@Header("Authorization") authorization: String): SeedboxTokenResponse
+
+    @GET("v1/seedbox/status")
+    suspend fun getSeedboxStatus(@Header("Authorization") authorization: String): SeedboxStatusResponse
+
+    @POST("v1/seedbox/jobs")
+    suspend fun createSeedboxJob(
+        @Header("Authorization") authorization: String,
+        @Body request: SeedboxCreateJobRequest
+    ): SeedboxCreateJobResponse
+
+    @GET("v1/seedbox/jobs")
+    suspend fun getSeedboxJobs(@Header("Authorization") authorization: String): SeedboxJobsListResponse
 }

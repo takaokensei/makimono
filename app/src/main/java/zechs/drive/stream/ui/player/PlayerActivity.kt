@@ -176,6 +176,12 @@ class PlayerActivity : BasePlayerActivity() {
     @Inject
     lateinit var bingeBufferManager: Lazy<zechs.drive.stream.ui.player.predictive.BingeBufferManager>
 
+    @Inject
+    lateinit var subtitleTranslationEngine: Lazy<zechs.drive.stream.utils.SubtitleTranslationEngine>
+
+    @Inject
+    lateinit var culturalXRayEngine: Lazy<zechs.drive.stream.data.translation.CulturalXRayEngine>
+
     // View binding
     private lateinit var binding: ActivityPlayerBinding
 
@@ -605,7 +611,13 @@ class PlayerActivity : BasePlayerActivity() {
             setOrientation(this@PlayerActivity, orientation)
         }
 
-        PlayerQuickOptions.bind(playerView)
+        PlayerQuickOptions.bind(
+            playerView,
+            listOf(
+                "X-Ray Cultural (IA)" to { showCulturalXRayDialog() },
+                "✨ Traduzir Legenda p/ PT-BR (IA)" to { translateCurrentSubtitle() }
+            )
+        )
 
         val timeBar = playerView.findViewById<View>(androidx.media3.ui.R.id.exo_progress)
         val timeBarContainer = playerView.findViewById<View>(R.id.timeBarContainer)
@@ -2692,6 +2704,21 @@ class PlayerActivity : BasePlayerActivity() {
             }
         }
 
+        if (activeExternalSubFile != null || folderSubtitles.isNotEmpty()) {
+            choices.add(
+                ExoSubChoice(
+                    group = null,
+                    trackIndex = -99,
+                    folderSub = null,
+                    onlineSub = null,
+                    savedSub = null,
+                    displayName = "✨ Traduzir Legenda p/ PT-BR (IA)",
+                    subtitle = "Tradução simultânea via IA mantendo estilo original",
+                    isSelected = false
+                )
+            )
+        }
+
         fun buildMenuItems(sourceChoices: List<ExoSubChoice>): List<GlassMenuItem> {
             return sourceChoices.mapIndexed { idx, c ->
                 GlassMenuItem(
@@ -2722,6 +2749,9 @@ class PlayerActivity : BasePlayerActivity() {
                 Snackbar.make(playerView, "Legenda: ${choice.displayName}", 750).apply {
                     anchorView = progressViewGroup
                 }.show()
+            } else if (choice.trackIndex == -99) {
+                glassDialog.dismiss()
+                translateCurrentSubtitle()
             } else if (choice.trackIndex == -1 && choice.folderSub == null && choice.onlineSub == null && choice.savedSub == null) {
                 val builder = player.trackSelectionParameters.buildUpon()
                 builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
@@ -3725,4 +3755,115 @@ class PlayerActivity : BasePlayerActivity() {
         super.onDestroy()
     }
 
+
+    private fun showCulturalXRayDialog() {
+        val title = currentTitle.ifBlank { intent.getStringExtra("title") ?: "Anime" }
+        Snackbar.make(playerView, "Analisando referências culturais e trocadilhos...", 1500).apply {
+            anchorView = progressViewGroup
+        }.show()
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            val cues = folderSubtitles.firstOrNull()?.let { sub ->
+                val f = viewModel.downloadSubtitle(sub, cacheDir)
+                if (f != null && f.exists()) {
+                    if (f.extension.equals("ass", ignoreCase = true)) {
+                        zechs.drive.stream.data.translation.AssTagPreservingCodec.extractFromAss(f.readLines())
+                    } else {
+                        zechs.drive.stream.data.translation.AssTagPreservingCodec.extractFromSrt(f.readText())
+                    }
+                } else emptyList()
+            } ?: emptyList()
+
+            val currentPos = if (::player.isInitialized) player.currentPosition else 0L
+            val res = culturalXRayEngine.get().explainSceneContext(title, currentEpNumber, currentPos, cues)
+
+            withContext(Dispatchers.Main) {
+                res.onSuccess { notes ->
+                    val items = notes.mapIndexed { idx, note ->
+                        GlassMenuItem(
+                            id = "xray_$idx",
+                            title = "• $note",
+                            subtitle = null,
+                            isInteractive = false
+                        )
+                    }
+                    PlayerGlassMenuDialog(this@PlayerActivity, "X-Ray Cultural (Sem Spoilers)", items) {}.show()
+                }.onFailure {
+                    Snackbar.make(playerView, "Não foi possível analisar o contexto cultural no momento", 2000).apply {
+                        anchorView = progressViewGroup
+                    }.show()
+                }
+            }
+        }
+    }
+
+    private fun translateCurrentSubtitle() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val targetFile = activeExternalSubFile ?: folderSubtitles.firstOrNull()?.let { sub ->
+                viewModel.downloadSubtitle(sub, cacheDir)
+            }
+
+            if (targetFile == null || !targetFile.exists()) {
+                withContext(Dispatchers.Main) {
+                    Snackbar.make(
+                        playerView,
+                        "Selecione ou baixe uma legenda antes de iniciar a tradução por IA",
+                        2000
+                    ).apply { anchorView = progressViewGroup }.show()
+                }
+                return@launch
+            }
+
+            val safeTitle = currentTitle.ifBlank { "Anime" }.replace("[^a-zA-Z0-9]".toRegex(), "_")
+            val cacheKey = "${safeTitle}_ep${currentEpNumber}_${targetFile.nameWithoutExtension}"
+            withContext(Dispatchers.Main) {
+                Snackbar.make(
+                    playerView,
+                    "✨ Traduzindo legenda p/ Português (IA) em segundo plano...",
+                    2000
+                ).apply { anchorView = progressViewGroup }.show()
+            }
+
+            val currentPos = if (::player.isInitialized) player.currentPosition else 0L
+            val result = subtitleTranslationEngine.get().translateFileProgressive(
+                sourceFile = targetFile,
+                cacheKey = cacheKey,
+                currentPositionMs = currentPos,
+                onProgressiveFileUpdated = { updatedFile ->
+                    withContext(Dispatchers.Main) {
+                        val virtualSub = SubtitleItem(
+                            id = "ai_translated_${targetFile.nameWithoutExtension}",
+                            name = "✨ [IA PT-BR] Traduzida",
+                            languageLabel = "Português (IA)",
+                            languageCode = "por"
+                        )
+                        applyExternalSubtitle(updatedFile, virtualSub, isMatching = true, forceSelect = true)
+                    }
+                }
+            )
+
+            withContext(Dispatchers.Main) {
+                result.onSuccess { finalFile ->
+                    val virtualSub = SubtitleItem(
+                        id = "ai_translated_${targetFile.nameWithoutExtension}",
+                        name = "✨ [IA PT-BR] Traduzida (Completa)",
+                        languageLabel = "Português (IA)",
+                        languageCode = "por"
+                    )
+                    applyExternalSubtitle(finalFile, virtualSub, isMatching = true, forceSelect = true)
+                    Snackbar.make(
+                        playerView,
+                        "✨ Legenda traduzida por IA ativada com sucesso!",
+                        2000
+                    ).apply { anchorView = progressViewGroup }.show()
+                }.onFailure { err ->
+                    Snackbar.make(
+                        playerView,
+                        "Erro na tradução: ${err.message ?: "Falha ao processar"}",
+                        2500
+                    ).apply { anchorView = progressViewGroup }.show()
+                }
+            }
+        }
+    }
 }
