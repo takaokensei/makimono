@@ -605,4 +605,16 @@
     <string name="seedbox_daemon_token_title">Token do Daemon (Colab)</string>
     <string name="seedbox_prompt_message">Digite o nome do anime ou cole um link magnético:</string>
     <string name="seedbox_queue_status_title">Status da Seedbox</string>
+    <string name="badge_seedbox_download">BAIXAR</string>
+    <string name="seedbox_catalog_available_subtitle">Disponível para download • Clique para baixar</string>
+    <string name="seedbox_confirm_download_title">Baixar %1$s?</string>
+    <string name="seedbox_confirm_download_message">Este anime ainda não está no seu Google Drive.\n\nDeseja iniciar o download agora? O Episódio 1 será baixado primeiro em alta prioridade para você começar a assistir em poucos minutos!</string>
+    <string name="seedbox_confirm_download_ep1_first">Sim, Baixar Ep. 1 Primeiro</string>
+    <string name="seedbox_confirm_download_full">Baixar Temporada Completa</string>
+    <string name="seedbox_confirm_download_no">Não</string>
+    <string name="seedbox_download_enqueued_ep1">Iniciando download do Episódio 1 de %1$s...</string>
+    <string name="seedbox_download_enqueued_full">Iniciando download de %1$s...</string>
+    <string name="seedbox_fast_ready_toast">🎉 Episódio 1 de %1$s pronto no Drive! Abrindo...</string>
+    <string name="seedbox_fast_downloading_status">⬇️ Baixando Episódio 1 de %1$s (%2$d%%)...</string>
+    <string name="seedbox_fast_uploading_status">☁️ Enviando Episódio 1 de %1$s para o Google Drive...</string>
 </resources>

@@ -135,8 +135,13 @@ sealed class FilesViewHolder(
                         tvFileSizeTAG
                     } else null
 
-                    isGone = tag == tvFileSizeTAG
-                    text = item.humanSize
+                    if (item.isSeedboxCatalogItem) {
+                        isGone = false
+                        text = root.context.getString(R.string.seedbox_catalog_available_subtitle)
+                    } else {
+                        isGone = tag == tvFileSizeTAG
+                        text = item.humanSize
+                    }
                 }
 
                 root.isFocusable = true
@@ -173,7 +178,12 @@ sealed class FilesViewHolder(
                     false
                 }
 
-                setStarred(item, item.starred)
+                if (!item.isSeedboxCatalogItem) {
+                    setStarred(item, item.starred)
+                } else {
+                    btnStar.isInvisible = true
+                    starLoading.isGone = true
+                }
             }
         }
     }
@@ -315,13 +325,17 @@ sealed class FilesViewHolder(
                 val ext = item.name.substringAfterLast('.', "").uppercase()
                 tvGridTypeBadge.apply {
                     val badgeText = when {
+                        item.isSeedboxCatalogItem -> root.context.getString(R.string.badge_seedbox_download)
                         isFolder -> null
                         item.source == zechs.drive.stream.data.model.MediaSource.LOCAL -> "LOCAL"
                         ext.isNotEmpty() && ext.length in 2..4 -> ext
                         item.isSubtitleFile -> "LEGENDA"
                         else -> null
                     }
-                    isVisible = badgeText != null && (item.source == zechs.drive.stream.data.model.MediaSource.LOCAL || (resTag == null && codecTag == null))
+                    val showBadge = item.isSeedboxCatalogItem ||
+                        item.source == zechs.drive.stream.data.model.MediaSource.LOCAL ||
+                        (resTag == null && codecTag == null)
+                    isVisible = badgeText != null && showBadge
                     text = badgeText.orEmpty()
                 }
 
@@ -407,7 +421,7 @@ sealed class FilesViewHolder(
                     false
                 }
 
-                if (isFolder) {
+                if (isFolder && !item.isSeedboxCatalogItem) {
                     setStarred(item, item.starred)
                 } else {
                     btnGridStar.visibility = View.GONE
