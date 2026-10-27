@@ -16,7 +16,6 @@ import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import retrofit2.HttpException
 import zechs.drive.stream.R
 import zechs.drive.stream.data.local.DownloadDao
 import zechs.drive.stream.data.model.DownloadStatus
@@ -48,6 +47,7 @@ class DownloadWorker @AssistedInject constructor(
 
         const val CHANNEL_ID = "downloads_channel"
         const val NOTIFICATION_ID = 40001
+        const val SUBTITLES_DIR_NAME = "subtitles"
         private const val TAG = "DownloadWorker"
         private const val BUFFER_SIZE = 64 * 1024
         private const val MIN_UPDATE_INTERVAL_MS = 500L
@@ -60,7 +60,10 @@ class DownloadWorker @AssistedInject constructor(
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val fileId = inputData.getString(KEY_FILE_ID) ?: return@withContext Result.failure()
         val name = inputData.getString(KEY_NAME) ?: return@withContext Result.failure()
-        val seriesTitle = inputData.getString(KEY_SERIES_TITLE)
+        val folderId = inputData.getString(KEY_FOLDER_ID)?.takeIf { it.isNotBlank() }
+        val seriesTitle = inputData.getString(KEY_SERIES_TITLE)?.takeIf { it.isNotBlank() }
+        val seasonNumber = inputData.getInt(KEY_SEASON_NUMBER, -1).takeIf { it >= 0 }
+        val episodeNumber = inputData.getInt(KEY_EPISODE_NUMBER, -1).takeIf { it >= 0 }
         val expectedSize = inputData.getLong(KEY_EXPECTED_SIZE, 0L)
 
         ensureChannel()
@@ -74,8 +77,16 @@ class DownloadWorker @AssistedInject constructor(
         val finalFile = File(downloadDir, "${fileId}_$safeName")
         val partFile = File(downloadDir, "${fileId}_$safeName.part")
 
-        // 1. If final file already exists with valid content, mark completed
+        // 1. If final file already exists with valid content, also ensure sidecar subtitles are downloaded
         if (finalFile.exists() && finalFile.length() > 0) {
+            downloadSidecarSubtitles(
+                fileId = fileId,
+                folderId = folderId,
+                videoTitle = name,
+                seasonNumber = seasonNumber,
+                episodeNumber = episodeNumber,
+                downloadDir = downloadDir
+            )
             val len = finalFile.length()
             downloadDao.updateProgress(fileId, len, len, DownloadStatus.COMPLETED.name)
             downloadDao.updateStatus(fileId, DownloadStatus.COMPLETED.name, completedAt = System.currentTimeMillis())
@@ -102,13 +113,17 @@ class DownloadWorker @AssistedInject constructor(
         val initialInfo = createForegroundInfo(0, seriesTitle ?: name, context.getString(R.string.download_status_downloading, 0))
         setForeground(initialInfo)
 
-        var existingBytes = if (partFile.exists()) partFile.length() else 0L
+        val existingBytes = if (partFile.exists()) partFile.length() else 0L
 
         try {
             executeDownloadWithToken(
                 fileId = fileId,
+                folderId = folderId,
                 name = name,
                 seriesTitle = seriesTitle,
+                seasonNumber = seasonNumber,
+                episodeNumber = episodeNumber,
+                downloadDir = downloadDir,
                 partFile = partFile,
                 finalFile = finalFile,
                 initialExistingBytes = existingBytes,
@@ -128,8 +143,12 @@ class DownloadWorker @AssistedInject constructor(
 
     private suspend fun executeDownloadWithToken(
         fileId: String,
+        folderId: String?,
         name: String,
         seriesTitle: String?,
+        seasonNumber: Int?,
+        episodeNumber: Int?,
+        downloadDir: File,
         partFile: File,
         finalFile: File,
         initialExistingBytes: Long,
@@ -160,6 +179,14 @@ class DownloadWorker @AssistedInject constructor(
             // Range not satisfiable: partial file is already complete or oversized
             if (partFile.exists() && partFile.length() > 0) {
                 partFile.renameTo(finalFile)
+                downloadSidecarSubtitles(
+                    fileId = fileId,
+                    folderId = folderId,
+                    videoTitle = name,
+                    seasonNumber = seasonNumber,
+                    episodeNumber = episodeNumber,
+                    downloadDir = downloadDir
+                )
                 val len = finalFile.length()
                 downloadDao.updateProgress(fileId, len, len, DownloadStatus.COMPLETED.name)
                 downloadDao.updateStatus(fileId, DownloadStatus.COMPLETED.name, completedAt = System.currentTimeMillis())
@@ -228,11 +255,21 @@ class DownloadWorker @AssistedInject constructor(
                 }
             }
 
-            // Finished reading
+            // Finished reading video stream
             if (partFile.exists() && partFile.length() > 0) {
                 if (finalFile.exists()) finalFile.delete()
                 val renamed = partFile.renameTo(finalFile)
                 if (renamed) {
+                    // Best-effort download of associated sidecar subtitles (.ass, .ssa, .srt, .vtt, .sub)
+                    downloadSidecarSubtitles(
+                        fileId = fileId,
+                        folderId = folderId,
+                        videoTitle = name,
+                        seasonNumber = seasonNumber,
+                        episodeNumber = episodeNumber,
+                        downloadDir = downloadDir
+                    )
+
                     val finalLen = finalFile.length()
                     downloadDao.updateProgress(fileId, finalLen, finalLen, DownloadStatus.COMPLETED.name)
                     downloadDao.updateStatus(fileId, DownloadStatus.COMPLETED.name, completedAt = System.currentTimeMillis())
@@ -254,6 +291,87 @@ class DownloadWorker @AssistedInject constructor(
                 return Result.failure()
             }
             throw e
+        }
+    }
+
+    /**
+     * Fetches and persists any matching sidecar subtitles from the episode's Drive folder
+     * (and standard `Subs/`, `Subtitles/`, `Legendas/` subfolders) into `downloads/subtitles/`.
+     * Naming convention: `${videoFileId}__${subId}__${safeSubName}` so `DownloadRepository`
+     * can deterministically reconstruct `SubtitleItem` instances for offline playback.
+     */
+    private suspend fun downloadSidecarSubtitles(
+        fileId: String,
+        folderId: String?,
+        videoTitle: String,
+        seasonNumber: Int?,
+        episodeNumber: Int?,
+        downloadDir: File
+    ) {
+        try {
+            val sidecarSubs = driveRepository.getEpisodeSidecarSubtitles(
+                fileId = fileId,
+                parentFolderId = folderId,
+                videoTitle = videoTitle,
+                seasonNumber = seasonNumber,
+                episodeNumber = episodeNumber
+            )
+            if (sidecarSubs.isEmpty()) {
+                AppLog.d(TAG, "No sidecar subtitles found for episode $videoTitle ($fileId)")
+                return
+            }
+
+            val subsDir = File(downloadDir, SUBTITLES_DIR_NAME)
+            if (!subsDir.exists()) {
+                subsDir.mkdirs()
+            }
+
+            var token = driveRepository.getValidAccessToken() ?: return
+            for (sub in sidecarSubs) {
+                if (isStopped) break
+                val rawSubName = if (sub.matchesVideo(videoTitle)) {
+                    sub.name
+                } else {
+                    "${videoTitle.substringBeforeLast('.')}.${sub.name}"
+                }
+                val safeSubName = rawSubName.replace("[^a-zA-Z0-9._-]".toRegex(), "_")
+                val destFile = File(subsDir, "${fileId}__${sub.id}__$safeSubName")
+                if (destFile.exists() && destFile.length() > 0L) {
+                    continue
+                }
+                val partSubFile = File(subsDir, "${fileId}__${sub.id}__$safeSubName.part")
+                try {
+                    var resp = driveApi.downloadFile("Bearer $token", sub.id)
+                    if (resp.code() == 401) {
+                        token = driveRepository.getValidAccessToken(forceRefresh = true) ?: break
+                        resp = driveApi.downloadFile("Bearer $token", sub.id)
+                    }
+                    val body = resp.body()
+                    if (resp.isSuccessful && body != null) {
+                        body.byteStream().use { input ->
+                            partSubFile.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                        if (partSubFile.exists() && partSubFile.length() > 0L) {
+                            if (destFile.exists()) destFile.delete()
+                            partSubFile.renameTo(destFile)
+                            AppLog.i(TAG, "Downloaded sidecar subtitle: ${destFile.name} (${destFile.length()} bytes)")
+                        } else {
+                            partSubFile.delete()
+                        }
+                    } else {
+                        AppLog.w(TAG, "Could not download sidecar subtitle ${sub.name}: HTTP ${resp.code()}")
+                    }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    partSubFile.delete()
+                    AppLog.w(TAG, "Failed downloading sidecar subtitle ${sub.name}: ${e.message}")
+                }
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            AppLog.w(TAG, "Sidecar subtitle discovery failed for $videoTitle: ${e.message}")
         }
     }
 

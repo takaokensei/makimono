@@ -1,18 +1,19 @@
 package zechs.drive.stream.playback.session
 
-import zechs.drive.stream.utils.MatroskaChapterParser
 import zechs.drive.stream.utils.MatroskaChapterParser.ChapterType
 import zechs.drive.stream.utils.MatroskaChapterParser.ParsedChapter
 
 /**
  * ADR-002: SkipController
  * Centralizes chapter detection, intelligent AniSkip/MKV chapter merging,
- * automatic opening/ending skips, and 90-second fallback intro skipping.
+ * automatic opening/ending/preview skips, Crunchyroll-style `displayDuration`
+ * auto-dismissal on the floating overlay pill, and 90-second fallback intro skipping.
  */
 class SkipController(
     private val autoSkipGracePeriodMs: Long = 3_500L,
     private val fallbackIntroWindowMs: Long = 140_000L,
-    private val fallbackIntroSkipDeltaMs: Long = 90_000L
+    private val fallbackIntroSkipDeltaMs: Long = 90_000L,
+    private val overlayDisplayDurationMs: Long = 8_000L
 ) {
 
     sealed interface SkipAction {
@@ -42,6 +43,7 @@ class SkipController(
     private var acknowledgedFallbackIntro: Boolean = false
     private var hasAutoSkippedCurrentInterval: Boolean = false
     private var currentIntervalChapterId: Int? = null
+    private var currentChapterFirstSeenPositionMs: Long? = null
 
     /**
      * Replaces current chapters with a new list, sorted by start time.
@@ -53,6 +55,8 @@ class SkipController(
                 // Guard: An ENDING chapter starting in the first 5 minutes is invalid/opening credits
                 if (ch.type == ChapterType.ENDING && ch.startTimeMs < 300_000L) {
                     ch.copy(type = ChapterType.OTHER)
+                } else if (ch.type == ChapterType.PREVIEW && ch.startTimeMs < 900_000L) {
+                    ch.copy(type = ChapterType.OTHER)
                 } else ch
             }
             .sortedBy { it.startTimeMs }
@@ -61,6 +65,7 @@ class SkipController(
         acknowledgedFallbackIntro = false
         hasAutoSkippedCurrentInterval = false
         currentIntervalChapterId = null
+        currentChapterFirstSeenPositionMs = null
     }
 
     /**
@@ -83,6 +88,8 @@ class SkipController(
             } else if (aniCh.type == ChapterType.ENDING && !hasMkvEd) {
                 existing.add(aniCh)
             } else if (aniCh.type == ChapterType.RECAP && existing.none { it.type == ChapterType.RECAP }) {
+                existing.add(aniCh)
+            } else if (aniCh.type == ChapterType.PREVIEW && existing.none { it.type == ChapterType.PREVIEW }) {
                 existing.add(aniCh)
             }
         }
@@ -124,20 +131,24 @@ class SkipController(
 
         activeSkipChapter = specialChapter
 
-        // Reset auto-skip flag when leaving chapter interval
+        // Reset auto-skip flag and overlay display timer when leaving or entering a new chapter interval
         if (specialChapter == null || specialChapter.index != currentIntervalChapterId) {
             hasAutoSkippedCurrentInterval = false
             currentIntervalChapterId = specialChapter?.index
+            currentChapterFirstSeenPositionMs = specialChapter?.let { positionMs }
+        } else if (controllerVisible) {
+            // Reset overlay timer whenever the user brings up the OSD controls so the skip button stays visible
+            currentChapterFirstSeenPositionMs = positionMs
         }
 
         var action: SkipAction = SkipAction.None
 
         if (specialChapter != null) {
             val isOpOrRecap = specialChapter.type == ChapterType.OPENING || specialChapter.type == ChapterType.RECAP
-            val isEnding = specialChapter.type == ChapterType.ENDING
+            val isEndingOrPreview = specialChapter.type == ChapterType.ENDING || specialChapter.type == ChapterType.PREVIEW
 
             // Evaluate automatic skip
-            if (autoSkipEnabled && (isOpOrRecap || isEnding) && !hasAutoSkippedCurrentInterval) {
+            if (autoSkipEnabled && (isOpOrRecap || isEndingOrPreview) && !hasAutoSkippedCurrentInterval) {
                 if (positionMs in specialChapter.startTimeMs..(specialChapter.startTimeMs + autoSkipGracePeriodMs)) {
                     hasAutoSkippedCurrentInterval = true
                     acknowledgedChapter = specialChapter
@@ -145,6 +156,7 @@ class SkipController(
                     val notifyText = when (specialChapter.type) {
                         ChapterType.ENDING -> "Encerramento pulado"
                         ChapterType.RECAP -> "Recap pulado"
+                        ChapterType.PREVIEW -> "Prévia pulada"
                         else -> "Abertura pulada"
                     }
                     action = SkipAction.AutoSkip(
@@ -158,15 +170,25 @@ class SkipController(
                 ChapterType.RECAP -> "Pular Recap"
                 ChapterType.OPENING -> "Pular Abertura"
                 ChapterType.ENDING -> "Pular Encerramento"
+                ChapterType.PREVIEW -> "Pular Prévia"
                 ChapterType.OTHER -> "Pular Capítulo"
             }
 
-            // Visible as overlay if controls are hidden and not locked, or inside controls.
+            // Crunchyroll SkipEvent.displayDuration pattern: when controls are hidden, auto-hide
+            // the floating overlay skip button after overlayDisplayDurationMs (8s) if ignored.
+            val firstSeenMs = currentChapterFirstSeenPositionMs ?: positionMs
+            val isOverlayTimedOut = !controllerVisible &&
+                    overlayDisplayDurationMs > 0L &&
+                    positionMs >= firstSeenMs &&
+                    (positionMs - firstSeenMs) > overlayDisplayDurationMs
+
+            // Visible as overlay if controls are hidden (and not timed out) and not locked, or inside controls.
             // Never show button if already auto-skipped or acknowledged.
             val shouldShowButton = !controlsLocked &&
                     action !is SkipAction.AutoSkip &&
                     !hasAutoSkippedCurrentInterval &&
-                    specialChapter != acknowledgedChapter
+                    specialChapter != acknowledgedChapter &&
+                    !isOverlayTimedOut
 
             val buttonUi = if (shouldShowButton) {
                 SkipButtonUi.Visible(

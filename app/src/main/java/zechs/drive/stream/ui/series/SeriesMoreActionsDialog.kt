@@ -19,15 +19,18 @@ object SeriesMoreActionsDialog {
         context: Context,
         focusAnchor: View,
         isFollowed: Boolean,
+        hasTrailer: Boolean = true,
+        canRestartContinueEpisode: Boolean = false,
+        isMovie: Boolean = false,
         onTrailer: () -> Unit,
         onFollowToggle: () -> Unit,
-        onMarkWatched: () -> Unit
+        onMarkWatched: () -> Unit,
+        onRestartFromBeginning: (() -> Unit)? = null
     ) {
         val density = context.resources.displayMetrics.density
         fun dp(value: Int) = (value * density).toInt()
         val panelWidth = dp(340)
         val rowHeight = dp(56)
-        val panelHeight = dp(20) + ((rowHeight + dp(4)) * 3)
 
         val panel = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -102,13 +105,27 @@ object SeriesMoreActionsDialog {
             )
         }
 
-        addAction(context.getString(R.string.series_action_trailer), R.drawable.ic_trailer_24, onTrailer)
+        if (canRestartContinueEpisode && onRestartFromBeginning != null) {
+            addAction(
+                context.getString(R.string.episode_action_restart),
+                R.drawable.ic_play_24,
+                onRestartFromBeginning
+            )
+        }
+        if (hasTrailer) {
+            addAction(context.getString(R.string.series_action_trailer), R.drawable.ic_trailer_24, onTrailer)
+        }
         addAction(
             context.getString(if (isFollowed) R.string.action_unfollow else R.string.action_follow),
             if (isFollowed) R.drawable.ic_star_filled_24 else R.drawable.ic_star_outline_24,
             onFollowToggle
         )
-        addAction(context.getString(R.string.series_action_mark_watched), R.drawable.ic_check_24, onMarkWatched)
+        if (!isMovie) {
+            addAction(context.getString(R.string.series_action_mark_watched), R.drawable.ic_check_24, onMarkWatched)
+        }
+
+        val actionCount = panel.childCount.coerceAtLeast(1)
+        val panelHeight = dp(20) + ((rowHeight + dp(4)) * actionCount)
 
         popup = PopupWindow(
             panel,

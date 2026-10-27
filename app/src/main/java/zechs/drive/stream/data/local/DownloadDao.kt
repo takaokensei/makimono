@@ -13,14 +13,23 @@ interface DownloadDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDownload(item: DownloadItem)
 
-    @Query("SELECT * FROM download_items WHERE fileId = :fileId")
+    @Query("SELECT * FROM download_items WHERE fileId = :fileId AND profileId = :profileId LIMIT 1")
+    suspend fun getDownloadForProfile(fileId: String, profileId: String): DownloadItem?
+
+    @Query("SELECT * FROM download_items WHERE fileId = :fileId LIMIT 1")
     suspend fun getDownload(fileId: String): DownloadItem?
 
-    @Query("SELECT * FROM download_items WHERE fileId = :fileId")
+    @Query("SELECT * FROM download_items WHERE fileId = :fileId AND profileId = :profileId LIMIT 1")
+    fun getDownloadFlowForProfile(fileId: String, profileId: String): Flow<DownloadItem?>
+
+    @Query("SELECT * FROM download_items WHERE fileId = :fileId LIMIT 1")
     fun getDownloadFlow(fileId: String): Flow<DownloadItem?>
 
     @Query("SELECT * FROM download_items WHERE profileId = :profileId ORDER BY createdAt DESC")
     fun getDownloadsForProfile(profileId: String): Flow<List<DownloadItem>>
+
+    @Query("SELECT * FROM download_items WHERE profileId = :profileId ORDER BY createdAt DESC")
+    suspend fun getDownloadsForProfileSync(profileId: String): List<DownloadItem>
 
     @Query("SELECT * FROM download_items WHERE profileId = :profileId AND status = 'COMPLETED' ORDER BY createdAt DESC")
     fun getCompletedDownloadsForProfile(profileId: String): Flow<List<DownloadItem>>
@@ -37,13 +46,25 @@ interface DownloadDao {
     @Query("UPDATE download_items SET status = :status, completedAt = :completedAt, errorMessage = :errorMessage WHERE fileId = :fileId")
     suspend fun updateStatus(fileId: String, status: String, completedAt: Long? = null, errorMessage: String? = null)
 
+    @Query("DELETE FROM download_items WHERE fileId = :fileId AND profileId = :profileId")
+    suspend fun deleteDownloadForProfile(fileId: String, profileId: String)
+
     @Query("DELETE FROM download_items WHERE fileId = :fileId")
     suspend fun deleteDownload(fileId: String)
+
+    @Query("SELECT COUNT(*) FROM download_items WHERE fileId = :fileId")
+    suspend fun countReferencesForFile(fileId: String): Int
 
     @Query("SELECT * FROM download_items WHERE status IN ('QUEUED', 'DOWNLOADING')")
     suspend fun getActiveDownloads(): List<DownloadItem>
 
-    @Query("SELECT * FROM download_items WHERE fileId = :fileId AND status = 'COMPLETED'")
+    @Query("SELECT * FROM download_items WHERE profileId = :profileId AND status IN ('QUEUED', 'DOWNLOADING')")
+    suspend fun getActiveDownloadsForProfile(profileId: String): List<DownloadItem>
+
+    @Query("SELECT * FROM download_items WHERE fileId = :fileId AND profileId = :profileId AND status = 'COMPLETED' LIMIT 1")
+    suspend fun getCompletedDownloadForProfile(fileId: String, profileId: String): DownloadItem?
+
+    @Query("SELECT * FROM download_items WHERE fileId = :fileId AND status = 'COMPLETED' LIMIT 1")
     suspend fun getCompletedDownload(fileId: String): DownloadItem?
 
     @Query("DELETE FROM download_items WHERE profileId = :profileId")

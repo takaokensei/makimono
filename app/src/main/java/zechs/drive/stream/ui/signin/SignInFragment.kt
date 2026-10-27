@@ -149,6 +149,7 @@ class SignInFragment : Fragment(R.layout.fragment_sign_in) {
                 btnCopyUrl.isVisible = false
                 btnToggleQr.isVisible = false
                 tvPairingUrl.isVisible = false
+                llCodeRow.isVisible = false
                 tvPairingCode.isVisible = false
                 tvPairingCodeLabel.isVisible = false
                 tvPairingStatus.isVisible = false
@@ -176,7 +177,9 @@ class SignInFragment : Fragment(R.layout.fragment_sign_in) {
                 btnToggleQr.setText(presentation.toggleQrButtonTextRes)
 
                 tvPairingUrl.isVisible = true
-                tvPairingCodeLabel.isVisible = true
+                llCodeRow.isVisible = presentation.isConfirmCodeVisible
+                tvPairingCodeLabel.isVisible = presentation.isConfirmCodeVisible
+                tvPairingCode.isVisible = presentation.isConfirmCodeVisible
                 tvPairingStatus.isVisible = true
                 btnGeneratePairing.isVisible = true
 
@@ -217,6 +220,7 @@ class SignInFragment : Fragment(R.layout.fragment_sign_in) {
                 btnCopyUrl.isVisible = false
                 btnToggleQr.isVisible = false
                 tvPairingUrl.isVisible = false
+                llCodeRow.isVisible = false
                 tvPairingCodeLabel.isVisible = false
                 tvPairingCode.isVisible = false
                 tvPairingStatus.isVisible = true

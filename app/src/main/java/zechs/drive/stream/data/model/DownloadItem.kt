@@ -3,19 +3,19 @@ package zechs.drive.stream.data.model
 import androidx.annotation.Keep
 import androidx.room.Entity
 import androidx.room.Index
-import androidx.room.PrimaryKey
 import java.io.Serializable
 
 @Keep
 @Entity(
     tableName = "download_items",
+    primaryKeys = ["profileId", "fileId"],
     indices = [
         Index(value = ["profileId"]),
-        Index(value = ["folderId"])
+        Index(value = ["folderId"]),
+        Index(value = ["fileId"])
     ]
 )
 data class DownloadItem(
-    @PrimaryKey
     val fileId: String,
     val folderId: String? = null,
     val seriesTitle: String? = null,

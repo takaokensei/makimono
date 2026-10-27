@@ -519,7 +519,7 @@
                 android:textStyle="bold"
                 android:visibility="gone" />
 
-            <!-- Actions Row: Continue Watch / Play | Trailer | Favorite | Watched -->
+            <!-- Actions Row: Continue Watch / Play | Minha Lista | Mais -->
             <LinearLayout
                 android:id="@+id/actionsRow"
                 android:layout_width="wrap_content"
@@ -708,7 +708,7 @@
                         android:textColor="@color/btn_secondary_action_foreground" />
                 </LinearLayout>
 
-                <!-- Marcar como Assistido -->
+                <!-- Marcar como Assistido (disponível via menu Mais) -->
                 <LinearLayout
                     android:id="@+id/btnMarkWatched"
                     android:layout_width="wrap_content"
@@ -721,7 +721,8 @@
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
                     android:paddingStart="16dp"
-                    android:paddingEnd="16dp">
+                    android:paddingEnd="16dp"
+                    android:visibility="gone">
 
                     <ImageView
                         android:id="@+id/ivMarkWatchedIcon"

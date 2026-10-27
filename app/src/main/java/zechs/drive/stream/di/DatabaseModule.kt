@@ -50,7 +50,8 @@ object DatabaseModule {
             WatchListDatabase.MIGRATION_9_10,
             WatchListDatabase.MIGRATION_10_11,
             WatchListDatabase.MIGRATION_11_12,
-            WatchListDatabase.MIGRATION_12_13
+            WatchListDatabase.MIGRATION_12_13,
+            WatchListDatabase.MIGRATION_13_14
         )
         .build()
 

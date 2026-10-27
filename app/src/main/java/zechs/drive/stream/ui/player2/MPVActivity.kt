@@ -3001,8 +3001,15 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
                 }
                 MPV_EVENT_END_FILE -> {
                     runOnUiThread {
-                        if (!isFileLoaded && activityIsForeground && !isFinishing) {
-                            showPlaybackFailureDialog("Não foi possível carregar a mídia no MPV.")
+                        val pos = ((MPVLib.getPropertyDouble("time-pos") ?: 0.0) * 1000.0).toLong()
+                        val duration = ((MPVLib.getPropertyDouble("duration") ?: 0.0) * 1000.0).toLong()
+                        val isPrematureEnd = (!isFileLoaded || (pos <= 2000L && duration <= 0L)) && !isFinishing
+
+                        if (isPrematureEnd && activityIsForeground) {
+                            AppLog.w(TAG, "MPV ended prematurely without playback. Launching Exo fallback...")
+                            launchExoFallback()
+                        } else if (!isFileLoaded && activityIsForeground && !isFinishing) {
+                            showPlaybackFailureDialog()
                         }
                     }
                 }

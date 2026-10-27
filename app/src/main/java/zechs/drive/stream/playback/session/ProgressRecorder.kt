@@ -57,6 +57,7 @@ class ProgressRecorder(
         val existing = watchListRepository.getWatch(fileId, playbackProfileId)
         val finalAudioDelay = audioDelayMs ?: existing?.audioDelayMs ?: 0L
         val finalSubtitleDelay = subtitleDelayMs ?: existing?.subtitleDelayMs ?: 0L
+        val now = System.currentTimeMillis()
 
         val watch = existing?.copy(
             name = title,
@@ -65,7 +66,8 @@ class ProgressRecorder(
             totalDuration = totalDuration,
             thumbnailLink = thumbnailLink ?: existing.thumbnailLink,
             audioDelayMs = finalAudioDelay,
-            subtitleDelayMs = finalSubtitleDelay
+            subtitleDelayMs = finalSubtitleDelay,
+            lastPlayedAt = now
         ) ?: WatchList(
             name = title,
             videoId = fileId,
@@ -73,7 +75,8 @@ class ProgressRecorder(
             totalDuration = totalDuration,
             thumbnailLink = thumbnailLink,
             audioDelayMs = finalAudioDelay,
-            subtitleDelayMs = finalSubtitleDelay
+            subtitleDelayMs = finalSubtitleDelay,
+            lastPlayedAt = now
         )
 
         AppLog.d(TAG, "Saving progress: $title ($finalWatched/$totalDuration, finished=$finished)")

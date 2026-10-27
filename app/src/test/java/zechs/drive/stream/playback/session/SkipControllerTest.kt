@@ -5,6 +5,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import zechs.drive.stream.utils.MatroskaChapterParser
 import zechs.drive.stream.utils.MatroskaChapterParser.ChapterType
 import zechs.drive.stream.utils.MatroskaChapterParser.ParsedChapter
 
@@ -34,6 +35,14 @@ class SkipControllerTest {
         startTimeMs = 0L,
         endTimeMs = 30_000L,
         type = ChapterType.RECAP
+    )
+
+    private val samplePreview = ParsedChapter(
+        index = 3,
+        title = "Next Episode Preview",
+        startTimeMs = 1_350_000L,
+        endTimeMs = 1_380_000L,
+        type = ChapterType.PREVIEW
     )
 
     @Before
@@ -90,6 +99,21 @@ class SkipControllerTest {
     }
 
     @Test
+    fun `detects preview chapter and provides skip button with label Pular Previa`() {
+        skipController.setChapters(listOf(samplePreview))
+        val (state, _) = skipController.onPlaybackTick(
+            positionMs = 1_355_000L,
+            autoSkipEnabled = false,
+            controllerVisible = true
+        )
+
+        assertEquals(samplePreview, state.activeChapter)
+        val visibleUi = state.buttonUi as SkipController.SkipButtonUi.Visible
+        assertEquals("Pular Prévia", visibleUi.label)
+        assertEquals(1_380_000L, visibleUi.targetPositionMs)
+    }
+
+    @Test
     fun `auto-skips opening when autoSkipEnabled and within grace period`() {
         skipController.setChapters(listOf(sampleOpening))
         val (_, action) = skipController.onPlaybackTick(
@@ -132,6 +156,60 @@ class SkipControllerTest {
         val autoSkip = action as SkipController.SkipAction.AutoSkip
         assertEquals(30_000L, autoSkip.targetPositionMs)
         assertTrue(autoSkip.message.contains("Recap"))
+    }
+
+    @Test
+    fun `auto-skips preview when autoSkipEnabled and within grace period`() {
+        skipController.setChapters(listOf(samplePreview))
+        val (_, action) = skipController.onPlaybackTick(
+            positionMs = 1_351_000L,
+            autoSkipEnabled = true,
+            controllerVisible = false
+        )
+
+        assertTrue(action is SkipController.SkipAction.AutoSkip)
+        val autoSkip = action as SkipController.SkipAction.AutoSkip
+        assertEquals(1_380_000L, autoSkip.targetPositionMs)
+        assertTrue(autoSkip.message.contains("Prévia"))
+    }
+
+    @Test
+    fun `hides overlay skip button after overlayDisplayDurationMs when OSD is hidden and re-shows when OSD is visible`() {
+        skipController.setChapters(listOf(sampleOpening))
+
+        // Within 8s of chapter start (60s -> 65s), overlay is visible while OSD is hidden
+        val (withinWindowState, _) = skipController.onPlaybackTick(
+            positionMs = 65_000L,
+            autoSkipEnabled = false,
+            controllerVisible = false
+        )
+        assertTrue(withinWindowState.buttonUi is SkipController.SkipButtonUi.Visible)
+
+        // Past 8s of first seen position (65s -> 75s), overlay auto-hides when OSD is hidden (Crunchyroll SkipEvent pattern)
+        val (expiredOverlayState, _) = skipController.onPlaybackTick(
+            positionMs = 75_000L,
+            autoSkipEnabled = false,
+            controllerVisible = false
+        )
+        assertEquals(SkipController.SkipButtonUi.Hidden, expiredOverlayState.buttonUi)
+
+        // When user opens OSD controls, skip button reappears even past 8s
+        val (osdVisibleState, _) = skipController.onPlaybackTick(
+            positionMs = 75_000L,
+            autoSkipEnabled = false,
+            controllerVisible = true
+        )
+        assertTrue(osdVisibleState.buttonUi is SkipController.SkipButtonUi.Visible)
+    }
+
+    @Test
+    fun `classifyChapterTitle identifies preview opening ending recap and end markers`() {
+        assertEquals(ChapterType.PREVIEW, MatroskaChapterParser.classifyChapterTitle("Next Episode Preview", 1_350_000L))
+        assertEquals(ChapterType.PREVIEW, MatroskaChapterParser.classifyChapterTitle("Prévia", 1_200_000L))
+        assertEquals(ChapterType.OTHER, MatroskaChapterParser.classifyChapterTitle("Preview End", 1_380_000L))
+        assertEquals(ChapterType.OPENING, MatroskaChapterParser.classifyChapterTitle("NCOP1", 60_000L))
+        assertEquals(ChapterType.ENDING, MatroskaChapterParser.classifyChapterTitle("Ending Credits", 1_200_000L))
+        assertEquals(ChapterType.RECAP, MatroskaChapterParser.classifyChapterTitle("Previously on", 5_000L))
     }
 
     @Test
@@ -216,8 +294,8 @@ class SkipControllerTest {
     @Test
     fun `performSkip returns chapter end time when inside chapter or 90s forward when fallback`() {
         skipController.setChapters(listOf(sampleOpening))
-        skipController.onPlaybackTick(80_000L)
-        assertEquals(150_000L, skipController.performSkip(80_000L))
+        skipController.onPlaybackTick(62_000L)
+        assertEquals(150_000L, skipController.performSkip(62_000L))
 
         skipController.setChapters(emptyList())
         skipController.onPlaybackTick(20_000L, controllerVisible = true)
@@ -228,15 +306,15 @@ class SkipControllerTest {
     fun `an accepted skip does not reappear on a stale position before seek completes`() {
         skipController.setChapters(listOf(sampleOpening))
         // 1. Tick during opening shows skip button
-        val (initialState, _) = skipController.onPlaybackTick(positionMs = 80_000L)
+        val (initialState, _) = skipController.onPlaybackTick(positionMs = 62_000L)
         assertTrue(initialState.buttonUi is SkipController.SkipButtonUi.Visible)
 
         // 2. User performs skip
-        val target = skipController.performSkip(80_000L)
+        val target = skipController.performSkip(62_000L)
         assertEquals(150_000L, target)
 
         // 3. Stale tick arrives before seek completion (same or slight advance inside interval)
-        val (staleState, _) = skipController.onPlaybackTick(positionMs = 80_050L)
+        val (staleState, _) = skipController.onPlaybackTick(positionMs = 62_050L)
         assertEquals(SkipController.SkipButtonUi.Hidden, staleState.buttonUi)
 
         // 4. Seek completes (position past opening)

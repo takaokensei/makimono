@@ -24,11 +24,19 @@ fun mergeCatalogSnapshot(
  * shortcuts can point back at that same container, so compare both file and
  * shortcut target ids before promoting entries to a title or hero.
  */
+fun isExcludedCatalogFolderName(name: String?): Boolean =
+    zechs.drive.stream.data.model.CatalogFolderFilters.isExcludedCatalogFolderName(name)
+
+fun excludeStagingAndDownloadFolders(files: List<DriveFile>): List<DriveFile> =
+    files.filterNot { isExcludedCatalogFolderName(it.name) }
+
 fun excludeLibraryRoot(
     files: List<DriveFile>,
     libraryRootId: String
 ): List<DriveFile> = files.filterNot { file ->
-    file.id == libraryRootId || file.shortcutDetails.targetId == libraryRootId
+    file.id == libraryRootId ||
+        file.shortcutDetails.targetId == libraryRootId ||
+        isExcludedCatalogFolderName(file.name)
 }
 
 fun filterStarredLibraryFolders(

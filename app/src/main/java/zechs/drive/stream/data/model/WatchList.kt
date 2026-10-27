@@ -10,7 +10,8 @@ import zechs.drive.stream.utils.ThumbnailUrl
 @Entity(
     tableName = "watch_list",
     indices = [
-        Index(value = ["profileId", "videoId"])
+        Index(value = ["profileId", "videoId"]),
+        Index(value = ["profileId", "lastPlayedAt"])
     ]
 )
 data class WatchList(
@@ -22,6 +23,7 @@ data class WatchList(
     val profileId: String = "",
     val audioDelayMs: Long = 0L,
     val subtitleDelayMs: Long = 0L,
+    val lastPlayedAt: Long = System.currentTimeMillis(),
     @PrimaryKey(autoGenerate = true) val id: Int? = null
 ) {
 

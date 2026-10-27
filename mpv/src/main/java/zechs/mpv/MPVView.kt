@@ -93,11 +93,11 @@ class MPVView(
         val numCores = Runtime.getRuntime().availableProcessors().coerceAtLeast(2)
         MPVLib.setOptionString("vd-lavc-threads", numCores.toString())
 
-        // Optimized network streaming cache for Android TV & high-bitrate 4K media
+        // Optimized network streaming cache bounded for Android TV & low-RAM stability
         MPVLib.setOptionString("cache", "yes")
-        MPVLib.setOptionString("demuxer-max-bytes", "${256 * 1024 * 1024}") // 256MB buffer for 4K / high-bitrate streams
-        MPVLib.setOptionString("demuxer-max-back-bytes", "${64 * 1024 * 1024}") // 64MB back buffer for rewinds
-        MPVLib.setOptionString("demuxer-readahead-secs", "90") // 90 seconds forward lookahead buffer
+        MPVLib.setOptionString("demuxer-max-bytes", "${64 * 1024 * 1024}") // 64MB forward buffer cap
+        MPVLib.setOptionString("demuxer-max-back-bytes", "${24 * 1024 * 1024}") // 24MB back buffer cap
+        MPVLib.setOptionString("demuxer-readahead-secs", "45") // 45 seconds forward lookahead buffer
 
         // Subtitle typesetting:
         // 'scale' preserves authentic ASS/SSA positioning, styles, and typography

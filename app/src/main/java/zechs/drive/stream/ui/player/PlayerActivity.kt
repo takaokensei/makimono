@@ -907,17 +907,12 @@ class PlayerActivity : BasePlayerActivity() {
                 var subtitleText = ""
 
                 player.videoFormat?.let {
-                    if (it.width != NO_VALUE && it.height != NO_VALUE) {
-                        subtitleText += "${it.width}x${it.height} - "
-                    }
-                    // frameRate can return NO_VALUE, which is a int
-                    // can't compare it against float.
-                    if (it.frameRate > 0) {
-                        val rounded = (it.frameRate * 100.0).roundToInt() / 100.0
-                        subtitleText += "${rounded}fps - "
-                    }
-                    it.codecs?.let { codec ->
-                        subtitleText += codec
+                    // Editorial clean subtitle: prefer Series + Episode or clean title
+                    val epNumber = currentEpNumber
+                    subtitleText = if (epNumber > 0) "Epis?dio %02d".format(epNumber) else "Reproduzindo"
+                    val seriesName = intent.getStringExtra(PlayerLauncher.EXTRA_SERIES_TITLE)
+                    if (!seriesName.isNullOrBlank()) {
+                        tvPlayerTitle?.text = seriesName
                     }
 
                     // Apple TV / Netflix Grade AFR (Auto Frame Rate) & HDR (Match Dynamic Range)
@@ -1139,6 +1134,14 @@ class PlayerActivity : BasePlayerActivity() {
         }
 
         // handles the duration of media to retain in the buffer
+        val activityManager = getSystemService(android.content.Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
+        val isLowRam = activityManager?.isLowRamDevice == true
+        val targetBufferBytes = if (isLowRam) {
+            BufferConfig.TARGET_BUFFER_BYTES_LOW_RAM
+        } else {
+            BufferConfig.TARGET_BUFFER_BYTES_STANDARD
+        }
+
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
                 BufferConfig.MIN_BUFFER_DURATION,
@@ -1146,7 +1149,8 @@ class PlayerActivity : BasePlayerActivity() {
                 BufferConfig.MIN_PLAYBACK_START_BUFFER,
                 BufferConfig.MIN_PLAYBACK_RESUME_BUFFER
             )
-            .setPrioritizeTimeOverSizeThresholds(true)
+            .setTargetBufferBytes(targetBufferBytes)
+            .setPrioritizeTimeOverSizeThresholds(false)
             .setBackBuffer(BufferConfig.BACK_BUFFER_DURATION, /* retainBackBufferFromKeyframe = */ true)
             .build()
 

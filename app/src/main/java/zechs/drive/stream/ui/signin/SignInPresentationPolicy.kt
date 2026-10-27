@@ -12,7 +12,8 @@ data class SignInPresentationState(
     val descriptionRes: Int,
     val instructionsRes: Int,
     val formattedConfirmCode: String,
-    val directAuthUrl: String
+    val directAuthUrl: String,
+    val isConfirmCodeVisible: Boolean = formattedConfirmCode.isNotBlank()
 )
 
 object SignInPresentationPolicy {
@@ -42,7 +43,8 @@ object SignInPresentationPolicy {
                 descriptionRes = R.string.pairing_description,
                 instructionsRes = R.string.pairing_instructions,
                 formattedConfirmCode = formattedCode,
-                directAuthUrl = directUrl
+                directAuthUrl = directUrl,
+                isConfirmCodeVisible = formattedCode.isNotBlank()
             )
         } else {
             SignInPresentationState(
@@ -59,7 +61,8 @@ object SignInPresentationPolicy {
                 descriptionRes = R.string.pairing_mobile_description,
                 instructionsRes = R.string.pairing_mobile_instructions,
                 formattedConfirmCode = formattedCode,
-                directAuthUrl = directUrl
+                directAuthUrl = directUrl,
+                isConfirmCodeVisible = formattedCode.isNotBlank()
             )
         }
     }

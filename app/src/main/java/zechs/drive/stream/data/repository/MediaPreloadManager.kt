@@ -51,8 +51,8 @@ class MediaPreloadManager @Inject constructor(
 
     companion object {
         private const val TAG = "MediaPreloadManager"
-        private const val METADATA_CONCURRENCY = 6
-        private const val EPISODE_CONCURRENCY = 4
+        private const val METADATA_CONCURRENCY = 2
+        private const val EPISODE_CONCURRENCY = 2
     }
 
     private val preloadScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -134,6 +134,7 @@ class MediaPreloadManager @Inject constructor(
             val isMediaOrFolder = file.isFolder || file.isShortcutFolder || file.isVideoFile || file.isShortcutVideo
             val lower = file.name.lowercase()
             isMediaOrFolder &&
+                !zechs.drive.stream.data.model.CatalogFolderFilters.isExcludedCatalogFolderName(file.name) &&
                 !lower.endsWith(".ico") &&
                 !lower.endsWith(".apk") &&
                 !lower.endsWith(".ini") &&

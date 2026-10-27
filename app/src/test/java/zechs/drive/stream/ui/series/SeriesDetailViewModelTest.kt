@@ -298,5 +298,12 @@ class SeriesDetailViewModelTest {
         org.junit.Assert.assertNull(viewModel.getCompletedDownloadPath("test_file"))
         org.junit.Assert.assertFalse(viewModel.isEpisodeDownloaded("test_file"))
         org.junit.Assert.assertFalse(viewModel.isEpisodeDownloading("test_file"))
+        org.junit.Assert.assertNull(viewModel.getDownloadedSubtitles("test_file"))
+    }
+
+    @Test
+    fun humanizeFolderTitleReplacesUnderscoresAndCleansBrackets() {
+        assertEquals("Downloads Diretos", SeriesDetailViewModel.humanizeFolderTitle("Downloads_Diretos"))
+        assertEquals("Frieren", SeriesDetailViewModel.humanizeFolderTitle("[SubsPlease] Frieren (1080p)"))
     }
 }

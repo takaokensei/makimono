@@ -18,6 +18,7 @@ class SignInPresentationPolicyTest {
         )
 
         assertTrue(state.isQrCodeVisible)
+        assertTrue(state.isConfirmCodeVisible)
         assertFalse(state.isDirectBrowserActionVisible)
         assertFalse(state.isCopyActionsVisible)
         assertFalse(state.isToggleQrActionVisible)
@@ -39,6 +40,7 @@ class SignInPresentationPolicyTest {
         )
 
         assertFalse(state.isQrCodeVisible)
+        assertTrue(state.isConfirmCodeVisible)
         assertTrue(state.isDirectBrowserActionVisible)
         assertTrue(state.isCopyActionsVisible)
         assertTrue(state.isToggleQrActionVisible)
@@ -61,6 +63,7 @@ class SignInPresentationPolicyTest {
         )
 
         assertTrue(state.isQrCodeVisible)
+        assertTrue(state.isConfirmCodeVisible)
         assertTrue(state.isDirectBrowserActionVisible)
         assertTrue(state.isToggleQrActionVisible)
         assertEquals(R.string.pairing_mobile_hide_qr, state.toggleQrButtonTextRes)
@@ -85,6 +88,7 @@ class SignInPresentationPolicyTest {
             confirmCode = "284-763"
         )
 
+        assertTrue(state.isConfirmCodeVisible)
         assertEquals("284 763", state.formattedConfirmCode)
         assertEquals("https://pairing.test/p/abc?code=284763", state.directAuthUrl)
     }
@@ -97,6 +101,7 @@ class SignInPresentationPolicyTest {
             confirmCode = ""
         )
 
+        assertFalse(state.isConfirmCodeVisible)
         assertEquals("", state.formattedConfirmCode)
         assertEquals("https://pairing.test/p/abc", state.directAuthUrl)
     }

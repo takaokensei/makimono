@@ -18,7 +18,7 @@ import zechs.drive.stream.data.model.WatchQueueItem
         ProfileEntity::class,
         zechs.drive.stream.data.model.DownloadItem::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = true
 )
 abstract class WatchListDatabase : RoomDatabase() {
@@ -35,6 +35,60 @@ abstract class WatchListDatabase : RoomDatabase() {
     abstract fun getDownloadDao(): DownloadDao
 
     companion object {
+        /**
+         * v13 -> v14:
+         * 1. Adds lastPlayedAt column to watch_list and index (profileId, lastPlayedAt) for chronological history (G06).
+         * 2. Migrates download_items to composite primary key (profileId, fileId) for multi-profile download isolation (G01).
+         */
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `watch_list` ADD COLUMN `lastPlayedAt` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_watch_list_profileId_lastPlayedAt` ON `watch_list` (`profileId`, `lastPlayedAt`)")
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `download_items_new` (
+                        `fileId` TEXT NOT NULL,
+                        `folderId` TEXT,
+                        `seriesTitle` TEXT,
+                        `name` TEXT NOT NULL,
+                        `seasonNumber` INTEGER,
+                        `episodeNumber` INTEGER,
+                        `thumbnailUrl` TEXT,
+                        `localPath` TEXT NOT NULL,
+                        `totalBytes` INTEGER NOT NULL DEFAULT 0,
+                        `downloadedBytes` INTEGER NOT NULL DEFAULT 0,
+                        `status` TEXT NOT NULL DEFAULT 'QUEUED',
+                        `profileId` TEXT NOT NULL DEFAULT 'caua',
+                        `createdAt` INTEGER NOT NULL,
+                        `completedAt` INTEGER,
+                        `errorMessage` TEXT,
+                        PRIMARY KEY(`profileId`, `fileId`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    INSERT OR REPLACE INTO `download_items_new` (
+                        `fileId`, `folderId`, `seriesTitle`, `name`, `seasonNumber`, `episodeNumber`,
+                        `thumbnailUrl`, `localPath`, `totalBytes`, `downloadedBytes`, `status`,
+                        `profileId`, `createdAt`, `completedAt`, `errorMessage`
+                    )
+                    SELECT
+                        `fileId`, `folderId`, `seriesTitle`, `name`, `seasonNumber`, `episodeNumber`,
+                        `thumbnailUrl`, `localPath`, `totalBytes`, `downloadedBytes`, `status`,
+                        `profileId`, `createdAt`, `completedAt`, `errorMessage`
+                    FROM `download_items`
+                    """.trimIndent()
+                )
+                db.execSQL("DROP TABLE `download_items`")
+                db.execSQL("ALTER TABLE `download_items_new` RENAME TO `download_items`")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_download_items_profileId` ON `download_items` (`profileId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_download_items_folderId` ON `download_items` (`folderId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_download_items_fileId` ON `download_items` (`fileId`)")
+            }
+        }
+
         /** Register preserved download records with Room without deleting existing downloads. */
         val MIGRATION_12_13 = object : Migration(12, 13) {
             override fun migrate(db: SupportSQLiteDatabase) {

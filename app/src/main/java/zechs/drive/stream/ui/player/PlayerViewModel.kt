@@ -81,8 +81,29 @@ class PlayerViewModel @Inject constructor(
     fun fetchSubtitles(fileId: String, parentFolderId: String? = null) {
         subtitlesJob?.cancel()
         subtitlesJob = viewModelScope.launch(Dispatchers.IO) {
+            // 1. Check locally downloaded sidecar subtitles first so offline playback works immediately
+            val localSubs = runCatching {
+                downloadRepository.get().getDownloadedSubtitlesForEpisode(fileId)
+            }.getOrDefault(arrayListOf())
+
+            if (localSubs.isNotEmpty()) {
+                _subtitlesChannel.send(
+                    DriveFolderListing(
+                        items = localSubs,
+                        isComplete = true,
+                        sourceFolderId = parentFolderId
+                    )
+                )
+            }
+
+            // 2. Also query Drive for any additional remote subtitles when online
             val repository = driveRepository.get()
             var page = repository.getFolderSubtitles(fileId, parentFolderId)
+            if (localSubs.isNotEmpty() && page.items.isEmpty() && page.message != null) {
+                // Suppress offline error banner when local subtitles are already loaded
+                return@launch
+            }
+
             val requestedTokens = mutableSetOf<String>()
             while (true) {
                 _subtitlesChannel.send(page)
@@ -97,7 +118,9 @@ class PlayerViewModel @Inject constructor(
                 }
                 page = repository.getNextFolderSubtitlePage(folderId, token)
                 if (page.message != null && page.items.isEmpty()) {
-                    _subtitlesChannel.send(page)
+                    if (localSubs.isEmpty()) {
+                        _subtitlesChannel.send(page)
+                    }
                     break
                 }
             }

@@ -42,9 +42,7 @@ object PlayerLauncher {
         val hasAss = subtitles?.any { it.ext == "ass" || it.ext == "ssa" } == true
         val isHi10pOr10bit = title.contains("hi10p", ignoreCase = true) ||
             title.contains("10bit", ignoreCase = true) ||
-            title.contains("10-bit", ignoreCase = true) ||
-            title.contains("bdrip", ignoreCase = true) ||
-            title.contains("bluray", ignoreCase = true)
+            title.contains("10-bit", ignoreCase = true)
         val extension = title.substringAfterLast('.', "").lowercase().takeIf { it.isNotEmpty() }
         val media = MediaInfo(
             name = title,

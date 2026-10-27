@@ -3,20 +3,24 @@ package zechs.drive.stream.ui.player.utils
 class BufferConfig {
 
     companion object {
-        // Min buffer ExoPlayer tries to keep once playback is going (increased to 45 secs for 4K / high-bitrate)
-        const val MIN_BUFFER_DURATION = 45_000
+        // Min buffer ExoPlayer tries to keep once playback is going (15s keeps memory bounded on high-bitrate Blu-Ray MKVs)
+        const val MIN_BUFFER_DURATION = 15_000
 
-        // Max buffer while playing (increased to 180 secs / 3 min to absorb network jitter)
-        const val MAX_BUFFER_DURATION = 180_000
+        // Max buffer while playing (45s prevents 180s OOM heap spikes on 80+ Mbps streams)
+        const val MAX_BUFFER_DURATION = 45_000
 
-        // Min buffer before starting playback (increased to 6 secs)
-        const val MIN_PLAYBACK_START_BUFFER = 6_000
+        // Min buffer before starting playback (4s for snappy start)
+        const val MIN_PLAYBACK_START_BUFFER = 4_000
 
-        // Min buffer when video is resumed after rebuffering (increased to 8 secs)
-        const val MIN_PLAYBACK_RESUME_BUFFER = 8_000
+        // Min buffer when video is resumed after rebuffering (6s)
+        const val MIN_PLAYBACK_RESUME_BUFFER = 6_000
 
-        // Back buffer to retain in memory for instant small rewinds (increased to 30 secs)
-        const val BACK_BUFFER_DURATION = 30_000
+        // Back buffer to retain in memory for instant small rewinds (10s)
+        const val BACK_BUFFER_DURATION = 10_000
+
+        // Strict byte thresholds so DefaultLoadControl never overflows the JVM heap
+        const val TARGET_BUFFER_BYTES_STANDARD = 48 * 1024 * 1024 // 48 MB
+        const val TARGET_BUFFER_BYTES_LOW_RAM = 24 * 1024 * 1024  // 24 MB
     }
 
 }

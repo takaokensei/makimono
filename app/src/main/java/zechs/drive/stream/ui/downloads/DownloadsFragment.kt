@@ -174,14 +174,27 @@ class DownloadsFragment : Fragment() {
             return
         }
 
-        val playlist = arrayListOf(
-            PlaylistItem(
-                fileId = item.fileId,
-                title = item.name,
-                thumbnailLink = item.thumbnailUrl,
-                localUri = "file://${item.localPath}"
+        val allCompleted = viewModel.downloads.value.filter { it.isComplete && it.localPath.isNotBlank() }
+        val siblingItems = allCompleted.filter { candidate ->
+            (!item.folderId.isNullOrBlank() && candidate.folderId == item.folderId) ||
+                (!item.seriesTitle.isNullOrBlank() && candidate.seriesTitle == item.seriesTitle)
+        }.ifEmpty { listOf(item) }
+            .sortedWith(
+                compareBy<DownloadItem> { it.seasonNumber ?: 1 }
+                    .thenBy { it.episodeNumber ?: Int.MAX_VALUE }
+                    .thenBy { it.name }
             )
-        )
+
+        val playlist = ArrayList(siblingItems.map { dl ->
+            PlaylistItem(
+                fileId = dl.fileId,
+                title = dl.name,
+                thumbnailLink = dl.thumbnailUrl,
+                localUri = "file://${dl.localPath}"
+            )
+        })
+
+        val localSubs = viewModel.getDownloadedSubtitles(item.fileId)
 
         PlayerLauncher.launch(
             context = requireContext(),
@@ -192,7 +205,9 @@ class DownloadsFragment : Fragment() {
             thumbnailLink = item.thumbnailUrl,
             themeIndex = mainViewModel.currentThemeIndex,
             playlist = playlist,
-            startPosition = 0L,
+            subtitles = localSubs,
+            startPosition = -1L,
+            siblingFolderId = item.folderId,
             localUri = "file://${item.localPath}"
         )
     }

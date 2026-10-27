@@ -32,6 +32,10 @@ class DriveRepository @Inject constructor(
         */
         const val MAX_PAGINATION_PAGES = 25
         const val MAX_PAGINATED_FILES = 2_500
+
+        private val SUBTITLE_FOLDER_NAMES = setOf(
+            "subs", "subtitles", "sub", "legendas", "legenda", "ass", "srt"
+        )
     }
 
     suspend fun <T> retryWithBackoff(
@@ -495,6 +499,119 @@ class DriveRepository @Inject constructor(
         }
     }
 
+    /**
+     * Discovers all sidecar subtitle files associated with an episode for offline download or
+     * deep subfolder lookup. Searches both the episode's parent folder and standard subtitle
+     * subfolders (`Subs/`, `Subtitles/`, `Legendas/`, `Sub/`).
+     */
+    suspend fun getEpisodeSidecarSubtitles(
+        fileId: String,
+        parentFolderId: String? = null,
+        videoTitle: String,
+        seasonNumber: Int? = null,
+        episodeNumber: Int? = null
+    ): List<SubtitleItem> {
+        return try {
+            var resolvedRawFileName: String? = null
+            val resolvedParentId = if (!parentFolderId.isNullOrBlank()) {
+                parentFolderId
+            } else {
+                val file = runCatching {
+                    executeWithTokenRetry { token ->
+                        retryWithBackoff {
+                            driveApi.getFile(
+                                accessToken = "Bearer $token",
+                                fileId = fileId,
+                                fields = "id, name, parents"
+                            )
+                        }
+                    }
+                }.getOrNull()
+                resolvedRawFileName = file?.name
+                file?.parents?.firstOrNull()
+            } ?: return emptyList()
+
+            if (resolvedRawFileName == null) {
+                resolvedRawFileName = runCatching {
+                    executeWithTokenRetry { token ->
+                        retryWithBackoff {
+                            driveApi.getFile(
+                                accessToken = "Bearer $token",
+                                fileId = fileId,
+                                fields = "id, name, parents"
+                            )
+                        }
+                    }.name
+                }.getOrNull()
+            }
+
+            val collectedSubs = linkedMapOf<String, SubtitleItem>()
+            var videoCountInFolder = 0
+
+            // 1. Collect files in parent folder (up to 3 pages)
+            val parentQuery = "'$resolvedParentId' in parents and trashed=false"
+            var pageToken: String? = null
+            val childSubFolderIds = mutableListOf<String>()
+            for (pageIndex in 0 until 3) {
+                val res = getFiles(parentQuery, pageToken, pageSize = 100, orderBy = "name")
+                if (res is Resource.Success) {
+                    res.data.files.forEach { f ->
+                        val driveFile = f.toDriveFile()
+                        if (driveFile.isFolder) {
+                            if (f.name.trim().lowercase() in SUBTITLE_FOLDER_NAMES) {
+                                childSubFolderIds.add(f.id)
+                            }
+                        } else if (driveFile.isVideoFile) {
+                            videoCountInFolder++
+                        } else if (isSubtitleFileName(f.name)) {
+                            collectedSubs[f.id] = SubtitleItem(id = f.id, name = f.name)
+                        }
+                    }
+                    pageToken = res.data.nextPageToken
+                    if (pageToken.isNullOrBlank()) break
+                } else {
+                    break
+                }
+            }
+
+            // 2. Also inspect standard subtitle subfolders (`Subs/`, `Subtitles/`, `Legendas/`)
+            for (subFolderId in childSubFolderIds.take(4)) {
+                val subQuery = "'$subFolderId' in parents and trashed=false and mimeType != 'application/vnd.google-apps.folder'"
+                val subRes = getFiles(subQuery, pageToken = null, pageSize = 100, orderBy = "name")
+                if (subRes is Resource.Success) {
+                    subRes.data.files.forEach { f ->
+                        if (isSubtitleFileName(f.name)) {
+                            collectedSubs[f.id] = SubtitleItem(id = f.id, name = f.name)
+                        }
+                    }
+                }
+            }
+
+            val isSingleVideo = videoCountInFolder <= 1
+            collectedSubs.values
+                .filter { sub ->
+                    sub.matchesEpisodeOrSingleVideo(
+                        videoTitle = videoTitle,
+                        rawVideoFileName = resolvedRawFileName,
+                        episodeNumber = episodeNumber,
+                        seasonNumber = seasonNumber,
+                        isSingleVideoFolder = isSingleVideo
+                    )
+                }
+                .sortedWith(compareBy<SubtitleItem> { it.sortPriority() }.thenBy { it.name })
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            AppLog.w(TAG, "Failed to discover sidecar subtitles for fileId=$fileId: ${e.message}")
+            emptyList()
+        }
+    }
+
+    private fun isSubtitleFileName(fileName: String): Boolean {
+        val name = fileName.lowercase()
+        return name.endsWith(".ass") || name.endsWith(".srt") || name.endsWith(".vtt") ||
+                name.endsWith(".ssa") || name.endsWith(".sub")
+    }
+
     private fun FilesResponse.toPlaylistPage(parentFolderId: String): DriveFolderListing<PlaylistItem> {
         val items = files.map { it.toDriveFile() }.filter { it.isVideoFile }
             .map { file ->
@@ -518,9 +635,7 @@ class DriveRepository @Inject constructor(
 
     private fun FilesResponse.toSubtitlePage(parentFolderId: String): DriveFolderListing<SubtitleItem> {
         val items = files.filter { file ->
-            val name = file.name.lowercase()
-            name.endsWith(".ass") || name.endsWith(".srt") || name.endsWith(".vtt") ||
-                    name.endsWith(".ssa") || name.endsWith(".sub")
+            isSubtitleFileName(file.name)
         }.map { file -> SubtitleItem(id = file.id, name = file.name) }
         return DriveFolderListing(
             items = items,

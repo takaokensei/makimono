@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import zechs.drive.stream.data.local.DownloadDao
@@ -16,6 +17,7 @@ import zechs.drive.stream.data.model.DownloadItem
 import zechs.drive.stream.data.model.DownloadStatus
 import zechs.drive.stream.data.model.UserProfile
 import zechs.drive.stream.utils.ProfileManager
+import zechs.drive.stream.worker.DownloadWorker
 import java.io.File
 
 class DownloadRepositoryTest {
@@ -71,11 +73,49 @@ class DownloadRepositoryTest {
             status = DownloadStatus.COMPLETED.name
         )
         coEvery { downloadDao.getDownload("del123") } returns item
+        coEvery { downloadDao.countReferencesForFile("del123") } returns 0
 
         repository.deleteDownload("del123")
 
         coVerify(exactly = 1) { downloadDao.deleteDownload("del123") }
         assertEquals(false, fakeFile.exists())
+    }
+
+    @Test
+    fun deleteDownloadPreservesPhysicalFileWhenAnotherProfileReferencesIt() = runBlocking {
+        val fakeFile = File(tempDir, "shared_ep.mkv")
+        fakeFile.writeText("shared video bytes")
+
+        val item = DownloadItem(
+            fileId = "shared123",
+            name = "shared_ep.mkv",
+            localPath = fakeFile.absolutePath,
+            status = DownloadStatus.COMPLETED.name,
+            profileId = "test_user"
+        )
+        coEvery { downloadDao.getDownloadForProfile("shared123", "test_user") } returns item
+        coEvery { downloadDao.countReferencesForFile("shared123") } returns 1
+
+        repository.deleteDownload("shared123", "test_user")
+
+        coVerify(exactly = 1) { downloadDao.deleteDownloadForProfile("shared123", "test_user") }
+        coVerify(exactly = 0) { downloadDao.deleteDownload("shared123") }
+        assertTrue(fakeFile.exists())
+    }
+
+    @Test
+    fun getDownloadedSubtitlesForEpisodeReconstructsAndPrioritizesAssPtBr() {
+        val subsDir = File(tempDir, DownloadWorker.SUBTITLES_DIR_NAME).apply { mkdirs() }
+        File(subsDir, "ep5__sub_en__Frieren_-_05.en.srt").writeText("1\n00:00:01,000 --> 00:00:02,000\nHello")
+        File(subsDir, "ep5__sub_pt__Frieren_-_05.pt-BR.ass").writeText("[Script Info]\nTitle: Frieren")
+
+        val subs = repository.getDownloadedSubtitlesForEpisode("ep5")
+
+        assertEquals(2, subs.size)
+        assertEquals("sub_pt", subs[0].id)
+        assertEquals("por", subs[0].languageCode)
+        assertEquals("ass", subs[0].ext)
+        assertEquals("sub_en", subs[1].id)
     }
 
     @Test

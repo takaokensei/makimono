@@ -121,6 +121,14 @@ class EngineSelectorTest {
     }
 
     @Test
+    fun `Bakemonogatari 8-bit Blu-Ray FLAC release stays on Media3 hardware decoder`() {
+        val media = standardMedia.copy(name = "[Coalgirls]_Bakemonogatari_01_(1920x1080_Blu-Ray_FLAC)_[86FE4DBE] (1).mkv")
+        val choice = EngineSelector.selectEngine(media, defaultDevice)
+        assertTrue(choice is EngineChoice.Media3)
+        assertEquals("default_media3", choice.ruleId)
+    }
+
+    @Test
     fun `describeActiveRules returns human-readable rule summaries`() {
         val summaries = EngineSelector.describeActiveRules()
         assertEquals(8, summaries.size)

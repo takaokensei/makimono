@@ -348,13 +348,18 @@ class ProfileSelectionFragment : BaseFragment() {
         binding.tvWelcomeGreeting.text = getString(R.string.profile_welcome_greeting, profile.name)
         binding.tvWelcomeSubtitle.text = getRandomLoadingPhrase()
 
+        val isTenFoot = zechs.drive.stream.utils.DeviceUi.isTenFootExperience(requireContext())
+        val durationNormal = resources.getInteger(R.integer.motion_spec_normal).toLong()
+        val durationGentle = resources.getInteger(R.integer.motion_spec_gentle).toLong()
+        val durationHide = resources.getInteger(R.integer.motion_osd_hide).toLong()
+
         // 6. Smoothly animate in the welcome screen overlay
         binding.layoutProfileWelcome.apply {
             visibility = View.VISIBLE
             alpha = 0f
             animate()
                 .alpha(1f)
-                .setDuration(220L)
+                .setDuration(durationNormal)
                 .start()
         }
 
@@ -366,14 +371,60 @@ class ProfileSelectionFragment : BaseFragment() {
                 .scaleX(1.0f)
                 .scaleY(1.0f)
                 .alpha(1f)
-                .setDuration(350L)
+                .setDuration(durationGentle)
                 .setInterpolator(android.view.animation.DecelerateInterpolator())
                 .start()
         }
 
-        // 7. Wait ~1.5 seconds for a polished feel, then navigate
+        // 7. Crunchyroll-style Avatar-to-Sidebar Docking Choreography
         viewLifecycleOwner.lifecycleScope.launch {
-            delay(1500L)
+            delay(1100L)
+            if (!isAdded || _binding == null) return@launch
+
+            if (isTenFoot) {
+                // Fade out text elements rapidly
+                binding.tvWelcomeGreeting.animate().alpha(0f).setDuration(durationHide).start()
+                binding.tvWelcomeSubtitle.animate().alpha(0f).setDuration(durationHide).start()
+                binding.pbWelcomeSpinner.animate().alpha(0f).setDuration(durationHide).start()
+
+                // Calculate TV Sidebar target position (top-left rail item)
+                val density = resources.displayMetrics.density
+                val targetSize = 22f * density
+                val currentSize = binding.ivWelcomeAvatar.width.toFloat().coerceAtLeast(160f * density)
+                val targetScale = targetSize / currentSize
+
+                val parentWidth = binding.root.width.toFloat().coerceAtLeast(1920f)
+                val parentHeight = binding.root.height.toFloat().coerceAtLeast(1080f)
+
+                // TV Navigation Rail avatar position: start=16dp + half avatar (11dp) = 27dp; top=24dp + half avatar = 35dp
+                val targetCenterX = 27f * density
+                val targetCenterY = 35f * density
+
+                val currentCenterX = parentWidth / 2f
+                val currentCenterY = parentHeight / 2f
+
+                val deltaX = targetCenterX - currentCenterX
+                val deltaY = targetCenterY - currentCenterY
+
+                binding.ivWelcomeAvatar.animate()
+                    .translationX(deltaX)
+                    .translationY(deltaY)
+                    .scaleX(targetScale)
+                    .scaleY(targetScale)
+                    .setDuration(durationGentle)
+                    .setInterpolator(androidx.interpolator.view.animation.FastOutSlowInInterpolator())
+                    .start()
+
+                binding.ivWelcomeBg.animate()
+                    .alpha(0f)
+                    .setDuration(durationGentle)
+                    .start()
+
+                delay(durationGentle + 50L)
+            } else {
+                delay(300L)
+            }
+
             if (!isAdded || _binding == null) return@launch
             findNavController().navigateSafe(R.id.action_profileSelectionFragment_to_homeFragment)
         }

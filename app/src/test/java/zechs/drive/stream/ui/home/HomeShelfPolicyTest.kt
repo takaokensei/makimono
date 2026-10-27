@@ -101,4 +101,33 @@ class HomeShelfPolicyTest {
         shortcutDetails = ShortcutDetails(),
         starred = Starred.STARRED
     )
+
+    @Test
+    fun excludeLibraryRootFiltersConfiguredRootAndDirectDownloadsStagingFolder() {
+        val files = listOf(
+            folder("root-id", "oneblacki"),
+            folder("f1", "Bakemonogatari"),
+            folder("f2", "Downloads Diretos"),
+            folder("f3", "downloads_diretos"),
+            folder("f4", "Torrents"),
+            folder("f5", "Steins;Gate")
+        )
+
+        val result = excludeLibraryRoot(files, "root-id")
+        assertEquals(listOf("Bakemonogatari", "Steins;Gate"), result.map { it.name })
+    }
+
+    @Test
+    fun excludeStagingAndDownloadFoldersIgnoresCasingAndWhitespace() {
+        val files = listOf(
+            folder("1", "  Downloads Diretos  "),
+            folder("2", "DIRECT DOWNLOADS"),
+            folder("3", "temp"),
+            folder("4", "incomplete"),
+            folder("5", "Attack on Titan")
+        )
+
+        val result = excludeStagingAndDownloadFolders(files)
+        assertEquals(listOf("Attack on Titan"), result.map { it.name })
+    }
 }

@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import zechs.drive.stream.data.model.DownloadItem
+import zechs.drive.stream.data.model.SubtitleItem
 import zechs.drive.stream.data.repository.DownloadRepository
 import zechs.drive.stream.utils.AppSettings
 import zechs.drive.stream.utils.ProfileManager
@@ -75,5 +76,9 @@ class DownloadsViewModel @Inject constructor(
             downloadRepository.deleteAllDownloadsForProfile(profileId)
             refreshStorageUsage()
         }
+    }
+
+    fun getDownloadedSubtitles(fileId: String): ArrayList<SubtitleItem> {
+        return downloadRepository.getDownloadedSubtitlesForEpisode(fileId)
     }
 }

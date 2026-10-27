@@ -160,7 +160,7 @@ class SeriesDetailFragment : BaseFragment() {
             findNavController().navigateUp()
         }
 
-        binding.tvBreadcrumbCurrent.text = args.name
+        binding.tvBreadcrumbCurrent.text = SeriesDetailViewModel.humanizeFolderTitle(args.name)
 
         binding.btnSearch.setOnClickListener {
             showEpisodeSearchDialog()
@@ -170,13 +170,22 @@ class SeriesDetailFragment : BaseFragment() {
 
     private fun showMoreActions() {
         val current = viewModel.uiState.value as? SeriesDetailUiState.Success
+        val hasTrailer = current?.trailerItem != null || !current?.aniListMetadata?.trailerUrl.isNullOrBlank()
+        val continueEp = current?.continueWatchingItem
+        val canRestart = continueEp != null && continueEp.progressPercent in 1..94
         SeriesMoreActionsDialog.show(
             context = requireContext(),
             focusAnchor = binding.btnMoreActions,
             isFollowed = current?.isFollowed == true,
+            hasTrailer = hasTrailer,
+            canRestartContinueEpisode = canRestart,
+            isMovie = current?.isMovie == true,
             onTrailer = { binding.btnTrailer.performClick() },
             onFollowToggle = { binding.btnFollow.performClick() },
-            onMarkWatched = { binding.btnMarkWatched.performClick() }
+            onMarkWatched = { binding.btnMarkWatched.performClick() },
+            onRestartFromBeginning = if (canRestart && continueEp != null) {
+                { playEpisode(continueEp, startFromBeginning = true) }
+            } else null
         )
     }
 
@@ -267,8 +276,7 @@ class SeriesDetailFragment : BaseFragment() {
         val heroButtons = listOf(
             binding.btnPrimaryAction,
             binding.btnFavorite,
-            binding.btnMoreActions,
-            binding.btnMarkWatched
+            binding.btnMoreActions
         )
         val headerButtons = listOf(
             binding.btnBack,
@@ -289,7 +297,7 @@ class SeriesDetailFragment : BaseFragment() {
         if (!DeviceUi.isTenFootExperience(requireContext())) return
         val hasTopHeader = binding.topHeaderBar.visibility == View.VISIBLE
 
-        // Define focus chain for action buttons
+        // Define focus chain for 3 primary action buttons: Assistir/Continuar | Minha Lista | Mais
         if (hasTopHeader) {
             binding.btnBack.nextFocusRightId = binding.btnSearch.id
             binding.btnSearch.nextFocusRightId = binding.btnPrimaryAction.id
@@ -297,10 +305,9 @@ class SeriesDetailFragment : BaseFragment() {
         }
         binding.btnPrimaryAction.nextFocusRightId = binding.btnFavorite.id
         binding.btnFavorite.nextFocusRightId = binding.btnMoreActions.id
-        binding.btnMoreActions.nextFocusRightId = binding.btnMarkWatched.id
+        binding.btnMoreActions.nextFocusRightId = binding.btnMoreActions.id
 
         // Reverse direction
-        binding.btnMarkWatched.nextFocusLeftId = binding.btnMoreActions.id
         binding.btnMoreActions.nextFocusLeftId = binding.btnFavorite.id
         binding.btnFavorite.nextFocusLeftId = binding.btnPrimaryAction.id
         binding.btnPrimaryAction.nextFocusLeftId =
@@ -320,8 +327,7 @@ class SeriesDetailFragment : BaseFragment() {
         listOf(
             binding.btnPrimaryAction,
             binding.btnFavorite,
-            binding.btnMoreActions,
-            binding.btnMarkWatched
+            binding.btnMoreActions
         ).forEach {
             it.nextFocusDownId = if (isMovie) binding.rvEpisodes.id else binding.tabButtonEpisodes.id
             it.nextFocusUpId = upTarget
@@ -362,8 +368,7 @@ class SeriesDetailFragment : BaseFragment() {
         listOf(
             b.btnPrimaryAction,
             b.btnFavorite,
-            b.btnMoreActions,
-            b.btnMarkWatched
+            b.btnMoreActions
         ).forEach { it.nextFocusUpId = upTarget }
         b.tvSynopsisMore.nextFocusUpId = headerTarget
         b.tvSynopsisMore.nextFocusDownId = b.btnPrimaryAction.id
@@ -390,7 +395,7 @@ class SeriesDetailFragment : BaseFragment() {
                             binding.tvPartialListingNotice.visibility = View.GONE
                             binding.btnRetry.visibility = View.GONE
                             binding.stateView.visibility = View.GONE
-                            binding.tvRomajiTitle.text = state.seriesTitle.ifBlank { args.name }
+                            binding.tvRomajiTitle.text = SeriesDetailViewModel.humanizeFolderTitle(state.seriesTitle.ifBlank { args.name })
                             binding.tvEnglishSubtitle.visibility = View.GONE
                             state.posterUrl?.let { poster ->
                                 MediaImageLoader.poster(binding.ivSeriesPosterCard, poster)
@@ -521,7 +526,7 @@ class SeriesDetailFragment : BaseFragment() {
         } else {
             state.aniListMetadata?.titleRomaji
                 ?: state.animeEntry?.title?.takeIf { it.isNotBlank() }
-                ?: state.seriesTitle
+                ?: SeriesDetailViewModel.humanizeFolderTitle(state.seriesTitle)
         }
         binding.tvRomajiTitle.text = canonicalTitle
         binding.tvBreadcrumbCurrent.text = canonicalTitle
@@ -661,7 +666,7 @@ class SeriesDetailFragment : BaseFragment() {
         }
         synopsisDisclosure.bind(cleanSynopsis)
 
-        // 5. Action Buttons
+        // 5. Action Buttons (REF-11: 3 Primary Hero Buttons — Assistir/Continuar | Minha Lista | Mais)
         val canResume = state.continueWatchingItem?.progressPercent in 1..94
         val actionRes = if (isMovie) {
             if (canResume) R.string.series_action_continue_movie else R.string.series_action_play
@@ -707,8 +712,8 @@ class SeriesDetailFragment : BaseFragment() {
             viewModel.toggleFollow()
         }
 
-        // Mark Watched button
-        binding.btnMarkWatched.visibility = if (isMovie) View.GONE else View.VISIBLE
+        // Keep btnMarkWatched hidden on the primary Hero row (available inside 'Mais' dialog)
+        binding.btnMarkWatched.visibility = View.GONE
         binding.btnMarkWatched.setOnClickListener {
             viewModel.markSeasonWatched()
             Toast.makeText(requireContext(), getString(R.string.season_marked_watched), Toast.LENGTH_SHORT).show()
@@ -938,6 +943,7 @@ class SeriesDetailFragment : BaseFragment() {
         val fileId = file.id
         val thumb = file.thumbnailLarge ?: file.thumbnailLink ?: file.posterUrl
         val localUri = viewModel.getCompletedDownloadPath(fileId)?.let { "file://$it" }
+        val localSubtitles = if (localUri != null) viewModel.getDownloadedSubtitles(fileId) else null
         val startPos = if (startFromBeginning || item.progressPercent >= 95) {
             0L
         } else if (item.progressPercent in 1..94) {
@@ -959,7 +965,7 @@ class SeriesDetailFragment : BaseFragment() {
         val seriesTitle = if (isMovie) {
             canonicalTitle
         } else {
-            args.name
+            SeriesDetailViewModel.humanizeFolderTitle(args.name)
         }
 
         PlayerLauncher.launch(
@@ -971,6 +977,7 @@ class SeriesDetailFragment : BaseFragment() {
             thumbnailLink = thumb,
             themeIndex = mainViewModel.currentThemeIndex,
             playlist = playlist,
+            subtitles = localSubtitles,
             startPosition = startPos,
             isMovie = isMovie,
             siblingFolderId = args.folderId,
@@ -1061,10 +1068,8 @@ class SeriesDetailFragment : BaseFragment() {
         seasonPicker.close()
         binding.rvEpisodes.adapter = null
         binding.rvSeasonTabs.adapter = null
-        context?.let { ctx ->
-            com.bumptech.glide.Glide.with(ctx).clear(binding.ivHeroBackdrop)
-            com.bumptech.glide.Glide.with(ctx).clear(binding.ivSeriesPosterCard)
-        }
+        MediaImageLoader.clear(binding.ivHeroBackdrop)
+        MediaImageLoader.clear(binding.ivSeriesPosterCard)
         _binding = null
     }
 }

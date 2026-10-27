@@ -16,6 +16,7 @@ object MatroskaChapterParser {
         RECAP,
         OPENING,
         ENDING,
+        PREVIEW,
         OTHER
     }
 
@@ -179,6 +180,65 @@ object MatroskaChapterParser {
         return buildParsedChapters(rawChapters)
     }
 
+    fun classifyChapterTitle(rawTitle: String, startTimeMs: Long): ChapterType {
+        val normalizedTitle = rawTitle.lowercase(Locale.ROOT).trim()
+        val isEndMarker = normalizedTitle.endsWith("end") || normalizedTitle.endsWith("fim") ||
+                normalizedTitle.endsWith("stop") || normalizedTitle.contains("recap end") ||
+                normalizedTitle.contains("credits end") || normalizedTitle.contains("op end") ||
+                normalizedTitle.contains("ed end") || normalizedTitle.contains("preview end") ||
+                normalizedTitle.endsWith("(end)") || normalizedTitle.endsWith("[end]")
+
+        if (isEndMarker) return ChapterType.OTHER
+
+        val isPreviewMarker = (normalizedTitle.contains("preview") ||
+                normalizedTitle.contains("next episode") ||
+                normalizedTitle.contains("próximo episódio") ||
+                normalizedTitle.contains("proximo episodio") ||
+                normalizedTitle.contains("prévia") ||
+                normalizedTitle.contains("previa") ||
+                normalizedTitle.contains("jikai")) && startTimeMs >= 900_000L
+
+        if (isPreviewMarker) return ChapterType.PREVIEW
+
+        val isPrologueOrStory = normalizedTitle.contains("prologue") ||
+                normalizedTitle.contains("prologo") ||
+                normalizedTitle.contains("prólogo") ||
+                normalizedTitle.contains("avant") ||
+                normalizedTitle.contains("part a") ||
+                normalizedTitle.contains("part b") ||
+                normalizedTitle.contains("preview") ||
+                normalizedTitle.contains("epilogue") ||
+                normalizedTitle.contains("epilogo") ||
+                normalizedTitle.contains("epílogo")
+
+        if (isPrologueOrStory) return ChapterType.OTHER
+
+        return when {
+            normalizedTitle.contains("recap") ||
+            normalizedTitle.contains("resumo") ||
+            normalizedTitle.contains("previously") ||
+            normalizedTitle.contains("anteriormente") -> ChapterType.RECAP
+
+            normalizedTitle.contains("intro") ||
+            normalizedTitle.contains("opening") ||
+            normalizedTitle.contains("abertura") ||
+            normalizedTitle.contains("title sequence") ||
+            normalizedTitle.contains("opening credits") ||
+            normalizedTitle.matches(Regex(".*\\b(op|ncop)\\d*\\b.*", RegexOption.IGNORE_CASE)) -> ChapterType.OPENING
+
+            (normalizedTitle.contains("ending") ||
+            normalizedTitle.contains("credits") ||
+            normalizedTitle.contains("créditos") ||
+            normalizedTitle.contains("creditos") ||
+            normalizedTitle.contains("outro") ||
+            normalizedTitle.contains("encerramento") ||
+            normalizedTitle.contains("closing") ||
+            normalizedTitle.matches(Regex(".*\\b(ed|nced)\\d*\\b.*", RegexOption.IGNORE_CASE))) && startTimeMs >= 300_000L -> ChapterType.ENDING
+
+            else -> ChapterType.OTHER
+        }
+    }
+
     private fun buildParsedChapters(rawChapters: List<RawChapter>): List<ParsedChapter> {
         if (rawChapters.isEmpty()) return emptyList()
 
@@ -196,50 +256,7 @@ object MatroskaChapterParser {
                 curr.startMs + 90_000L
             }
 
-            val normalizedTitle = curr.title.lowercase(Locale.ROOT).trim()
-            val isEndMarker = normalizedTitle.endsWith("end") || normalizedTitle.endsWith("fim") ||
-                    normalizedTitle.endsWith("stop") || normalizedTitle.contains("recap end") ||
-                    normalizedTitle.contains("credits end") || normalizedTitle.contains("op end") ||
-                    normalizedTitle.contains("ed end") || normalizedTitle.contains("preview end") ||
-                    normalizedTitle.endsWith("(end)") || normalizedTitle.endsWith("[end]")
-
-            val isPrologueOrStory = normalizedTitle.contains("prologue") ||
-                    normalizedTitle.contains("prologo") ||
-                    normalizedTitle.contains("prólogo") ||
-                    normalizedTitle.contains("avant") ||
-                    normalizedTitle.contains("part a") ||
-                    normalizedTitle.contains("part b") ||
-                    normalizedTitle.contains("preview") ||
-                    normalizedTitle.contains("epilogue") ||
-                    normalizedTitle.contains("epilogo") ||
-                    normalizedTitle.contains("epílogo")
-
-            val type = if (isEndMarker || isPrologueOrStory) {
-                ChapterType.OTHER
-            } else when {
-                normalizedTitle.contains("recap") ||
-                normalizedTitle.contains("resumo") ||
-                normalizedTitle.contains("previously") ||
-                normalizedTitle.contains("anteriormente") -> ChapterType.RECAP
-
-                normalizedTitle.contains("intro") ||
-                normalizedTitle.contains("opening") ||
-                normalizedTitle.contains("abertura") ||
-                normalizedTitle.contains("title sequence") ||
-                normalizedTitle.contains("opening credits") ||
-                normalizedTitle.matches(Regex(".*\\b(op|ncop)\\d*\\b.*", RegexOption.IGNORE_CASE)) -> ChapterType.OPENING
-
-                (normalizedTitle.contains("ending") ||
-                normalizedTitle.contains("credits") ||
-                normalizedTitle.contains("créditos") ||
-                normalizedTitle.contains("creditos") ||
-                normalizedTitle.contains("outro") ||
-                normalizedTitle.contains("encerramento") ||
-                normalizedTitle.contains("closing") ||
-                normalizedTitle.matches(Regex(".*\\b(ed|nced)\\d*\\b.*", RegexOption.IGNORE_CASE))) && curr.startMs >= 300_000L -> ChapterType.ENDING
-
-                else -> ChapterType.OTHER
-            }
+            val type = classifyChapterTitle(curr.title, curr.startMs)
 
             result.add(
                 ParsedChapter(

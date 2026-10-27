@@ -13,7 +13,7 @@ import javax.inject.Singleton
 
 @Singleton
 class AppSettings @Inject constructor(
-    @ApplicationContext appContext: Context,
+    @ApplicationContext private val appContext: Context,
     private val profileManager: ProfileManager
 ) {
 
@@ -37,6 +37,7 @@ class AppSettings @Inject constructor(
         fun profileMatchDynamicRangeKey(profileId: String) = androidx.datastore.preferences.core.booleanPreferencesKey("profile_${profileId}_hdr")
         fun profilePredictiveBufferingKey(profileId: String) = androidx.datastore.preferences.core.booleanPreferencesKey("profile_${profileId}_binge_buffer")
         fun profileSmartDownloadsKey(profileId: String) = androidx.datastore.preferences.core.booleanPreferencesKey("profile_${profileId}_smart_downloads")
+        fun profileAutoSkipIntroKey(profileId: String) = androidx.datastore.preferences.core.booleanPreferencesKey("profile_${profileId}_auto_skip_intro")
     }
 
     private val gson = Gson()
@@ -114,12 +115,15 @@ class AppSettings @Inject constructor(
             } else {
                 val legacySize = preferences[profileSubtitleKey(profileId)]
                     ?: preferences[androidx.datastore.preferences.core.floatPreferencesKey(SUBTITLE_SIZE)]
-                    ?: 20f
-                SubtitleStyle(sizeSp = legacySize)
+                if (legacySize != null) {
+                    SubtitleStyle(sizeSp = legacySize)
+                } else {
+                    SystemCaptioningBridge.resolveDefaultSubtitleStyle(appContext, fallbackSizeSp = 20f)
+                }
             }
         } catch (e: Exception) {
             AppLog.w(TAG, "fetchSubtitleStyle fallback", e)
-            SubtitleStyle()
+            SystemCaptioningBridge.resolveDefaultSubtitleStyle(appContext, fallbackSizeSp = 20f)
         }
     }
 
@@ -213,6 +217,25 @@ class AppSettings @Inject constructor(
         } catch (e: Exception) {
             AppLog.w(TAG, "fetchSmartDownloads error, fallback to true", e)
             true
+        }
+    }
+
+    suspend fun saveAutoSkipIntro(enabled: Boolean, profileId: String = currentProfileId()) {
+        val dataStoreKey = profileAutoSkipIntroKey(profileId)
+        sessionStore.edit { settings ->
+            settings[dataStoreKey] = enabled
+        }
+        AppLog.d(TAG, "saveAutoSkipIntro [profile=$profileId]: $enabled")
+    }
+
+    suspend fun fetchAutoSkipIntro(profileId: String = currentProfileId()): Boolean {
+        return try {
+            val profileKey = profileAutoSkipIntroKey(profileId)
+            val preferences = sessionStore.data.first()
+            preferences[profileKey] ?: false
+        } catch (e: Exception) {
+            AppLog.w(TAG, "fetchAutoSkipIntro error, fallback to false", e)
+            false
         }
     }
 

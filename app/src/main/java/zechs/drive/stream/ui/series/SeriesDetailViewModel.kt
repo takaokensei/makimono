@@ -18,6 +18,7 @@ import zechs.drive.stream.R
 import zechs.drive.stream.data.local.CatalogEntry
 import zechs.drive.stream.data.local.toAnimeMetadata
 import zechs.drive.stream.data.model.DriveFile
+import zechs.drive.stream.data.model.SubtitleItem
 import zechs.drive.stream.data.model.WatchList
 import zechs.drive.stream.data.remote.AnimeMetadata
 import zechs.drive.stream.data.remote.AnimePosterResolver
@@ -145,6 +146,14 @@ class SeriesDetailViewModel @Inject constructor(
         fun cacheEpisodes(folderId: String, episodes: List<SeriesEpisodeItem>) {
             folderEpisodesCache[folderId] = episodes
         }
+
+        fun humanizeFolderTitle(rawTitle: String): String {
+            return EpisodeParser.cleanTitleString(rawTitle)
+                .replace('_', ' ')
+                .replace(Regex("\\s+"), " ")
+                .trim()
+                .ifBlank { rawTitle }
+        }
     }
 
     private val _uiState = MutableStateFlow<SeriesDetailUiState>(SeriesDetailUiState.Loading("", ""))
@@ -225,7 +234,7 @@ class SeriesDetailViewModel @Inject constructor(
         if (cachedSuccess != null) {
             _uiState.value = cachedSuccess
         } else {
-            _uiState.value = SeriesDetailUiState.Loading(folderId, seriesTitle, initialPoster)
+            _uiState.value = SeriesDetailUiState.Loading(folderId, humanizeFolderTitle(seriesTitle), initialPoster)
         }
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -243,7 +252,7 @@ class SeriesDetailViewModel @Inject constructor(
                         if (_uiState.value is SeriesDetailUiState.Loading) {
                             _uiState.value = SeriesDetailUiState.Loading(
                                 folderId = folderId,
-                                seriesTitle = seriesTitle,
+                                seriesTitle = humanizeFolderTitle(seriesTitle),
                                 posterUrl = quickPoster,
                                 bannerUrl = quickBanner
                             )
@@ -526,7 +535,7 @@ class SeriesDetailViewModel @Inject constructor(
             driveFiles.size <= 2 &&
             allSeasonGroups.size <= 1
         val movieCanonical = if (isMovie) {
-            aniListMeta?.titleRomaji ?: aniListMeta?.titleEnglish ?: seriesTitle
+            aniListMeta?.titleRomaji ?: aniListMeta?.titleEnglish ?: humanizeFolderTitle(seriesTitle)
         } else null
         val fallbackThumb = aniListMeta?.bannerUrl ?: aniListMeta?.posterUrl ?: fallbackPosterUrl
         val seriesAgeRating = formatRating(aniListMeta?.ageRating)
@@ -636,7 +645,7 @@ class SeriesDetailViewModel @Inject constructor(
         val franchiseTitle = when {
             isFranchise && hub != null -> hub.canonicalTitle
             knownFranchiseKey != null -> franchiseGroupingManager.getCanonicalTitle(knownFranchiseKey)
-            else -> aniListMeta?.titleRomaji?.takeIf(String::isNotBlank) ?: seriesTitle
+            else -> aniListMeta?.titleRomaji?.takeIf(String::isNotBlank) ?: humanizeFolderTitle(seriesTitle)
         }
         val hubSynopsis = hub?.synopsis
         val effectiveAniListMeta = if (isFranchise && !hubSynopsis.isNullOrBlank()) {
@@ -677,7 +686,7 @@ class SeriesDetailViewModel @Inject constructor(
             isFranchiseHub = isFranchise,
             franchiseMembersCount = hub?.members?.size ?: 0,
             activeArcId = activeTab?.id ?: folderId,
-            activeArcTitle = activeTab?.title ?: seriesTitle,
+            activeArcTitle = activeTab?.title ?: humanizeFolderTitle(seriesTitle),
             activeArcYear = activeTab?.releaseYear ?: aniListMeta?.year,
             activeArcScore = if (isFranchise) activeTab?.score else activeTab?.score ?: aniListMeta?.score,
             activeArcScoreSource = activeTab?.scoreSource ?: if (aniListMeta?.isAnime == false) "TMDB" else "MAL",
@@ -1285,6 +1294,10 @@ class SeriesDetailViewModel @Inject constructor(
         return null
     }
 
+    fun getDownloadedSubtitles(fileId: String): ArrayList<SubtitleItem>? {
+        return downloadRepository?.getDownloadedSubtitlesForEpisode(fileId)
+    }
+
     fun isEpisodeDownloaded(fileId: String): Boolean {
         return getCompletedDownloadPath(fileId) != null
     }
@@ -1311,14 +1324,18 @@ class SeriesDetailViewModel @Inject constructor(
             _uiState.value = currentSuccess.copy(currentEpisodes = updated)
         }
 
+        val parsed = EpisodeParser.parse(episode.file.name)
+        val seasonNum = parsed.season?.toInt()
+        val epNum = episode.episodeNumber ?: parsed.episode?.toInt()
+
         viewModelScope.launch {
             downloadRepository?.enqueueDownload(
                 fileId = episode.file.id,
                 folderId = folderId,
-                seriesTitle = seriesTitle,
+                seriesTitle = humanizeFolderTitle(seriesTitle),
                 name = episode.displayTitle,
-                seasonNumber = null,
-                episodeNumber = episode.episodeNumber,
+                seasonNumber = seasonNum,
+                episodeNumber = epNum,
                 thumbnailUrl = episode.file.thumbnailLarge ?: episode.file.thumbnailLink ?: episode.fallbackThumbnailUrl,
                 expectedSize = episode.file.size ?: 0L
             )

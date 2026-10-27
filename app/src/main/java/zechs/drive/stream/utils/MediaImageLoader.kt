@@ -16,6 +16,19 @@ object MediaImageLoader {
     const val BACKDROP_WIDTH = 1440
     const val BACKDROP_HEIGHT = 810
 
+    /**
+     * Clears pending Glide requests safely using applicationContext to prevent
+     * IllegalArgumentException if the host Activity is already destroyed/destroying.
+     */
+    fun clear(view: ImageView) {
+        try {
+            Glide.with(view.context.applicationContext).clear(view)
+            view.setImageDrawable(null)
+        } catch (e: Exception) {
+            AppLog.logSwallowed("MediaImageLoader", "clearing image view", e)
+        }
+    }
+
     fun card(view: ImageView, url: String?) {
         load(view, url, CARD_WIDTH, CARD_HEIGHT, R.drawable.glass_card_bg)
     }
@@ -26,8 +39,7 @@ object MediaImageLoader {
 
     fun backdrop(view: ImageView, url: String?) {
         if (url.isNullOrBlank()) {
-            Glide.with(view).clear(view)
-            view.setImageDrawable(null)
+            clear(view)
             return
         }
         Glide.with(view)
@@ -56,24 +68,6 @@ object MediaImageLoader {
         }
     }
 
-    /**
-     * Pure policy selecting non-blank neighbor URLs within `[focusedIndex - radius .. focusedIndex + radius]`
-     * (excluding `focusedIndex` itself, which is already bound) for Glide prefetching (T-804).
-     */
-    fun selectNeighborPreloadUrls(
-        urls: List<String?>,
-        focusedIndex: Int,
-        radius: Int = 2
-    ): List<String> {
-        if (urls.isEmpty() || focusedIndex !in urls.indices || radius <= 0) return emptyList()
-        val start = (focusedIndex - radius).coerceAtLeast(0)
-        val end = (focusedIndex + radius).coerceAtMost(urls.lastIndex)
-        return (start..end)
-            .filter { it != focusedIndex }
-            .mapNotNull { index -> urls[index]?.trim()?.takeIf { it.isNotEmpty() } }
-            .distinct()
-    }
-
     fun preloadPoster(context: Context, url: String?) {
         if (url.isNullOrBlank()) return
         try {
@@ -100,6 +94,39 @@ object MediaImageLoader {
         }
     }
 
+    /**
+     * Pure policy selecting non-blank neighbor URLs within `[focusedIndex - radius .. focusedIndex + radius]`
+     * (excluding `focusedIndex` itself, which is already bound) for Glide prefetching (T-804).
+     */
+    fun selectNeighborPreloadUrls(
+        urls: List<String?>,
+        focusedIndex: Int,
+        radius: Int = 2
+    ): List<String> {
+        if (urls.isEmpty() || focusedIndex !in urls.indices || radius <= 0) return emptyList()
+        val start = (focusedIndex - radius).coerceAtLeast(0)
+        val end = (focusedIndex + radius).coerceAtMost(urls.lastIndex)
+        return (start..end)
+            .filter { it != focusedIndex }
+            .mapNotNull { index -> urls[index]?.trim()?.takeIf { it.isNotEmpty() } }
+            .distinct()
+    }
+
+    /**
+     * Convenience helper to prefetch neighbors of the currently focused item on a TV shelf (T-804).
+     */
+    fun preloadShelfNeighbors(
+        context: Context,
+        urls: List<String?>,
+        focusedIndex: Int,
+        radius: Int = 2
+    ) {
+        val neighbors = selectNeighborPreloadUrls(urls, focusedIndex, radius)
+        for (url in neighbors) {
+            preloadCard(context, url)
+        }
+    }
+
     private fun load(
         view: ImageView,
         url: String?,
@@ -108,7 +135,7 @@ object MediaImageLoader {
         placeholder: Int
     ) {
         if (url.isNullOrBlank()) {
-            Glide.with(view).clear(view)
+            clear(view)
             view.setImageResource(placeholder)
             return
         }

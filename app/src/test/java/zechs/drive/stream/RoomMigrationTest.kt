@@ -17,6 +17,36 @@ class RoomMigrationTest {
         verify(exactly = 0) { db.execSQL(match { it.contains("DROP TABLE", ignoreCase = true) }) }
     }
 
+    @Test
+    fun migration_13_14_addsLastPlayedAtAndCompositeDownloadPrimaryKey() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+        WatchListDatabase.MIGRATION_13_14.migrate(db)
+
+        verify(exactly = 1) {
+            db.execSQL("ALTER TABLE `watch_list` ADD COLUMN `lastPlayedAt` INTEGER NOT NULL DEFAULT 0")
+        }
+        verify(exactly = 1) {
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_watch_list_profileId_lastPlayedAt` ON `watch_list` (`profileId`, `lastPlayedAt`)")
+        }
+        verify(exactly = 1) {
+            db.execSQL(match {
+                it.contains("CREATE TABLE IF NOT EXISTS `download_items_new`") &&
+                    it.contains("PRIMARY KEY(`profileId`, `fileId`)")
+            })
+        }
+        verify(exactly = 1) {
+            db.execSQL(match { it.contains("INSERT OR REPLACE INTO `download_items_new`") })
+        }
+        verify(exactly = 1) {
+            db.execSQL("DROP TABLE `download_items`")
+        }
+        verify(exactly = 1) {
+            db.execSQL("ALTER TABLE `download_items_new` RENAME TO `download_items`")
+        }
+        verify(exactly = 1) {
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_download_items_fileId` ON `download_items` (`fileId`)")
+        }
+    }
 
     @Test
     fun migration_1_2_addsThumbnailLinkColumn() {

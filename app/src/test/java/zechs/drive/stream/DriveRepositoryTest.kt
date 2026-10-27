@@ -583,4 +583,68 @@ class DriveRepositoryTest {
         assertEquals("success_payload", result)
         assertEquals(2, callCount)
     }
+
+    @Test
+    fun getEpisodeSidecarSubtitles_discoversParentAndSubfolderSubtitlesAndPrioritizesPtBrAss() = runBlocking {
+        coEvery {
+            driveApi.getFile(
+                accessToken = any(),
+                fileId = "file_ep5",
+                fields = any(),
+                supportsAllDrives = any()
+            )
+        } returns FileDetailsResponse(
+            id = "file_ep5",
+            name = "[SubsPlease] Frieren - 05 (1080p).mkv",
+            parents = listOf("season_folder")
+        )
+
+        val parentFiles = listOf(
+            createFile("file_ep5", "[SubsPlease] Frieren - 05 (1080p).mkv"),
+            createFile("file_ep6", "[SubsPlease] Frieren - 06 (1080p).mkv"),
+            File("sub_en_srt", "Frieren - 05.en.srt", 400L, "", "text/plain"),
+            File("sub_ep6_ass", "Frieren - 06.pt-BR.ass", 500L, "", "text/x-ssa"),
+            File("subs_dir", "Subs", null, "", "application/vnd.google-apps.folder")
+        )
+        val subsFolderFiles = listOf(
+            File("sub_pt_ass", "[SubsPlease] Frieren - 05.pt-BR.ass", 800L, "", "text/x-ssa")
+        )
+
+        coEvery {
+            driveApi.getFiles(
+                accessToken = any(),
+                q = match { it.contains("'season_folder' in parents") },
+                pageSize = any(),
+                pageToken = null,
+                supportsAllDrives = any(),
+                includeItemsFromAllDrives = any(),
+                fields = any(),
+                orderBy = any()
+            )
+        } returns FilesResponse(files = parentFiles, nextPageToken = null)
+
+        coEvery {
+            driveApi.getFiles(
+                accessToken = any(),
+                q = match { it.contains("'subs_dir' in parents") },
+                pageSize = any(),
+                pageToken = null,
+                supportsAllDrives = any(),
+                includeItemsFromAllDrives = any(),
+                fields = any(),
+                orderBy = any()
+            )
+        } returns FilesResponse(files = subsFolderFiles, nextPageToken = null)
+
+        val matched = repository.getEpisodeSidecarSubtitles(
+            fileId = "file_ep5",
+            parentFolderId = "season_folder",
+            videoTitle = "Episódio 5",
+            seasonNumber = 1,
+            episodeNumber = 5
+        )
+
+        assertEquals(listOf("sub_pt_ass", "sub_en_srt"), matched.map { it.id })
+        assertEquals("por", matched.first().languageCode)
+    }
 }
