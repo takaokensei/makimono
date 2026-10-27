@@ -30,6 +30,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zechs.drive.stream.data.local.CatalogEntry
 import zechs.drive.stream.data.model.DriveFile
+import zechs.drive.stream.data.model.MediaSource
 import zechs.drive.stream.data.model.WatchList
 import zechs.drive.stream.data.model.WatchQueueItem
 import zechs.drive.stream.data.local.FollowedFolder
@@ -59,7 +60,8 @@ class HomeViewModel @Inject constructor(
     private val watchQueueRepository: WatchQueueRepository,
     private val profileManager: ProfileManager,
     private val franchiseGroupingManager: zechs.drive.stream.data.repository.FranchiseGroupingManager,
-    private val mediaPreloadManager: zechs.drive.stream.data.repository.MediaPreloadManager? = null
+    private val mediaPreloadManager: zechs.drive.stream.data.repository.MediaPreloadManager? = null,
+    private val seedboxRepository: Lazy<zechs.drive.stream.data.repository.SeedboxRepository>? = null
 ) : ViewModel() {
 
     companion object {
@@ -93,6 +95,16 @@ class HomeViewModel @Inject constructor(
 
     private val _searchNotice = MutableStateFlow<String?>(null)
     val searchNotice: StateFlow<String?> = _searchNotice.asStateFlow()
+
+    sealed class SeedboxFastStartEvent {
+        data class Enqueued(val animeTitle: String, val ep1Only: Boolean) : SeedboxFastStartEvent()
+        data class Progress(val animeTitle: String, val status: String, val progressPct: Int) : SeedboxFastStartEvent()
+        data class ReadyToWatch(val folderId: String, val animeTitle: String, val posterUrl: String?) : SeedboxFastStartEvent()
+        data class Failed(val animeTitle: String, val message: String) : SeedboxFastStartEvent()
+    }
+
+    private val _seedboxFastStartEvent = MutableSharedFlow<SeedboxFastStartEvent>(extraBufferCapacity = 1)
+    val seedboxFastStartEvent: SharedFlow<SeedboxFastStartEvent> = _seedboxFastStartEvent.asSharedFlow()
 
     private var searchJob: Job? = null
 
@@ -1142,6 +1154,50 @@ class HomeViewModel @Inject constructor(
             } else if (response is Resource.Error && _searchQuery.value == trimmed) {
                 _searchNotice.value = response.message
             }
+
+            // 3. Hybrid global catalog search (animes disponiveis para download)
+            if (_searchQuery.value == trimmed) {
+                try {
+                    val catalogEntries = tenraiAnimeService.searchAnime(trimmed)
+                    if (catalogEntries.isNotEmpty() && _searchQuery.value == trimmed) {
+                        val currentFiles = _filteredAnimes.value
+                        val knownTitles = currentFiles.map {
+                            AnimePosterResolver.cleanAnimeTitle(it.name).lowercase()
+                        }.toSet()
+
+                        val catalogSeedboxFiles = catalogEntries.filter { entry ->
+                            val clean = AnimePosterResolver.cleanAnimeTitle(entry.title).lowercase()
+                            val cleanEng = entry.titleEnglish?.let {
+                                AnimePosterResolver.cleanAnimeTitle(it).lowercase()
+                            }
+                            !knownTitles.contains(clean) && (cleanEng == null || !knownTitles.contains(cleanEng))
+                        }.take(8).map { entry ->
+                            val epSuffix = if (entry.episodes != null && entry.episodes > 0) {
+                                " (${entry.episodes} eps)"
+                            } else ""
+                            DriveFile(
+                                id = "seedbox_mal_${entry.malId}",
+                                name = "${entry.title}$epSuffix",
+                                size = null,
+                                mimeType = "application/vnd.makimono.seedbox-catalog",
+                                iconLink = null,
+                                thumbnailLink = entry.imageUrl,
+                                posterUrl = entry.imageUrl,
+                                description = entry.synopsis,
+                                shortcutDetails = zechs.drive.stream.data.model.ShortcutDetails(),
+                                starred = zechs.drive.stream.data.model.Starred.UNSTARRED,
+                                source = MediaSource.CATALOG_SEEDBOX
+                            )
+                        }
+                        if (catalogSeedboxFiles.isNotEmpty()) {
+                            mergeSearchResults(catalogSeedboxFiles)
+                        }
+                    }
+                } catch (ce: Exception) {
+                    if (ce is CancellationException) throw ce
+                    AppLog.w(TAG, "Hybrid catalog search failed for: $query (${ce.message})")
+                }
+            }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             AppLog.e(TAG, "Error executing global search for: $query", e)
@@ -1479,6 +1535,76 @@ class HomeViewModel @Inject constructor(
         }
         kotlinx.coroutines.withContext(Dispatchers.Main) {
             onResult(null, 0L)
+        }
+    }
+
+    fun requestFastStartAnimeDownload(animeTitle: String, ep1First: Boolean) {
+        val cleanTitle = AnimePosterResolver.cleanAnimeTitle(animeTitle).trim()
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val repo = seedboxRepository?.get() ?: return@launch
+                _seedboxFastStartEvent.emit(SeedboxFastStartEvent.Enqueued(cleanTitle, ep1First))
+
+                val filter = if (ep1First) "1" else "all"
+                val res1 = repo.enqueueJob(query = cleanTitle, episodesFilter = filter, preferPtBr = true)
+
+                if (res1.isFailure) {
+                    val msg = res1.exceptionOrNull()?.message ?: "Falha ao agendar download"
+                    _seedboxFastStartEvent.emit(SeedboxFastStartEvent.Failed(cleanTitle, msg))
+                    return@launch
+                }
+
+                val jobId1 = res1.getOrThrow()
+
+                if (ep1First) {
+                    launch {
+                        repo.enqueueJob(query = cleanTitle, episodesFilter = "2-999", preferPtBr = true)
+                    }
+                }
+
+                var folderId: String? = null
+                var lastStatus = ""
+                var attempts = 0
+                while (isActive && attempts < 150) {
+                    delay(6000L)
+                    attempts++
+                    val jobsRes = repo.getJobs()
+                    val job = jobsRes.getOrNull()?.firstOrNull { it.jobId == jobId1 }
+                    if (job != null) {
+                        if (job.status != lastStatus || job.progressPct > 0) {
+                            lastStatus = job.status
+                            _seedboxFastStartEvent.emit(
+                                SeedboxFastStartEvent.Progress(cleanTitle, job.status, job.progressPct)
+                            )
+                        }
+                        if (job.status.equals("COMPLETED", ignoreCase = true)) {
+                            folderId = job.driveFolderId
+                            break
+                        } else if (job.status.equals("FAILED", ignoreCase = true) ||
+                            job.status.equals("CANCELLED", ignoreCase = true)
+                        ) {
+                            val detail = job.statusDetail ?: "Download falhou"
+                            _seedboxFastStartEvent.emit(SeedboxFastStartEvent.Failed(cleanTitle, detail))
+                            return@launch
+                        }
+                    }
+                }
+
+                if (folderId != null) {
+                    val posterUrl = _filteredAnimes.value.firstOrNull {
+                        it.name.contains(cleanTitle, ignoreCase = true)
+                    }?.posterUrl
+                    _seedboxFastStartEvent.emit(
+                        SeedboxFastStartEvent.ReadyToWatch(folderId, cleanTitle, posterUrl)
+                    )
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                AppLog.e(TAG, "Error in requestFastStartAnimeDownload", e)
+                _seedboxFastStartEvent.emit(
+                    SeedboxFastStartEvent.Failed(cleanTitle, e.message ?: "Erro desconhecido")
+                )
+            }
         }
     }
 

@@ -57,6 +57,10 @@ class HomeActionHandler(
     }
 
     fun handleOpenFolder(file: DriveFile) {
+        if (file.isSeedboxCatalogItem) {
+            showSeedboxDownloadConfirmationDialog(file)
+            return
+        }
         val isFolder = file.isFolder || file.isShortcutFolder
         if (isFolder) {
             val folderId = if (file.isShortcut) file.shortcutDetails.targetId ?: file.id else file.id
@@ -225,4 +229,26 @@ class HomeActionHandler(
             }
         }
     }
+
+    private fun showSeedboxDownloadConfirmationDialog(file: DriveFile) {
+        val cleanTitle = zechs.drive.stream.data.remote.AnimePosterResolver.cleanAnimeTitle(file.name)
+        val dialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
+            .setTitle(context.getString(R.string.seedbox_confirm_download_title, cleanTitle))
+            .setMessage(context.getString(R.string.seedbox_confirm_download_message))
+            .setPositiveButton(R.string.seedbox_confirm_download_ep1_first) { _, _ ->
+                viewModel.requestFastStartAnimeDownload(cleanTitle, ep1First = true)
+            }
+            .setNeutralButton(R.string.seedbox_confirm_download_full) { _, _ ->
+                viewModel.requestFastStartAnimeDownload(cleanTitle, ep1First = false)
+            }
+            .setNegativeButton(R.string.seedbox_confirm_download_no, null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.window?.let { w -> zechs.drive.stream.utils.TvFocusRing.install(w.decorView) }
+            dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)?.requestFocus()
+        }
+        dialog.show()
+    }
+
 }

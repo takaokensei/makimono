@@ -12,6 +12,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
+import zechs.drive.stream.utils.ext.navigateSafe
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
@@ -506,6 +507,58 @@ class HomeFragment : BaseFragment() {
                     viewModel.searchNotice.collect { message ->
                         if (!message.isNullOrBlank() && viewModel.searchQuery.value.isNotBlank()) {
                             Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).show()
+                        }
+                    }
+                }
+
+                launch {
+                    viewModel.seedboxFastStartEvent.collect { event ->
+                        when (event) {
+                            is HomeViewModel.SeedboxFastStartEvent.Enqueued -> {
+                                val msgRes = if (event.ep1Only) {
+                                    R.string.seedbox_download_enqueued_ep1
+                                } else {
+                                    R.string.seedbox_download_enqueued_full
+                                }
+                                Snackbar.make(
+                                    binding.root,
+                                    getString(msgRes, event.animeTitle),
+                                    Snackbar.LENGTH_LONG
+                                ).show()
+                            }
+                            is HomeViewModel.SeedboxFastStartEvent.Progress -> {
+                                val msg = when (event.status.uppercase()) {
+                                    "DOWNLOADING" -> getString(
+                                        R.string.seedbox_fast_downloading_status,
+                                        event.animeTitle,
+                                        event.progressPct
+                                    )
+                                    "UPLOADING" -> getString(
+                                        R.string.seedbox_fast_uploading_status,
+                                        event.animeTitle
+                                    )
+                                    else -> null
+                                }
+                                if (msg != null) {
+                                    Snackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
+                                }
+                            }
+                            is HomeViewModel.SeedboxFastStartEvent.ReadyToWatch -> {
+                                Snackbar.make(
+                                    binding.root,
+                                    getString(R.string.seedbox_fast_ready_toast, event.animeTitle),
+                                    Snackbar.LENGTH_LONG
+                                ).show()
+                                val action = HomeFragmentDirections.actionHomeFragmentToSeriesDetailFragment(
+                                    name = event.animeTitle,
+                                    folderId = event.folderId,
+                                    posterUrl = event.posterUrl
+                                )
+                                findNavController().navigateSafe(action)
+                            }
+                            is HomeViewModel.SeedboxFastStartEvent.Failed -> {
+                                Snackbar.make(binding.root, event.message, Snackbar.LENGTH_LONG).show()
+                            }
                         }
                     }
                 }
