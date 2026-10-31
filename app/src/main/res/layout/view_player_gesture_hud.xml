@@ -238,20 +238,19 @@
             app:tint="@color/obsidian_text_primary" />
     </LinearLayout>
 
-    <!-- Top-end notification pill stays clear of the player title and back button. -->
+    <!-- Kodi / VLC style top-centered OSD Notification Toast (safe margins, never overlaps title or clock) -->
     <LinearLayout
         android:id="@+id/gestureNotificationPill"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="top|end"
-        android:layout_marginEnd="32dp"
-        android:layout_marginTop="32dp"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="36dp"
         android:background="@drawable/glass_panel_bg"
         android:gravity="center"
         android:orientation="horizontal"
-        android:paddingStart="20dp"
+        android:paddingStart="24dp"
         android:paddingTop="10dp"
-        android:paddingEnd="20dp"
+        android:paddingEnd="24dp"
         android:paddingBottom="10dp"
         android:visibility="gone"
         tools:visibility="visible">

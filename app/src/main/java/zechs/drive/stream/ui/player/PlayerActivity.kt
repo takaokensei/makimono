@@ -234,6 +234,8 @@ class PlayerActivity : BasePlayerActivity() {
     private lateinit var aniskipPill: LinearLayout
     private lateinit var tvAniSkipLabel: TextView
     private var prevEpisode: PlaylistItem? = null
+    private var sleepTimerJob: kotlinx.coroutines.Job? = null
+    private var sleepTimerTargetMs: Long = 0L
     private var aniskipPillJob: Job? = null
     private var tvPlayerClock: TextView? = null
     private var chapterMarkersView: ChapterMarkersView? = null
@@ -544,14 +546,12 @@ class PlayerActivity : BasePlayerActivity() {
                 }
                 resizeMode = nextMode
                 val modeLabel = when (nextMode) {
-                    RESIZE_MODE_FIT -> "Modo de Vídeo: Ajustar (Original)"
-                    RESIZE_MODE_ZOOM -> "Modo de Vídeo: Zoom (Cortar Bordas)"
-                    RESIZE_MODE_FILL -> "Modo de Vídeo: Esticar (Preencher Tela)"
-                    else -> "Modo de Vídeo"
+                    RESIZE_MODE_FIT -> "${getString(R.string.video)}: Ajustar (Fit)"
+                    RESIZE_MODE_ZOOM -> "${getString(R.string.video)}: Zoom"
+                    RESIZE_MODE_FILL -> "${getString(R.string.video)}: Preencher (Fill)"
+                    else -> getString(R.string.video)
                 }
-                Snackbar.make(playerView, modeLabel, 1000).apply {
-                    anchorView = progressViewGroup
-                }.show()
+                gestureHelper.showNotification(modeLabel)
                 zechs.drive.stream.utils.TvFocusRing.clear(playerView)
             }
         }
@@ -614,6 +614,7 @@ class PlayerActivity : BasePlayerActivity() {
         PlayerQuickOptions.bind(
             playerView,
             listOf(
+                getString(R.string.kodi_sleep_timer_title) to { showSleepTimerDialog() },
                 "X-Ray Cultural (IA)" to { showCulturalXRayDialog() },
                 "✨ Traduzir Legenda p/ PT-BR (IA)" to { translateCurrentSubtitle() }
             )
@@ -2362,7 +2363,6 @@ class PlayerActivity : BasePlayerActivity() {
         if (skipAction is zechs.drive.stream.playback.session.SkipController.SkipAction.AutoSkip) {
             player.seekTo(skipAction.targetPositionMs)
             gestureHelper.showNotification(skipAction.message)
-            showAniSkipPill(skipAction.message)
             return
         }
 
@@ -2495,20 +2495,80 @@ class PlayerActivity : BasePlayerActivity() {
         }
     }
 
+    private fun applyAudioBoost(boostDb: Int) {
+        try {
+            val sessionId = player.audioSessionId
+            if (sessionId != android.media.AudioManager.ERROR) {
+                if (loudnessEnhancer == null) {
+                    loudnessEnhancer = android.media.audiofx.LoudnessEnhancer(sessionId)
+                }
+                if (boostDb <= 0) {
+                    if (!isNightModeAudioEnabled) {
+                        loudnessEnhancer?.enabled = false
+                    }
+                } else {
+                    loudnessEnhancer?.setTargetGain(boostDb * 100)
+                    loudnessEnhancer?.enabled = true
+                }
+            }
+            val label = if (boostDb <= 0) "0 dB" else "+${boostDb}dB"
+            gestureHelper.showNotification("${getString(R.string.kodi_audio_boost_title)}: $label")
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Failed to apply Audio Boost", e)
+        }
+    }
+
+    private fun showSleepTimerDialog() {
+        val options = listOf(
+            0 to getString(R.string.kodi_sleep_timer_off),
+            15 to getString(R.string.kodi_sleep_timer_15m),
+            30 to getString(R.string.kodi_sleep_timer_30m),
+            45 to getString(R.string.kodi_sleep_timer_45m),
+            60 to getString(R.string.kodi_sleep_timer_60m),
+            -1 to getString(R.string.kodi_sleep_timer_end_ep)
+        )
+        val items = options.map { (mins, label) ->
+            GlassMenuItem(
+                id = "sleep_$mins",
+                title = label,
+                isSelected = (mins > 0 && sleepTimerTargetMs > 0L) || (mins == 0 && sleepTimerTargetMs == 0L),
+                tag = mins
+            )
+        }
+        PlayerGlassMenuDialog(this, getString(R.string.kodi_sleep_timer_title), items) { selected ->
+            val mins = selected.tag as? Int ?: 0
+            sleepTimerJob?.cancel()
+            if (mins == 0) {
+                sleepTimerTargetMs = 0L
+                gestureHelper.showNotification(getString(R.string.kodi_sleep_timer_off))
+            } else if (mins > 0) {
+                val delayMs = mins * 60 * 1000L
+                sleepTimerTargetMs = System.currentTimeMillis() + delayMs
+                sleepTimerJob = lifecycleScope.launch {
+                    kotlinx.coroutines.delay(delayMs)
+                    if (::player.isInitialized) {
+                        player.pause()
+                    }
+                    gestureHelper.showNotification(getString(R.string.kodi_sleep_timer_title))
+                }
+                gestureHelper.showNotification("${getString(R.string.kodi_sleep_timer_title)}: ${mins}m")
+            } else if (mins == -1) {
+                sleepTimerTargetMs = -1L
+                gestureHelper.showNotification(getString(R.string.kodi_sleep_timer_end_ep))
+            }
+        }.show()
+    }
+
     private fun showAudioTrackDialog() {
-        data class AudioTrackItem(val group: Tracks.Group, val trackIndex: Int, val name: String, val isSelected: Boolean)
+        data class AudioTrackItem(val group: Tracks.Group, val trackIndex: Int, val name: String, val subtitle: String?, val isSelected: Boolean)
         val audioItems = mutableListOf<AudioTrackItem>()
 
         player.currentTracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }.forEach { group ->
             for (i in 0 until group.length) {
                 val format = group.getTrackFormat(i)
-                val lang = format.language?.takeIf { it.isNotBlank() }
-                val label = format.label?.takeIf { it.isNotBlank() }
-                val name = if (label != null && lang != null) {
-                    "$label ($lang)"
-                } else label ?: lang ?: "Faixa ${audioItems.size + 1}"
+                val formatted = zechs.drive.stream.ui.player.utils.PlaybackTrackFormatter.formatAudio(format, audioItems.size + 1)
                 val selected = group.isTrackSelected(i)
-                audioItems.add(AudioTrackItem(group, i, name, selected))
+                audioItems.add(AudioTrackItem(group, i, formatted.displayName, formatted.secondaryDetail, selected))
             }
         }
 
@@ -2521,30 +2581,44 @@ class PlayerActivity : BasePlayerActivity() {
             GlassMenuItem(
                 id = "audio_$idx",
                 title = item.name,
+                subtitle = item.subtitle,
                 isSelected = item.isSelected,
                 tag = item
             )
         }
 
-        val nightModeLabel = if (isNightModeAudioEnabled) "Modo Noturno (Ativo)" else "Modo Noturno (Desat.)"
-        PlayerGlassMenuDialog(
-            context = this,
+        KodiMediaPanelController(this).show(
+            mode = KodiMediaPanelController.PanelMode.AUDIO,
             title = getString(R.string.select_audio),
-            items = menuItems
-        ) { selected ->
-            val chosen = selected.tag as? AudioTrackItem ?: return@PlayerGlassMenuDialog
-            val builder = player.trackSelectionParameters.buildUpon()
-            builder.clearOverridesOfType(C.TRACK_TYPE_AUDIO)
-            builder.addOverride(TrackSelectionOverride(chosen.group.mediaTrackGroup, listOf(chosen.trackIndex)))
-            player.trackSelectionParameters = builder.build()
-            Snackbar.make(playerView, "Áudio: ${chosen.name}", 750).apply {
-                anchorView = progressViewGroup
-            }.show()
-        }.setFooterSecondary("Sincronia") {
-            showAudioSyncDialog()
-        }.setFooterPrimary(nightModeLabel) {
-            toggleNightModeAudio()
-        }.show()
+            subtitle = getString(R.string.kodi_night_mode_desc),
+            items = menuItems,
+            initialOffsetMs = currentAudioDelayMs,
+            isNightModeActive = isNightModeAudioEnabled,
+            onItemSelected = { selected ->
+                val chosen = selected.tag as? AudioTrackItem ?: return@show
+                val builder = player.trackSelectionParameters.buildUpon()
+                builder.clearOverridesOfType(C.TRACK_TYPE_AUDIO)
+                builder.addOverride(TrackSelectionOverride(chosen.group.mediaTrackGroup, listOf(chosen.trackIndex)))
+                player.trackSelectionParameters = builder.build()
+                gestureHelper.showNotification("${getString(R.string.audio)}: ${chosen.name}")
+            },
+            onOffsetChanged = { newOffset ->
+                currentAudioDelayMs = newOffset
+                val fid = currentFileId.ifBlank { intent.getStringExtra("fileId") ?: "" }
+                if (fid.isNotBlank()) {
+                    viewModel.saveDelays(fid, currentAudioDelayMs, currentSubtitleOffsetMs)
+                }
+                val sign = if (newOffset > 0) "+" else ""
+                gestureHelper.showNotification("${getString(R.string.kodi_tab_sync)} (${getString(R.string.audio)}): ${sign}${newOffset}ms")
+            },
+            onNightModeToggled = {
+                toggleNightModeAudio()
+                isNightModeAudioEnabled
+            },
+            onBoostSelected = { boostDb ->
+                applyAudioBoost(boostDb)
+            }
+        )
     }
 
     private fun showAudioSyncDialog() {
@@ -2612,18 +2686,14 @@ class PlayerActivity : BasePlayerActivity() {
                 AppLog.w(TAG, "LoudnessEnhancer could not be attached: ${e.message}")
             }
             player.volume = 1.0f
-            Snackbar.make(playerView, "Modo Noturno ativado: Vozes realçadas e picos balanceados", 2500).apply {
-                anchorView = progressViewGroup
-            }.show()
+            gestureHelper.showNotification(getString(R.string.kodi_night_mode_enabled))
         } else {
             try {
                 loudnessEnhancer?.enabled = false
             } catch (e: Exception) {
                 AppLog.w(TAG, "Error disabling LoudnessEnhancer: ${e.message}")
             }
-            Snackbar.make(playerView, "Modo Noturno desativado: Áudio original", 2000).apply {
-                anchorView = progressViewGroup
-            }.show()
+            gestureHelper.showNotification(getString(R.string.kodi_night_mode_disabled))
         }
     }
 
@@ -2653,13 +2723,9 @@ class PlayerActivity : BasePlayerActivity() {
         player.currentTracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }.forEach { group ->
             for (i in 0 until group.length) {
                 val format = group.getTrackFormat(i)
-                val lang = format.language?.takeIf { it.isNotBlank() }
-                val label = format.label?.takeIf { it.isNotBlank() }
-                val name = if (label != null && lang != null) {
-                    "$label ($lang)"
-                } else label ?: lang ?: "Legenda ${choices.size}"
+                val formatted = zechs.drive.stream.ui.player.utils.PlaybackTrackFormatter.formatSubtitle(format, choices.size + 1)
                 val selected = group.isTrackSelected(i)
-                choices.add(ExoSubChoice(group, i, null, null, null, name, "Embutida", selected))
+                choices.add(ExoSubChoice(group, i, null, null, null, formatted.displayName, formatted.secondaryDetail, selected))
             }
         }
 
@@ -2733,110 +2799,110 @@ class PlayerActivity : BasePlayerActivity() {
 
         val menuItems = buildMenuItems(choices).toMutableList()
 
-        lateinit var glassDialog: PlayerGlassMenuDialog
-        glassDialog = PlayerGlassMenuDialog(
-            context = this,
+        KodiMediaPanelController(this).show(
+            mode = KodiMediaPanelController.PanelMode.SUBTITLES,
             title = getString(R.string.select_subtitle),
-            items = menuItems
-        ) { selected ->
-            val choice = selected.tag as? ExoSubChoice ?: return@PlayerGlassMenuDialog
-            if (choice.group != null) {
-                val builder = player.trackSelectionParameters.buildUpon()
-                builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-                builder.clearOverridesOfType(C.TRACK_TYPE_TEXT)
-                builder.addOverride(TrackSelectionOverride(choice.group.mediaTrackGroup, listOf(choice.trackIndex)))
-                player.trackSelectionParameters = builder.build()
-                Snackbar.make(playerView, "Legenda: ${choice.displayName}", 750).apply {
-                    anchorView = progressViewGroup
-                }.show()
-            } else if (choice.trackIndex == -99) {
-                glassDialog.dismiss()
-                translateCurrentSubtitle()
-            } else if (choice.trackIndex == -1 && choice.folderSub == null && choice.onlineSub == null && choice.savedSub == null) {
-                val builder = player.trackSelectionParameters.buildUpon()
-                builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
-                player.trackSelectionParameters = builder.build()
-                Snackbar.make(playerView, getString(R.string.track_off), 750).apply {
-                    anchorView = progressViewGroup
-                }.show()
-            } else if (choice.savedSub != null) {
-                val saved = choice.savedSub
-                val virtualSub = SubtitleItem(
-                    id = "saved_${saved.file.nameWithoutExtension}",
-                    name = "💾 [Salva] ${saved.langName}",
-                    languageLabel = saved.langName,
-                    languageCode = saved.lang
-                )
-                applyExternalSubtitle(saved.file, virtualSub, isMatching = true, forceSelect = true)
-            } else if (choice.folderSub != null) {
-                val sub = choice.folderSub
-                val isMatching = sub.matchesVideo(videoTitle)
-                Snackbar.make(playerView, "Carregando legenda: ${sub.name}...", 1000).apply {
-                    anchorView = progressViewGroup
-                }.show()
-                lifecycleScope.launch(Dispatchers.IO) {
-                    val cached = viewModel.downloadSubtitle(sub, cacheDir)
-                    if (cached != null && cached.exists()) {
-                        withContext(Dispatchers.Main) {
-                            applyExternalSubtitle(cached, sub, isMatching = isMatching, forceSelect = true)
+            subtitle = getString(R.string.kodi_sync_hint),
+            items = menuItems,
+            initialOffsetMs = currentSubtitleOffsetMs,
+            onItemSelected = { selected ->
+                val choice = selected.tag as? ExoSubChoice ?: return@show
+                if (choice.group != null) {
+                    val builder = player.trackSelectionParameters.buildUpon()
+                    builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                    builder.clearOverridesOfType(C.TRACK_TYPE_TEXT)
+                    builder.addOverride(TrackSelectionOverride(choice.group.mediaTrackGroup, listOf(choice.trackIndex)))
+                    player.trackSelectionParameters = builder.build()
+                    gestureHelper.showNotification("${getString(R.string.subtitles)}: ${choice.displayName}")
+                } else if (choice.trackIndex == -99) {
+                    translateCurrentSubtitle()
+                } else if (choice.trackIndex == -1 && choice.folderSub == null && choice.onlineSub == null && choice.savedSub == null) {
+                    val builder = player.trackSelectionParameters.buildUpon()
+                    builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                    player.trackSelectionParameters = builder.build()
+                    gestureHelper.showNotification(getString(R.string.kodi_track_off))
+                } else if (choice.savedSub != null) {
+                    val saved = choice.savedSub
+                    val virtualSub = SubtitleItem(
+                        id = "saved_${saved.file.nameWithoutExtension}",
+                        name = "💾 [Salva] ${saved.langName}",
+                        languageLabel = saved.langName,
+                        languageCode = saved.lang
+                    )
+                    applyExternalSubtitle(saved.file, virtualSub, isMatching = true, forceSelect = true)
+                    gestureHelper.showNotification("${getString(R.string.subtitles)}: ${saved.langName}")
+                } else if (choice.folderSub != null) {
+                    val sub = choice.folderSub
+                    val isMatching = sub.matchesVideo(videoTitle)
+                    gestureHelper.showNotification("${getString(R.string.subtitles)}: ${sub.name}")
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        val cached = viewModel.downloadSubtitle(sub, cacheDir)
+                        if (cached != null && cached.exists()) {
+                            withContext(Dispatchers.Main) {
+                                applyExternalSubtitle(cached, sub, isMatching = isMatching, forceSelect = true)
+                                gestureHelper.showNotification("${getString(R.string.subtitles)}: ${sub.name}")
+                            }
+                        } else {
+                            withContext(Dispatchers.Main) {
+                                gestureHelper.showNotification(getString(R.string.download_status_failed))
+                            }
                         }
-                    } else {
+                    }
+                } else if (choice.onlineSub != null) {
+                    val onlineSub = choice.onlineSub
+                    gestureHelper.showNotification("${getString(R.string.subtitles)}: ${onlineSub.langName}")
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        val result = onlineSubtitleManager.get().downloadSubtitle(onlineSub, videoTitle)
                         withContext(Dispatchers.Main) {
-                            Snackbar.make(playerView, "Erro ao baixar legenda do Drive", 1500).apply {
-                                anchorView = progressViewGroup
-                            }.show()
+                            result.onSuccess { cachedFile ->
+                                val virtualSub = SubtitleItem(
+                                    id = "saved_${cachedFile.nameWithoutExtension}",
+                                    name = "💾 [Salva] ${onlineSub.langName}",
+                                    languageLabel = onlineSub.langName,
+                                    languageCode = onlineSub.lang
+                                )
+                                applyExternalSubtitle(cachedFile, virtualSub, isMatching = true, forceSelect = true)
+                                gestureHelper.showNotification("${getString(R.string.subtitles)}: ${onlineSub.langName}")
+                            }.onFailure { _ ->
+                                gestureHelper.showNotification(getString(R.string.download_status_failed))
+                            }
                         }
                     }
                 }
-            } else if (choice.onlineSub != null) {
-                val onlineSub = choice.onlineSub
-                Snackbar.make(playerView, "Baixando legenda online: ${onlineSub.langName}...", 1200).apply {
-                    anchorView = progressViewGroup
-                }.show()
-                lifecycleScope.launch(Dispatchers.IO) {
-                    val result = onlineSubtitleManager.get().downloadSubtitle(onlineSub, videoTitle)
-                    withContext(Dispatchers.Main) {
-                        result.onSuccess { cachedFile ->
-                            val virtualSub = SubtitleItem(
-                                id = "saved_${cachedFile.nameWithoutExtension}",
-                                name = "💾 [Salva] ${onlineSub.langName}",
-                                languageLabel = onlineSub.langName,
-                                languageCode = onlineSub.lang
-                            )
-                            applyExternalSubtitle(cachedFile, virtualSub, isMatching = true, forceSelect = true)
-                            Snackbar.make(playerView, "Legenda salva e ativada: ${onlineSub.langName}!", 1500).apply {
-                                anchorView = progressViewGroup
-                            }.show()
-                        }.onFailure { err ->
-                            Snackbar.make(playerView, "Erro ao baixar legenda online: ${err.message}", 2000).apply {
-                                anchorView = progressViewGroup
-                            }.show()
-                        }
-                    }
+            },
+            onOffsetChanged = { newOffset ->
+                currentSubtitleOffsetMs = newOffset
+                val fileId = currentFileId.ifBlank { intent.getStringExtra("fileId") ?: "" }
+                if (fileId.isNotBlank()) {
+                    viewModel.saveDelays(fileId, currentAudioDelayMs, currentSubtitleOffsetMs)
                 }
+                val activeSub = activeExternalSubItem
+                val activeFile = activeExternalSubFile
+                if (activeSub != null && activeFile != null && activeFile.exists()) {
+                    applyExternalSubtitle(activeFile, activeSub, isMatching = true, forceSelect = true)
+                }
+                val sign = if (newOffset > 0) "+" else ""
+                gestureHelper.showNotification("${getString(R.string.kodi_tab_sync)} (${getString(R.string.subtitles)}): ${sign}${newOffset}ms")
+            },
+            onSizeSelected = { chosenSp ->
+                playerView.subtitleView?.setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, chosenSp)
+                lifecycleScope.launch {
+                    runCatching { appSettings.get().saveSubtitleSize(chosenSp) }
+                }
+                gestureHelper.showNotification("${getString(R.string.kodi_sub_size_title)}: ${chosenSp.toInt()}sp")
+            },
+            onColorSelected = { chosenColor ->
+                val style = currentSubtitleStyle.copy(foregroundColor = chosenColor)
+                applySubtitleStyleToPlayer(style)
+                lifecycleScope.launch {
+                    runCatching { appSettings.get().saveSubtitleStyle(style) }
+                }
+                gestureHelper.showNotification(getString(R.string.kodi_sub_color_title))
+            },
+            onOnlineSearchClicked = {
+                showOnlineSubtitleHubDialog(videoTitle)
             }
-        }
-
-        glassDialog.setSubtitle("Faixas embutidas, salvas e na nuvem • Verificação de idioma ativa")
-
-        glassDialog.setActionButton("✨ Central de Legendas Oficiais (Download Rápido)") { dialog ->
-            dialog.dismiss()
-            showOnlineSubtitleHubDialog(videoTitle)
-        }
-
-        glassDialog.setFooterTertiary("Aparência") {
-            openSubtitleStyleDialog()
-        }
-
-        glassDialog.setFooterSecondary("Sincronia") {
-            showSubtitleSyncDialog()
-        }
-
-        glassDialog.setFooterPrimary("Tamanho") {
-            showSubtitleSizeDialog()
-        }
-
-        glassDialog.show()
+        )
     }
 
     private fun showOnlineSubtitleHubDialog(
@@ -3373,13 +3439,8 @@ class PlayerActivity : BasePlayerActivity() {
     }
 
     private fun speedSnackbar(speedIndex: Int) {
-        Snackbar.make(
-            binding.playerView,
-            "Playback speed set to ${speed[speedIndex]}",
-            /* duration */ 750
-        ).apply {
-            anchorView = progressViewGroup
-        }.also { it.show() }
+        val spText = speed.getOrNull(speedIndex) ?: "1.0x"
+        gestureHelper.showNotification("${getString(R.string.player_speed)}: $spText")
     }
 
     private fun autoSelectPreferredTracks(tracks: Tracks) {

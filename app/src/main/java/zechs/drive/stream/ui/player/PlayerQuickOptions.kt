@@ -9,12 +9,13 @@ object PlayerQuickOptions {
     fun bind(root: View, extraActions: List<Pair<String, () -> Unit>> = emptyList()) {
         zechs.drive.stream.utils.TvFocusRing.install(root)
         val more = root.findViewById<View>(R.id.btnMoreOptions)
+        val ctx = root.context
         val actions = buildList {
-            add(R.id.btnSpeed to "Velocidade")
-            add(R.id.btnResize to "Proporção de tela")
-            add(R.id.btnChapter to "Capítulos")
-            add(R.id.btnInfo to "Informações técnicas")
-            if (!DeviceUi.isTenFootExperience(root.context)) add(R.id.btnRotate to "Girar tela")
+            add(R.id.btnSpeed to ctx.getString(R.string.player_speed))
+            add(R.id.btnResize to ctx.getString(R.string.resize))
+            add(R.id.btnChapter to ctx.getString(R.string.chapters))
+            add(R.id.btnInfo to ctx.getString(R.string.player_technical_info))
+            if (!DeviceUi.isTenFootExperience(ctx)) add(R.id.btnRotate to ctx.getString(R.string.player_rotate_label))
         }
         listOf(R.id.btnSpeed, R.id.btnResize, R.id.btnChapter, R.id.btnInfo, R.id.btnRotate)
             .forEach { root.findViewById<View>(it).visibility = View.GONE }
@@ -28,7 +29,7 @@ object PlayerQuickOptions {
                 GlassMenuItem("extra_$idx", title, tag = title)
             }
             lateinit var menu: PlayerGlassMenuDialog
-            menu = PlayerGlassMenuDialog(root.context, "Mais opções", menuItems) { selected ->
+            menu = PlayerGlassMenuDialog(ctx, ctx.getString(R.string.player_more_options), menuItems) { selected ->
                 menu.dismiss()
                 val tag = selected.tag
                 if (tag is Int) {

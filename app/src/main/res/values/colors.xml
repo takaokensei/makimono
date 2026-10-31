@@ -170,4 +170,9 @@
     <color name="progress_track">#33FFFFFF</color>
     <color name="progress_track_inactive">#40FFFFFF</color>
 
+    <!-- Kodi Subtitle Colors -->
+    <color name="kodi_subtitle_white">#FFFFFF</color>
+    <color name="kodi_subtitle_yellow">#FDE047</color>
+    <color name="kodi_subtitle_cyan">#22D3EE</color>
+
 </resources>
