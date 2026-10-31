@@ -61,6 +61,7 @@ class SeriesDetailFragment : BaseFragment() {
     private lateinit var seasonPicker: SeasonPickerController
     private lateinit var episodeAdapter: SeriesDetailEpisodeAdapter
     private lateinit var synopsisDisclosure: SeriesSynopsisDisclosure
+    private var moreActionsDialog: androidx.appcompat.app.AlertDialog? = null
     private var hasRestoredInitialFocus = false
     private var shimmerAnimator: android.animation.ValueAnimator? = null
 
@@ -75,6 +76,8 @@ class SeriesDetailFragment : BaseFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        zechs.drive.stream.ui.FocusedItemScroll.install(binding.scrollView,
+            listOf(binding.rvEpisodes, binding.rvSeasonTabs))
 
         TvAccessibilityLayout.adaptSeriesActions(
             requireContext(),
@@ -169,11 +172,12 @@ class SeriesDetailFragment : BaseFragment() {
     }
 
     private fun showMoreActions() {
+        if (moreActionsDialog?.isShowing == true) return
         val current = viewModel.uiState.value as? SeriesDetailUiState.Success
         val hasTrailer = current?.trailerItem != null || !current?.aniListMetadata?.trailerUrl.isNullOrBlank()
         val continueEp = current?.continueWatchingItem
         val canRestart = continueEp != null && continueEp.progressPercent in 1..94
-        SeriesMoreActionsDialog.show(
+        moreActionsDialog = SeriesMoreActionsDialog.show(
             context = requireContext(),
             focusAnchor = binding.btnMoreActions,
             isFollowed = current?.isFollowed == true,
@@ -784,15 +788,16 @@ class SeriesDetailFragment : BaseFragment() {
         // Do not steal focus again when the metadata enrichment state arrives, unless focus was lost.
         if (!hasRestoredInitialFocus) {
             hasRestoredInitialFocus = true
-            val viewModelFocusRestored = viewModel.lastFocusedPosition?.let { pos ->
+            val identityRestored = FocusMemory.restore(binding.rvEpisodes, "details.episodes.${args.folderId}") { pos ->
+                episodeAdapter.currentList.getOrNull(pos)?.file?.id
+            }
+            val viewModelFocusRestored = if (identityRestored) false else viewModel.lastFocusedPosition?.let { pos ->
                 binding.rvEpisodes.post {
                     binding.rvEpisodes.findViewHolderForAdapterPosition(pos)?.itemView?.requestFocus()
                 }
                 true
             } ?: false
-            val restored = viewModelFocusRestored || FocusMemory.restore(binding.rvEpisodes, "details.episodes.${args.folderId}") { pos ->
-                episodeAdapter.currentList.getOrNull(pos)?.file?.id
-            }
+            val restored = identityRestored || viewModelFocusRestored
             if (!restored) {
                 binding.btnPrimaryAction.post {
                     val currentBinding = _binding ?: return@post
@@ -1084,6 +1089,8 @@ class SeriesDetailFragment : BaseFragment() {
         super.onDestroyView()
         shimmerAnimator?.cancel()
         shimmerAnimator = null
+        moreActionsDialog?.dismiss()
+        moreActionsDialog = null
         seasonPicker.close()
         binding.rvEpisodes.adapter = null
         binding.rvSeasonTabs.adapter = null

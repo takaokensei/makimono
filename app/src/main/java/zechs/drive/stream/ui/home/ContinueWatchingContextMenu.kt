@@ -35,28 +35,12 @@ internal object ContinueWatchingContextMenu {
             Option(context.getString(R.string.home_remove_continue), Action.REMOVE)
         )
 
-        return MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
+        val anchor = focusAnchor ?: return MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
             .setTitle(title)
-            .setItems(options.map(Option::label).toTypedArray()) { _, index ->
-                options.getOrNull(index)?.let { onAction(it.action) }
-            }
-            .create()
-            .also { dialog ->
-                dialog.setOnDismissListener {
-                    focusAnchor?.let { anchor ->
-                        zechs.drive.stream.utils.LifecycleDelays.postDelayed(anchor, FOCUS_RESTORE_DELAY_MS) {
-                            if (anchor.isShown) {
-                                if (anchor.isInTouchMode) {
-                                    anchor.requestFocusFromTouch()
-                                } else {
-                                    anchor.requestFocus()
-                                }
-                            }
-                        }
-                    }
-                }
-                dialog.show()
-            }
+            .setItems(options.map(Option::label).toTypedArray()) { _, index -> onAction(options[index].action) }
+            .show()
+        return zechs.drive.stream.ui.common.ActionMenuDialog.show(context, anchor, title,
+            options.map { option -> option.label to { onAction(option.action) } })
     }
 
     private fun formatPosition(context: Context, positionMs: Long): String {
@@ -68,7 +52,6 @@ internal object ContinueWatchingContextMenu {
         )
     }
 
-    private const val FOCUS_RESTORE_DELAY_MS = 150L
 }
 
 /** The TV Menu key opens the focused card's context actions once on key-down. */

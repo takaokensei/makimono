@@ -23,13 +23,13 @@
     <color name="obsidian_media_scrim">#CC050608</color>
 
     <!-- Obsidian Design System Specific Tokens -->
-    <color name="obsidian_bg">#070B11</color>
-    <color name="obsidian_surface">#111925</color>
-    <color name="obsidian_accent">#FF640A</color>
+    <color name="obsidian_bg">@color/obsidian_bg_base</color>
+    <color name="obsidian_surface">@color/obsidian_bg_surface</color>
+    <color name="obsidian_accent">@color/obsidian_accent_primary</color>
     <color name="obsidian_ice_white">#F5F7FA</color>
     <color name="obsidian_gray">#B0B8C4</color>
     <color name="obsidian_link_blue_gray">#8EA0B8</color>
-    <color name="obsidian_completed_green">#FF640A</color>
+    <color name="obsidian_completed_green">@color/obsidian_success</color>
     <color name="obsidian_glass_fill">#26FFFFFF</color>
     <color name="obsidian_glass_stroke">#33FFFFFF</color>
 
@@ -122,20 +122,20 @@
     <color name="estuary_warning">#FFB70F</color>
     <color name="estuary_danger">#E85B5B</color>
 
-    <!-- Crunchyroll (Signature Orange & Deep Anime Dark) -->
-    <color name="crunchyroll_bg_base">#0C0D10</color>
-    <color name="crunchyroll_bg_surface">#16181F</color>
-    <color name="crunchyroll_bg_glass">#8816181F</color>
-    <color name="crunchyroll_border_glass">#25FFFFFF</color>
-    <color name="crunchyroll_text_primary">#FFFFFF</color>
-    <color name="crunchyroll_text_secondary">#A0A6B2</color>
-    <color name="crunchyroll_text_tertiary">#686E7B</color>
-    <color name="crunchyroll_accent_primary">#FF640A</color>
-    <color name="crunchyroll_accent_secondary">#F47521</color>
-    <color name="crunchyroll_focus_fill">#28FF640A</color>
-    <color name="crunchyroll_success">#2AB859</color>
-    <color name="crunchyroll_warning">#FFB800</color>
-    <color name="crunchyroll_danger">#FF3B30</color>
+    <!-- Legacy theme IDs resolve to the canonical Obsidian palette. -->
+    <color name="crunchyroll_bg_base">@color/obsidian_bg_base</color>
+    <color name="crunchyroll_bg_surface">@color/obsidian_bg_surface</color>
+    <color name="crunchyroll_bg_glass">@color/obsidian_bg_glass</color>
+    <color name="crunchyroll_border_glass">@color/obsidian_border_glass</color>
+    <color name="crunchyroll_text_primary">@color/obsidian_text_primary</color>
+    <color name="crunchyroll_text_secondary">@color/obsidian_text_secondary</color>
+    <color name="crunchyroll_text_tertiary">@color/obsidian_text_tertiary</color>
+    <color name="crunchyroll_accent_primary">@color/obsidian_accent_primary</color>
+    <color name="crunchyroll_accent_secondary">@color/obsidian_accent_secondary</color>
+    <color name="crunchyroll_focus_fill">@color/obsidian_focus_fill</color>
+    <color name="crunchyroll_success">@color/obsidian_success</color>
+    <color name="crunchyroll_warning">@color/obsidian_warning</color>
+    <color name="crunchyroll_danger">@color/obsidian_danger</color>
 
     <!-- Shared / Legacy Aliases (mapped to Tokyo Night defaults for backwards compatibility) -->
     <color name="colorPrimary">@color/obsidian_bg_base</color>

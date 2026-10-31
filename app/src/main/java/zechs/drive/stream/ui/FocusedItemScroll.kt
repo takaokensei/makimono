@@ -31,8 +31,10 @@ object FocusedItemScroll {
                 focused.getLocationOnScreen(focusedLocation)
                 val focusedTop = focusedLocation[1]
                 val focusedBottom = focusedTop + focused.height
-                val visibleTop = viewportLocation[1] + viewport.paddingTop
-                val visibleBottom = viewportLocation[1] + viewport.height - viewport.paddingBottom
+                val safeInset = if (zechs.drive.stream.utils.DeviceUi.isTenFootExperience(viewport.context))
+                    viewport.resources.getDimensionPixelSize(zechs.drive.stream.R.dimen.tv_overscan_margin_vertical) else 0
+                val visibleTop = viewportLocation[1] + maxOf(viewport.paddingTop, safeInset)
+                val visibleBottom = viewportLocation[1] + viewport.height - maxOf(viewport.paddingBottom, safeInset)
                 val availableHeight = visibleBottom - visibleTop
                 val scrollDelta = when {
                     focused.height > availableHeight -> focusedTop - visibleTop

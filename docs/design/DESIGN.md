@@ -7,7 +7,7 @@ Data de referência: Outubro de 2026.
 
 ## 1. Princípios do Design System Obsidian
 
-1. **Local-First & Imersivo:** Fundo preto profundo (`#070B11`) e superfícies cinza-escuro com translucidez elegante para destacar pôsteres e mídia.
+1. **Local-First & Imersivo:** Fundo preto profundo (`obsidian_bg_base`) e superfícies cinza-escuro com translucidez elegante para destacar pôsteres e mídia.
 2. **Acento Visual Distinto:** Branco como acento primário para o foco. Seleções persistentes usam marcadores discretos; cores ficam reservadas para estados semânticos e identidade.
 3. **Piso Tipográfico Estrito:** Nenhum elemento de texto na interface pode ter tamanho inferior a **12sp** (`values/dimens.xml`), garantindo legibilidade mínima a qualquer distância.
 4. **Foco Visível e Previsível:** Todo elemento interativo na TV possui anel de foco bem delineado (espessura padrão de 3dp, cantos arredondados contínuos) e transições suaves de escala/elevação.
@@ -80,7 +80,7 @@ Todos os 69 identificadores literais de layout são mapeados diretamente para to
 ### 5.2 Rail de Navegação Lateral
 - **Largura:** recolhida conforme token; expansão sobre o conteúdo, sem comprimir o feed. Referência histórica: 80dp (`values-television/dimens.xml:tv_rail_width`).
 - **Ícones:** 24dp centralizados vertical e horizontalmente.
-- **Indicador Ativo:** Barra discreta de 16 × 2dp posicionada abaixo do ícone com a cor de acento `#22D3EE`.
+- **Indicador Ativo:** Barra discreta de 16 × 2dp posicionada abaixo do ícone com o token branco `obsidian_accent_primary`.
 - **Fundo:** Gradiente sutil de `obsidian_bg_base` para transparente, sem bloquear o sangramento do hero backdrop.
 
 ### 5.3 Anéis de Foco e Transições
@@ -131,7 +131,7 @@ Especificação de referência para a tela canônica de detalhes de série/franq
 ### 7.4 Estados de Episódio e Indicadores Visuais
 - **Não Assistido:** Borda sutil de superfície glass, sem preenchimento colorido de progresso.
 - **Em Andamento:** Barra de progresso horizontal fina posicionada na base da miniatura com a cor de acento branca (`obsidian_accent_primary`), refletindo a porcentagem exata salva no Room.
-- **Concluído:** Indicador de status com checkmark em verde esmeralda (`obsidian_success` `#54D18A`), comunicando conclusão sem poluição visual.
+- **Concluído:** Indicador de status com checkmark em verde esmeralda (`obsidian_success` `#34C759`), comunicando conclusão sem poluição visual.
 
 ### 7.5 Navegação por Foco no D-Pad (10-Foot Experience)
 - **Foco Inicial:** Ao abrir a tela, o foco repousa automaticamente na ação primária ("Assistir" / "Continuar").

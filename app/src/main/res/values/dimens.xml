@@ -101,4 +101,7 @@
     <item name="focus_scale_card" type="dimen" format="float">1.08</item>
     <item name="focus_scale_button" type="dimen" format="float">1.04</item>
     <dimen name="focus_elevation">12dp</dimen>
+    <dimen name="tv_rail_safe_inset">0dp</dimen>
+    <dimen name="tv_rail_safe_vertical">0dp</dimen>
+    <dimen name="tv_rail_inner_padding">12dp</dimen>
 </resources>

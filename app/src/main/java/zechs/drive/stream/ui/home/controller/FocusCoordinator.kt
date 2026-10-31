@@ -60,7 +60,8 @@ class FocusCoordinator(
         val root = binding.root
         val focusLayoutListener = ViewTreeObserver.OnGlobalLayoutListener {
             val genreChips = binding.rvGenreFilterChips
-            val rows = listOfNotNull(continueShelf, queueShelf, followedShelf, starredShelf, recentlyAddedShelf, genreChips, catalog).filter { it.isShown }
+            val rows = listOfNotNull(continueShelf, queueShelf, followedShelf, starredShelf, recentlyAddedShelf,
+                genreChips, catalog, binding.rvDiscovery).filter { it.isShown }
             val heroTarget = play?.takeIf { it.isShown } ?: search
             val primaryTarget = play?.takeIf { it.isShown } ?: search.takeIf { it.isShown } ?: rows.firstOrNull() ?: catalog
             railItems.forEach { railItem ->
@@ -85,7 +86,8 @@ class FocusCoordinator(
 
         FocusedItemScroll.install(
             viewport = binding.contentScrollView,
-            rows = listOfNotNull(continueShelf, queueShelf, followedShelf, starredShelf, recentlyAddedShelf, binding.rvGenreFilterChips, catalog)
+            rows = listOfNotNull(continueShelf, queueShelf, followedShelf, starredShelf, recentlyAddedShelf,
+                binding.rvGenreFilterChips, catalog, binding.rvDiscovery)
         )
     }
 
@@ -164,25 +166,30 @@ class FocusCoordinator(
     }
 
     fun restoreShelfFocus(shelfIndex: Int, itemIndex: Int) {
-        val shelves = listOfNotNull(
-            binding.rvContinueWatchingShelf,
-            binding.rvWatchQueueShelf,
-            binding.rvNewEpisodesShelf,
-            binding.rvStarredShelf,
-            binding.rvRecentlyAddedShelf,
-            binding.rvAnimeLibrary
-        )
-        val shelf = shelves.getOrNull(shelfIndex) ?: return
-        if (!shelf.isShown) return
-
-        val itemCount = shelf.adapter?.itemCount ?: 0
-        val resolved = RailNavigationPolicy.resolveShelfFocusRestoration(
-            shelfIndex = shelfIndex,
-            itemIndex = itemIndex,
-            shelfItemCounts = mapOf(shelfIndex to itemCount)
-        ) ?: return
-
-        val targetPos = resolved.second
+        val (shelf, memoryKey) = when (shelfIndex) {
+            0 -> binding.rvContinueWatchingShelf to "home.continue_watching"
+            1 -> binding.rvWatchQueueShelf to "home.watch_queue"
+            2 -> binding.rvNewEpisodesShelf to "home.new_episodes"
+            3 -> binding.rvStarredShelf to "home.starred"
+            4 -> binding.rvRecentlyAddedShelf to "home.recently_added"
+            5 -> binding.rvAnimeLibrary to "home.catalog"
+            else -> return
+        }
+        if (shelf == null || !shelf.isShown) return
+        val adapter = shelf.adapter as? androidx.recyclerview.widget.ListAdapter<*, *> ?: return
+        val ids = adapter.currentList.map { item ->
+            when (item) {
+                is zechs.drive.stream.data.model.WatchList -> item.videoId
+                is zechs.drive.stream.data.model.WatchQueueItem -> item.fileId
+                is zechs.drive.stream.data.model.DriveFile -> item.id
+                is zechs.drive.stream.ui.files.adapter.FilesDataModel.File -> item.driveFile.id
+                else -> ""
+            }
+        }
+        if (ids.isEmpty()) return
+        val memory = zechs.drive.stream.utils.FocusMemory
+        val targetPos = if (memory.getRememberedIndex(memoryKey) != null || memory.getRememberedId(memoryKey) != null)
+            memory.resolveTargetIndex(memoryKey, ids) else itemIndex.coerceIn(ids.indices)
         shelf.scrollToPosition(targetPos)
         zechs.drive.stream.utils.LifecycleDelays.postDelayed(shelf, 100) {
             shelf.findViewHolderForAdapterPosition(targetPos)?.itemView?.requestFocus()

@@ -33,8 +33,11 @@ class RailController(
     private val onContentFocusRequested: () -> Unit,
     private val onCancelFeaturedPreview: () -> Unit,
     private val onRefreshShelvesRequested: () -> Unit,
-    private val onShowHistoryRequested: () -> Unit
+    private val onShowHistoryRequested: () -> Unit,
+    private val reduceMotionProvider: () -> Boolean = { !zechs.drive.stream.utils.MotionPolicy.areSystemAnimationsEnabled() }
 ) {
+
+    private fun motion(token: Int): Long = if (reduceMotionProvider()) 0L else binding.root.resources.getInteger(token).toLong()
 
     private var historyNavItem: android.widget.LinearLayout? = null
     private var historyNavLabel: android.widget.TextView? = null
@@ -274,6 +277,10 @@ class RailController(
     fun selectTab(tab: String) {
         if (tab != "Início") onCancelFeaturedPreview()
         currentTab = tab
+        if (tab != "Buscar") {
+            binding.rvDiscovery.visibility = View.GONE
+            binding.tvDiscoveryHeading.visibility = View.GONE
+        }
         if (tab != "Buscar" && binding.etSearchAnime.text?.isNotBlank() == true) {
             previousTabBeforeSearch = null
             binding.etSearchAnime.text?.clear()
@@ -525,7 +532,7 @@ class RailController(
             alpha = 0f
             animate()
                 .alpha(1f)
-                .setDuration(binding.root.resources.getInteger(R.integer.motion_osd_show).toLong())
+                .setDuration(motion(R.integer.motion_osd_show))
                 .setInterpolator(DecelerateInterpolator())
                 .start()
         }
@@ -535,7 +542,7 @@ class RailController(
             animate().cancel()
             animate()
                 .translationX(0f)
-                .setDuration(binding.root.resources.getInteger(R.integer.motion_card).toLong())
+                .setDuration(motion(R.integer.motion_card))
                 .setInterpolator(DecelerateInterpolator())
                 .withEndAction {
                     focusCurrentNavItem()
@@ -555,7 +562,7 @@ class RailController(
             animate().cancel()
             animate()
                 .alpha(0f)
-                .setDuration(binding.root.resources.getInteger(R.integer.motion_osd_hide).toLong())
+                .setDuration(motion(R.integer.motion_osd_hide))
                 .setInterpolator(AccelerateInterpolator())
                 .withEndAction { visibility = View.GONE }
                 .start()
@@ -565,7 +572,7 @@ class RailController(
         binding.navRail.animate().cancel()
         binding.navRail.animate()
             .translationX(-railWidth)
-            .setDuration(binding.root.resources.getInteger(R.integer.motion_card).toLong())
+            .setDuration(motion(R.integer.motion_card))
             .setInterpolator(AccelerateInterpolator())
             .withEndAction {
                 if (!isSidebarExpanded) {
@@ -613,7 +620,7 @@ class RailController(
             visibility = View.VISIBLE
             animate()
                 .alpha(1f)
-                .setDuration(220L)
+                .setDuration(motion(R.integer.motion_card))
                 .setInterpolator(DecelerateInterpolator())
                 .start()
         }
@@ -624,17 +631,20 @@ class RailController(
         tvRailAnimator?.cancel()
         val currentWidth = binding.navRail.layoutParams.width.takeIf { it > 0 } ?: collapsedPx
         tvRailAnimator = android.animation.ValueAnimator.ofInt(currentWidth, expandedPx).apply {
-            duration = 220L
+            duration = motion(R.integer.motion_card)
             interpolator = android.view.animation.DecelerateInterpolator()
             addUpdateListener { anim ->
                 binding.navRail.layoutParams.width = anim.animatedValue as Int
                 binding.navRail.requestLayout()
             }
             addListener(object : android.animation.AnimatorListenerAdapter() {
+                private var cancelled = false
+                override fun onAnimationCancel(animation: android.animation.Animator) { cancelled = true }
                 override fun onAnimationStart(animation: android.animation.Animator) {
                     setTvLabelsVisible(true)
                 }
                 override fun onAnimationEnd(animation: android.animation.Animator) {
+                    if (cancelled) return
                     binding.navRail.layoutParams.width = expandedPx
                     binding.navRail.requestLayout()
                 }
@@ -652,7 +662,7 @@ class RailController(
             animate().cancel()
             animate()
                 .alpha(0f)
-                .setDuration(200L)
+                .setDuration(motion(R.integer.motion_crossfade))
                 .setInterpolator(AccelerateInterpolator())
                 .withEndAction { visibility = View.GONE }
                 .start()
@@ -664,17 +674,20 @@ class RailController(
         tvRailAnimator?.cancel()
         val currentWidth = binding.navRail.layoutParams.width.takeIf { it > 0 } ?: expandedPx
         tvRailAnimator = android.animation.ValueAnimator.ofInt(currentWidth, collapsedPx).apply {
-            duration = 200L
+            duration = motion(R.integer.motion_crossfade)
             interpolator = android.view.animation.AccelerateInterpolator()
             addUpdateListener { anim ->
                 binding.navRail.layoutParams.width = anim.animatedValue as Int
                 binding.navRail.requestLayout()
             }
             addListener(object : android.animation.AnimatorListenerAdapter() {
+                private var cancelled = false
+                override fun onAnimationCancel(animation: android.animation.Animator) { cancelled = true }
                 override fun onAnimationStart(animation: android.animation.Animator) {
                     setTvLabelsVisible(false)
                 }
                 override fun onAnimationEnd(animation: android.animation.Animator) {
+                    if (cancelled) return
                     binding.navRail.layoutParams.width = collapsedPx
                     binding.navRail.requestLayout()
                     if (!isTvRailExpanded) {
