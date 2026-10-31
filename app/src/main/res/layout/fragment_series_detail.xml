@@ -293,7 +293,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
                 android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:orientation="horizontal" android:visibility="gone">
 
                 <TextView
                     android:id="@+id/tvAgeRating"
@@ -384,7 +384,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:orientation="horizontal" android:visibility="gone">
 
                 <!-- 1080p -->
                 <LinearLayout
@@ -721,8 +721,7 @@
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
                     android:paddingStart="16dp"
-                    android:paddingEnd="16dp"
-                    android:visibility="gone">
+                    android:paddingEnd="16dp" android:visibility="gone">
 
                     <ImageView
                         android:id="@+id/ivMarkWatchedIcon"
@@ -763,7 +762,7 @@
             android:orientation="horizontal"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/heroContentBlock">
+            app:layout_constraintTop_toBottomOf="@id/heroContentBlock" android:visibility="gone">
 
             <TextView
                 android:id="@+id/tabButtonEpisodes"

@@ -29,6 +29,7 @@ object PlaybackTrackFormatter {
         )
     }
 
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     fun formatAudio(
         format: androidx.media3.common.Format,
         trackIndex: Int = 0

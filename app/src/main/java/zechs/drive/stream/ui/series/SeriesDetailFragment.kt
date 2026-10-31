@@ -385,6 +385,7 @@ class SeriesDetailFragment : BaseFragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collectLatest { state ->
+                    renderContentAvailability(state is SeriesDetailUiState.Success)
                     when (state) {
                         is SeriesDetailUiState.Loading -> {
                             binding.pbLoading.visibility = View.GONE
@@ -436,6 +437,11 @@ class SeriesDetailFragment : BaseFragment() {
                                     viewModel.loadSeriesDetails(args.folderId, args.name, args.posterUrl)
                                 }
                             }
+                            if (state.error is AppError.Empty || state.error is AppError.NotFound || state.error is AppError.AccessDenied) {
+                                binding.stateView.setAction(R.string.state_error_go_back_action) {
+                                    findNavController().navigateUp()
+                                }
+                            }
                         }
 
                         is SeriesDetailUiState.Success -> {
@@ -453,6 +459,19 @@ class SeriesDetailFragment : BaseFragment() {
                     }
                 }
             }
+        }
+    }
+
+    private fun renderContentAvailability(available: Boolean) {
+        val visibility = if (available) View.VISIBLE else View.GONE
+        (binding.actionsRow.parent as? View)?.visibility = visibility
+        binding.tabsContainer.visibility = visibility
+        if (!available) {
+            listOf(binding.metaRow1, binding.metaRow2, binding.tvSynopsis, binding.tvSynopsisMore,
+                binding.tvEnglishSubtitle, binding.tvJapaneseTitle, binding.tvFranchiseCanonicalPill,
+                binding.panelEpisodesTab, binding.panelDetailsTab, binding.panelMoreLikeThisTab)
+                .forEach { it.visibility = View.GONE }
+            binding.btnMarkWatched.visibility = View.GONE
         }
     }
 

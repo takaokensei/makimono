@@ -274,6 +274,10 @@ class RailController(
     fun selectTab(tab: String) {
         if (tab != "Início") onCancelFeaturedPreview()
         currentTab = tab
+        if (tab != "Buscar" && binding.etSearchAnime.text?.isNotBlank() == true) {
+            previousTabBeforeSearch = null
+            binding.etSearchAnime.text?.clear()
+        }
 
         val isTenFoot = DeviceUi.isTenFootExperience(binding.root.context)
         val showHeaderBar = if (isTenFoot) {

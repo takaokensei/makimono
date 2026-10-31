@@ -1,6 +1,8 @@
 package zechs.drive.stream.ui.series
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.cancelAndJoin
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -86,6 +88,7 @@ class SeriesDetailViewModelTest {
     @After
     fun tearDown() {
         SeriesDetailViewModel.clearCache()
+        runBlocking { viewModel.viewModelScope.coroutineContext[kotlinx.coroutines.Job]?.cancelAndJoin() }
         Dispatchers.resetMain()
     }
 
@@ -106,7 +109,8 @@ class SeriesDetailViewModelTest {
         viewModel.loadSeriesDetails("folder1", "Frieren")
 
         withTimeout(3_000) {
-            while (viewModel.uiState.value is SeriesDetailUiState.Loading) {
+            while (viewModel.uiState.value is SeriesDetailUiState.Loading ||
+                viewModel.viewModelScope.coroutineContext[kotlinx.coroutines.Job]?.children?.any { it.isActive } == true) {
                 delay(10)
             }
         }
@@ -142,7 +146,8 @@ class SeriesDetailViewModelTest {
         viewModel.loadSeriesDetails("folder1", "Frieren")
 
         withTimeout(3_000) {
-            while (viewModel.uiState.value is SeriesDetailUiState.Loading) {
+            while (viewModel.uiState.value is SeriesDetailUiState.Loading ||
+                viewModel.viewModelScope.coroutineContext[kotlinx.coroutines.Job]?.children?.any { it.isActive } == true) {
                 delay(10)
             }
         }
@@ -178,7 +183,8 @@ class SeriesDetailViewModelTest {
         viewModel.loadSeriesDetails("folder1", "Frieren")
 
         withTimeout(3_000) {
-            while (viewModel.uiState.value is SeriesDetailUiState.Loading) {
+            while (viewModel.uiState.value is SeriesDetailUiState.Loading ||
+                viewModel.viewModelScope.coroutineContext[kotlinx.coroutines.Job]?.children?.any { it.isActive } == true) {
                 delay(10)
             }
         }
@@ -228,7 +234,8 @@ class SeriesDetailViewModelTest {
         viewModel.loadSeriesDetails("movieFolder", "Your Name")
 
         withTimeout(3_000) {
-            while (viewModel.uiState.value is SeriesDetailUiState.Loading) {
+            while (viewModel.uiState.value is SeriesDetailUiState.Loading ||
+                viewModel.viewModelScope.coroutineContext[kotlinx.coroutines.Job]?.children?.any { it.isActive } == true) {
                 delay(10)
             }
         }
@@ -277,7 +284,8 @@ class SeriesDetailViewModelTest {
         viewModel.loadSeriesDetails("folder1", "Frieren")
 
         withTimeout(3_000) {
-            while (viewModel.uiState.value is SeriesDetailUiState.Loading) {
+            while (viewModel.uiState.value is SeriesDetailUiState.Loading ||
+                viewModel.viewModelScope.coroutineContext[kotlinx.coroutines.Job]?.children?.any { it.isActive } == true) {
                 delay(10)
             }
         }
@@ -306,4 +314,46 @@ class SeriesDetailViewModelTest {
         assertEquals("Downloads Diretos", SeriesDetailViewModel.humanizeFolderTitle("Downloads_Diretos"))
         assertEquals("Frieren", SeriesDetailViewModel.humanizeFolderTitle("[SubsPlease] Frieren (1080p)"))
     }
+    @Test
+    fun traversesNestedSeasonsEvenWithDirectVideosAndShortcutCycles() = runBlocking {
+        fun video(id: String) = File(id, "BLEACH - $id.mkv", 1000L, "", "video/x-matroska")
+        fun folder(id: String) = File(id, id, null, "", "application/vnd.google-apps.folder")
+        fun response(vararg files: File) = Resource.Success(FileCollectionResult(
+            files.toList(), true, null, 1, DriveQueryContext("query", 100, "name")))
+        coEvery { driveRepository.getAllFilesDetailed(any(), any()) } answers {
+            when {
+                firstArg<String>().startsWith("'folder1'") -> response(video("01"), video("02"), video("03"), folder("season"))
+                firstArg<String>().startsWith("'season'") -> response(folder("language"))
+                firstArg<String>().startsWith("'language'") -> response(video("04"), folder("folder1"))
+                else -> response()
+            }
+        }
+        viewModel.loadSeriesDetails("folder1", "BLEACH")
+        withTimeout(3_000) {
+            while (viewModel.uiState.value is SeriesDetailUiState.Loading ||
+                viewModel.viewModelScope.coroutineContext[kotlinx.coroutines.Job]?.children?.any { it.isActive } == true) delay(10)
+        }
+        val state = viewModel.uiState.value as SeriesDetailUiState.Success
+        assertEquals(4, state.currentEpisodes.size)
+        io.mockk.coVerify(exactly = 1) {
+            driveRepository.getAllFilesDetailed("'folder1' in parents and trashed = false", 100)
+        }
+    }
+
+    @Test
+    fun failedChildListingNeverClaimsTheFolderIsEmpty() = runBlocking {
+        coEvery { driveRepository.getAllFilesDetailed(any(), any()) } answers {
+            if (firstArg<String>().startsWith("'folder1'")) Resource.Success(FileCollectionResult(
+                listOf(File("season", "Season", null, "", "application/vnd.google-apps.folder")),
+                true, null, 1, DriveQueryContext("query", 100, "name")))
+            else Resource.Error("offline", errorKind = ResourceErrorKind.NETWORK)
+        }
+        viewModel.loadSeriesDetails("folder1", "BLEACH")
+        withTimeout(3_000) {
+            while (viewModel.uiState.value is SeriesDetailUiState.Loading ||
+                viewModel.viewModelScope.coroutineContext[kotlinx.coroutines.Job]?.children?.any { it.isActive } == true) delay(10)
+        }
+        assertTrue((viewModel.uiState.value as SeriesDetailUiState.Error).error is AppError.Network)
+    }
+
 }

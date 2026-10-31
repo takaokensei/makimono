@@ -8,7 +8,7 @@ Data de referência: Outubro de 2026.
 ## 1. Princípios do Design System Obsidian
 
 1. **Local-First & Imersivo:** Fundo preto profundo (`#070B11`) e superfícies cinza-escuro com translucidez elegante para destacar pôsteres e mídia.
-2. **Acento Visual Distinto:** Torii / Ciano `#22D3EE` como cor de acento primária para foco, seleções ativas e indicadores.
+2. **Acento Visual Distinto:** Branco como acento primário para o foco. Seleções persistentes usam marcadores discretos; cores ficam reservadas para estados semânticos e identidade.
 3. **Piso Tipográfico Estrito:** Nenhum elemento de texto na interface pode ter tamanho inferior a **12sp** (`values/dimens.xml`), garantindo legibilidade mínima a qualquer distância.
 4. **Foco Visível e Previsível:** Todo elemento interativo na TV possui anel de foco bem delineado (espessura padrão de 3dp, cantos arredondados contínuos) e transições suaves de escala/elevação.
 
@@ -27,23 +27,23 @@ Para eliminar a superfície de bugs de contraste em telas grandes e simplificar 
 
 | Token | Valor Hex | Função / Aplicação |
 |---|---|---|
-| `obsidian_bg_base` | `#070B11` | Fundo principal da aplicação (OLED black) |
-| `obsidian_bg_surface` | `#111925` | Cards, modais e superfícies elevadas |
-| `obsidian_bg_glass` | `#0F111925` | Superfícies com translucidez e menus OSD |
-| `obsidian_border_glass` | `#1AFFFFFF` | Bordas sutis e divisores em cards |
-| `obsidian_accent_primary` | `#22D3EE` | Acento ciano primário, anel de foco, indicador ativo |
-| `obsidian_accent_secondary` | `#4F8CFF` | Acento secundário para destaques e gradientes |
-| `obsidian_on_primary` | `#0A0E14` | Cor de texto sobre fundos com `accent_primary` |
-| `obsidian_text_primary` | `#F5F7FA` | Títulos, rótulos principais (alto contraste > 12:1) |
-| `obsidian_text_secondary` | `#B0B8C4` | Subtítulos, metadados (contraste WCAG AA > 4.5:1) |
-| `obsidian_text_tertiary` | `#7C8696` | Textos terciários e badges sutis |
-| `obsidian_focus_fill` | `#2622D3EE` | Preenchimento sutil translúcido para foco ativo |
-| `obsidian_hairline` | `#1AFFFFFF` | Linhas delimitadoras finas |
-| `obsidian_success` | `#54D18A` | Indicadores de sucesso / concluído |
-| `obsidian_warning` | `#F6C76A` | Alertas e avisos |
-| `obsidian_danger` | `#FF6B78` | Erros, falhas e botões destrutivos |
-| `obsidian_scrim` | `#99000000` | Escurecimento de fundo em modais e gavetas |
-| `obsidian_media_scrim` | `#CC000000` | Gradiente sobre backdrops para contraste de texto |
+| `obsidian_bg_base` | `#07080B` | Fundo principal da aplicação (OLED black) |
+| `obsidian_bg_surface` | `#101218` | Cards, modais e superfícies elevadas |
+| `obsidian_bg_glass` | `#8810131C` | Superfícies com translucidez e menus OSD |
+| `obsidian_border_glass` | `#28FFFFFF` | Bordas sutis e divisores em cards |
+| `obsidian_accent_primary` | `#FFFFFF` | Acento branco primário e anel de foco; seleção discreta |
+| `obsidian_accent_secondary` | `#FF3B30` | Acento secundário para destaques e gradientes |
+| `obsidian_on_primary` | `#07080B` | Cor de texto sobre fundos com `accent_primary` |
+| `obsidian_text_primary` | `#F8FAFC` | Títulos, rótulos principais (alto contraste > 12:1) |
+| `obsidian_text_secondary` | `#94A3B8` | Subtítulos, metadados (contraste WCAG AA > 4.5:1) |
+| `obsidian_text_tertiary` | `#64748B` | Textos terciários e badges sutis |
+| `obsidian_focus_fill` | `#24FFFFFF` | Preenchimento branco sutil para foco ativo |
+| `obsidian_hairline` | `#24FFFFFF` | Linhas delimitadoras finas |
+| `obsidian_success` | `#34C759` | Indicadores de sucesso / concluído |
+| `obsidian_warning` | `#FF9F0A` | Alertas e avisos |
+| `obsidian_danger` | `#FF3B30` | Erros, falhas e botões destrutivos |
+| `obsidian_scrim` | `#99050608` | Escurecimento de fundo em modais e gavetas |
+| `obsidian_media_scrim` | `#CC050608` | Gradiente sobre backdrops para contraste de texto |
 
 ---
 
@@ -78,7 +78,7 @@ Todos os 69 identificadores literais de layout são mapeados diretamente para to
 - **Backdrops e Hero:** Sangram até a borda física da tela por baixo dos trilhos de navegação.
 
 ### 5.2 Rail de Navegação Lateral
-- **Largura:** 80dp fixos (`values-television/dimens.xml:tv_rail_width`).
+- **Largura:** recolhida conforme token; expansão sobre o conteúdo, sem comprimir o feed. Referência histórica: 80dp (`values-television/dimens.xml:tv_rail_width`).
 - **Ícones:** 24dp centralizados vertical e horizontalmente.
 - **Indicador Ativo:** Barra discreta de 16 × 2dp posicionada abaixo do ícone com a cor de acento `#22D3EE`.
 - **Fundo:** Gradiente sutil de `obsidian_bg_base` para transparente, sem bloquear o sangramento do hero backdrop.
@@ -120,7 +120,7 @@ Especificação de referência para a tela canônica de detalhes de série/franq
 - **Ações Primárias:** Fileira horizontal de botões: botão primário "Assistir" / "Continuar" com preenchimento de acento e ícone de play, seguido de botões de favoritos e ações secundárias em estilo glass.
 
 ### 7.3 Abas e Divisão em Dois Painéis
-- **Abas de Navegação:** Tipografia limpa sem bloco retangular de fundo; aba ativa marcada com sublinhado fino ciano (`obsidian_accent_primary`).
+- **Abas de Navegação:** Tipografia limpa sem bloco retangular de fundo; aba ativa marcada com sublinhado fino branco (`obsidian_accent_primary`).
 - **Painel Esquerdo (~32% da largura):**
   - Card vertical do arco/obra atualmente selecionado com thumbnail, título e metadado ("N Episódios • ano").
   - Fileira de chips secundários logo abaixo do card selecionado para alternar categorias de conteúdo: "Episódios", "Especiais (SP)", "Aberturas (OP/ED)", "Prévias (PV)".
@@ -130,7 +130,7 @@ Especificação de referência para a tela canônica de detalhes de série/franq
 
 ### 7.4 Estados de Episódio e Indicadores Visuais
 - **Não Assistido:** Borda sutil de superfície glass, sem preenchimento colorido de progresso.
-- **Em Andamento:** Barra de progresso horizontal fina posicionada na base da miniatura com a cor de acento ciano (`obsidian_accent_primary`), refletindo a porcentagem exata salva no Room.
+- **Em Andamento:** Barra de progresso horizontal fina posicionada na base da miniatura com a cor de acento branca (`obsidian_accent_primary`), refletindo a porcentagem exata salva no Room.
 - **Concluído:** Indicador de status com checkmark em verde esmeralda (`obsidian_success` `#54D18A`), comunicando conclusão sem poluição visual.
 
 ### 7.5 Navegação por Foco no D-Pad (10-Foot Experience)
@@ -140,9 +140,24 @@ Especificação de referência para a tela canônica de detalhes de série/franq
   - No painel esquerdo: D-pad Down percorre os arcos; D-pad Right navega diretamente para o primeiro card de episódio visível no painel direito.
   - No painel direito: D-pad Up/Down rola a lista de episódios; D-pad Left retorna para o arco ou chip ativo no painel esquerdo.
 - **Memória de Foco:** Ao retornar do player ou de um diálogo, a seleção e o anel de foco são restaurados com precisão no episódio correspondente.
-- **Unicidade de Foco:** Apenas um elemento em toda a tela exibe o anel de foco ciano de 3dp por vez; estados selecionados (como arco ativo) usam preenchimento sutil de superfície ou badge, nunca o anel de foco ativo.
+- **Unicidade de Foco:** Apenas um elemento em toda a tela exibe o anel de foco branco de 3dp por vez; estados selecionados (como arco ativo) usam preenchimento sutil de superfície ou badge, nunca o anel de foco ativo.
 
 ### 7.6 Margens Seguras de TV (Overscan Protection)
 - **Margens Laterais:** Mínimo de **48dp** em ambas as bordas (esquerda e direita).
 - **Margens Verticais:** Mínimo de **27dp** no topo e na base da tela.
 - **Proteção de Borda:** Nenhum texto legível, botão, chip ou elemento interativo pode penetrar a zona de overscan. Apenas a arte do backdrop pode sangrar até a borda física por baixo dos scrims de proteção.
+
+
+## 8. Contrato cinematográfico aprovado em 31/10/2026
+
+- TV primeiro, compatibilidade móvel; usar Inter e estilos existentes.
+- Hero com título de até duas linhas, sinopse de até três e duas ações.
+- Cards 2:3 para obras e 16:9 para episódios/retomada; sem área de legenda vazia excessiva.
+- Foco branco único e seleção persistente distinta; superfícies e bordas discretas.
+- Nenhuma classificação, idioma, contagem ou duração presumida. Dados ausentes são omitidos.
+- Loading, erro e vazio controlam também ações, abas, metadados e destino de foco.
+- A biblioteca principal contém mídia real. Descoberta externa tem disponibilidade explícita.
+- Motion: foco 150ms, painéis 200–220ms, hero 400ms após debounce de 250ms,
+  sempre cancelável e com movimento reduzido.
+- Os nomes históricos de tokens ciano permanecem por compatibilidade; sua função
+  é definida pelos tokens semânticos, sem novas cores literais em componentes.

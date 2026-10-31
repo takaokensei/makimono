@@ -19,7 +19,7 @@ class WatchHistoryDialog(
 ) {
     private val dialog = Dialog(context, R.style.ThemeOverlay_DriveStream_Dialog)
     private val binding = DialogWatchHistoryBinding.inflate(dialog.layoutInflater)
-    private val allItems = history.sortedByDescending { it.id ?: 0 }
+    private val allItems = sortWatchHistory(history)
     private val adapter = WatchHistoryAdapter { item ->
         dialog.dismiss()
         onPlay(item)

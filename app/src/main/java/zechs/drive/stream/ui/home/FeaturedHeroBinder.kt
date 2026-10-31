@@ -222,9 +222,8 @@ internal class FeaturedHeroBinder(
         }
 
         val separator = context.getString(R.string.home_featured_separator)
-        val badgeLabel = featured.ageRating?.takeIf { it.isNotBlank() } ?: if (isTenFoot) "A14" else null
+        val badgeLabel = featured.ageRating?.takeIf { it.isNotBlank() }
         val metadataItems = buildList {
-            if (isTenFoot) add("Legendado")
             featured.year?.let { add(it.toString()) }
             featured.episodeCount?.let {
                 add(context.resources.getQuantityString(R.plurals.home_featured_episode_count, it, it))

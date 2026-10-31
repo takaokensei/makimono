@@ -225,7 +225,10 @@ class SeriesDetailViewModel @Inject constructor(
         }
     }
 
+    private var detailsLoadJob: kotlinx.coroutines.Job? = null
+
     fun loadSeriesDetails(folderId: String, seriesTitle: String, initialPoster: String? = null) {
+        detailsLoadJob?.cancel()
         currentFolderId = folderId
         currentSeriesTitle = seriesTitle
         observeDownloads(folderId)
@@ -237,7 +240,7 @@ class SeriesDetailViewModel @Inject constructor(
             _uiState.value = SeriesDetailUiState.Loading(folderId, humanizeFolderTitle(seriesTitle), initialPoster)
         }
 
-        viewModelScope.launch(Dispatchers.IO) {
+        detailsLoadJob = viewModelScope.launch(Dispatchers.IO) {
             try {
                 // Check local Room cache immediately so cached posters/banners display with zero delay
                 val initialCached = try {
@@ -764,38 +767,48 @@ class SeriesDetailViewModel @Inject constructor(
         var isIncomplete = !directCollection.isComplete || directRes is Resource.Error
         val items = directCollection.files.map { it.toDriveFile() }
         val videoFiles = items.filter { it.isVideoFile || (it.isShortcut && it.isShortcutVideo) }.toMutableList()
-        val subfolders = items.filter { it.isFolder || it.isShortcutFolder }
-
-        // If folder has subfolders (e.g. Kajitsu, Meikyuu, Rakuen) and few direct videos, fetch subfolders
-        if (subfolders.isNotEmpty() && videoFiles.size <= 2) {
-            val subResults = coroutineScope {
-                subfolders.map { sub ->
-                    async {
-                        val subId = if (sub.isShortcut) sub.shortcutDetails.targetId ?: sub.id else sub.id
-                        driveRepository.getAllFilesDetailed(
-                            query = "'$subId' in parents and trashed = false",
-                            pageSize = 100
-                        )
-                    }
-                }.awaitAll()
+        // Folder structures vary: series -> season -> language -> video. Follow actual
+        // folder/shortcut IDs, avoid cycles, and bound work before calling anything empty.
+        val visited = mutableSetOf(folderId)
+        val pending = java.util.ArrayDeque<Pair<DriveFile, Int>>()
+        items.filter { it.isFolder || it.isShortcutFolder }.forEach { pending.add(it to 1) }
+        var firstChildError: AppError? = null
+        while (pending.isNotEmpty() && visited.size < 128) {
+            val (folder, depth) = pending.removeFirst()
+            val targetId = if (folder.isShortcut) folder.shortcutDetails.targetId ?: folder.id else folder.id
+            if (!visited.add(targetId)) continue
+            if (depth > 8) {
+                isIncomplete = true
+                continue
             }
-            for (subRes in subResults) {
-                val subCollection = when (subRes) {
-                    is Resource.Success -> subRes.data
-                    is Resource.Error -> subRes.data
-                    is Resource.Loading -> null
-                }
-                if (subCollection == null) {
-                    isIncomplete = true
-                    continue
-                }
-                if (!subCollection.isComplete || subRes is Resource.Error) isIncomplete = true
-                if (subCollection.files.isNotEmpty()) {
-                    val subVideos = subCollection.files.map { it.toDriveFile() }
-                        .filter { it.isVideoFile || (it.isShortcut && it.isShortcutVideo) }
-                    videoFiles.addAll(subVideos)
+            val response = driveRepository.getAllFilesDetailed(
+                query = "'$targetId' in parents and trashed = false", pageSize = 100
+            )
+            val collection = when (response) {
+                is Resource.Success -> response.data
+                is Resource.Error -> response.data
+                is Resource.Loading -> null
+            }
+            if (collection == null || !collection.isComplete || response is Resource.Error) {
+                isIncomplete = true
+                val kind = (response as? Resource.Error)?.errorKind
+                firstChildError = firstChildError ?: when (kind) {
+                    ResourceErrorKind.AUTHENTICATION -> AppError.Authentication("Drive authorization required")
+                    ResourceErrorKind.ACCESS_DENIED -> AppError.AccessDenied("Folder access denied")
+                    else -> AppError.Network("The folder listing could not be completed")
                 }
             }
+            collection?.files?.map { it.toDriveFile() }?.forEach { child ->
+                when {
+                    child.isVideoFile || child.isShortcutVideo -> videoFiles.add(child)
+                    child.isFolder || child.isShortcutFolder -> pending.add(child to depth + 1)
+                }
+            }
+        }
+        if (pending.isNotEmpty()) isIncomplete = true
+        if (videoFiles.isEmpty() && isIncomplete) {
+            return DriveVideoFetch(emptyList(), true,
+                firstChildError ?: AppError.Unknown("The folder listing could not be completed"))
         }
 
         val deduplicatedVideos = EpisodeDeduplicationPolicy.removeDuplicates(

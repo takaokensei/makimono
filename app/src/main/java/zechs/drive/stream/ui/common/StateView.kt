@@ -186,4 +186,14 @@ class StateView @JvmOverloads constructor(
             false
         }
     }
+
+    /** Supplies a real recovery action for otherwise passive empty states. */
+    fun setAction(@StringRes label: Int, action: () -> Unit) {
+        binding.btnStateAction.isVisible = true
+        binding.btnStateAction.setText(label)
+        binding.btnStateAction.setOnClickListener { action() }
+        binding.btnStateAction.post {
+            if (isAttachedToWindow && binding.btnStateAction.isShown) requestActionFocus()
+        }
+    }
 }

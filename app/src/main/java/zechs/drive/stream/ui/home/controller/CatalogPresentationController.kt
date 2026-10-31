@@ -66,11 +66,11 @@ class CatalogPresentationController(
             val query = editable?.toString().orEmpty()
             binding.btnClearSearch.visibility = if (query.isNotBlank()) View.VISIBLE else View.GONE
             if (query.isNotBlank()) {
-                if (railController.previousTabBeforeSearch == null && railController.currentTab != "Animes") {
+                if (railController.previousTabBeforeSearch == null && railController.currentTab != "Buscar") {
                     railController.previousTabBeforeSearch = railController.currentTab
                 }
-                if (railController.currentTab != "Animes") {
-                    railController.selectTab("Animes")
+                if (railController.currentTab != "Buscar") {
+                    railController.selectTab("Buscar")
                 }
             } else {
                 railController.previousTabBeforeSearch?.let { prevTab ->
