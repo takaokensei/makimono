@@ -1100,6 +1100,43 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private fun isStandaloneSeriesOrMovie(file: DriveFile): Boolean {
+        if (file.source == MediaSource.CATALOG_SEEDBOX) return true
+        if (file.isFolder || file.isShortcutFolder) {
+            val lower = file.name.lowercase(java.util.Locale.ROOT)
+            if (lower.startsWith("ep") || lower.startsWith("episodio") || lower.startsWith("episódio")) {
+                val parsed = zechs.drive.stream.utils.EpisodeParser.parse(file.name)
+                if (parsed.episode != null || parsed.season != null) return false
+            }
+            return true
+        }
+        val isVideo = file.isVideoFile || file.isShortcutVideo
+        if (!isVideo) return false
+
+        val filename = file.name
+        val lower = filename.lowercase(java.util.Locale.ROOT)
+        // Episódios individuais não devem aparecer separadamente na barra de buscas
+        if (lower.contains("episodio") || lower.contains("episódio")) return false
+
+        val epPatterns = listOf(
+            Regex("(?i)\\b(s\\d{1,2})?[\\s._-]*e(p)?\\s*\\d{1,4}\\b"),
+            Regex("(?i)(?:\\s+-\\s+|\\s+-)\\d{1,4}(?:v\\d+)?(?:\\s|\\.|_|\$)"),
+            Regex("(?i)\\b\\d{1,4}\\s*(?:ts|mkv|mp4|avi|webm)\\b"),
+            Regex("(?i)\\b(?:sp|ova|oad|ncop|nced)\\s*\\d{0,3}\\b")
+        )
+        for (pattern in epPatterns) {
+            if (pattern.containsMatchIn(filename)) {
+                return false
+            }
+        }
+
+        val parsed = zechs.drive.stream.utils.EpisodeParser.parse(filename)
+        if (parsed.episode != null || parsed.season != null || parsed.isSpecial) {
+            return false
+        }
+        return true
+    }
+
     fun filterAnimes(query: String) {
         val trimmed = query.trim()
         _searchQuery.value = trimmed
@@ -1110,8 +1147,10 @@ class HomeViewModel @Inject constructor(
             _filteredAnimes.value = _animeLibrary.value
         } else {
             _filteredAnimes.value = _animeLibrary.value.filter {
-                it.name.contains(trimmed, ignoreCase = true) ||
-                AnimePosterResolver.cleanAnimeTitle(it.name).contains(trimmed, ignoreCase = true)
+                isStandaloneSeriesOrMovie(it) && (
+                    it.name.contains(trimmed, ignoreCase = true) ||
+                    AnimePosterResolver.cleanAnimeTitle(it.name).contains(trimmed, ignoreCase = true)
+                )
             }
             searchJob = viewModelScope.launch {
                 delay(350L)
@@ -1164,9 +1203,7 @@ class HomeViewModel @Inject constructor(
             }
             if (listing != null && _searchQuery.value == trimmed) {
                 val remoteFiles = listing.files.map { it.toDriveFile() }.filter { file ->
-                    val isFolder = file.isFolder || file.isShortcutFolder
-                    val isVideo = file.isVideoFile || file.isShortcutVideo
-                    (isFolder || isVideo) && !file.name.startsWith(".")
+                    !file.name.startsWith(".") && isStandaloneSeriesOrMovie(file)
                 }
                 mergeSearchResults(remoteFiles)
                 if (!listing.isComplete) {
@@ -1238,9 +1275,10 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun mergeSearchResults(newResults: List<DriveFile>) {
+        val filtered = newResults.filter { isStandaloneSeriesOrMovie(it) }
         val current = _filteredAnimes.value.toMutableList()
         val existingIds = current.map { it.id }.toSet()
-        val toAdd = newResults.filterNot { existingIds.contains(it.id) }
+        val toAdd = filtered.filterNot { existingIds.contains(it.id) }
         if (toAdd.isNotEmpty()) {
             current.addAll(toAdd)
             _filteredAnimes.value = current
