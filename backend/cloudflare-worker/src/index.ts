@@ -666,8 +666,14 @@ async function pollSeedboxDaemon(request: Request, env: PairingEnv): Promise<Res
   await env.DB.prepare("UPDATE seedbox_daemons SET last_heartbeat_at = ?, free_disk_gb = ?, active_speed = ? WHERE daemon_token_hash = ?")
     .bind(now, freeDisk, speed, tokenHash).run();
 
-  const nextJob = await env.DB.prepare("SELECT * FROM seedbox_jobs WHERE google_sub = ? AND status = 'PENDING' ORDER BY created_at ASC LIMIT 1")
-    .bind(auth.google_sub).first();
+  const nextJob = await env.DB.prepare(
+    `SELECT * FROM seedbox_jobs
+     WHERE google_sub = ? AND status = 'PENDING'
+     ORDER BY CASE WHEN episodes_filter = '1' THEN 0 ELSE 1 END ASC,
+              created_at ASC,
+              rowid ASC
+     LIMIT 1`
+  ).bind(auth.google_sub).first();
   return json({ job: nextJob ?? null });
 }
 

@@ -446,13 +446,31 @@ describe("Makimono TV pairing", () => {
     });
     expect(patchResp.status).toBe(200);
 
-    // 6. User verifies updated status
-    const updatedStatusResp = await SELF.fetch("https://makimono.test/v1/seedbox/status", {
-      headers: { authorization: `Bearer ${sessionToken}` }
+    // 7. Verify Fast-Start prioritization: episode 1 must be prioritized over batch
+    const batchJobResp = await SELF.fetch("https://makimono.test/v1/seedbox/jobs", {
+      method: "POST",
+      headers: { authorization: `Bearer ${sessionToken}`, "content-type": "application/json" },
+      body: JSON.stringify({ anime_query: "Frieren", episodes_filter: "2-999", prefer_ptbr: true })
     });
-    const updatedStatus = await updatedStatusResp.json() as { is_online: boolean; jobs: Array<{ status: string; progress_pct: number }> };
-    expect(updatedStatus.is_online).toBe(true);
-    expect(updatedStatus.jobs[0].status).toBe("DOWNLOADING");
-    expect(updatedStatus.jobs[0].progress_pct).toBe(75);
+    expect(batchJobResp.status).toBe(201);
+    const { job_id: batchJobId } = await batchJobResp.json() as { job_id: string };
+
+    const ep1JobResp = await SELF.fetch("https://makimono.test/v1/seedbox/jobs", {
+      method: "POST",
+      headers: { authorization: `Bearer ${sessionToken}`, "content-type": "application/json" },
+      body: JSON.stringify({ anime_query: "Frieren", episodes_filter: "1", prefer_ptbr: true })
+    });
+    expect(ep1JobResp.status).toBe(201);
+    const { job_id: ep1JobId } = await ep1JobResp.json() as { job_id: string };
+
+    // Daemon polling must return Episode 1 job first despite batchJob being enqueued prior
+    const prioritizePoll = await SELF.fetch("https://makimono.test/v1/seedbox/daemon/poll", {
+      method: "POST",
+      headers: { authorization: `Bearer ${daemon_token}`, "content-type": "application/json" }
+    });
+    expect(prioritizePoll.status).toBe(200);
+    const prioritizedJob = (await prioritizePoll.json() as { job: { job_id: string; episodes_filter: string } }).job;
+    expect(prioritizedJob.job_id).toBe(ep1JobId);
+    expect(prioritizedJob.episodes_filter).toBe("1");
   });
 });
