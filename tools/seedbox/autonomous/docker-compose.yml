@@ -4,11 +4,17 @@ services:
     container_name: makimono-autonomous-seedbox
     restart: always
     environment:
+      # Token gerado na Android TV (Configurações > Seedbox)
       - MAKIMONO_SEEDBOX_TOKEN=${MAKIMONO_SEEDBOX_TOKEN:-}
+      # URL canônica do Cloudflare Worker
       - MAKIMONO_WORKER_URL=https://makimono-pairing.cauavitorfigueredo.workers.dev
-      - OAUTH_CLIENT_ID=235586231139-672hsh1bsecejbjut4fkk80o394d23l5.apps.googleusercontent.com
-      - OAUTH_CLIENT_SECRET=
-      - OAUTH_REFRESH_TOKEN=
+      # Credenciais OAuth do Google Drive para upload com cota pessoal
+      - OAUTH_CLIENT_ID=${OAUTH_CLIENT_ID:-235586231139-672hsh1bsecejbjut4fkk80o394d23l5.apps.googleusercontent.com}
+      - OAUTH_CLIENT_SECRET=${OAUTH_CLIENT_SECRET:-}
+      - OAUTH_REFRESH_TOKEN=${OAUTH_REFRESH_TOKEN:-}
+      # Blindagem anti-idle para a VM da Oracle Cloud Always Free
+      - ORACLE_KEEPALIVE=true
+      # Frequência de escuta da fila (segundos)
       - POLL_INTERVAL=15
     volumes:
       - ./downloads:/app/downloads_seedbox
