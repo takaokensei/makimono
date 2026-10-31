@@ -9,6 +9,7 @@ import dagger.Lazy
 import dagger.hilt.android.lifecycle.HiltViewModel
 import zechs.drive.stream.domain.common.AppError
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -1182,7 +1183,7 @@ class HomeViewModel @Inject constructor(
                         starred = zechs.drive.stream.data.model.Starred.UNSTARRED
                     )
                 }
-                mergeSearchResults(cachedFiles)
+                mergeSearchResults(cachedFiles, trimmed)
             }
 
             // 2. Global Google Drive search with pagination
@@ -1205,7 +1206,7 @@ class HomeViewModel @Inject constructor(
                 val remoteFiles = listing.files.map { it.toDriveFile() }.filter { file ->
                     !file.name.startsWith(".") && isStandaloneSeriesOrMovie(file)
                 }
-                mergeSearchResults(remoteFiles)
+                mergeSearchResults(remoteFiles, trimmed)
                 if (!listing.isComplete) {
                     _searchNotice.value = when (listing.incompleteReason) {
                         zechs.drive.stream.data.model.FileCollectionResult.IncompleteReason.PAGE_LIMIT ->
@@ -1256,7 +1257,7 @@ class HomeViewModel @Inject constructor(
                             )
                         }
                         if (catalogSeedboxFiles.isNotEmpty()) {
-                            mergeSearchResults(catalogSeedboxFiles)
+                            mergeSearchResults(catalogSeedboxFiles, trimmed)
                         }
                     }
                 } catch (ce: Exception) {
@@ -1274,7 +1275,9 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun mergeSearchResults(newResults: List<DriveFile>) {
+    private suspend fun mergeSearchResults(newResults: List<DriveFile>, expectedQuery: String) {
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+        if (_searchQuery.value != expectedQuery || expectedQuery.isBlank()) return
         val filtered = newResults.filter { isStandaloneSeriesOrMovie(it) }
         val current = _filteredAnimes.value.toMutableList()
         val existingIds = current.map { it.id }.toSet()
@@ -1421,7 +1424,7 @@ class HomeViewModel @Inject constructor(
             }
         }
         withContext(Dispatchers.Main) {
-            _filteredAnimes.value = filtered
+            if (_searchQuery.value.isBlank()) _filteredAnimes.value = filtered
         }
     }
 
