@@ -762,6 +762,9 @@
 
             </LinearLayout>
 
+            <include
+                android:id="@+id/layoutFastStartHud"
+                layout="@layout/layout_fast_start_hud" />
         </FrameLayout>
 
         <!-- Dim Overlay behind expanded sidebar: clickable="true" captures touch events to prevent click-through, while focusable="false" ensures D-pad navigation targets navRail items instead of the scrim (T-205 / Q-003) -->

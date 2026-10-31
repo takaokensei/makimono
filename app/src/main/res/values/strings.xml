@@ -618,7 +618,7 @@
     <string name="seedbox_daemon_token_title">Colab Daemon Token</string>
     <string name="seedbox_prompt_message">Enter anime title or paste a magnet link:</string>
     <string name="seedbox_queue_status_title">Seedbox Status</string>
-    <string name="badge_seedbox_download">DOWNLOAD</string>
+    <string name="badge_seedbox_download">CLOUD</string>
     <string name="seedbox_catalog_available_subtitle">Available for download • Click to download</string>
     <string name="seedbox_confirm_download_title">Download %1$s?</string>
     <string name="seedbox_confirm_download_message">This anime is not in your Google Drive library.\n\nDo you want to start downloading now? Episode 1 will be downloaded first at top priority so you can start watching in minutes!</string>
@@ -630,4 +630,18 @@
     <string name="seedbox_fast_ready_toast">🎉 Episode 1 of %1$s is ready on Drive! Opening...</string>
     <string name="seedbox_fast_downloading_status">⬇️ Downloading Episode 1 of %1$s (%2$d%%)...</string>
     <string name="seedbox_fast_uploading_status">☁️ Uploading Episode 1 of %1$s to Google Drive...</string>
+    <string name="seedbox_modal_eyebrow">MAKIMONO CLOUD • ON-DEMAND STREAMING</string>
+    <string name="seedbox_fast_start_explanation">This anime is not in your Google Drive library yet. Start Episode 1 in fast priority to begin streaming in minutes, while the remaining episodes download in the background.</string>
+    <string name="seedbox_btn_watch_ep1_now">▶  Watch Episode 1 Now</string>
+    <string name="seedbox_btn_download_full_season">Download Full Season</string>
+    <string name="seedbox_btn_minimize">Minimize to Background</string>
+    <string name="seedbox_btn_play_now">▶  Play Episode 1 Now</string>
+    <string name="seedbox_btn_play_now_countdown">▶  Playing in %1$ds</string>
+    <string name="seedbox_hud_downloading">Downloading • %1$s</string>
+    <string name="seedbox_hud_uploading">Syncing to Google Drive...</string>
+    <string name="seedbox_hud_ready">Ready to watch! Click to play</string>
+    <string name="seedbox_stage_searching">Step 1/3: Finding best 1080p release with Portuguese subtitles...</string>
+    <string name="seedbox_stage_downloading">Step 2/3: High-speed cloud seedbox download in progress...</string>
+    <string name="seedbox_stage_syncing">Step 3/3: Syncing Episode 1 to your Google Drive...</string>
+    <string name="seedbox_stage_ready">Ready! Launching playback...</string>
 </resources>

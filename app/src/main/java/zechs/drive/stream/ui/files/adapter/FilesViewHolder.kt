@@ -323,18 +323,29 @@ sealed class FilesViewHolder(
 
                 val displayThumb = item.posterUrl ?: item.thumbnailLarge ?: item.thumbnailLink
                 val ext = item.name.substringAfterLast('.', "").uppercase()
+
+                tvGridCloudPill.apply {
+                    isVisible = item.isSeedboxCatalogItem
+                    text = root.context.getString(R.string.badge_seedbox_download)
+                }
+
+                progressGridDownload.apply {
+                    isGone = true
+                }
+
                 tvGridTypeBadge.apply {
                     val badgeText = when {
-                        item.isSeedboxCatalogItem -> root.context.getString(R.string.badge_seedbox_download)
+                        item.isSeedboxCatalogItem -> null
                         isFolder -> null
                         item.source == zechs.drive.stream.data.model.MediaSource.LOCAL -> "LOCAL"
                         ext.isNotEmpty() && ext.length in 2..4 -> ext
                         item.isSubtitleFile -> "LEGENDA"
                         else -> null
                     }
-                    val showBadge = item.isSeedboxCatalogItem ||
+                    val showBadge = !item.isSeedboxCatalogItem && (
                         item.source == zechs.drive.stream.data.model.MediaSource.LOCAL ||
                         (resTag == null && codecTag == null)
+                    )
                     isVisible = badgeText != null && showBadge
                     text = badgeText.orEmpty()
                 }

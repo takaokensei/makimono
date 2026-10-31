@@ -605,7 +605,7 @@
     <string name="seedbox_daemon_token_title">Token do Daemon (Colab)</string>
     <string name="seedbox_prompt_message">Digite o nome do anime ou cole um link magnético:</string>
     <string name="seedbox_queue_status_title">Status da Seedbox</string>
-    <string name="badge_seedbox_download">BAIXAR</string>
+    <string name="badge_seedbox_download">NUVEM</string>
     <string name="seedbox_catalog_available_subtitle">Disponível para download • Clique para baixar</string>
     <string name="seedbox_confirm_download_title">Baixar %1$s?</string>
     <string name="seedbox_confirm_download_message">Este anime ainda não está no seu Google Drive.\n\nDeseja iniciar o download agora? O Episódio 1 será baixado primeiro em alta prioridade para você começar a assistir em poucos minutos!</string>
@@ -617,4 +617,18 @@
     <string name="seedbox_fast_ready_toast">🎉 Episódio 1 de %1$s pronto no Drive! Abrindo...</string>
     <string name="seedbox_fast_downloading_status">⬇️ Baixando Episódio 1 de %1$s (%2$d%%)...</string>
     <string name="seedbox_fast_uploading_status">☁️ Enviando Episódio 1 de %1$s para o Google Drive...</string>
+    <string name="seedbox_modal_eyebrow">MAKIMONO CLOUD • STREAMING SOB DEMANDA</string>
+    <string name="seedbox_fast_start_explanation">Este anime ainda não está na sua biblioteca do Google Drive. Inicie pelo Episódio 1 em alta prioridade para começar a assistir em minutos, enquanto o restante baixa em segundo plano.</string>
+    <string name="seedbox_btn_watch_ep1_now">▶  Assistir Episódio 1 Agora</string>
+    <string name="seedbox_btn_download_full_season">Baixar Temporada Completa</string>
+    <string name="seedbox_btn_minimize">Minimizar para 2º Plano</string>
+    <string name="seedbox_btn_play_now">▶  Reproduzir Ep. 1 Agora</string>
+    <string name="seedbox_btn_play_now_countdown">▶  Reproduzindo em %1$ds</string>
+    <string name="seedbox_hud_downloading">Baixando • %1$s</string>
+    <string name="seedbox_hud_uploading">Sincronizando no Drive...</string>
+    <string name="seedbox_hud_ready">Pronto para assistir! Clique para reproduzir</string>
+    <string name="seedbox_stage_searching">Etapa 1/3: Localizando melhor release 1080p PT-BR...</string>
+    <string name="seedbox_stage_downloading">Etapa 2/3: Baixando via Seedbox de alta velocidade...</string>
+    <string name="seedbox_stage_syncing">Etapa 3/3: Sincronizando Episódio 1 no seu Google Drive...</string>
+    <string name="seedbox_stage_ready">Pronto! Iniciando reprodução...</string>
 </resources>

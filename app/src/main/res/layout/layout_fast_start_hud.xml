@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/cardFastStartHud"
+    android:layout_width="320dp"
+    android:layout_height="wrap_content"
+    android:layout_gravity="bottom|end"
+    android:layout_marginEnd="@dimen/tv_overscan_margin"
+    android:layout_marginBottom="28dp"
+    android:clickable="true"
+    android:elevation="18dp"
+    android:focusable="true"
+    android:foreground="@drawable/bg_fast_start_hud"
+    android:translationZ="18dp"
+    android:visibility="gone"
+    app:cardBackgroundColor="@color/obsidian_bg_surface"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/obsidian_border_glass"
+    app:strokeWidth="1dp"
+    tools:visibility="visible">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingTop="10dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="10dp">
+
+            <!-- Mini Poster Thumbnail -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="34dp"
+                android:layout_height="50dp"
+                app:cardBackgroundColor="@color/obsidian_bg_base"
+                app:cardCornerRadius="6dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/obsidian_border_glass"
+                app:strokeWidth="1dp">
+
+                <ImageView
+                    android:id="@+id/ivHudPoster"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@null"
+                    android:scaleType="centerCrop"
+                    tools:src="@drawable/kodi_primary_bg" />
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Title & Status Column -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvHudTitle"
+                    style="@style/TextAppearance.Makimono.TV.Callout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/inter"
+                    android:maxLines="1"
+                    android:singleLine="true"
+                    android:textColor="@color/obsidian_text_primary"
+                    android:textStyle="bold"
+                    tools:text="Bleach • Ep. 1" />
+
+                <TextView
+                    android:id="@+id/tvHudSubtitle"
+                    style="@style/TextAppearance.Makimono.TV.Badge"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/inter"
+                    android:fontFeatureSettings="tnum"
+                    android:maxLines="1"
+                    android:singleLine="true"
+                    android:textColor="@color/obsidian_text_secondary"
+                    tools:text="Baixando • 28.4 MB/s" />
+
+            </LinearLayout>
+
+            <!-- Percent Text / Ready Icon -->
+            <TextView
+                android:id="@+id/tvHudPercent"
+                style="@style/TextAppearance.Makimono.TV.Headline"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:fontFamily="@font/inter"
+                android:fontFeatureSettings="tnum"
+                android:textColor="@color/obsidian_accent_cyan"
+                android:textStyle="bold"
+                tools:text="48%" />
+
+            <ImageView
+                android:id="@+id/ivHudReadyIcon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="8dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_play_24"
+                android:visibility="gone"
+                app:tint="@color/obsidian_success" />
+
+        </LinearLayout>
+
+        <!-- Fine 3dp Cyan Progress Bar at the bottom of the card -->
+        <ProgressBar
+            android:id="@+id/progressHudLive"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="3dp"
+            android:progressDrawable="@drawable/bg_fast_start_progress"
+            tools:progress="48" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

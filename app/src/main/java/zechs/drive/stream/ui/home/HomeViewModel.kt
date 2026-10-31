@@ -106,6 +106,35 @@ class HomeViewModel @Inject constructor(
     private val _seedboxFastStartEvent = MutableSharedFlow<SeedboxFastStartEvent>(extraBufferCapacity = 1)
     val seedboxFastStartEvent: SharedFlow<SeedboxFastStartEvent> = _seedboxFastStartEvent.asSharedFlow()
 
+    enum class FastStartPhase {
+        INITIAL,
+        SEARCHING,
+        DOWNLOADING,
+        SYNCING_DRIVE,
+        READY,
+        FAILED
+    }
+
+    data class FastStartSession(
+        val jobId: String? = null,
+        val animeTitle: String,
+        val posterUrl: String? = null,
+        val totalEpisodes: String? = null,
+        val ep1Only: Boolean = true,
+        val phase: FastStartPhase = FastStartPhase.INITIAL,
+        val progressPct: Int = 0,
+        val speed: String? = null,
+        val statusDetail: String? = null,
+        val stageDescription: String? = null,
+        val isMinimized: Boolean = false,
+        val readyFolderId: String? = null,
+        val readyVideoFile: DriveFile? = null,
+        val errorMessage: String? = null
+    )
+
+    private val _fastStartSession = MutableStateFlow<FastStartSession?>(null)
+    val fastStartSession: StateFlow<FastStartSession?> = _fastStartSession.asStateFlow()
+
     private var searchJob: Job? = null
 
     val watchQueue: StateFlow<List<WatchQueueItem>> =
@@ -1538,11 +1567,70 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun requestFastStartAnimeDownload(animeTitle: String, ep1First: Boolean) {
+    fun openFastStartDialog(file: DriveFile) {
+        val cleanTitle = AnimePosterResolver.cleanAnimeTitle(file.name).trim()
+        val epRegex = Regex("""(\d+)\s*(?:eps?|episodes?|cap[íi]tulos?|epis[óo]dios?)""", RegexOption.IGNORE_CASE)
+        val epMatch = epRegex.find(file.name)
+        val epTag = epMatch?.let { "${it.groupValues[1]} EP" }
+
+        _fastStartSession.value = FastStartSession(
+            animeTitle = cleanTitle,
+            posterUrl = file.posterUrl ?: file.thumbnailLarge ?: file.thumbnailLink,
+            totalEpisodes = epTag,
+            phase = FastStartPhase.INITIAL,
+            isMinimized = false
+        )
+    }
+
+    fun minimizeFastStartSession() {
+        _fastStartSession.value = _fastStartSession.value?.copy(isMinimized = true)
+    }
+
+    fun restoreFastStartSession() {
+        _fastStartSession.value = _fastStartSession.value?.copy(isMinimized = false)
+    }
+
+    fun dismissFastStartSession() {
+        _fastStartSession.value = null
+    }
+
+    fun startFastStartDownload(animeTitle: String, ep1First: Boolean, posterUrl: String? = null) {
+        requestFastStartAnimeDownload(animeTitle, ep1First, posterUrl)
+    }
+
+    fun requestFastStartAnimeDownload(animeTitle: String, ep1First: Boolean, posterUrl: String? = null) {
         val cleanTitle = AnimePosterResolver.cleanAnimeTitle(animeTitle).trim()
+        val effectivePoster = posterUrl ?: _fastStartSession.value?.posterUrl ?: _filteredAnimes.value.firstOrNull {
+            it.name.contains(cleanTitle, ignoreCase = true)
+        }?.posterUrl
+
+        _fastStartSession.value = _fastStartSession.value?.copy(
+            animeTitle = cleanTitle,
+            posterUrl = effectivePoster,
+            ep1Only = ep1First,
+            phase = FastStartPhase.SEARCHING,
+            progressPct = 4,
+            statusDetail = "Iniciando...",
+            isMinimized = false
+        ) ?: FastStartSession(
+            animeTitle = cleanTitle,
+            posterUrl = effectivePoster,
+            ep1Only = ep1First,
+            phase = FastStartPhase.SEARCHING,
+            progressPct = 4,
+            statusDetail = "Iniciando...",
+            isMinimized = false
+        )
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val repo = seedboxRepository?.get() ?: return@launch
+                val repo = seedboxRepository?.get() ?: run {
+                    _fastStartSession.value = _fastStartSession.value?.copy(
+                        phase = FastStartPhase.FAILED,
+                        errorMessage = "SeedboxRepository indisponível"
+                    )
+                    return@launch
+                }
                 _seedboxFastStartEvent.emit(SeedboxFastStartEvent.Enqueued(cleanTitle, ep1First))
 
                 val filter = if (ep1First) "1" else "all"
@@ -1550,11 +1638,16 @@ class HomeViewModel @Inject constructor(
 
                 if (res1.isFailure) {
                     val msg = res1.exceptionOrNull()?.message ?: "Falha ao agendar download"
+                    _fastStartSession.value = _fastStartSession.value?.copy(
+                        phase = FastStartPhase.FAILED,
+                        errorMessage = msg
+                    )
                     _seedboxFastStartEvent.emit(SeedboxFastStartEvent.Failed(cleanTitle, msg))
                     return@launch
                 }
 
                 val jobId1 = res1.getOrThrow()
+                _fastStartSession.value = _fastStartSession.value?.copy(jobId = jobId1)
 
                 if (ep1First) {
                     launch {
@@ -1565,18 +1658,33 @@ class HomeViewModel @Inject constructor(
                 var folderId: String? = null
                 var lastStatus = ""
                 var attempts = 0
-                while (isActive && attempts < 150) {
-                    delay(6000L)
+                while (isActive && attempts < 300) {
+                    delay(2000L)
                     attempts++
                     val jobsRes = repo.getJobs()
                     val job = jobsRes.getOrNull()?.firstOrNull { it.jobId == jobId1 }
                     if (job != null) {
+                        val newPhase = when {
+                            job.status.equals("COMPLETED", ignoreCase = true) -> FastStartPhase.SYNCING_DRIVE
+                            job.status.equals("UPLOADING", ignoreCase = true) || job.progressPct >= 96 -> FastStartPhase.SYNCING_DRIVE
+                            job.status.equals("SEARCHING", ignoreCase = true) -> FastStartPhase.SEARCHING
+                            else -> FastStartPhase.DOWNLOADING
+                        }
+
+                        _fastStartSession.value = _fastStartSession.value?.copy(
+                            phase = newPhase,
+                            progressPct = job.progressPct,
+                            speed = job.transferSpeed,
+                            statusDetail = job.statusDetail
+                        )
+
                         if (job.status != lastStatus || job.progressPct > 0) {
                             lastStatus = job.status
                             _seedboxFastStartEvent.emit(
                                 SeedboxFastStartEvent.Progress(cleanTitle, job.status, job.progressPct)
                             )
                         }
+
                         if (job.status.equals("COMPLETED", ignoreCase = true)) {
                             folderId = job.driveFolderId
                             break
@@ -1584,23 +1692,78 @@ class HomeViewModel @Inject constructor(
                             job.status.equals("CANCELLED", ignoreCase = true)
                         ) {
                             val detail = job.statusDetail ?: "Download falhou"
+                            _fastStartSession.value = _fastStartSession.value?.copy(
+                                phase = FastStartPhase.FAILED,
+                                errorMessage = detail
+                            )
                             _seedboxFastStartEvent.emit(SeedboxFastStartEvent.Failed(cleanTitle, detail))
                             return@launch
                         }
                     }
                 }
 
-                if (folderId != null) {
-                    val posterUrl = _filteredAnimes.value.firstOrNull {
-                        it.name.contains(cleanTitle, ignoreCase = true)
-                    }?.posterUrl
+                _fastStartSession.value = _fastStartSession.value?.copy(
+                    phase = FastStartPhase.SYNCING_DRIVE,
+                    progressPct = 98,
+                    statusDetail = "Sincronizando biblioteca..."
+                )
+
+                var readyVideo: DriveFile? = null
+
+                if (folderId.isNullOrBlank()) {
+                    val driveRepo = driveRepository.get()
+                    for (retry in 1..6) {
+                        val sanitized = cleanTitle.replace("'", "\\'")
+                        val q = "mimeType = 'application/vnd.google-apps.folder' and trashed = false and name contains '$sanitized'"
+                        val searchRes = driveRepo.getFiles(query = q, pageToken = null, pageSize = 10)
+                        if (searchRes is Resource.Success && !searchRes.data?.files.isNullOrEmpty()) {
+                            folderId = searchRes.data?.files?.firstOrNull()?.id
+                            if (!folderId.isNullOrBlank()) break
+                        }
+                        delay(2500L)
+                    }
+                }
+
+                if (!folderId.isNullOrBlank()) {
+                    val driveRepo = driveRepository.get()
+                    val filesQ = "'$folderId' in parents and trashed = false and mimeType contains 'video/'"
+                    val videosRes = driveRepo.getFiles(query = filesQ, pageToken = null, pageSize = 50)
+                    if (videosRes is Resource.Success) {
+                        val videoList = videosRes.data?.files?.map { it.toDriveFile() }.orEmpty()
+                        readyVideo = videoList.firstOrNull {
+                            val epNum = zechs.drive.stream.domain.library.EpisodeParser.parse(it.name).episode
+                            epNum != null && epNum.toInt() == 1
+                        } ?: videoList.firstOrNull()
+                    }
+
+                    loadAnimeLibrary(forceRefresh = true)
+
+                    _fastStartSession.value = _fastStartSession.value?.copy(
+                        phase = FastStartPhase.READY,
+                        progressPct = 100,
+                        readyFolderId = folderId,
+                        readyVideoFile = readyVideo,
+                        statusDetail = "Episódio 1 pronto!"
+                    )
+
                     _seedboxFastStartEvent.emit(
-                        SeedboxFastStartEvent.ReadyToWatch(folderId, cleanTitle, posterUrl)
+                        SeedboxFastStartEvent.ReadyToWatch(folderId, cleanTitle, effectivePoster)
+                    )
+                } else {
+                    loadAnimeLibrary(forceRefresh = true)
+                    _fastStartSession.value = _fastStartSession.value?.copy(
+                        phase = FastStartPhase.READY,
+                        progressPct = 100,
+                        statusDetail = "Download concluído!"
                     )
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 AppLog.e(TAG, "Error in requestFastStartAnimeDownload", e)
+                _fastStartSession.value = _fastStartSession.value?.copy(
+                    phase = FastStartPhase.FAILED,
+                    errorMessage = e.message ?: "Erro desconhecido"
+                )
                 _seedboxFastStartEvent.emit(
                     SeedboxFastStartEvent.Failed(cleanTitle, e.message ?: "Erro desconhecido")
                 )

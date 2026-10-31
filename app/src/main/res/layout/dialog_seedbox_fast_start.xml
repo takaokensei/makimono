@@ -1,0 +1,460 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp">
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardFastStartRoot"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        app:cardBackgroundColor="@color/obsidian_bg_surface"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="24dp"
+        app:strokeColor="@color/obsidian_border_glass"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <!-- Eyebrow & Close Header -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <View
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/cyan_dot_drawable" />
+
+                <TextView
+                    android:id="@+id/tvFastStartEyebrow"
+                    style="@style/TextAppearance.Makimono.TV.Badge"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/inter"
+                    android:letterSpacing="0.12"
+                    android:maxLines="1"
+                    android:singleLine="true"
+                    android:text="@string/seedbox_modal_eyebrow"
+                    android:textColor="@color/obsidian_accent_cyan"
+                    android:textStyle="bold" />
+
+                <ImageView
+                    android:id="@+id/btnCloseFastStart"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:contentDescription="@string/content_description_close"
+                    android:focusable="true"
+                    android:padding="6dp"
+                    android:src="@drawable/ic_close_24"
+                    app:tint="@color/obsidian_text_secondary" />
+
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="16dp"
+                android:background="@color/obsidian_border_glass" />
+
+            <!-- Main Content Container: Poster on Left, Details & Cockpit on Right -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <!-- Left: High-Res 2:3 Poster with Rounded Corners -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="140dp"
+                    android:layout_height="210dp"
+                    app:cardBackgroundColor="@color/obsidian_bg_base"
+                    app:cardCornerRadius="10dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/obsidian_border_glass"
+                    app:strokeWidth="1dp">
+
+                    <ImageView
+                        android:id="@+id/ivFastStartPoster"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:contentDescription="@null"
+                        android:scaleType="centerCrop"
+                        tools:src="@drawable/kodi_primary_bg" />
+
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Right: Information & Action Cockpit -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="20dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <!-- Title -->
+                    <TextView
+                        android:id="@+id/tvFastStartTitle"
+                        style="@style/TextAppearance.Makimono.TV.Title2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:fontFamily="@font/inter"
+                        android:letterSpacing="-0.01"
+                        android:maxLines="2"
+                        android:textColor="@color/obsidian_text_primary"
+                        android:textStyle="bold"
+                        tools:text="Bleach: Thousand-Year Blood War" />
+
+                    <!-- Badges Row -->
+                    <LinearLayout
+                        android:id="@+id/layoutFastStartBadges"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/tvFastStartEpCount"
+                            style="@style/TextAppearance.Makimono.TV.Badge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/glass_pill_bg"
+                            android:ellipsize="end"
+                            android:fontFamily="@font/inter"
+                            android:fontFeatureSettings="tnum"
+                            android:letterSpacing="0.06"
+                            android:maxLines="1"
+                            android:paddingStart="7dp"
+                            android:paddingTop="2dp"
+                            android:paddingEnd="7dp"
+                            android:paddingBottom="2dp"
+                            android:singleLine="true"
+                            android:textColor="@color/obsidian_text_primary"
+                            android:textStyle="bold"
+                            tools:text="366 EP" />
+
+                        <TextView
+                            style="@style/TextAppearance.Makimono.TV.Badge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:background="@drawable/glass_pill_bg"
+                            android:ellipsize="end"
+                            android:fontFamily="@font/inter"
+                            android:letterSpacing="0.06"
+                            android:maxLines="1"
+                            android:paddingStart="7dp"
+                            android:paddingTop="2dp"
+                            android:paddingEnd="7dp"
+                            android:paddingBottom="2dp"
+                            android:singleLine="true"
+                            android:text="1080P"
+                            android:textColor="@color/obsidian_text_secondary"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            style="@style/TextAppearance.Makimono.TV.Badge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:background="@drawable/glass_pill_bg"
+                            android:ellipsize="end"
+                            android:fontFamily="@font/inter"
+                            android:letterSpacing="0.06"
+                            android:maxLines="1"
+                            android:paddingStart="7dp"
+                            android:paddingTop="2dp"
+                            android:paddingEnd="7dp"
+                            android:paddingBottom="2dp"
+                            android:singleLine="true"
+                            android:text="PT-BR"
+                            android:textColor="@color/obsidian_accent_cyan"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
+
+                    <!-- Initial Selection Cockpit (State: INITIAL) -->
+                    <LinearLayout
+                        android:id="@+id/layoutFastStartInitialActions"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:orientation="vertical"
+                        android:visibility="visible">
+
+                        <TextView
+                            style="@style/TextAppearance.Makimono.TV.Body"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:lineSpacingMultiplier="1.15"
+                            android:maxLines="2"
+                            android:text="@string/seedbox_fast_start_explanation"
+                            android:textColor="@color/obsidian_text_secondary" />
+
+                        <!-- Primary Hero Button: Watch Ep 1 Fast -->
+                        <LinearLayout
+                            android:id="@+id/btnFastStartEp1"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:layout_marginTop="14dp"
+                            android:background="@drawable/btn_hero_play_bg"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:contentDescription="@null"
+                                android:duplicateParentState="true"
+                                android:src="@drawable/ic_play_24"
+                                app:tint="@color/btn_hero_play_foreground" />
+
+                            <TextView
+                                style="@style/TextAppearance.Makimono.TV.Headline"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="10dp"
+                                android:duplicateParentState="true"
+                                android:fontFamily="@font/inter"
+                                android:letterSpacing="0.04"
+                                android:text="@string/seedbox_btn_watch_ep1_now"
+                                android:textColor="@color/btn_hero_play_foreground"
+                                android:textStyle="bold" />
+
+                        </LinearLayout>
+
+                        <!-- Secondary Button: Download Full Season -->
+                        <LinearLayout
+                            android:id="@+id/btnFastStartFull"
+                            android:layout_width="match_parent"
+                            android:layout_height="44dp"
+                            android:layout_marginTop="10dp"
+                            android:background="@drawable/btn_secondary_action_bg"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp">
+
+                            <ImageView
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
+                                android:contentDescription="@null"
+                                android:duplicateParentState="true"
+                                android:src="@drawable/ic_download_24"
+                                app:tint="@color/btn_secondary_action_foreground" />
+
+                            <TextView
+                                style="@style/TextAppearance.Makimono.TV.Callout"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="10dp"
+                                android:duplicateParentState="true"
+                                android:fontFamily="@font/inter"
+                                android:text="@string/seedbox_btn_download_full_season"
+                                android:textColor="@color/btn_secondary_action_foreground"
+                                android:textStyle="bold" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                    <!-- Live Progress Cockpit (State: DOWNLOADING / SYNCING / READY) -->
+                    <LinearLayout
+                        android:id="@+id/layoutFastStartLiveCockpit"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:orientation="vertical"
+                        android:visibility="gone"
+                        tools:visibility="visible">
+
+                        <!-- Percentage & Speed Row -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="bottom"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/tvFastStartPercent"
+                                style="@style/TextAppearance.Makimono.TV.Display"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/inter"
+                                android:fontFeatureSettings="tnum"
+                                android:letterSpacing="-0.02"
+                                android:textColor="@color/obsidian_accent_cyan"
+                                android:textStyle="bold"
+                                tools:text="48%" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="12dp"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/tvFastStartStatusTitle"
+                                    style="@style/TextAppearance.Makimono.TV.Callout"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:ellipsize="end"
+                                    android:fontFamily="@font/inter"
+                                    android:maxLines="1"
+                                    android:singleLine="true"
+                                    android:textColor="@color/obsidian_text_primary"
+                                    android:textStyle="bold"
+                                    tools:text="Baixando Episódio 1..." />
+
+                                <TextView
+                                    android:id="@+id/tvFastStartSpeedEta"
+                                    style="@style/TextAppearance.Makimono.TV.Badge"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:ellipsize="end"
+                                    android:fontFamily="@font/inter"
+                                    android:fontFeatureSettings="tnum"
+                                    android:maxLines="1"
+                                    android:singleLine="true"
+                                    android:textColor="@color/obsidian_text_secondary"
+                                    tools:text="28.4 MB/s • ETA 00:22 • 24 peers" />
+
+                            </LinearLayout>
+
+                        </LinearLayout>
+
+                        <!-- Fluid Cyan Progress Bar -->
+                        <ProgressBar
+                            android:id="@+id/progressFastStartLive"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="6dp"
+                            android:layout_marginTop="10dp"
+                            android:progressDrawable="@drawable/bg_fast_start_progress"
+                            tools:progress="48" />
+
+                        <!-- Status Stepper Description -->
+                        <TextView
+                            android:id="@+id/tvFastStartStageDetail"
+                            style="@style/TextAppearance.Makimono.TV.Caption"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:ellipsize="end"
+                            android:fontFamily="@font/inter"
+                            android:maxLines="1"
+                            android:singleLine="true"
+                            android:textColor="@color/obsidian_text_tertiary"
+                            tools:text="Etapa 2/3: Baixando via Seedbox de alta velocidade" />
+
+                        <!-- Action Controls during Download / When Ready -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <!-- Minimize to Background Floating HUD -->
+                            <LinearLayout
+                                android:id="@+id/btnFastStartMinimize"
+                                android:layout_width="0dp"
+                                android:layout_height="44dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/btn_secondary_action_bg"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:gravity="center"
+                                android:orientation="horizontal"
+                                android:paddingStart="12dp"
+                                android:paddingEnd="12dp">
+
+                                <TextView
+                                    style="@style/TextAppearance.Makimono.TV.Callout"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:duplicateParentState="true"
+                                    android:fontFamily="@font/inter"
+                                    android:text="@string/seedbox_btn_minimize"
+                                    android:textColor="@color/btn_secondary_action_foreground"
+                                    android:textStyle="bold" />
+
+                            </LinearLayout>
+
+                            <!-- Play Now Button (Glows when Ready) -->
+                            <LinearLayout
+                                android:id="@+id/btnFastStartPlayNow"
+                                android:layout_width="0dp"
+                                android:layout_height="44dp"
+                                android:layout_marginStart="10dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/btn_hero_play_bg"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:gravity="center"
+                                android:orientation="horizontal"
+                                android:paddingStart="12dp"
+                                android:paddingEnd="12dp"
+                                android:visibility="gone"
+                                tools:visibility="visible">
+
+                                <ImageView
+                                    android:layout_width="18dp"
+                                    android:layout_height="18dp"
+                                    android:contentDescription="@null"
+                                    android:duplicateParentState="true"
+                                    android:src="@drawable/ic_play_24"
+                                    app:tint="@color/btn_hero_play_foreground" />
+
+                                <TextView
+                                    android:id="@+id/tvFastStartPlayNowLabel"
+                                    style="@style/TextAppearance.Makimono.TV.Callout"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="6dp"
+                                    android:duplicateParentState="true"
+                                    android:fontFamily="@font/inter"
+                                    android:text="@string/seedbox_btn_play_now"
+                                    android:textColor="@color/btn_hero_play_foreground"
+                                    android:textStyle="bold" />
+
+                            </LinearLayout>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+</FrameLayout>

@@ -30,6 +30,7 @@ import zechs.drive.stream.ui.common.StateView
 import zechs.drive.stream.ui.files.adapter.FilesAdapter
 import zechs.drive.stream.ui.files.adapter.FilesDataModel
 import zechs.drive.stream.ui.home.controller.CatalogPresentationController
+import zechs.drive.stream.ui.home.controller.SeedboxFastStartController
 import zechs.drive.stream.ui.home.controller.FocusCoordinator
 import zechs.drive.stream.ui.home.controller.HeroController
 import zechs.drive.stream.ui.home.controller.HomeActionHandler
@@ -83,6 +84,7 @@ class HomeFragment : BaseFragment() {
     private lateinit var actionHandler: HomeActionHandler
     private lateinit var shelvesController: ShelvesController
     private lateinit var catalogController: CatalogPresentationController
+    private lateinit var fastStartController: SeedboxFastStartController
 
     private val voiceSearchLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
@@ -190,6 +192,13 @@ class HomeFragment : BaseFragment() {
             voiceSearchLauncher = voiceSearchLauncher,
             reduceMotionProvider = { reduceMotionEnabled },
             onGridModeChanged = { setupAnimeGrid() }
+        )
+        fastStartController = SeedboxFastStartController(
+            fragment = this,
+            hudView = binding.layoutFastStartHud?.root,
+            viewModel = viewModel,
+            mainViewModel = mainViewModel,
+            navController = findNavController()
         )
 
         refreshMotionPreference()
@@ -511,57 +520,7 @@ class HomeFragment : BaseFragment() {
                     }
                 }
 
-                launch {
-                    viewModel.seedboxFastStartEvent.collect { event ->
-                        when (event) {
-                            is HomeViewModel.SeedboxFastStartEvent.Enqueued -> {
-                                val msgRes = if (event.ep1Only) {
-                                    R.string.seedbox_download_enqueued_ep1
-                                } else {
-                                    R.string.seedbox_download_enqueued_full
-                                }
-                                Snackbar.make(
-                                    binding.root,
-                                    getString(msgRes, event.animeTitle),
-                                    Snackbar.LENGTH_LONG
-                                ).show()
-                            }
-                            is HomeViewModel.SeedboxFastStartEvent.Progress -> {
-                                val msg = when (event.status.uppercase()) {
-                                    "DOWNLOADING" -> getString(
-                                        R.string.seedbox_fast_downloading_status,
-                                        event.animeTitle,
-                                        event.progressPct
-                                    )
-                                    "UPLOADING" -> getString(
-                                        R.string.seedbox_fast_uploading_status,
-                                        event.animeTitle
-                                    )
-                                    else -> null
-                                }
-                                if (msg != null) {
-                                    Snackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
-                                }
-                            }
-                            is HomeViewModel.SeedboxFastStartEvent.ReadyToWatch -> {
-                                Snackbar.make(
-                                    binding.root,
-                                    getString(R.string.seedbox_fast_ready_toast, event.animeTitle),
-                                    Snackbar.LENGTH_LONG
-                                ).show()
-                                val action = HomeFragmentDirections.actionHomeFragmentToSeriesDetailFragment(
-                                    name = event.animeTitle,
-                                    folderId = event.folderId,
-                                    posterUrl = event.posterUrl
-                                )
-                                findNavController().navigateSafe(action)
-                            }
-                            is HomeViewModel.SeedboxFastStartEvent.Failed -> {
-                                Snackbar.make(binding.root, event.message, Snackbar.LENGTH_LONG).show()
-                            }
-                        }
-                    }
-                }
+                // Fast-Start telemetry and cockpit are managed by SeedboxFastStartController
 
                 launch {
                     viewModel.uiState.collect { state ->
@@ -672,6 +631,9 @@ class HomeFragment : BaseFragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        if (::fastStartController.isInitialized) {
+            fastStartController.onDestroy()
+        }
         exitDialog?.dismiss()
         exitDialog = null
         lastFocusedAnimeView = null

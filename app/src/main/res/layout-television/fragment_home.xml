@@ -430,6 +430,9 @@
                     </LinearLayout>
                 </FrameLayout>
             </LinearLayout>
+            <include
+                android:id="@+id/layoutFastStartHud"
+                layout="@layout/layout_fast_start_hud" />
         </FrameLayout>
     </FrameLayout>
 </FrameLayout>

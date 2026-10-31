@@ -109,9 +109,10 @@ class OracleAntiIdleGuard:
 
 class MakimonoLiveJobBoard(core.JobBoard):
     """
-    Subclasse do JobBoard original da Célula 2.
-    Além de gerenciar o progresso do lote, envia telemetria real (%, MB/s e ETA)
-    diretamente para o Cloudflare Worker a cada 3 segundos para a TV exibir.
+    Subclasse do JobBoard reativo da Célula 4.
+    Além de gerenciar o progresso do lote, envia telemetria em tempo real
+    (%, MB/s, ETA, peers e status textual) diretamente para o Cloudflare Worker
+    a cada 2.0 segundos para a Android TV e aplicativo mobile exibirem suavemente.
     """
     def __init__(self, job_id: str, anime_folder_id: str = None):
         super().__init__()
@@ -119,27 +120,50 @@ class MakimonoLiveJobBoard(core.JobBoard):
         self.anime_folder_id = anime_folder_id
         self._last_report_ts = 0.0
 
-    def update(self, key: str, telemetry: core.Telemetry) -> None:
-        super().update(key, telemetry)
+    def handle_event(self, slot: int, kind: str, payload) -> None:
+        super().handle_event(slot, kind, payload)
         now = time.time()
-        if now - self._last_report_ts >= 3.0:
+        force_report = (kind == "done")
+        if force_report or (now - self._last_report_ts >= 2.0):
             self._last_report_ts = now
-            self._send_telemetry_report()
+            threading.Thread(target=self._send_telemetry_report, daemon=True).start()
 
     def _send_telemetry_report(self):
         try:
-            total_items = len(self._states)
-            if not total_items:
+            jobs = list(self._jobs.values())
+            if not jobs:
                 return
-            completed_items = sum(1 for s in self._states.values() if s.status == "done")
-            active_speeds = [s.last_telemetry.speed for s in self._states.values() if s.last_telemetry and s.status == "downloading"]
-            
-            # Calcula progresso aproximado
-            progress_pct = int(min(98, max(5, (completed_items / total_items) * 100)))
-            speed_str = active_speeds[0] if active_speeds else "Ativo"
-            detail = f"Baixando {completed_items}/{total_items} episódios • {speed_str}"
-            
-            _patch_job_status(self.job_id, "DOWNLOADING", progress_pct=progress_pct, speed=speed_str, folder_id=self.anime_folder_id, detail=detail)
+            total_pct = sum(j.percent for j in jobs) / len(jobs)
+            is_uploading = any(j.status_type == "uploading" for j in jobs)
+            if is_uploading:
+                pct = int(96 + min(3, (total_pct / 100.0) * 3))
+                status_str = "UPLOADING"
+            else:
+                pct = int(min(95, max(8, total_pct)))
+                status_str = "DOWNLOADING"
+
+            speeds = [j.speed for j in jobs if j.speed and j.speed != "--"]
+            etas = [j.eta for j in jobs if j.eta and j.eta != "--"]
+            peers_list = [j.peers for j in jobs if j.peers]
+            total_peers = sum(peers_list)
+
+            speed_str = speeds[0] if speeds else "Ativo"
+            eta_str = f" • ETA {etas[0]}" if etas else ""
+            peers_str = f" • {total_peers} peers" if total_peers > 0 else ""
+
+            if is_uploading:
+                detail = f"Sincronizando no Google Drive ({pct}%)..."
+            else:
+                detail = f"Baixando Ep. 1 ({pct}% • {speed_str}{eta_str}{peers_str})"
+
+            _patch_job_status(
+                self.job_id,
+                status_str,
+                progress_pct=pct,
+                speed=speed_str,
+                folder_id=self.anime_folder_id,
+                detail=detail
+            )
         except Exception:
             pass
 

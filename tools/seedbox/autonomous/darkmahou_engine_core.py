@@ -2346,6 +2346,19 @@ def _score_opcao_mix(opt: DownloadOption, qualidade_pref: str) -> float:
     elif seeds == "--":
         score += 15.0
 
+    tam_str = opt.metadata.get("tamanho")
+    if tam_str:
+        m = re.match(r"([\d.,]+)\s*([KMGT]?i?B)", str(tam_str).strip(), re.IGNORECASE)
+        if m:
+            try:
+                val = float(m.group(1).replace(",", "."))
+                unit = m.group(2).upper()
+                mult = {"B": 1, "KIB": 1024, "KB": 1000, "MIB": 1024**2, "MB": 1000**2, "GIB": 1024**3, "GB": 1000**3, "TIB": 1024**4, "TB": 1000**4}.get(unit, 1024**2)
+                if val * mult > 4.5 * (1024**3):
+                    score -= 300.0
+            except Exception:
+                pass
+
     return score
 
 def gerar_auto_mix_consolidado(
@@ -5340,6 +5353,12 @@ class DiskSpaceGate:
         valor = bytes_estimados or self.tamanho_padrao_bytes
         with self._lock:
             if not self._cabe_agora(valor):
+                if self._bytes_reservados == 0:
+                    livre = self.espaco_livre_bytes()
+                    if livre > self.margem_seguranca_bytes:
+                        disponivel = livre - self.margem_seguranca_bytes
+                        self._bytes_reservados += disponivel
+                        return disponivel
                 return None
             self._bytes_reservados += valor
             return valor
