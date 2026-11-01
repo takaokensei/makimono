@@ -757,7 +757,7 @@ class RailController(
             isFocusable = true
             contentDescription = context.getString(R.string.nav_history)
             layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, itemHeight).apply {
-                topMargin = (4 * density).toInt()
+                topMargin = (2 * density).toInt()
                 marginStart = (8 * density).toInt()
                 marginEnd = (8 * density).toInt()
             }
@@ -818,7 +818,7 @@ class RailController(
             isFocusable = true
             contentDescription = context.getString(R.string.downloads_title)
             layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, itemHeight).apply {
-                topMargin = (4 * density).toInt()
+                topMargin = (2 * density).toInt()
                 marginStart = (8 * density).toInt()
                 marginEnd = (8 * density).toInt()
             }
