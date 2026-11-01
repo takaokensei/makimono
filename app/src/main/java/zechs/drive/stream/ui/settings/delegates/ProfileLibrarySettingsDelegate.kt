@@ -43,6 +43,7 @@ class ProfileLibrarySettingsDelegate(
                 onSelected = { rootId, rootName ->
                     viewModel.onEvent(SettingsEvent.SetLibraryRoot(rootId, rootName))
                 },
+                focusAnchor = binding.settingLibraryRoot,
                 onDismiss = {
                     binding.settingLibraryRoot.post { binding.settingLibraryRoot.requestFocus() }
                 }

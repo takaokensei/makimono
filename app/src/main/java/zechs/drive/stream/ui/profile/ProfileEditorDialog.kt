@@ -1,5 +1,7 @@
 package zechs.drive.stream.ui.profile
 
+import zechs.drive.stream.domain.profile.ProfileSetupPolicy
+
 import android.app.Dialog
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -48,7 +50,8 @@ import java.util.UUID
 class ProfileEditorDialog(
     private val fragment: Fragment,
     private val manager: ProfileManager,
-    private val resolver: ProfileArtCatalog
+    private val resolver: ProfileArtCatalog,
+    private val setupSettings: zechs.drive.stream.utils.AppSettings? = null
 ) {
     fun show(profile: UserProfile?, required: Boolean = false, onSaved: (UserProfile) -> Unit = {}) {
         val context = fragment.requireContext()
@@ -504,6 +507,8 @@ class ProfileEditorDialog(
                             isAdmin = profile?.isAdmin ?: true,
                             isKids = profile?.isKids ?: false
                         )
+                    if (profile == null || required)
+                        setupSettings?.saveProfileSetupStep(targetProfile.id, ProfileSetupPolicy.AUDIO)
                     manager.saveProfile(targetProfile)
                     val saved = manager.getProfiles().first { it.id == targetProfile.id }
                     dialog.dismiss()

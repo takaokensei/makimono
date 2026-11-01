@@ -46,6 +46,38 @@ class AppSettings @Inject constructor(
 
     private fun currentProfileId(): String = profileManager.getActiveProfile().id
 
+    suspend fun fetchProfileSetupStep(profileId: String): Int =
+        zechs.drive.stream.domain.profile.ProfileSetupPolicy.normalize(
+            sessionStore.data.first()[androidx.datastore.preferences.core.intPreferencesKey("profile_${profileId}_setup_step")] ?: 0)
+
+    suspend fun saveProfileSetupStep(profileId: String, step: Int) {
+        sessionStore.edit { it[androidx.datastore.preferences.core.intPreferencesKey("profile_${profileId}_setup_step")] = step }
+    }
+
+    suspend fun fetchTrackPreference(profileId: String = currentProfileId()):
+        zechs.drive.stream.playback.session.TrackPreferencePolicy.TrackPreference {
+        val p = sessionStore.data.first()
+        return zechs.drive.stream.playback.session.TrackPreferencePolicy.TrackPreference(
+            p[stringPreferencesKey("profile_${profileId}_audio_language")],
+            p[stringPreferencesKey("profile_${profileId}_subtitle_language")],
+            p[androidx.datastore.preferences.core.booleanPreferencesKey("profile_${profileId}_subtitles_off")] ?: false)
+    }
+
+    suspend fun saveAudioLanguage(profileId: String, language: String?) {
+        sessionStore.edit { p ->
+            val key = stringPreferencesKey("profile_${profileId}_audio_language")
+            if (language == null) p.remove(key) else p[key] = language
+        }
+    }
+
+    suspend fun saveSubtitleLanguage(profileId: String, language: String?, disabled: Boolean) {
+        sessionStore.edit { p ->
+            val key = stringPreferencesKey("profile_${profileId}_subtitle_language")
+            if (language == null) p.remove(key) else p[key] = language
+            p[androidx.datastore.preferences.core.booleanPreferencesKey("profile_${profileId}_subtitles_off")] = disabled
+        }
+    }
+
     suspend fun saveTheme(theme: AppTheme, profileId: String = currentProfileId()) {
         val dataStoreKey = profileThemeKey(profileId)
         sessionStore.edit { settings ->
@@ -59,12 +91,12 @@ class AppSettings @Inject constructor(
             val profileKey = profileThemeKey(profileId)
             val preferences = sessionStore.data.first()
             val themeText = preferences[profileKey] ?: preferences[stringPreferencesKey(APP_THEME)]
-            val appTheme = themeText?.let(AppTheme::fromText) ?: AppTheme.CRUNCHYROLL
+            val appTheme = themeText?.let(AppTheme::fromText) ?: AppTheme.OBSIDIAN
             AppLog.d(TAG, "fetchTheme [profile=$profileId]: $appTheme")
             appTheme
         } catch (e: Exception) {
-            AppLog.e(TAG, "fetchTheme error, fallback to Crunchyroll", e)
-            AppTheme.CRUNCHYROLL
+            AppLog.e(TAG, "fetchTheme error, fallback to Obsidian", e)
+            AppTheme.OBSIDIAN
         }
     }
 

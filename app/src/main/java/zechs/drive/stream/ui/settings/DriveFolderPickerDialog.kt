@@ -35,6 +35,7 @@ class DriveFolderPickerDialog(
     private val initialSelectionName: String?,
     private val loadPage: suspend (parentId: String?, pageToken: String?) -> Resource<FilesResponse>,
     private val onSelected: (id: String?, name: String?) -> Unit,
+    private val focusAnchor: View? = null,
     private val onDismiss: () -> Unit = {}
 ) {
     private data class PathNode(val id: String?, val name: String)
@@ -48,6 +49,7 @@ class DriveFolderPickerDialog(
     private var dialog: Dialog? = null
 
     fun show() {
+        val focusGuard = focusAnchor?.let { zechs.drive.stream.ui.common.ModalFocusGuard(it) }
         compactStateViewForLandscape()
         binding.rvFolderPicker.layoutManager = LinearLayoutManager(context)
         binding.rvFolderPicker.adapter = folderAdapter
@@ -92,6 +94,7 @@ class DriveFolderPickerDialog(
                 }
                 picker.setOnDismissListener {
                     loadingJob?.cancel()
+                    focusGuard?.restore()
                     onDismiss()
                 }
                 picker.show()
@@ -278,6 +281,7 @@ class DriveFolderPickerDialog(
             holder.itemView.nextFocusDownId = if (position == items.lastIndex) {
                 if (hasMore) R.id.btnPickerLoadMore else R.id.btnPickerSelect
             } else View.NO_ID
+            holder.itemView.nextFocusRightId = R.id.btnPickerSelect
             holder.itemView.nextFocusUpId = if (position == 0) R.id.btnFolderParent else View.NO_ID
         }
         override fun getItemCount(): Int = items.size

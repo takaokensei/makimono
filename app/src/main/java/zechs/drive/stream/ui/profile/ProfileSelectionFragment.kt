@@ -1,5 +1,7 @@
 package zechs.drive.stream.ui.profile
 
+import zechs.drive.stream.domain.profile.ProfileSetupPolicy
+
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.LayoutInflater
@@ -255,6 +257,11 @@ class ProfileSelectionFragment : BaseFragment() {
                         }
                     }
                     val activeProfile = profileManager.getActiveProfile()
+                    if (!initialCreateShown && profiles.size == 1 &&
+                        appSettings.fetchProfileSetupStep(activeProfile.id) != ProfileSetupPolicy.COMPLETE) {
+                        initialCreateShown = true
+                        binding.root.post { if (_binding != null && isAdded) showProfileWelcomeScreen(activeProfile) }
+                    }
                     val motionPreference = try {
                         appSettings.fetchMotionPreference(activeProfile.id)
                     } catch (e: CancellationException) {
@@ -300,24 +307,44 @@ class ProfileSelectionFragment : BaseFragment() {
 
     private fun showAddProfileDialog(required: Boolean = false) {
         val firstProfile = profileManager.getProfiles().isEmpty()
-        ProfileEditorDialog(this, profileManager, posterResolver).show(null, required) { saved ->
+        ProfileEditorDialog(this, profileManager, posterResolver, appSettings).show(null, required) { saved ->
             if ((firstProfile || required) && isAdded && _binding != null) showProfileWelcomeScreen(saved)
         }
     }
 
     private fun showRequiredProfileSetup(profile: UserProfile) {
-        ProfileEditorDialog(this, profileManager, posterResolver).show(profile, required = true) { saved ->
+        ProfileEditorDialog(this, profileManager, posterResolver, appSettings).show(profile, required = true) { saved ->
             if (isAdded && _binding != null) showProfileWelcomeScreen(saved)
         }
     }
 
     private fun showEditProfileDialog(profile: UserProfile) {
-        ProfileEditorDialog(this, profileManager, posterResolver).show(profile)
+        ProfileEditorDialog(this, profileManager, posterResolver, appSettings).show(profile)
     }
 
+    private var setupDialog: android.app.Dialog? = null
+    private var setupCheckInFlight = false
     private var isTransitioningToHome = false
 
     private fun showProfileWelcomeScreen(profile: UserProfile) {
+        if (setupCheckInFlight || setupDialog?.isShowing == true || isTransitioningToHome) return
+        setupCheckInFlight = true
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val step = appSettings.fetchProfileSetupStep(profile.id)
+                if (!isAdded || _binding == null) return@launch
+                if (step != ProfileSetupPolicy.COMPLETE) {
+                    profileManager.setActiveProfile(profile.id)
+                    setupDialog = ProfileOnboardingDialog(this@ProfileSelectionFragment, profileManager,
+                        appSettings, driveRepository,
+                        onFinished = { enterProfileHome(profileManager.getActiveProfile()) },
+                        onDismiss = { setupDialog = null }).show(profile)
+                } else enterProfileHome(profile)
+            } finally { setupCheckInFlight = false }
+        }
+    }
+
+    private fun enterProfileHome(profile: UserProfile) {
         if (isTransitioningToHome) return
         isTransitioningToHome = true
 
@@ -346,7 +373,7 @@ class ProfileSelectionFragment : BaseFragment() {
 
         // 5. Welcome texts & fun loading phrase
         binding.tvWelcomeGreeting.text = getString(R.string.profile_welcome_greeting, profile.name)
-        binding.tvWelcomeSubtitle.text = getRandomLoadingPhrase()
+        binding.tvWelcomeSubtitle.setText(R.string.startup_preparing_library)
 
         val isTenFoot = zechs.drive.stream.utils.DeviceUi.isTenFootExperience(requireContext())
         val durationNormal = resources.getInteger(R.integer.motion_spec_normal).toLong()
@@ -378,7 +405,7 @@ class ProfileSelectionFragment : BaseFragment() {
 
         // 7. Crunchyroll-style Avatar-to-Sidebar Docking Choreography
         viewLifecycleOwner.lifecycleScope.launch {
-            delay(1100L)
+            delay(if (profilesAdapter.reduceMotion) 0L else durationNormal)
             if (!isAdded || _binding == null) return@launch
 
             if (isTenFoot) {
@@ -420,9 +447,9 @@ class ProfileSelectionFragment : BaseFragment() {
                     .setDuration(durationGentle)
                     .start()
 
-                delay(durationGentle + 50L)
+                delay(if (profilesAdapter.reduceMotion) 0L else durationGentle)
             } else {
-                delay(300L)
+                delay(if (profilesAdapter.reduceMotion) 0L else durationNormal)
             }
 
             if (!isAdded || _binding == null) return@launch
@@ -457,6 +484,8 @@ class ProfileSelectionFragment : BaseFragment() {
     }
 
     override fun onDestroyView() {
+        setupDialog?.dismiss()
+        setupDialog = null
         super.onDestroyView()
         bgDebounceJob?.cancel()
         bgDebounceJob = null
