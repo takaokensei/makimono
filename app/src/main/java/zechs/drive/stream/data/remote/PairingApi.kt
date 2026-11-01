@@ -56,4 +56,15 @@ interface PairingApi {
 
     @GET("v1/seedbox/jobs")
     suspend fun getSeedboxJobs(@Header("Authorization") authorization: String): SeedboxJobsListResponse
+
+    @DELETE("v1/seedbox/jobs/{jobId}")
+    suspend fun cancelSeedboxJob(
+        @Header("Authorization") authorization: String,
+        @Path("jobId") jobId: String
+    ): Response<Unit>
+
+    @DELETE("v1/seedbox/jobs")
+    suspend fun cancelAllSeedboxJobs(
+        @Header("Authorization") authorization: String
+    ): Response<Unit>
 }

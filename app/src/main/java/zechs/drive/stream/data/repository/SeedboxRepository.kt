@@ -81,4 +81,34 @@ class SeedboxRepository @Inject constructor(
             Result.failure(e)
         }
     }
+
+    suspend fun cancelJob(jobId: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val auth = requireAuthHeader()
+            val resp = pairingApi.get().cancelSeedboxJob(auth, jobId)
+            if (resp.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("HTTP ${resp.code()}: ${resp.message()}"))
+            }
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed cancelling Seedbox job $jobId", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun cancelAllJobs(): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val auth = requireAuthHeader()
+            val resp = pairingApi.get().cancelAllSeedboxJobs(auth)
+            if (resp.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("HTTP ${resp.code()}: ${resp.message()}"))
+            }
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed cancelling all Seedbox jobs", e)
+            Result.failure(e)
+        }
+    }
 }

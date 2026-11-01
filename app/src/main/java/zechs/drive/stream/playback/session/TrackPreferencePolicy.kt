@@ -124,7 +124,11 @@ object TrackPreferencePolicy {
                 SubtitleSelectionPolicy.isPortuguese(candidate.lang, candidate.title, candidate.label.orEmpty())
             "ja", "jpn", "japanese", "japonês" ->
                 SubtitleSelectionPolicy.isJapanese(candidate.lang, candidate.title, candidate.label.orEmpty())
-            else -> combined.contains(token)
+            "en", "eng", "english", "inglês" ->
+                candidate.lang?.lowercase(Locale.ROOT)?.substringBefore('-') in listOf("en", "eng") ||
+                    Regex("\\b(english|inglês)\\b").containsMatchIn(combined)
+            else -> candidate.lang?.lowercase(Locale.ROOT)?.substringBefore('-') == token.substringBefore('-') ||
+                Regex("\\b" + Regex.escape(token) + "\\b").containsMatchIn(combined)
         }
     }
 

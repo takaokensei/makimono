@@ -105,7 +105,11 @@ class HomeActionHandler(
     }
 
     fun showWatchHistoryDialog() {
-        WatchHistoryDialog(context, viewModel.watchHistory.value, ::playWatchItem).show()
+        WatchHistoryDialog(context, viewModel.watchHistory.value, onPlay = { playWatchItem(it) },
+            focusAnchor = rootView.findFocus(), presentation = viewModel.watchHistoryPresentation, onContextAction = { item, action ->
+                if (action == ContinueWatchingContextMenu.Action.REMOVE) viewModel.removeWatchItem(item)
+                else handleWatchAction(item, action)
+            }, onRestore = { viewModel.restoreWatchItem(it) }).show()
     }
 
     fun showWatchQueueDialog() {
@@ -177,30 +181,33 @@ class HomeActionHandler(
             context = context,
             watchItem = watchItem,
             focusAnchor = focusAnchor
-        ) { action ->
-            when (action) {
-                ContinueWatchingContextMenu.Action.RESUME ->
-                    playWatchItem(watchItem, startFromBeginning = false)
-                ContinueWatchingContextMenu.Action.RESTART ->
-                    playWatchItem(watchItem, startFromBeginning = true)
-                ContinueWatchingContextMenu.Action.OPEN_SERIES -> {
-                    val series = onFindLibraryFolder(watchItem.name)
-                    if (series != null) handleOpenFolder(series)
-                    else Toast.makeText(context, R.string.home_series_not_found, Toast.LENGTH_SHORT).show()
-                }
-                ContinueWatchingContextMenu.Action.MARK_FINISHED -> {
-                    viewModel.markWatchItemFinished(watchItem)
-                    Snackbar.make(rootView, R.string.home_marked_finished, 1500).show()
-                }
-                ContinueWatchingContextMenu.Action.REMOVE -> {
-                    viewModel.removeWatchItem(watchItem)
-                    Snackbar.make(rootView, R.string.home_continue_removed, Snackbar.LENGTH_LONG)
-                        .setAction(R.string.undo) { viewModel.restoreWatchItem(watchItem) }
-                        .show()
-                }
+        ) { action -> handleWatchAction(watchItem, action) }
+    }
+
+    private fun handleWatchAction(watchItem: WatchList, action: ContinueWatchingContextMenu.Action) {
+        when (action) {
+            ContinueWatchingContextMenu.Action.RESUME ->
+                playWatchItem(watchItem, startFromBeginning = false)
+            ContinueWatchingContextMenu.Action.RESTART ->
+                playWatchItem(watchItem, startFromBeginning = true)
+            ContinueWatchingContextMenu.Action.OPEN_SERIES -> {
+                val series = onFindLibraryFolder(watchItem.name)
+                if (series != null) handleOpenFolder(series)
+                else Toast.makeText(context, R.string.home_series_not_found, Toast.LENGTH_SHORT).show()
+            }
+            ContinueWatchingContextMenu.Action.MARK_FINISHED -> {
+                viewModel.markWatchItemFinished(watchItem)
+                Snackbar.make(rootView, R.string.home_marked_finished, 1500).show()
+            }
+            ContinueWatchingContextMenu.Action.REMOVE -> {
+                viewModel.removeWatchItem(watchItem)
+                Snackbar.make(rootView, R.string.home_continue_removed, Snackbar.LENGTH_LONG)
+                    .setAction(R.string.undo) { viewModel.restoreWatchItem(watchItem) }
+                    .show()
             }
         }
     }
+
 
     fun playWatchItem(watchItem: WatchList, startFromBeginning: Boolean = false) {
         val startPos = if (startFromBeginning || watchItem.hasFinished()) {

@@ -69,4 +69,12 @@ class TrackPreferencePolicyTest {
         assertEquals("💾 [Salva] Português (BR)", item.name)
         assertEquals("pt-BR", item.languageCode)
     }
+    @Test fun englishPreferenceDoesNotMatchFrenchBySubstring() {
+        val french = TrackPreferencePolicy.TrackCandidate("fr", "fr", "French")
+        val english = TrackPreferencePolicy.TrackCandidate("en", "en", "English")
+        val preference = TrackPreferencePolicy.TrackPreference(preferredAudioLang = "en", preferredSubtitleLang = "en")
+        org.junit.Assert.assertEquals("en", TrackPreferencePolicy.selectPreferredAudioTrack(listOf(french, english), preference)?.id)
+        org.junit.Assert.assertEquals("en", TrackPreferencePolicy.selectPreferredSubtitleTrack(listOf(french, english), preference)?.id)
+    }
+
 }

@@ -15,7 +15,9 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:paddingTop="@dimen/tv_rail_safe_vertical"
+        android:paddingBottom="@dimen/tv_rail_safe_vertical">
 
         <!-- Top Navigation Bar -->
         <com.google.android.material.appbar.MaterialToolbar
@@ -24,8 +26,8 @@
             android:layout_height="56dp"
             android:background="@android:color/transparent"
             android:elevation="0dp"
-            android:paddingStart="24dp"
-            android:paddingEnd="24dp"
+            android:paddingStart="@dimen/tv_overscan_margin"
+            android:paddingEnd="@dimen/tv_overscan_margin"
             app:navigationIcon="@drawable/ic_back_24"
             app:navigationIconTint="?attr/colorTextPrimary"
             app:title="@string/app_settings"
@@ -38,8 +40,8 @@
             android:layout_height="0dp"
             android:layout_weight="1"
             android:orientation="horizontal"
-            android:paddingStart="24dp"
-            android:paddingEnd="24dp"
+            android:paddingStart="@dimen/tv_overscan_margin"
+            android:paddingEnd="@dimen/tv_overscan_margin"
             android:paddingTop="8dp"
             android:paddingBottom="24dp">
 

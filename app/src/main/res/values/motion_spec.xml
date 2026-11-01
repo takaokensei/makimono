@@ -25,4 +25,5 @@
     <item name="motion_pill_enter" type="integer">200</item>
     <item name="motion_pill_exit" type="integer">150</item>
     <item name="motion_crossfade" type="integer">200</item>
+    <item name="motion_hero_crossfade" type="integer">400</item>
 </resources>

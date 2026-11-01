@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/cardJobRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    android:clickable="true"
+    android:focusable="true"
+    app:cardBackgroundColor="@color/obsidian_bg_base"
+    app:cardCornerRadius="10dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/obsidian_border_glass"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="14dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="12dp">
+
+        <!-- Status Badge -->
+        <TextView
+            android:id="@+id/tvJobStatusBadge"
+            style="@style/TextAppearance.Makimono.TV.Badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/glass_pill_bg"
+            android:fontFamily="@font/inter"
+            android:letterSpacing="0.08"
+            android:paddingStart="8dp"
+            android:paddingTop="3dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="3dp"
+            android:textColor="@color/obsidian_accent_cyan"
+            android:textStyle="bold"
+            tools:text="BAIXANDO" />
+
+        <!-- Info Column -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvJobTitle"
+                    style="@style/TextAppearance.Makimono.TV.Callout"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/inter"
+                    android:maxLines="1"
+                    android:singleLine="true"
+                    android:textColor="@color/obsidian_text_primary"
+                    android:textStyle="bold"
+                    tools:text="Bleach: Thousand-Year Blood War" />
+
+                <TextView
+                    android:id="@+id/tvJobFilter"
+                    style="@style/TextAppearance.Makimono.TV.Badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/glass_pill_bg"
+                    android:fontFamily="@font/inter"
+                    android:paddingStart="6dp"
+                    android:paddingTop="1dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="1dp"
+                    android:textColor="@color/obsidian_text_secondary"
+                    tools:text="Ep. 1" />
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvJobDetail"
+                style="@style/TextAppearance.Makimono.TV.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:fontFamily="@font/inter"
+                android:maxLines="1"
+                android:singleLine="true"
+                android:textColor="@color/obsidian_text_tertiary"
+                tools:text="28.4 MB/s • Baixando via Seedbox" />
+
+            <ProgressBar
+                android:id="@+id/progressJob"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:layout_marginTop="6dp"
+                android:progressDrawable="@drawable/bg_fast_start_progress"
+                android:visibility="gone"
+                tools:progress="48"
+                tools:visibility="visible" />
+
+        </LinearLayout>
+
+        <!-- Cancel Action Button -->
+        <FrameLayout
+            android:id="@+id/btnCancelJob"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:contentDescription="@string/seedbox_btn_cancel"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_gravity="center"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_close_24"
+                app:tint="@color/obsidian_danger" />
+
+        </FrameLayout>
+
+        <!-- Completed Check Icon -->
+        <ImageView
+            android:id="@+id/ivJobCompleted"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_check_24"
+            android:visibility="gone"
+            app:tint="@color/obsidian_success" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

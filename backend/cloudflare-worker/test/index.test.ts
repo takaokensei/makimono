@@ -472,5 +472,46 @@ describe("Makimono TV pairing", () => {
     const prioritizedJob = (await prioritizePoll.json() as { job: { job_id: string; episodes_filter: string } }).job;
     expect(prioritizedJob.job_id).toBe(ep1JobId);
     expect(prioritizedJob.episodes_filter).toBe("1");
+
+    // 8. User cancels the batch job
+    const cancelResp = await SELF.fetch(`https://makimono.test/v1/seedbox/jobs/${batchJobId}`, {
+      method: "DELETE",
+      headers: { authorization: `Bearer ${sessionToken}` }
+    });
+    expect(cancelResp.status).toBe(200);
+    const cancelData = await cancelResp.json() as { success: boolean; status: string };
+    expect(cancelData.success).toBe(true);
+    expect(cancelData.status).toBe("CANCELLED");
+
+    // Daemon polling with active_job_id detects cancelled status immediately
+    const checkCancelPoll = await SELF.fetch("https://makimono.test/v1/seedbox/daemon/poll", {
+      method: "POST",
+      headers: { authorization: `Bearer ${daemon_token}`, "content-type": "application/json" },
+      body: JSON.stringify({ active_job_id: batchJobId })
+    });
+    expect(checkCancelPoll.status).toBe(200);
+    const cancelPollData = await checkCancelPoll.json() as { active_job_status: string };
+    expect(cancelPollData.active_job_status).toBe("CANCELLED");
+
+    // Daemon trying to update progress on a cancelled job receives cancelled: true
+    const patchCancelled = await SELF.fetch(`https://makimono.test/v1/seedbox/daemon/jobs/${batchJobId}`, {
+      method: "PATCH",
+      headers: { authorization: `Bearer ${daemon_token}`, "content-type": "application/json" },
+      body: JSON.stringify({ status: "DOWNLOADING", progress_pct: 45 })
+    });
+    expect(patchCancelled.status).toBe(200);
+    const patchCancelledData = await patchCancelled.json() as { success: boolean; cancelled?: boolean };
+    expect(patchCancelledData.success).toBe(true);
+    expect(patchCancelledData.cancelled).toBe(true);
+
+    // 9. Cancel all remaining jobs
+    const cancelAllResp = await SELF.fetch("https://makimono.test/v1/seedbox/jobs", {
+      method: "DELETE",
+      headers: { authorization: `Bearer ${sessionToken}` }
+    });
+    expect(cancelAllResp.status).toBe(200);
+    const cancelAllData = await cancelAllResp.json() as { success: boolean; cancelled_count: number };
+    expect(cancelAllData.success).toBe(true);
+    expect(cancelAllData.cancelled_count).toBeGreaterThanOrEqual(1);
   });
 });

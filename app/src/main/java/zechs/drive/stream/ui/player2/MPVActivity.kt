@@ -2911,45 +2911,27 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
         }
     }
 
+    private var automaticTrackSelectionJob: kotlinx.coroutines.Job? = null
+
     private fun autoSelectMpvTracks() {
         if (hasAutoSelectedMpvTracks) return
-
-        val audioTracks = player.tracks["audio"] ?: emptyList()
-        val subTracks = player.tracks["sub"] ?: emptyList()
-
-        if (audioTracks.isEmpty() && subTracks.isEmpty()) return
-
-        // 1. Audio: Auto-select Japanese
-        val currentAid = player.aid
-        val targetAudio = audioTracks.firstOrNull { track ->
-            if (track.mpvId == -1) return@firstOrNull false
-            zechs.drive.stream.utils.SubtitleSelectionPolicy.isJapanese(track.lang, track.title, track.name)
-        }
-        if (targetAudio != null && targetAudio.mpvId != currentAid) {
-            AppLog.d(TAG, "MPV auto-selected Japanese audio: ${targetAudio.name} (id=${targetAudio.mpvId})")
-            player.aid = targetAudio.mpvId
-        }
-
-        // 2. Subtitle: Auto-select Portuguese (prefer Brazilian Portuguese / full dialogue)
-        val currentSid = player.sid
-        val ptSubs = subTracks.filter { track ->
-            if (track.mpvId == -1) return@filter false
-            zechs.drive.stream.utils.SubtitleSelectionPolicy.isPortuguese(track.lang, track.title, track.name)
-        }
-
-        val targetSub = ptSubs.maxByOrNull { track ->
-            // P2-08: mesma pontuação do player Exo, em regra única testada.
-            zechs.drive.stream.utils.SubtitleSelectionPolicy
-                .scorePortuguese("${track.title} ${track.name}")
-        }
-
-        if (targetSub != null && targetSub.mpvId != currentSid) {
-            AppLog.d(TAG, "MPV auto-selected Portuguese subtitle: ${targetSub.name} (id=${targetSub.mpvId})")
-            player.sid = targetSub.mpvId
-        }
-
-        if (audioTracks.size > 1 || subTracks.size > 1) {
-            hasAutoSelectedMpvTracks = true
+        automaticTrackSelectionJob?.cancel()
+        val fileId = currentFileId
+        automaticTrackSelectionJob = lifecycleScope.launch {
+            val preference = try { appSettings.get().fetchTrackPreference() }
+                catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                catch (_: Exception) { zechs.drive.stream.playback.session.TrackPreferencePolicy.TrackPreference() }
+            if (fileId != currentFileId || hasAutoSelectedMpvTracks) return@launch
+            val audio = player.tracks["audio"].orEmpty().filter { it.mpvId != -1 }
+            val subtitles = player.tracks["sub"].orEmpty().filter { it.mpvId != -1 }
+            fun candidates(tracks: List<zechs.mpv.MPVView.Track>): List<zechs.drive.stream.playback.session.TrackPreferencePolicy.TrackCandidate> =
+                tracks.map { zechs.drive.stream.playback.session.TrackPreferencePolicy.TrackCandidate(it.mpvId.toString(), it.lang, it.title, it.name) }
+            zechs.drive.stream.playback.session.TrackPreferencePolicy.selectPreferredAudioTrack(candidates(audio), preference)
+                ?.let { player.aid = it.id.toInt() }
+            if (preference.subtitlesDisabled) player.sid = -1
+            else zechs.drive.stream.playback.session.TrackPreferencePolicy.selectPreferredSubtitleTrack(candidates(subtitles), preference)
+                ?.let { player.sid = it.id.toInt() }
+            if (audio.isNotEmpty() || subtitles.isNotEmpty()) hasAutoSelectedMpvTracks = true
         }
     }
 

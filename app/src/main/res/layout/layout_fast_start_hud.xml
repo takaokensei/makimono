@@ -116,6 +116,19 @@
                 android:visibility="gone"
                 app:tint="@color/obsidian_success" />
 
+            <ImageView
+                android:id="@+id/btnHudCancel"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginStart="6dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:contentDescription="@string/seedbox_btn_cancel"
+                android:focusable="true"
+                android:padding="6dp"
+                android:src="@drawable/ic_close_24"
+                app:tint="@color/obsidian_text_secondary" />
+
         </LinearLayout>
 
         <!-- Fine 3dp Cyan Progress Bar at the bottom of the card -->

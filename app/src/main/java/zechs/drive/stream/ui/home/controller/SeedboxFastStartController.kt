@@ -54,7 +54,8 @@ class SeedboxFastStartController(
             ?: fragment.view?.findViewById<View>(R.id.cardFastStartHud)
 
         targetHud?.let { v ->
-            hudBinding = LayoutFastStartHudBinding.bind(v)
+            val hb = LayoutFastStartHudBinding.bind(v)
+            hudBinding = hb
             FocusEngine.attach(v, FocusEngine.FocusKind.CARD)
             v.setOnClickListener {
                 val current = viewModel.fastStartSession.value ?: return@setOnClickListener
@@ -63,6 +64,11 @@ class SeedboxFastStartController(
                 } else {
                     viewModel.restoreFastStartSession()
                 }
+            }
+            FocusEngine.attach(hb.btnHudCancel, FocusEngine.FocusKind.BUTTON)
+            hb.btnHudCancel.setOnClickListener {
+                cancelAutoPlayTimer()
+                viewModel.cancelFastStartDownload()
             }
         }
 
@@ -197,6 +203,11 @@ class SeedboxFastStartController(
             viewModel.minimizeFastStartSession()
         }
 
+        binding.btnFastStartCancel.setOnClickListener {
+            cancelAutoPlayTimer()
+            viewModel.cancelFastStartDownload()
+        }
+
         binding.btnFastStartPlayNow.setOnClickListener {
             val curr = viewModel.fastStartSession.value ?: return@setOnClickListener
             cancelAutoPlayTimer()
@@ -210,6 +221,7 @@ class SeedboxFastStartController(
         FocusEngine.attach(binding.btnFastStartEp1, FocusEngine.FocusKind.BUTTON)
         FocusEngine.attach(binding.btnFastStartFull, FocusEngine.FocusKind.BUTTON)
         FocusEngine.attach(binding.btnFastStartMinimize, FocusEngine.FocusKind.BUTTON)
+        FocusEngine.attach(binding.btnFastStartCancel, FocusEngine.FocusKind.BUTTON)
         FocusEngine.attach(binding.btnFastStartPlayNow, FocusEngine.FocusKind.BUTTON)
         FocusEngine.attach(binding.btnCloseFastStart, FocusEngine.FocusKind.BUTTON)
     }
@@ -238,6 +250,7 @@ class SeedboxFastStartController(
                 binding.layoutFastStartLiveCockpit.isVisible = true
                 binding.btnFastStartPlayNow.isGone = true
                 binding.btnFastStartMinimize.isVisible = true
+                binding.btnFastStartCancel.isVisible = true
 
                 binding.tvFastStartPercent.text = "${session.progressPct}%"
                 binding.tvFastStartStatusTitle.text = session.animeTitle
@@ -260,6 +273,7 @@ class SeedboxFastStartController(
                 binding.layoutFastStartLiveCockpit.isVisible = true
                 binding.btnFastStartMinimize.isVisible = true
                 binding.btnFastStartPlayNow.isVisible = true
+                binding.btnFastStartCancel.isGone = true
 
                 binding.tvFastStartPercent.text = "100%"
                 binding.tvFastStartStatusTitle.setText(R.string.seedbox_hud_ready)
@@ -277,6 +291,7 @@ class SeedboxFastStartController(
                 binding.layoutFastStartLiveCockpit.isVisible = true
                 binding.btnFastStartPlayNow.isGone = true
                 binding.btnFastStartMinimize.isVisible = true
+                binding.btnFastStartCancel.isGone = true
                 binding.tvFastStartPercent.text = "!"
                 binding.tvFastStartStatusTitle.setText(R.string.files_page_error_generic)
                 binding.tvFastStartSpeedEta.text = session.errorMessage ?: ""

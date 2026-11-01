@@ -1,20 +1,32 @@
 package zechs.drive.stream.ui.settings.delegates
 
+import android.app.Dialog
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.view.LayoutInflater
+import android.view.Window
+import android.view.WindowManager
 import android.widget.LinearLayout
+import androidx.core.content.ContextCompat
+import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.LifecycleCoroutineScope
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 import zechs.drive.stream.R
 import zechs.drive.stream.data.repository.SeedboxRepository
+import zechs.drive.stream.databinding.DialogSeedboxManagementBinding
 import zechs.drive.stream.databinding.FragmentSettingsBinding
 import zechs.drive.stream.ui.settings.MalAuthDialog
 import zechs.drive.stream.ui.settings.SettingsEvent
 import zechs.drive.stream.ui.settings.SettingsUiState
 import zechs.drive.stream.ui.settings.SettingsViewModel
+import zechs.drive.stream.ui.settings.adapter.SeedboxJobsAdapter
+import zechs.drive.stream.utils.FocusEngine
 import zechs.drive.stream.utils.TvFocusRing
 import zechs.drive.stream.utils.ext.resolveThemeColor
 
@@ -57,7 +69,7 @@ class IntegrationsSettingsDelegate(
         val options = arrayOf(
             "📋 Obter Token do Daemon (MAKIMONO_SEEDBOX_TOKEN)",
             "⚡ Novo Pedido de Download (Anime / Magnet)",
-            "📊 Ver Fila e Status do Servidor"
+            "📊 Central de Downloads e Fila"
         )
 
         val dialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
@@ -103,7 +115,7 @@ class IntegrationsSettingsDelegate(
         }
     }
 
-    private fun showNewJobPrompt() {
+    private fun showNewJobPrompt(onEnqueued: (() -> Unit)? = null) {
         val container = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(48, 16, 48, 16)
@@ -137,6 +149,7 @@ class IntegrationsSettingsDelegate(
                     )
                     res.onSuccess { jobId ->
                         showSnackBar("Pedido adicionado à fila com sucesso (ID: ${jobId.take(8)})!")
+                        onEnqueued?.invoke()
                     }.onFailure { err ->
                         showSnackBar("Falha ao agendar download: ${err.message}")
                     }
@@ -153,52 +166,127 @@ class IntegrationsSettingsDelegate(
     }
 
     private fun showQueueStatusDialog() {
-        showSnackBar("Consultando fila do Colab...")
+        val dialog = Dialog(context, R.style.ThemeOverlay_DriveStream_Dialog).apply {
+            requestWindowFeature(Window.FEATURE_NO_TITLE)
+        }
+        val mgmtBinding = DialogSeedboxManagementBinding.inflate(LayoutInflater.from(context))
+        dialog.setContentView(mgmtBinding.root)
+
+        dialog.window?.apply {
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            setLayout(
+                (context.resources.displayMetrics.widthPixels * 0.88).toInt().coerceAtMost(860),
+                WindowManager.LayoutParams.WRAP_CONTENT
+            )
+            TvFocusRing.install(decorView)
+        }
+
+        lateinit var jobsAdapter: SeedboxJobsAdapter
+        jobsAdapter = SeedboxJobsAdapter { jobToCancel ->
+            lifecycleScope.launch {
+                val cancelRes = seedboxRepoProvider().cancelJob(jobToCancel.jobId)
+                cancelRes.onSuccess {
+                    showSnackBar(context.getString(R.string.seedbox_stage_cancelled) + ": ${jobToCancel.animeQuery}")
+                    loadManagementQueue(mgmtBinding, jobsAdapter)
+                }.onFailure { err ->
+                    showSnackBar("Erro ao cancelar: ${err.message}")
+                }
+            }
+        }
+
+        mgmtBinding.rvSeedboxJobs.apply {
+            adapter = jobsAdapter
+            layoutManager = LinearLayoutManager(context)
+        }
+
+        mgmtBinding.btnCloseManagement.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        mgmtBinding.btnRefreshQueue.setOnClickListener {
+            loadManagementQueue(mgmtBinding, jobsAdapter)
+        }
+
+        mgmtBinding.btnCancelAllJobs.setOnClickListener {
+            MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
+                .setTitle(R.string.seedbox_mgmt_cancel_all_confirm_title)
+                .setMessage(R.string.seedbox_mgmt_cancel_all_confirm_msg)
+                .setPositiveButton(R.string.seedbox_mgmt_cancel_all) { _, _ ->
+                    lifecycleScope.launch {
+                        val res = seedboxRepoProvider().cancelAllJobs()
+                        res.onSuccess { count ->
+                            showSnackBar("$count downloads cancelados.")
+                            loadManagementQueue(mgmtBinding, jobsAdapter)
+                        }.onFailure { err ->
+                            showSnackBar("Erro ao cancelar fila: ${err.message}")
+                        }
+                    }
+                }
+                .setNegativeButton(R.string.seedbox_confirm_download_no, null)
+                .show()
+        }
+
+        mgmtBinding.btnNewJob.setOnClickListener {
+            showNewJobPrompt {
+                loadManagementQueue(mgmtBinding, jobsAdapter)
+            }
+        }
+
+        mgmtBinding.btnCopyToken.setOnClickListener {
+            showDaemonTokenDialog()
+        }
+
+        FocusEngine.attach(mgmtBinding.btnCloseManagement, FocusEngine.FocusKind.BUTTON)
+        FocusEngine.attach(mgmtBinding.btnRefreshQueue, FocusEngine.FocusKind.BUTTON)
+        FocusEngine.attach(mgmtBinding.btnNewJob, FocusEngine.FocusKind.BUTTON)
+        FocusEngine.attach(mgmtBinding.btnCancelAllJobs, FocusEngine.FocusKind.BUTTON)
+        FocusEngine.attach(mgmtBinding.btnCopyToken, FocusEngine.FocusKind.BUTTON)
+
+        loadManagementQueue(mgmtBinding, jobsAdapter)
+        dialog.show()
+    }
+
+    private fun loadManagementQueue(
+        mgmtBinding: DialogSeedboxManagementBinding,
+        jobsAdapter: SeedboxJobsAdapter
+    ) {
+        mgmtBinding.progressLoadingQueue.isVisible = true
         lifecycleScope.launch {
             val statusRes = seedboxRepoProvider().getStatus()
             val jobsRes = seedboxRepoProvider().getJobs()
 
-            statusRes.onSuccess { status ->
-                val jobs = jobsRes.getOrDefault(emptyList())
-                val daemonState = if (status.isOnline) {
-                    val disk = status.freeDiskGb?.let { " • ${it}GB livres" } ?: ""
-                    val speed = status.activeSpeed?.let { " • $it" } ?: ""
-                    "● Servidor Colab: ONLINE$disk$speed"
-                } else {
-                    "○ Servidor Colab: OFFLINE / ADORMECIDO"
-                }
+            mgmtBinding.progressLoadingQueue.isGone = true
 
-                val jobsSummary = if (jobs.isEmpty()) {
-                    "Nenhum download pendente ou em andamento."
-                } else {
-                    jobs.take(8).joinToString("\n") { j ->
-                        val icon = when (j.status) {
-                            "completed" -> "✓"
-                            "downloading" -> "⬇"
-                            "uploading" -> "☁"
-                            "failed" -> "✗"
-                            else -> "⏳"
-                        }
-                        "$icon [${j.status}] ${j.animeQuery}"
-                    }
-                }
+            val jobs = jobsRes.getOrDefault(emptyList())
+            val status = statusRes.getOrNull()
 
-                val activeCount = jobs.count { it.status == "downloading" || it.status == "uploading" || it.status == "pending" }
-                val completedCount = jobs.count { it.status == "completed" }
-                val msg = "$daemonState\nFila: $activeCount ativos • $completedCount concluídos\n\nÚltimos Pedidos:\n$jobsSummary"
-
-                val statDialog = MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
-                    .setTitle(R.string.seedbox_queue_status_title)
-                    .setMessage(msg)
-                    .setPositiveButton("OK", null)
-                    .create()
-                statDialog.setOnShowListener {
-                    statDialog.window?.let { w -> TvFocusRing.install(w.decorView) }
-                }
-                statDialog.show()
-            }.onFailure { err ->
-                showSnackBar("Erro ao obter status da seedbox: ${err.message}")
+            if (status != null && status.isOnline) {
+                val disk = status.freeDiskGb?.let { "${it}GB livres" } ?: ""
+                val speed = status.activeSpeed?.let { " • $it" } ?: ""
+                mgmtBinding.tvServerStatusTitle.text = context.getString(R.string.seedbox_status_colab_online)
+                mgmtBinding.tvServerStatusMeta.text = if (disk.isNotEmpty()) "$disk$speed" else "Pronto para receber pedidos"
+                mgmtBinding.viewServerStatusDot.backgroundTintList = ColorStateList.valueOf(
+                    ContextCompat.getColor(context, R.color.obsidian_success)
+                )
+            } else {
+                mgmtBinding.tvServerStatusTitle.text = context.getString(R.string.seedbox_status_colab_offline)
+                mgmtBinding.tvServerStatusMeta.setText(R.string.seedbox_mgmt_colab_offline_hint)
+                mgmtBinding.viewServerStatusDot.backgroundTintList = ColorStateList.valueOf(
+                    ContextCompat.getColor(context, R.color.obsidian_text_tertiary)
+                )
             }
+
+            val activeCount = jobs.count { it.status.uppercase() in listOf("DOWNLOADING", "UPLOADING", "PENDING", "SEARCHING") }
+            val completedCount = jobs.count { it.status.uppercase() == "COMPLETED" }
+
+            mgmtBinding.tvActiveCountBadge.text = context.getString(R.string.seedbox_mgmt_active_count, activeCount)
+            mgmtBinding.tvCompletedCountBadge.text = context.getString(R.string.seedbox_mgmt_completed_count, completedCount)
+
+            mgmtBinding.btnCancelAllJobs.isVisible = activeCount > 0
+
+            jobsAdapter.submitList(jobs)
+            mgmtBinding.layoutEmptyQueue.isVisible = jobs.isEmpty()
+            mgmtBinding.rvSeedboxJobs.isVisible = jobs.isNotEmpty()
         }
     }
 

@@ -653,6 +653,27 @@ async function getSeedboxJobs(request: Request, env: PairingEnv): Promise<Respon
   return json({ jobs: jobs.results });
 }
 
+async function cancelSeedboxJob(request: Request, env: PairingEnv, jobId: string): Promise<Response> {
+  const session = await bearerSession(request, env);
+  if (!session) return json({ error: "session_invalid" }, 401);
+  const now = Math.floor(Date.now() / 1000);
+  const res = await env.DB.prepare(
+    "UPDATE seedbox_jobs SET status = 'CANCELLED', status_detail = 'Cancelado pelo usuário', updated_at = ? WHERE job_id = ? AND google_sub = ?"
+  ).bind(now, jobId, session.google_sub).run();
+  if (res.meta.changes === 0) return json({ error: "job_not_found" }, 404);
+  return json({ success: true, job_id: jobId, status: "CANCELLED" });
+}
+
+async function cancelAllSeedboxJobs(request: Request, env: PairingEnv): Promise<Response> {
+  const session = await bearerSession(request, env);
+  if (!session) return json({ error: "session_invalid" }, 401);
+  const now = Math.floor(Date.now() / 1000);
+  const res = await env.DB.prepare(
+    "UPDATE seedbox_jobs SET status = 'CANCELLED', status_detail = 'Cancelado pelo usuário', updated_at = ? WHERE google_sub = ? AND status IN ('PENDING', 'SEARCHING', 'DOWNLOADING')"
+  ).bind(now, session.google_sub).run();
+  return json({ success: true, cancelled_count: res.meta.changes });
+}
+
 async function pollSeedboxDaemon(request: Request, env: PairingEnv): Promise<Response> {
   const auth = await daemonAuth(request, env);
   if (!auth) return json({ error: "daemon_token_invalid" }, 401);
@@ -666,6 +687,14 @@ async function pollSeedboxDaemon(request: Request, env: PairingEnv): Promise<Res
   await env.DB.prepare("UPDATE seedbox_daemons SET last_heartbeat_at = ?, free_disk_gb = ?, active_speed = ? WHERE daemon_token_hash = ?")
     .bind(now, freeDisk, speed, tokenHash).run();
 
+  const activeJobId = typeof body.active_job_id === "string" ? body.active_job_id : null;
+  let activeJobStatus: string | null = null;
+  if (activeJobId) {
+    const active = await env.DB.prepare("SELECT status FROM seedbox_jobs WHERE job_id = ? AND google_sub = ?")
+      .bind(activeJobId, auth.google_sub).first<{ status: string }>();
+    activeJobStatus = active?.status ?? null;
+  }
+
   const nextJob = await env.DB.prepare(
     `SELECT * FROM seedbox_jobs
      WHERE google_sub = ? AND status = 'PENDING'
@@ -674,7 +703,7 @@ async function pollSeedboxDaemon(request: Request, env: PairingEnv): Promise<Res
               rowid ASC
      LIMIT 1`
   ).bind(auth.google_sub).first();
-  return json({ job: nextJob ?? null });
+  return json({ job: nextJob ?? null, active_job_status: activeJobStatus });
 }
 
 async function updateSeedboxDaemonJob(request: Request, env: PairingEnv, jobId: string): Promise<Response> {
@@ -691,9 +720,12 @@ async function updateSeedboxDaemonJob(request: Request, env: PairingEnv, jobId: 
   const detail = typeof body.status_detail === "string" ? body.status_detail : null;
   const now = Math.floor(Date.now() / 1000);
 
-  const existing = await env.DB.prepare("SELECT * FROM seedbox_jobs WHERE job_id = ? AND google_sub = ?")
-    .bind(jobId, auth.google_sub).first();
+  const existing = await env.DB.prepare("SELECT status FROM seedbox_jobs WHERE job_id = ? AND google_sub = ?")
+    .bind(jobId, auth.google_sub).first<{ status: string }>();
   if (!existing) return json({ error: "job_not_found" }, 404);
+  if (existing.status === "CANCELLED") {
+    return json({ success: true, cancelled: true });
+  }
 
   await env.DB.prepare(`UPDATE seedbox_jobs SET
     status = COALESCE(?, status),
@@ -735,6 +767,9 @@ async function handle(request: Request, env: PairingEnv): Promise<Response> {
   if (request.method === "GET" && path === "/v1/seedbox/status") return getSeedboxStatus(request, env);
   if (request.method === "POST" && path === "/v1/seedbox/jobs") return createSeedboxJob(request, env);
   if (request.method === "GET" && path === "/v1/seedbox/jobs") return getSeedboxJobs(request, env);
+  if (request.method === "DELETE" && path === "/v1/seedbox/jobs") return cancelAllSeedboxJobs(request, env);
+  const cancelJobMatch = path.match(/^\/v1\/seedbox\/jobs\/([A-Za-z0-9_-]+)$/);
+  if (request.method === "DELETE" && cancelJobMatch) return cancelSeedboxJob(request, env, cancelJobMatch[1]);
   if (request.method === "POST" && path === "/v1/seedbox/daemon/poll") return pollSeedboxDaemon(request, env);
   const daemonJobMatch = path.match(/^\/v1\/seedbox\/daemon\/jobs\/([A-Za-z0-9_-]+)$/);
   if (request.method === "PATCH" && daemonJobMatch) return updateSeedboxDaemonJob(request, env, daemonJobMatch[1]);

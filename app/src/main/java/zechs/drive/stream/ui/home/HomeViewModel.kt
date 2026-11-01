@@ -137,6 +137,7 @@ class HomeViewModel @Inject constructor(
     val fastStartSession: StateFlow<FastStartSession?> = _fastStartSession.asStateFlow()
 
     private var searchJob: Job? = null
+    private var fastStartJob: Job? = null
 
     val watchQueue: StateFlow<List<WatchQueueItem>> =
         watchQueueRepository.observeQueue()
@@ -193,6 +194,8 @@ class HomeViewModel @Inject constructor(
     private var featuredRequestId = 0L
     private var focusedFeaturedFolderId: String? = null
     @Volatile private var cachedFolderMetaMap: Map<String, zechs.drive.stream.data.local.FolderMetadata> = emptyMap()
+
+    internal val watchHistoryPresentation = WatchHistoryPresentation()
 
     var lastFocusedShelfIndex: Int? = null
         private set
@@ -424,7 +427,8 @@ class HomeViewModel @Inject constructor(
 
     fun getLibraryRootFolder(onResult: (folderId: String?, folderName: String) -> Unit) = viewModelScope.launch(Dispatchers.IO) {
         val activeProfileId = profileManager.getActiveProfile().id
-        if (!cachedLibraryRootId.isNullOrBlank() && cachedLibraryRootProfileId == activeProfileId) {
+        if (!cachedLibraryRootId.isNullOrBlank() && cachedLibraryRootProfileId == activeProfileId &&
+            profileManager.getLibraryRoot().first == cachedLibraryRootId) {
             kotlinx.coroutines.withContext(Dispatchers.Main) {
                 onResult(cachedLibraryRootId, profileManager.getLibraryRoot().second ?: "Biblioteca")
             }
@@ -613,6 +617,19 @@ class HomeViewModel @Inject constructor(
     }
 
 
+
+    /** Re-evaluate a confirmed root on return from Settings, without requiring a restart. */
+    fun refreshConfiguredLibrary() {
+        val profile = profileManager.getActiveProfile()
+        if (zechs.drive.stream.domain.library.LibraryRootChangePolicy.needsRefresh(
+                cachedLibraryRootProfileId, cachedLibraryRootId, profile.id, profile.libraryRootId)) {
+            cachedLibraryRootId = null
+            cachedLibraryRootProfileId = null
+            _animeLibrary.value = emptyList()
+            filterAnimes("")
+            loadAnimeLibrary(forceRefresh = true)
+        }
+    }
 
     fun loadAnimeLibrary(forceRefresh: Boolean = false) = viewModelScope.launch(Dispatchers.IO) {
         if (forceRefresh) {
@@ -1635,6 +1652,23 @@ class HomeViewModel @Inject constructor(
         _fastStartSession.value = null
     }
 
+    fun cancelFastStartDownload() {
+        val current = _fastStartSession.value
+        val jId = current?.jobId
+        fastStartJob?.cancel()
+        fastStartJob = null
+        _fastStartSession.value = null
+        if (!jId.isNullOrBlank()) {
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    seedboxRepository?.get()?.cancelJob(jId)
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "Failed cancelling seedbox job $jId", e)
+                }
+            }
+        }
+    }
+
     fun startFastStartDownload(animeTitle: String, ep1First: Boolean, posterUrl: String? = null) {
         requestFastStartAnimeDownload(animeTitle, ep1First, posterUrl)
     }
@@ -1663,7 +1697,8 @@ class HomeViewModel @Inject constructor(
             isMinimized = false
         )
 
-        viewModelScope.launch(Dispatchers.IO) {
+        fastStartJob?.cancel()
+        fastStartJob = viewModelScope.launch(Dispatchers.IO) {
             try {
                 val repo = seedboxRepository?.get() ?: run {
                     _fastStartSession.value = _fastStartSession.value?.copy(
@@ -1689,12 +1724,6 @@ class HomeViewModel @Inject constructor(
 
                 val jobId1 = res1.getOrThrow()
                 _fastStartSession.value = _fastStartSession.value?.copy(jobId = jobId1)
-
-                if (ep1First) {
-                    launch {
-                        repo.enqueueJob(query = cleanTitle, episodesFilter = "2-999", preferPtBr = true)
-                    }
-                }
 
                 var folderId: String? = null
                 var lastStatus = ""

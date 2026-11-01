@@ -4572,6 +4572,8 @@ def run_concurrent(
 
             if disk_gate is not None:
                 bytes_estimados = estimar_bytes_de_tamanho_str(option.metadata.get("tamanho")) if "estimar_bytes_de_tamanho_str" in globals() else None
+                if bytes_estimados and bytes_estimados > 8 * (1024 ** 3):
+                    bytes_estimados = min(bytes_estimados, int(2.5 * (1024 ** 3)))
                 bytes_reservados = disk_gate.reservar(bytes_estimados, label=option.label)
 
             result = engine.download_with_retry(
@@ -4630,6 +4632,9 @@ def run_concurrent(
         futures = {pool.submit(worker, slot, opt): slot for slot, opt in enumerate(options)}
         pending = set(futures.keys())
         while pending:
+            if getattr(board, "cancelled", False):
+                for ev in cancel_events.values():
+                    ev.set()
             try:
                 slot, kind, payload = events_q.get(timeout=0.3)
                 board.handle_event(slot, kind, payload)
@@ -4801,6 +4806,8 @@ def run_batch_rpc(
         while fila_pendente:
             slot, option = fila_pendente[0]
             bytes_estimados = estimar_bytes_de_tamanho_str(option.metadata.get("tamanho")) if "estimar_bytes_de_tamanho_str" in globals() else None
+            if bytes_estimados and bytes_estimados > 8 * (1024 ** 3):
+                bytes_estimados = min(bytes_estimados, int(2.5 * (1024 ** 3)))
             if disk_gate is not None:
                 reservado = disk_gate.tentar_reservar(bytes_estimados)
                 if reservado is None:
@@ -4830,6 +4837,13 @@ def run_batch_rpc(
         _liberar_proximos_da_fila()
 
         while any(r is None for r in results):
+            if getattr(board, "cancelled", False):
+                for gid in list(slot_by_gid.keys()):
+                    try:
+                        engine.cancel_download(gid)
+                    except Exception:
+                        pass
+                break
             updates = engine.poll_once()
             for gid, u in updates.items():
                 slot = slot_by_gid.get(gid)

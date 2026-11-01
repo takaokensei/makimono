@@ -406,6 +406,42 @@
 
                             </LinearLayout>
 
+                            <!-- Cancel Download Button -->
+                            <LinearLayout
+                                android:id="@+id/btnFastStartCancel"
+                                android:layout_width="0dp"
+                                android:layout_height="44dp"
+                                android:layout_marginStart="10dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/btn_secondary_action_bg"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:gravity="center"
+                                android:orientation="horizontal"
+                                android:paddingStart="12dp"
+                                android:paddingEnd="12dp">
+
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:contentDescription="@null"
+                                    android:duplicateParentState="true"
+                                    android:src="@drawable/ic_close_24"
+                                    app:tint="@color/obsidian_danger" />
+
+                                <TextView
+                                    style="@style/TextAppearance.Makimono.TV.Callout"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="6dp"
+                                    android:duplicateParentState="true"
+                                    android:fontFamily="@font/inter"
+                                    android:text="@string/seedbox_btn_cancel"
+                                    android:textColor="@color/obsidian_danger"
+                                    android:textStyle="bold" />
+
+                            </LinearLayout>
+
                             <!-- Play Now Button (Glows when Ready) -->
                             <LinearLayout
                                 android:id="@+id/btnFastStartPlayNow"

@@ -186,7 +186,7 @@ class SignInFragment : Fragment(R.layout.fragment_sign_in) {
                 if (presentation.isQrCodeVisible && renderedQrUrl != state.qrUrl) {
                     val bitmap = QRCodeGenerator.generateBitmap(
                         content = state.qrUrl,
-                        sizePx = 768,
+                        sizePx = ivPairingQrCode.width.takeIf { it > 0 } ?: 768,
                         darkColor = Color.BLACK,
                         lightColor = Color.WHITE
                     )
@@ -195,6 +195,7 @@ class SignInFragment : Fragment(R.layout.fragment_sign_in) {
                         return@with
                     }
                     ivPairingQrCode.setImageBitmap(bitmap)
+                    (ivPairingQrCode.drawable as? android.graphics.drawable.BitmapDrawable)?.isFilterBitmap = false
                     renderedQrUrl = state.qrUrl
                 }
 

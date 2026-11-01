@@ -3443,7 +3443,22 @@ class PlayerActivity : BasePlayerActivity() {
         gestureHelper.showNotification("${getString(R.string.player_speed)}: $spText")
     }
 
+    private var automaticTrackSelectionJob: kotlinx.coroutines.Job? = null
+
     private fun autoSelectPreferredTracks(tracks: Tracks) {
+        if (hasAutoSelectedTracks) return
+        automaticTrackSelectionJob?.cancel()
+        val fileId = currentFileId
+        automaticTrackSelectionJob = lifecycleScope.launch {
+            val preference = try { appSettings.get().fetchTrackPreference() }
+                catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                catch (_: Exception) { zechs.drive.stream.playback.session.TrackPreferencePolicy.TrackPreference() }
+            if (fileId == currentFileId && !hasAutoSelectedTracks) applyAutomaticTracks(tracks, preference)
+        }
+    }
+
+    private fun applyAutomaticTracks(tracks: Tracks,
+        preference: zechs.drive.stream.playback.session.TrackPreferencePolicy.TrackPreference) {
         if (hasAutoSelectedTracks) return
 
         var preferredAudioOverride: TrackSelectionOverride? = null
@@ -3451,21 +3466,15 @@ class PlayerActivity : BasePlayerActivity() {
 
         // 1. Audio: Auto-select Japanese
         val audioGroups = tracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
-        audioLoop@ for (group in audioGroups) {
-            for (i in 0 until group.length) {
-                val format = group.getTrackFormat(i)
-                val lang = format.language?.lowercase() ?: ""
-                val label = (format.label ?: "").lowercase()
-
-                val isJapanese = lang in listOf("ja", "jpn", "jp", "japanese") ||
-                        label.contains("jap") || label.contains("jpn")
-
-                if (isJapanese) {
-                    AppLog.d(TAG, "Exo auto-selected Japanese audio: lang=$lang, label=$label, index=$i")
-                    preferredAudioOverride = TrackSelectionOverride(group.mediaTrackGroup, listOf(i))
-                    break@audioLoop
-                }
+        val audioCandidates = audioGroups.flatMapIndexed { groupIndex, group ->
+            (0 until group.length).map { index ->
+                val f = group.getTrackFormat(index)
+                zechs.drive.stream.playback.session.TrackPreferencePolicy.TrackCandidate("$groupIndex:$index", f.language, f.label)
             }
+        }
+        val selectedAudio = zechs.drive.stream.playback.session.TrackPreferencePolicy.selectPreferredAudioTrack(audioCandidates, preference)
+        selectedAudio?.id?.split(":")?.map(String::toInt)?.let { (g, i) ->
+            preferredAudioOverride = TrackSelectionOverride(audioGroups[g].mediaTrackGroup, listOf(i))
         }
 
         // 2. Subtitle: Auto-select Portuguese (prioritize Brazilian Portuguese / full dialogue)
@@ -3489,7 +3498,18 @@ class PlayerActivity : BasePlayerActivity() {
             }
         }
 
-        if (bestSubScore < 0) {
+        val subtitleCandidates = textGroups.flatMapIndexed { groupIndex, group ->
+            (0 until group.length).map { index ->
+                val f = group.getTrackFormat(index)
+                zechs.drive.stream.playback.session.TrackPreferencePolicy.TrackCandidate("$groupIndex:$index", f.language, f.label)
+            }
+        }
+        val selectedSubtitle = zechs.drive.stream.playback.session.TrackPreferencePolicy.selectPreferredSubtitleTrack(subtitleCandidates, preference)
+        if (bestSubScore < 0 && selectedSubtitle != null) {
+            val (g, i) = selectedSubtitle.id.split(":").map(String::toInt)
+            bestSubGroup = textGroups[g]; bestSubIndex = i; bestSubScore = 1000
+        }
+        if (bestSubScore < 0 && !preference.subtitlesDisabled) {
             for (group in textGroups) {
                 for (i in 0 until group.length) {
                 val format = group.getTrackFormat(i)
@@ -3519,8 +3539,9 @@ class PlayerActivity : BasePlayerActivity() {
             preferredTextOverride = TrackSelectionOverride(bestSubGroup.mediaTrackGroup, listOf(bestSubIndex))
         }
 
-        if (preferredAudioOverride != null || preferredTextOverride != null) {
+        if (preferredAudioOverride != null || preferredTextOverride != null || preference.subtitlesDisabled) {
             val builder = player.trackSelectionParameters.buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, preference.subtitlesDisabled && forcedSubtitleUri == null)
             preferredAudioOverride?.let {
                 builder.clearOverridesOfType(C.TRACK_TYPE_AUDIO)
                 builder.addOverride(it)

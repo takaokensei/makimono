@@ -83,7 +83,7 @@ def inject_daemon(notebook_path: str, token: str = DEFAULT_TOKEN, worker_url: st
         "    if folder_id is not None: payload[\"drive_folder_id\"] = folder_id\n",
         "    if detail is not None: payload[\"status_detail\"] = detail\n",
         "    try:\n",
-        "        _api_request(f\"/v1/seedbox/daemon/jobs/{job_id}\", method=\"PATCH\", body=payload)\n",
+        "        return _api_request(f\"/v1/seedbox/daemon/jobs/{job_id}\", method=\"PATCH\", body=payload)\n",
         "    except Exception as e:\n",
         "        print(f\"\u26a0\ufe0f Erro ao atualizar status do job {job_id} no Worker: {e}\")\n",
         "\n",

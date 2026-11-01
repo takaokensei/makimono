@@ -70,6 +70,30 @@ class SeedboxRepositoryTest {
     }
 
     @Test
+    fun testCancelJobSuccess() = runBlocking {
+        coEvery { sessionManager.fetchPairingSessionToken() } returns "valid_session_token"
+        val resp = retrofit2.Response.success(Unit)
+        coEvery { pairingApi.cancelSeedboxJob("Bearer valid_session_token", "job_123") } returns resp
+
+        val result = repository.cancelJob("job_123")
+        assertTrue(result.isSuccess)
+        assertEquals(Unit, result.getOrThrow())
+        io.mockk.coVerify(exactly = 1) { pairingApi.cancelSeedboxJob("Bearer valid_session_token", "job_123") }
+    }
+
+    @Test
+    fun testCancelAllJobsSuccess() = runBlocking {
+        coEvery { sessionManager.fetchPairingSessionToken() } returns "valid_session_token"
+        val resp = retrofit2.Response.success(Unit)
+        coEvery { pairingApi.cancelAllSeedboxJobs("Bearer valid_session_token") } returns resp
+
+        val result = repository.cancelAllJobs()
+        assertTrue(result.isSuccess)
+        assertEquals(Unit, result.getOrThrow())
+        io.mockk.coVerify(exactly = 1) { pairingApi.cancelAllSeedboxJobs("Bearer valid_session_token") }
+    }
+
+    @Test
     fun testUnauthenticatedThrowsFailure() = runBlocking {
         coEvery { sessionManager.fetchPairingSessionToken() } returns null
         val result = repository.getStatus()

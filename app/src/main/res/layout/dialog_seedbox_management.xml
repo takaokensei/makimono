@@ -1,0 +1,395 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp">
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardManagementRoot"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        app:cardBackgroundColor="@color/obsidian_bg_surface"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="24dp"
+        app:strokeColor="@color/obsidian_border_glass"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <!-- Header Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <View
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/cyan_dot_drawable" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvManagementEyebrow"
+                        style="@style/TextAppearance.Makimono.TV.Badge"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:fontFamily="@font/inter"
+                        android:letterSpacing="0.12"
+                        android:maxLines="1"
+                        android:singleLine="true"
+                        android:text="@string/seedbox_mgmt_eyebrow"
+                        android:textColor="@color/obsidian_accent_cyan"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvManagementTitle"
+                        style="@style/TextAppearance.Makimono.TV.Title2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:ellipsize="end"
+                        android:fontFamily="@font/inter"
+                        android:letterSpacing="-0.01"
+                        android:maxLines="1"
+                        android:singleLine="true"
+                        android:text="@string/seedbox_mgmt_title"
+                        android:textColor="@color/obsidian_text_primary"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+                <!-- Refresh Button -->
+                <FrameLayout
+                    android:id="@+id/btnRefreshQueue"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:contentDescription="@string/seedbox_mgmt_refresh"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_update_24"
+                        app:tint="@color/obsidian_text_secondary" />
+
+                </FrameLayout>
+
+                <!-- Close Button -->
+                <FrameLayout
+                    android:id="@+id/btnCloseManagement"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:contentDescription="@string/content_description_close"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_close_24"
+                        app:tint="@color/obsidian_text_secondary" />
+
+                </FrameLayout>
+
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="14dp"
+                android:background="@color/obsidian_border_glass" />
+
+            <!-- Server Status Cockpit -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="@color/obsidian_bg_base"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/obsidian_border_glass"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="14dp"
+                    android:paddingTop="10dp"
+                    android:paddingEnd="14dp"
+                    android:paddingBottom="10dp">
+
+                    <View
+                        android:id="@+id/viewServerStatusDot"
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
+                        android:background="@drawable/cyan_dot_drawable" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvServerStatusTitle"
+                            style="@style/TextAppearance.Makimono.TV.Callout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:fontFamily="@font/inter"
+                            android:maxLines="1"
+                            android:singleLine="true"
+                            android:textColor="@color/obsidian_text_primary"
+                            android:textStyle="bold"
+                            tools:text="Servidor Colab: ONLINE" />
+
+                        <TextView
+                            android:id="@+id/tvServerStatusMeta"
+                            style="@style/TextAppearance.Makimono.TV.Badge"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:ellipsize="end"
+                            android:fontFamily="@font/inter"
+                            android:fontFeatureSettings="tnum"
+                            android:maxLines="1"
+                            android:singleLine="true"
+                            android:textColor="@color/obsidian_text_secondary"
+                            tools:text="183.3 GB livres • 28.4 MB/s" />
+
+                    </LinearLayout>
+
+                    <!-- Cockpit Action: New Job -->
+                    <LinearLayout
+                        android:id="@+id/btnNewJob"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:layout_marginEnd="8dp"
+                        android:background="@drawable/btn_secondary_action_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center"
+                        android:orientation="horizontal"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp">
+
+                        <ImageView
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:contentDescription="@null"
+                            android:duplicateParentState="true"
+                            android:src="@drawable/ic_add_24"
+                            app:tint="@color/btn_secondary_action_foreground" />
+
+                        <TextView
+                            style="@style/TextAppearance.Makimono.TV.Callout"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:duplicateParentState="true"
+                            android:fontFamily="@font/inter"
+                            android:text="@string/seedbox_mgmt_new_job"
+                            android:textColor="@color/btn_secondary_action_foreground"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
+
+                    <!-- Cockpit Action: Cancel All -->
+                    <LinearLayout
+                        android:id="@+id/btnCancelAllJobs"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:background="@drawable/btn_secondary_action_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center"
+                        android:orientation="horizontal"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp">
+
+                        <ImageView
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:contentDescription="@null"
+                            android:duplicateParentState="true"
+                            android:src="@drawable/ic_close_24"
+                            app:tint="@color/obsidian_danger" />
+
+                        <TextView
+                            style="@style/TextAppearance.Makimono.TV.Callout"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:duplicateParentState="true"
+                            android:fontFamily="@font/inter"
+                            android:text="@string/seedbox_mgmt_cancel_all"
+                            android:textColor="@color/obsidian_danger"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Badges Summary Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvActiveCountBadge"
+                    style="@style/TextAppearance.Makimono.TV.Badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/glass_pill_bg"
+                    android:fontFamily="@font/inter"
+                    android:fontFeatureSettings="tnum"
+                    android:paddingStart="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingEnd="8dp"
+                    android:paddingBottom="3dp"
+                    android:textColor="@color/obsidian_accent_cyan"
+                    android:textStyle="bold"
+                    tools:text="2 ativos" />
+
+                <TextView
+                    android:id="@+id/tvCompletedCountBadge"
+                    style="@style/TextAppearance.Makimono.TV.Badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/glass_pill_bg"
+                    android:fontFamily="@font/inter"
+                    android:fontFeatureSettings="tnum"
+                    android:paddingStart="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingEnd="8dp"
+                    android:paddingBottom="3dp"
+                    android:textColor="@color/obsidian_success"
+                    android:textStyle="bold"
+                    tools:text="6 concluídos" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <!-- Copy Token Link Button -->
+                <TextView
+                    android:id="@+id/btnCopyToken"
+                    style="@style/TextAppearance.Makimono.TV.Badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:fontFamily="@font/inter"
+                    android:padding="4dp"
+                    android:text="@string/seedbox_mgmt_copy_token"
+                    android:textColor="@color/obsidian_text_secondary"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+            <!-- Main Queue Container: RecyclerView + Empty State + Loading Spinner -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="280dp"
+                android:layout_marginTop="10dp">
+
+                <!-- Queue RecyclerView -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvSeedboxJobs"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:clipToPadding="false"
+                    android:descendantFocusability="afterDescendants"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="6dp" />
+
+                <!-- Empty State -->
+                <LinearLayout
+                    android:id="@+id/layoutEmptyQueue"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <ImageView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_queue_empty"
+                        app:tint="@color/obsidian_text_tertiary" />
+
+                    <TextView
+                        style="@style/TextAppearance.Makimono.TV.Headline"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:fontFamily="@font/inter"
+                        android:text="@string/seedbox_mgmt_empty_title"
+                        android:textColor="@color/obsidian_text_secondary"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        style="@style/TextAppearance.Makimono.TV.Body"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="center"
+                        android:maxWidth="400dp"
+                        android:text="@string/seedbox_mgmt_empty_desc"
+                        android:textColor="@color/obsidian_text_tertiary" />
+
+                </LinearLayout>
+
+                <!-- Loading Spinner -->
+                <ProgressBar
+                    android:id="@+id/progressLoadingQueue"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_gravity="center"
+                    android:indeterminate="true"
+                    android:indeterminateTint="@color/obsidian_accent_cyan"
+                    android:visibility="gone" />
+
+            </FrameLayout>
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+</FrameLayout>
