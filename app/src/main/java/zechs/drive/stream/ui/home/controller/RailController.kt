@@ -426,12 +426,12 @@ class RailController(
             val normalBg = R.drawable.rail_item_focus_bg
             val activeBg = R.drawable.nav_item_active_bg
             val context = root.context
-            val normalTextColor = context.resolveThemeColor(R.attr.colorTextPrimary)
-            val activeTextColor = context.resolveThemeColor(R.attr.colorAccentPrimary)
+            val normalTextColor = context.resolveThemeColor(R.attr.colorTextSecondary)
+            val activeTextColor = context.resolveThemeColor(R.attr.colorTextPrimary)
             val normalIconColor = context.resolveThemeColor(R.attr.colorTextSecondary)
-            val activeIconColor = context.resolveThemeColor(R.attr.colorAccentPrimary)
+            val activeIconColor = context.resolveThemeColor(R.attr.colorTextPrimary)
             val focusedDarkColor = context.resolveThemeColor(R.attr.colorOnPrimary)
-            val focusedDarkSubtitleColor = Color.parseColor("#1E293B")
+            val focusedDarkSubtitleColor = Color.parseColor("#475569")
             val tab = currentTab
 
             val profileFocused = userProfilePill?.hasFocus() == true
@@ -615,6 +615,9 @@ class RailController(
         if (!DeviceUi.isTenFootExperience(context) || isTvRailExpanded) return
         isTvRailExpanded = true
 
+        val density = context.resources.displayMetrics.density
+        binding.navRail.elevation = 24f * density
+        binding.navRail.translationZ = 24f * density
         binding.navRail.setBackgroundResource(R.drawable.bg_sidebar_panel_expanded)
         binding.sidebarDimOverlay?.apply {
             animate().cancel()
@@ -693,6 +696,8 @@ class RailController(
                     binding.navRail.requestLayout()
                     if (!isTvRailExpanded) {
                         binding.navRail.setBackgroundResource(R.drawable.bg_sidebar_panel)
+                        binding.navRail.elevation = 0f
+                        binding.navRail.translationZ = 0f
                     }
                 }
             })
@@ -746,13 +751,15 @@ class RailController(
             id = View.generateViewId()
             orientation = android.widget.LinearLayout.HORIZONTAL
             gravity = android.view.Gravity.CENTER_VERTICAL
-            setPadding((16 * density).toInt(), 0, (16 * density).toInt(), 0)
+            setPadding((21 * density).toInt(), 0, (16 * density).toInt(), 0)
             setBackgroundResource(R.drawable.rail_item_focus_bg)
             isClickable = true
             isFocusable = true
             contentDescription = context.getString(R.string.nav_history)
             layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, itemHeight).apply {
-                topMargin = (2 * density).toInt()
+                topMargin = (4 * density).toInt()
+                marginStart = (8 * density).toInt()
+                marginEnd = (8 * density).toInt()
             }
             addView(icon)
             addView(label)
@@ -805,13 +812,15 @@ class RailController(
             id = View.generateViewId()
             orientation = android.widget.LinearLayout.HORIZONTAL
             gravity = android.view.Gravity.CENTER_VERTICAL
-            setPadding((16 * density).toInt(), 0, (16 * density).toInt(), 0)
+            setPadding((21 * density).toInt(), 0, (16 * density).toInt(), 0)
             setBackgroundResource(R.drawable.rail_item_focus_bg)
             isClickable = true
             isFocusable = true
             contentDescription = context.getString(R.string.downloads_title)
             layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, itemHeight).apply {
-                topMargin = (2 * density).toInt()
+                topMargin = (4 * density).toInt()
+                marginStart = (8 * density).toInt()
+                marginEnd = (8 * density).toInt()
             }
             addView(icon)
             addView(label)

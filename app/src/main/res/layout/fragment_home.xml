@@ -788,13 +788,13 @@
             android:layout_height="match_parent"
             android:layout_gravity="start"
             android:background="@drawable/bg_sidebar_panel"
-            android:elevation="24dp"
+            android:elevation="0dp"
             android:orientation="vertical"
             android:paddingStart="16dp"
             android:paddingTop="@dimen/tv_rail_inner_padding"
             android:paddingEnd="16dp"
             android:paddingBottom="@dimen/tv_rail_inner_padding"
-            android:translationZ="24dp"
+            android:translationZ="0dp"
             android:visibility="visible" android:layout_marginStart="@dimen/tv_rail_safe_inset" android:layout_marginTop="@dimen/tv_rail_safe_vertical" android:layout_marginBottom="@dimen/tv_rail_safe_vertical">
 
             <!-- 1. Início (Active by default) -->
