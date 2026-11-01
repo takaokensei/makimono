@@ -1745,7 +1745,8 @@ class HomeViewModel @Inject constructor(
                             phase = newPhase,
                             progressPct = job.progressPct,
                             speed = job.transferSpeed,
-                            statusDetail = job.statusDetail
+                            statusDetail = job.statusDetail,
+                            readyFolderId = job.driveFolderId ?: _fastStartSession.value?.readyFolderId
                         )
 
                         if (job.status != lastStatus || job.progressPct > 0) {

@@ -129,7 +129,7 @@ class SeedboxFastStartController(
                 hud.tvHudPercent.isVisible = true
                 hud.ivHudReadyIcon.isGone = true
                 hud.tvHudPercent.text = "${session.progressPct}%"
-                val speed = session.speed ?: ""
+                val speed = session.statusDetail ?: session.speed ?: ""
                 hud.tvHudSubtitle.text = context.getString(R.string.seedbox_hud_downloading, speed)
                 hud.progressHudLive.progress = session.progressPct
             }
@@ -254,7 +254,11 @@ class SeedboxFastStartController(
 
                 binding.tvFastStartPercent.text = "${session.progressPct}%"
                 binding.tvFastStartStatusTitle.text = session.animeTitle
-                binding.tvFastStartSpeedEta.text = session.speed ?: session.statusDetail ?: ""
+                binding.tvFastStartSpeedEta.text = when {
+                    !session.statusDetail.isNullOrBlank() -> session.statusDetail
+                    !session.speed.isNullOrBlank() -> session.speed
+                    else -> ""
+                }
 
                 ObjectAnimator.ofInt(binding.progressFastStartLive, "progress", session.progressPct)
                     .setDuration(250)
