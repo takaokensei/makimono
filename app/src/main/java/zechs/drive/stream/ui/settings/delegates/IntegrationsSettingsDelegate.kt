@@ -214,8 +214,8 @@ class IntegrationsSettingsDelegate(
                 .setPositiveButton(R.string.seedbox_mgmt_cancel_all) { _, _ ->
                     lifecycleScope.launch {
                         val res = seedboxRepoProvider().cancelAllJobs()
-                        res.onSuccess { count ->
-                            showSnackBar("$count downloads cancelados.")
+                        res.onSuccess {
+                            showSnackBar(context.getString(R.string.seedbox_stage_cancelled))
                             loadManagementQueue(mgmtBinding, jobsAdapter)
                         }.onFailure { err ->
                             showSnackBar("Erro ao cancelar fila: ${err.message}")
