@@ -15,4 +15,11 @@ class WatchHistoryPolicyTest {
         val second = first.copy(videoId = "b", id = 2)
         assertEquals(listOf("b", "a"), sortWatchHistory(listOf(first, second)).map { it.videoId })
     }
+    @Test fun filterKeepsPlaybackDateOrderAndDoesNotReclassifyCompletedItems() {
+        val watching = WatchList("BLEACH 01", "a", 10, 100, lastPlayedAt = 300)
+        val completed = watching.copy(videoId = "b", watchedDuration = 100, lastPlayedAt = 200)
+        assertEquals(listOf("a"), filterWatchHistory(listOf(completed, watching), WatchHistoryFilter.IN_PROGRESS).map { it.videoId })
+        assertEquals(listOf("b"), filterWatchHistory(listOf(watching, completed), WatchHistoryFilter.COMPLETED).map { it.videoId })
+        assertEquals(listOf("a", "b"), filterWatchHistory(listOf(completed, watching), WatchHistoryFilter.ALL).map { it.videoId })
+    }
 }

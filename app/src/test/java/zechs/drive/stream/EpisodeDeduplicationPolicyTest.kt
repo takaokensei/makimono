@@ -43,4 +43,25 @@ class EpisodeDeduplicationPolicyTest {
         duration: Long? = 1_440_000L,
         checksum: String? = null
     ) = EpisodeDeduplicationPolicy.Candidate(id, title, size, duration, checksum)
+    @Test fun genericEpisodeNamesInDifferentSeasonFoldersRemainDistinct() {
+        val first = zechs.drive.stream.domain.library.EpisodeDeduplicationPolicy.Candidate(
+            "a", "01.mkv", 1000L, 120000L, null, "season-1")
+        val second = first.copy(id = "b", groupKey = "season-2")
+        org.junit.Assert.assertEquals(2,
+            zechs.drive.stream.domain.library.EpisodeDeduplicationPolicy.removeDuplicates(listOf(first, second)).size)
+    }
+    @Test fun equalChecksumsStillCollapseCopiesAcrossFolders() {
+        val first = zechs.drive.stream.domain.library.EpisodeDeduplicationPolicy.Candidate(
+            "a", "01.mkv", 1000L, 120000L, "same-checksum", "season-1")
+        val second = first.copy(id = "b", groupKey = "season-2")
+        org.junit.Assert.assertEquals(1,
+            zechs.drive.stream.domain.library.EpisodeDeduplicationPolicy.removeDuplicates(listOf(first, second)).size)
+    }
+
+    @Test fun theSameDriveIdCannotCreateTwoRowsEvenIfItsChecksumChanges() {
+        val first = EpisodeDeduplicationPolicy.Candidate("same-file", "01.mkv", 1000L, 120000L, "before")
+        val second = first.copy(checksum = "after")
+        org.junit.Assert.assertEquals(1, EpisodeDeduplicationPolicy.removeDuplicates(listOf(first, second)).size)
+    }
+
 }

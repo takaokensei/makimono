@@ -14,6 +14,7 @@ import zechs.drive.stream.utils.MediaImageLoader
 import zechs.drive.stream.utils.ext.resolveThemeColor
 
 class WatchHistoryAdapter(
+    private val onLongClick: ((WatchList, android.view.View) -> Unit)? = null,
     private val onClick: (WatchList) -> Unit
 ) : ListAdapter<WatchList, WatchHistoryAdapter.ViewHolder>(DiffCallback()) {
 
@@ -28,13 +29,16 @@ class WatchHistoryAdapter(
         ItemWatchHistoryBinding.inflate(LayoutInflater.from(parent.context), parent, false)
     )
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) = holder.bind(getItem(position), onClick)
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) = holder.bind(getItem(position), onClick, onLongClick)
 
     class ViewHolder(private val binding: ItemWatchHistoryBinding) :
         androidx.recyclerview.widget.RecyclerView.ViewHolder(binding.root) {
 
-        fun bind(item: WatchList, onClick: (WatchList) -> Unit) {
+        fun bind(item: WatchList, onClick: (WatchList) -> Unit, onLongClick: ((WatchList, android.view.View) -> Unit)?) {
             val context = binding.root.context
+            binding.tvHistoryDate.visibility = if (item.lastPlayedAt > 0L) android.view.View.VISIBLE else android.view.View.GONE
+            binding.tvHistoryDate.text = if (item.lastPlayedAt > 0L)
+                android.text.format.DateFormat.getMediumDateFormat(context).format(java.util.Date(item.lastPlayedAt)) else ""
             val parsed = EpisodeParser.parse(item.name)
             val progress = item.watchProgress()
             val complete = item.hasFinished()
@@ -75,7 +79,15 @@ class WatchHistoryAdapter(
                 binding.tvHistoryProgressBadge.text
             )
             binding.cardHistoryItem.setOnClickListener { onClick(item) }
+            binding.cardHistoryItem.setOnLongClickListener { v -> onLongClick?.invoke(item, v); onLongClick != null }
+            binding.cardHistoryItem.setOnKeyListener { v, key, event ->
+                if (zechs.drive.stream.ui.home.ContinueWatchingInputPolicy.shouldOpenContextMenu(
+                    key, event.action, event.repeatCount, onLongClick != null)) {
+                    onLongClick?.invoke(item, v); true
+                } else false
+            }
             FocusEngine.attach(binding.cardHistoryItem, FocusEngine.FocusKind.CARD) { view, focused ->
+                if (focused) zechs.drive.stream.utils.FocusMemory.remember("home.history", bindingAdapterPosition, item.videoId)
                 val card = view as? com.google.android.material.card.MaterialCardView ?: return@attach
                 card.strokeColor = context.resolveThemeColor(
                     if (focused) R.attr.colorAccentPrimary else R.attr.colorBorderGlass

@@ -80,6 +80,8 @@ sealed class SeriesDetailUiState {
         val audioBadge: String? = null,
         val subtitleBadge: String? = null,
         val hasIncompleteDriveListing: Boolean = false,
+        val isSeasonLoading: Boolean = false,
+        val seasonLoadError: AppError? = null,
         val isMovie: Boolean = false,
         val selectedNavTab: SeriesNavTab = SeriesNavTab.EPISODES,
         val franchiseHub: FranchiseGroupingManager.FranchiseHub? = null,
@@ -226,9 +228,11 @@ class SeriesDetailViewModel @Inject constructor(
     }
 
     private var detailsLoadJob: kotlinx.coroutines.Job? = null
+    private var seasonLoadJob: kotlinx.coroutines.Job? = null
 
     fun loadSeriesDetails(folderId: String, seriesTitle: String, initialPoster: String? = null) {
         detailsLoadJob?.cancel()
+        seasonLoadJob?.cancel()
         currentFolderId = folderId
         currentSeriesTitle = seriesTitle
         observeDownloads(folderId)
@@ -270,26 +274,7 @@ class SeriesDetailViewModel @Inject constructor(
 
                 // 1.5 Offline-First check: if catalogRepository already has cached videos, emit immediate success state!
                 val cachedEntries = catalogRepository?.getChildren(folderId).orEmpty()
-                val cachedVideoFiles = cachedEntries
-                    .filter { entry ->
-                        val lower = entry.name.lowercase()
-                        val isVideoMime = entry.mimeType.startsWith("video/") || entry.mimeType == "application/x-matroska"
-                        val isVideoExt = lower.endsWith(".mkv") || lower.endsWith(".mp4") || lower.endsWith(".webm") || lower.endsWith(".avi")
-                        isVideoMime || isVideoExt
-                    }
-                    .map { entry ->
-                        DriveFile(
-                            id = entry.id,
-                            name = entry.name,
-                            size = null,
-                            mimeType = entry.mimeType,
-                            iconLink = null,
-                            thumbnailLink = entry.posterUrl,
-                            posterUrl = entry.posterUrl,
-                            shortcutDetails = zechs.drive.stream.data.model.ShortcutDetails(),
-                            starred = zechs.drive.stream.data.model.Starred.UNSTARRED
-                        )
-                    }
+                val cachedVideoFiles = restoreCachedVideos(cachedEntries)
 
                 if (cachedVideoFiles.isNotEmpty() && initialCached != null) {
                     val quickVideoIds = cachedVideoFiles.map { it.id }
@@ -567,8 +552,9 @@ class SeriesDetailViewModel @Inject constructor(
             emptyList()
         } else if (members != null && members.size > 1) {
             members.mapIndexed { index, member ->
-                val count = member.episodeCount ?: 1
-                val subtitle = formatCountLabel(count, member.isMovie)
+                // Remote episode totals are not a count of files available in this Drive folder.
+                val subtitle = if (member.folderId == folderId) formatCountLabel(allEpisodeItems.size, member.isMovie)
+                    else member.releaseYear?.toString().orEmpty()
                 val isSelected = member.folderId == folderId || (index == 0 && members.none { it.folderId == folderId })
                 SeasonTab(
                     id = member.folderId,
@@ -710,6 +696,13 @@ class SeriesDetailViewModel @Inject constructor(
         val errorMessage: String? = null
     )
 
+    private fun restoreCachedVideos(entries: List<CatalogEntry>): List<DriveFile> = entries.map { entry ->
+        DriveFile(id = entry.id, name = entry.name, size = null, mimeType = entry.mimeType,
+            iconLink = null, thumbnailLink = entry.posterUrl, posterUrl = entry.posterUrl,
+            shortcutDetails = zechs.drive.stream.data.model.ShortcutDetails(),
+            starred = zechs.drive.stream.data.model.Starred.UNSTARRED)
+    }.filter { it.isVideoFile }
+
     private suspend fun fetchAllDriveVideos(folderId: String): DriveVideoFetch {
         val directRes = driveRepository.getAllFilesDetailed(
             query = "'$folderId' in parents and trashed = false",
@@ -736,26 +729,7 @@ class SeriesDetailViewModel @Inject constructor(
 
             // Offline-first fallback: check if local catalog cache has files before failing
             val cachedEntries = catalogRepository?.getChildren(folderId).orEmpty()
-            val cachedVideos = cachedEntries
-                .filter { entry ->
-                    val lower = entry.name.lowercase()
-                    val isVideoMime = entry.mimeType.startsWith("video/") || entry.mimeType == "application/x-matroska"
-                    val isVideoExt = lower.endsWith(".mkv") || lower.endsWith(".mp4") || lower.endsWith(".webm") || lower.endsWith(".avi")
-                    isVideoMime || isVideoExt
-                }
-                .map { entry ->
-                    DriveFile(
-                        id = entry.id,
-                        name = entry.name,
-                        size = null,
-                        mimeType = entry.mimeType,
-                        iconLink = null,
-                        thumbnailLink = entry.posterUrl,
-                        posterUrl = entry.posterUrl,
-                        shortcutDetails = zechs.drive.stream.data.model.ShortcutDetails(),
-                        starred = zechs.drive.stream.data.model.Starred.UNSTARRED
-                    )
-                }
+            val cachedVideos = restoreCachedVideos(cachedEntries)
 
             if (cachedVideos.isNotEmpty()) {
                 return DriveVideoFetch(cachedVideos, isIncomplete = true)
@@ -767,6 +741,7 @@ class SeriesDetailViewModel @Inject constructor(
         var isIncomplete = !directCollection.isComplete || directRes is Resource.Error
         val items = directCollection.files.map { it.toDriveFile() }
         val videoFiles = items.filter { it.isVideoFile || (it.isShortcut && it.isShortcutVideo) }.toMutableList()
+        val folderContext = videoFiles.associate { it.id to folderId }.toMutableMap()
         // Folder structures vary: series -> season -> language -> video. Follow actual
         // folder/shortcut IDs, avoid cycles, and bound work before calling anything empty.
         val visited = mutableSetOf(folderId)
@@ -800,7 +775,10 @@ class SeriesDetailViewModel @Inject constructor(
             }
             collection?.files?.map { it.toDriveFile() }?.forEach { child ->
                 when {
-                    child.isVideoFile || child.isShortcutVideo -> videoFiles.add(child)
+                    child.isVideoFile || child.isShortcutVideo -> {
+                        videoFiles.add(child)
+                        folderContext[child.id] = targetId
+                    }
                     child.isFolder || child.isShortcutFolder -> pending.add(child to depth + 1)
                 }
             }
@@ -818,7 +796,8 @@ class SeriesDetailViewModel @Inject constructor(
                     title = file.name,
                     sizeBytes = file.size,
                     durationMillis = file.durationMillis,
-                    checksum = file.md5Checksum
+                    checksum = file.md5Checksum,
+                    groupKey = folderContext[file.id]
                 )
             }
         ).mapNotNull { candidate ->
@@ -937,8 +916,11 @@ class SeriesDetailViewModel @Inject constructor(
     }
 
     fun selectSeasonTab(tab: SeasonTab) {
-        observeDownloads(tab.id)
         val currentState = _uiState.value as? SeriesDetailUiState.Success ?: return
+        detailsLoadJob?.cancel()
+        seasonLoadJob?.cancel()
+        lastFocusedPosition = null
+        observeDownloads(tab.id)
 
         val hub = currentState.franchiseHub
         if (hub != null && hub.members.size > 1) {
@@ -962,9 +944,13 @@ class SeriesDetailViewModel @Inject constructor(
                     val domainCat = EpisodeCategorizer.categorize(ep.file.name, parsed)
                     SeriesMediaClassifier.mapCategory(domainCat) == defaultCategory
                 }
+                allEpisodeItems = cachedEps
+                val primary = PrimaryEpisodeSelection.select(cachedEps)
+                val isMovieTab = hub.members.firstOrNull { it.folderId == tab.id }?.isMovie == true
                 val updatedTabs = currentState.seasonTabs.map {
                     if (it.id == tab.id) {
-                        it.copy(isSelected = true, chips = chips, selectedCategory = defaultCategory)
+                        it.copy(isSelected = true, chips = chips, selectedCategory = defaultCategory,
+                            subtitle = formatCountLabel(cachedEps.size, isMovieTab))
                     } else {
                         it.copy(isSelected = false)
                     }
@@ -974,6 +960,10 @@ class SeriesDetailViewModel @Inject constructor(
                 _uiState.value = currentState.copy(
                     seasonTabs = updatedTabs,
                     currentEpisodes = filtered,
+                    continueWatchingItem = primary,
+                    continueWatchingSubtitle = PrimaryEpisodeSelection.formatContinueSubtitle(primary, isMovieTab),
+                    trailerItem = SeriesDetailEpisodeSelection.firstTrailer(cachedEps),
+                    isSeasonLoading = false, seasonLoadError = null,
                     allCurrentArcEpisodes = cachedEps,
                     activeMemberFolderId = tab.id,
                     activeArcId = tab.id,
@@ -994,87 +984,119 @@ class SeriesDetailViewModel @Inject constructor(
                     activeMemberFolderId = tab.id,
                     activeArcId = tab.id,
                     activeArcTitle = tab.title,
-                    activeArcYear = tab.releaseYear ?: currentState.activeArcYear,
-                    activeArcScore = if (currentState.isFranchiseHub) tab.score else tab.score ?: currentState.activeArcScore,
-                    activeArcScoreSource = tab.scoreSource
+                    activeArcYear = tab.releaseYear,
+                    activeArcScore = tab.score,
+                    activeArcScoreSource = tab.scoreSource,
+                    currentEpisodes = emptyList(), allCurrentArcEpisodes = emptyList(),
+                    continueWatchingItem = null, continueWatchingSubtitle = "", trailerItem = null,
+                    qualityBadge = null, audioBadge = null, subtitleBadge = null,
+                    isSeasonLoading = true, seasonLoadError = null
                 )
-                viewModelScope.launch(Dispatchers.IO) {
-                    val driveResult = fetchAllDriveVideos(tab.id)
-                    val videoIds = driveResult.files.map { it.id }
-                    val watchList = watchListRepository.getWatches(videoIds)
-                    val watchMap = watchList.associateBy { it.videoId }
-                    val resolved = try {
-                        episodeMetadataResolver.fetchShowEpisodes(tab.title)
-                    } catch (_: Exception) {
-                        currentResolvedEpisodes
-                    }.ifEmpty { currentResolvedEpisodes }
-                    val isMovieTab = tab.subtitle?.contains("Filme", true) == true
-                    val arcMeta = folderMetadataRepository.getMetadata(tab.id)?.toAnimeMetadata()
-                        ?: try {
-                            animePosterResolver.resolveMetadata(tab.title)
-                        } catch (_: Exception) { null }
-                    val arcRating = formatRating(arcMeta?.ageRating)
-                        ?: formatRating(currentState.aniListMetadata?.ageRating)
-                        ?: formatRating(animeEntry?.rating)
-                    val fallbackThumb = arcMeta?.bannerUrl
-                        ?: arcMeta?.posterUrl
-                        ?: currentState.aniListMetadata?.bannerUrl
-                        ?: currentState.fallbackPosterUrl
-                    val newEpisodes = driveResult.files.map { file ->
-                        mapToEpisodeItem(
-                            file = file,
-                            watch = watchMap[file.id],
-                            arcs = franchiseArcs,
-                            isMovie = isMovieTab,
-                            canonicalMovieTitle = if (isMovieTab) tab.title else null,
-                            fallbackThumbnail = fallbackThumb,
-                            resolvedEpisodes = resolved,
-                            seriesAgeRating = arcRating,
-                            fallbackRuntimeMinutes = arcMeta?.runtime ?: currentState.aniListMetadata?.runtime
-                        )
-                    }
-                    folderEpisodesCache[tab.id] = newEpisodes
-
-                    val categoryCounts = mutableMapOf<SeriesMediaCategory, Int>()
-                    newEpisodes.forEach { ep ->
-                        val parsed = EpisodeParser.parse(ep.file.name)
-                        val domainCat = EpisodeCategorizer.categorize(ep.file.name, parsed)
-                        val cat = SeriesMediaClassifier.mapCategory(domainCat)
-                        categoryCounts[cat] = (categoryCounts[cat] ?: 0) + 1
-                    }
-                    val defaultCategory = if ((categoryCounts[SeriesMediaCategory.EPISODES] ?: 0) > 0) {
-                        SeriesMediaCategory.EPISODES
-                    } else {
-                        categoryCounts.keys.firstOrNull() ?: SeriesMediaCategory.EPISODES
-                    }
-                    val chips = SeriesMediaClassifier.buildChips(categoryCounts, defaultCategory)
-                    val filtered = newEpisodes.filter { ep ->
-                        val parsed = EpisodeParser.parse(ep.file.name)
-                        val domainCat = EpisodeCategorizer.categorize(ep.file.name, parsed)
-                        SeriesMediaClassifier.mapCategory(domainCat) == defaultCategory
-                    }
-
-                    withContext(Dispatchers.Main) {
-                        val finalTabs = currentState.seasonTabs.map {
-                            if (it.id == tab.id) {
-                                it.copy(isSelected = true, chips = chips, selectedCategory = defaultCategory)
-                            } else {
-                                it.copy(isSelected = false)
+                seasonLoadJob = viewModelScope.launch(Dispatchers.IO) {
+                    try {
+                        val driveResult = fetchAllDriveVideos(tab.id)
+                        if (driveResult.files.isEmpty() && driveResult.appError != null) {
+                            withContext(Dispatchers.Main) {
+                                val latest = _uiState.value as? SeriesDetailUiState.Success ?: return@withContext
+                                if (latest.activeMemberFolderId == tab.id)
+                                    _uiState.value = latest.copy(isSeasonLoading = false, seasonLoadError = driveResult.appError)
                             }
+                            return@launch
                         }
-                        _uiState.value = currentState.copy(
-                            seasonTabs = finalTabs,
-                            currentEpisodes = filtered,
-                            allCurrentArcEpisodes = newEpisodes,
-                            activeMemberFolderId = tab.id,
-                            activeArcId = tab.id,
-                            activeArcTitle = tab.title,
-                            activeArcYear = tab.releaseYear ?: currentState.activeArcYear,
-                            activeArcScore = if (currentState.isFranchiseHub) tab.score else tab.score ?: currentState.activeArcScore,
-                            activeArcScoreSource = tab.scoreSource,
-                            categoryChips = chips,
-                            selectedCategory = defaultCategory
-                        )
+                        val videoIds = driveResult.files.map { it.id }
+                        val watchList = watchListRepository.getWatches(videoIds)
+                        val watchMap = watchList.associateBy { it.videoId }
+                        val resolved = try {
+                            episodeMetadataResolver.fetchShowEpisodes(tab.title)
+                        } catch (_: Exception) {
+                            currentResolvedEpisodes
+                        }.ifEmpty { currentResolvedEpisodes }
+                        val isMovieTab = hub.members.firstOrNull { it.folderId == tab.id }?.isMovie == true
+                        val arcMeta = folderMetadataRepository.getMetadata(tab.id)?.toAnimeMetadata()
+                            ?: try {
+                                animePosterResolver.resolveMetadata(tab.title)
+                            } catch (_: Exception) { null }
+                        val arcRating = formatRating(arcMeta?.ageRating)
+                            ?: formatRating(currentState.aniListMetadata?.ageRating)
+                            ?: formatRating(animeEntry?.rating)
+                        val fallbackThumb = arcMeta?.bannerUrl
+                            ?: arcMeta?.posterUrl
+                            ?: currentState.aniListMetadata?.bannerUrl
+                            ?: currentState.fallbackPosterUrl
+                        val newEpisodes = driveResult.files.map { file ->
+                            mapToEpisodeItem(
+                                file = file,
+                                watch = watchMap[file.id],
+                                arcs = franchiseArcs,
+                                isMovie = isMovieTab,
+                                canonicalMovieTitle = if (isMovieTab) tab.title else null,
+                                fallbackThumbnail = fallbackThumb,
+                                resolvedEpisodes = resolved,
+                                seriesAgeRating = arcRating,
+                                fallbackRuntimeMinutes = arcMeta?.runtime ?: currentState.aniListMetadata?.runtime
+                            )
+                        }
+                        folderEpisodesCache[tab.id] = newEpisodes
+
+                        val categoryCounts = mutableMapOf<SeriesMediaCategory, Int>()
+                        newEpisodes.forEach { ep ->
+                            val parsed = EpisodeParser.parse(ep.file.name)
+                            val domainCat = EpisodeCategorizer.categorize(ep.file.name, parsed)
+                            val cat = SeriesMediaClassifier.mapCategory(domainCat)
+                            categoryCounts[cat] = (categoryCounts[cat] ?: 0) + 1
+                        }
+                        val defaultCategory = if ((categoryCounts[SeriesMediaCategory.EPISODES] ?: 0) > 0) {
+                            SeriesMediaCategory.EPISODES
+                        } else {
+                            categoryCounts.keys.firstOrNull() ?: SeriesMediaCategory.EPISODES
+                        }
+                        val chips = SeriesMediaClassifier.buildChips(categoryCounts, defaultCategory)
+                        val filtered = newEpisodes.filter { ep ->
+                            val parsed = EpisodeParser.parse(ep.file.name)
+                            val domainCat = EpisodeCategorizer.categorize(ep.file.name, parsed)
+                            SeriesMediaClassifier.mapCategory(domainCat) == defaultCategory
+                        }
+
+                        withContext(Dispatchers.Main) {
+                            val latest = _uiState.value as? SeriesDetailUiState.Success ?: return@withContext
+                            if (latest.activeMemberFolderId != tab.id || latest.folderId != currentState.folderId) return@withContext
+                            allEpisodeItems = newEpisodes
+                            currentResolvedEpisodes = resolved
+                            val primary = PrimaryEpisodeSelection.select(newEpisodes)
+                            val finalTabs = latest.seasonTabs.map {
+                                if (it.id == tab.id) {
+                                    it.copy(isSelected = true, chips = chips, selectedCategory = defaultCategory,
+                                        subtitle = formatCountLabel(newEpisodes.size, isMovieTab))
+                                } else {
+                                    it.copy(isSelected = false)
+                                }
+                            }
+                            _uiState.value = latest.copy(
+                                seasonTabs = finalTabs,
+                                continueWatchingItem = primary,
+                                continueWatchingSubtitle = PrimaryEpisodeSelection.formatContinueSubtitle(primary, isMovieTab),
+                                trailerItem = SeriesDetailEpisodeSelection.firstTrailer(newEpisodes),
+                                isSeasonLoading = false, seasonLoadError = null,
+                                hasIncompleteDriveListing = driveResult.isIncomplete,
+                                currentEpisodes = filtered,
+                                allCurrentArcEpisodes = newEpisodes,
+                                activeMemberFolderId = tab.id,
+                                activeArcId = tab.id,
+                                activeArcTitle = tab.title,
+                                activeArcYear = tab.releaseYear ?: currentState.activeArcYear,
+                                activeArcScore = if (currentState.isFranchiseHub) tab.score else tab.score ?: currentState.activeArcScore,
+                                activeArcScoreSource = tab.scoreSource,
+                                categoryChips = chips,
+                                selectedCategory = defaultCategory
+                            )
+                        }
+                    } catch (e: CancellationException) { throw e }
+                    catch (_: Exception) {
+                        withContext(Dispatchers.Main) {
+                            val latest = _uiState.value as? SeriesDetailUiState.Success ?: return@withContext
+                            if (latest.activeMemberFolderId == tab.id)
+                                _uiState.value = latest.copy(isSeasonLoading = false, seasonLoadError = AppError.Unknown())
+                        }
                     }
                 }
             }
@@ -1087,9 +1109,12 @@ class SeriesDetailViewModel @Inject constructor(
             }
             selectedSeasonPosition = updatedTabs.indexOfFirst { it.isSelected }.coerceAtLeast(0)
 
+            val primary = PrimaryEpisodeSelection.select(filteredEpisodes)
             _uiState.value = currentState.copy(
                 seasonTabs = updatedTabs,
                 currentEpisodes = filteredEpisodes,
+                continueWatchingItem = primary,
+                continueWatchingSubtitle = PrimaryEpisodeSelection.formatContinueSubtitle(primary, currentState.isMovie),
                 activeArcId = tab.id,
                 activeArcTitle = tab.title,
                 activeArcYear = tab.releaseYear ?: currentState.activeArcYear,

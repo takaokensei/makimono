@@ -85,6 +85,10 @@
                 android:maxLines="1"
                 android:textColor="@color/obsidian_text_secondary" />
 
+            <TextView android:id="@+id/tvHistoryDate" style="@style/TextAppearance.Makimono.TV.Body"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="5dp" android:textColor="@color/obsidian_text_secondary" />
+
             <TextView
                 android:id="@+id/tvHistoryStatus"
                 style="@style/TextAppearance.Makimono.TV.Body"

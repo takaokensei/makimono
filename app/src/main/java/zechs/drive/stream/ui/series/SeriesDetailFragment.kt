@@ -43,6 +43,7 @@ import zechs.drive.stream.utils.TvAccessibilityLayout
 import zechs.drive.stream.utils.FocusEngine
 import zechs.drive.stream.utils.FocusMemory
 import zechs.drive.stream.utils.ShimmerController
+import zechs.drive.stream.ui.common.UiError
 import zechs.drive.stream.ui.common.StateView
 import zechs.drive.stream.domain.common.AppError
 import java.util.Locale
@@ -689,6 +690,9 @@ class SeriesDetailFragment : BaseFragment() {
         }
         synopsisDisclosure.bind(cleanSynopsis)
 
+        (binding.actionsRow.parent as? View)?.visibility =
+            if (state.continueWatchingItem != null && !state.isSeasonLoading) View.VISIBLE else View.GONE
+
         // 5. Action Buttons (REF-11: 3 Primary Hero Buttons — Assistir/Continuar | Minha Lista | Mais)
         val canResume = state.continueWatchingItem?.progressPercent in 1..94
         val actionRes = if (isMovie) {
@@ -778,6 +782,18 @@ class SeriesDetailFragment : BaseFragment() {
             episodeAdapter.submitList(state.currentEpisodes)
             if (state.currentEpisodes.isEmpty()) {
                 binding.tvEmptyEpisodes.visibility = View.VISIBLE
+                val loadError = state.seasonLoadError?.let { UiError.fromAppError(it) }
+                binding.tvEmptyEpisodes.text = when {
+                    state.isSeasonLoading -> getString(R.string.series_season_loading)
+                    loadError != null -> getString(loadError.messageRes) + "\n" + getString(R.string.state_error_network_action)
+                    else -> getString(R.string.no_episodes_available)
+                }
+                binding.tvEmptyEpisodes.isFocusable = loadError != null
+                binding.tvEmptyEpisodes.isClickable = loadError != null
+                binding.tvEmptyEpisodes.setBackgroundResource(if (loadError != null) R.drawable.btn_secondary_action_bg else 0)
+                binding.tvEmptyEpisodes.setOnClickListener {
+                    state.seasonTabs.firstOrNull { it.isSelected }?.let(viewModel::selectSeasonTab)
+                }
             } else {
                 binding.tvEmptyEpisodes.visibility = View.GONE
             }

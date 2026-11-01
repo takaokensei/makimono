@@ -10,13 +10,16 @@ object EpisodeDeduplicationPolicy {
         val title: String,
         val sizeBytes: Long?,
         val durationMillis: Long?,
-        val checksum: String?
+        val checksum: String?,
+        val groupKey: String? = null
     )
 
     fun removeDuplicates(items: List<Candidate>): List<Candidate> {
         val retained = mutableListOf<Candidate>()
         val checksums = mutableSetOf<String>()
+        val identities = mutableSetOf<String>()
         for (candidate in items) {
+            if (!identities.add(candidate.id)) continue
             val checksum = candidate.checksum?.trim()?.lowercase(Locale.ROOT)?.takeIf(String::isNotEmpty)
             if (checksum != null) {
                 if (!checksums.add(checksum)) continue
@@ -30,6 +33,8 @@ object EpisodeDeduplicationPolicy {
 
     private fun isStrongMetadataMatch(left: Candidate, right: Candidate): Boolean {
         if (left.id == right.id) return true
+        // Equal generic filenames in different seasons/language folders are not evidence of duplication.
+        if (left.groupKey != right.groupKey) return false
         val leftTitle = normalizeTitle(left.title)
         val rightTitle = normalizeTitle(right.title)
         if (leftTitle.isBlank() || leftTitle != rightTitle) return false
