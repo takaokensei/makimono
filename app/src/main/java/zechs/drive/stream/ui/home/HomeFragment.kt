@@ -156,7 +156,8 @@ class HomeFragment : BaseFragment() {
             },
             onCancelFeaturedPreview = { },
             onRefreshShelvesRequested = { refreshInicioShelfUi() },
-            onShowHistoryRequested = { actionHandler.showWatchHistoryDialog() }
+            onShowHistoryRequested = { actionHandler.showWatchHistoryDialog() },
+            reduceMotionProvider = { reduceMotionEnabled }
         )
         actionHandler = HomeActionHandler(
             context = requireContext(),
@@ -230,7 +231,7 @@ class HomeFragment : BaseFragment() {
         observeAnimeLibrary()
         heroController.observeFeaturedAnime(
             currentTabProvider = { railController.currentTab },
-            reduceMotionEnabled = reduceMotionEnabled,
+            reduceMotionEnabled = { reduceMotionEnabled },
             isCollapsible = railController.isCollapsibleRail()
         )
         observeProfileConfiguration()
@@ -373,6 +374,7 @@ class HomeFragment : BaseFragment() {
 
     override fun onResume() {
         super.onResume()
+        viewModel.refreshConfiguredLibrary()
         if (railController.currentTab == "Início") {
             val rootFocus = binding.root.findFocus()
             val rail = binding.root.findViewById<View>(R.id.navRail)
@@ -637,6 +639,7 @@ class HomeFragment : BaseFragment() {
         exitDialog?.dismiss()
         exitDialog = null
         lastFocusedAnimeView = null
+        if (::catalogController.isInitialized) catalogController.release()
         _binding = null
     }
 }

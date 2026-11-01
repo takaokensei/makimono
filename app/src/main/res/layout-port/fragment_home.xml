@@ -191,7 +191,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:orientation="horizontal" android:layout_marginStart="@dimen/tv_rail_safe_inset" android:layout_marginTop="@dimen/tv_rail_safe_vertical" android:layout_marginBottom="@dimen/tv_rail_safe_vertical" android:paddingTop="@dimen/tv_rail_inner_padding" android:paddingBottom="@dimen/tv_rail_inner_padding">
 
             <!-- 1. Início -->
             <LinearLayout
@@ -222,7 +222,7 @@
                     android:fontFamily="@font/inter"
                     android:text="Início"
                     android:textColor="@color/obsidian_text_secondary"
-                    style="@style/TextAppearance.Makimono.TV.Callout" />
+                    style="@style/TextAppearance.Makimono.TV.Callout"  android:maxLines="1" android:ellipsize="end" />
 
             </LinearLayout>
 
@@ -257,7 +257,7 @@
                     android:text="Animes"
                     android:textColor="@color/obsidian_text_primary"
                     style="@style/TextAppearance.Makimono.TV.Callout"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"  android:maxLines="1" android:ellipsize="end" />
 
             </LinearLayout>
 
@@ -290,7 +290,7 @@
                     android:fontFamily="@font/inter"
                     android:text="Pastas"
                     android:textColor="@color/obsidian_text_secondary"
-                    style="@style/TextAppearance.Makimono.TV.Callout" />
+                    style="@style/TextAppearance.Makimono.TV.Callout"  android:maxLines="1" android:ellipsize="end" />
 
             </LinearLayout>
 
@@ -324,7 +324,7 @@
                     android:fontFamily="@font/inter"
                     android:text="Favoritos"
                     android:textColor="@color/obsidian_text_secondary"
-                    style="@style/TextAppearance.Makimono.TV.Callout" />
+                    style="@style/TextAppearance.Makimono.TV.Callout"  android:maxLines="1" android:ellipsize="end" />
 
             </LinearLayout>
 
@@ -356,7 +356,7 @@
                     android:fontFamily="@font/inter"
                     android:text="Configurações"
                     android:textColor="@color/obsidian_text_secondary"
-                    style="@style/TextAppearance.Makimono.TV.Callout" />
+                    style="@style/TextAppearance.Makimono.TV.Callout"  android:maxLines="1" android:ellipsize="end" />
 
             </LinearLayout>
 
@@ -515,6 +515,9 @@
                     android:clipChildren="false"
                     android:clipToPadding="false"
                     android:nestedScrollingEnabled="false" />
+<TextView android:id="@+id/tvDiscoveryHeading" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingStart="@dimen/home_content_margin" android:paddingEnd="@dimen/tv_overscan_margin" android:paddingTop="24dp" android:paddingBottom="12dp" android:text="@string/catalog_discovery_heading" android:textColor="@color/obsidian_text_primary" style="@style/TextAppearance.Makimono.TV.Subheadline" android:visibility="gone" />
+<androidx.recyclerview.widget.RecyclerView android:id="@+id/rvDiscovery" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingStart="@dimen/home_content_margin" android:paddingEnd="@dimen/tv_overscan_margin" android:paddingBottom="@dimen/tv_overscan_margin_vertical" android:clipToPadding="false" android:clipChildren="false" android:focusable="false" android:nestedScrollingEnabled="false" android:visibility="gone" />
+
 
             </LinearLayout>
 

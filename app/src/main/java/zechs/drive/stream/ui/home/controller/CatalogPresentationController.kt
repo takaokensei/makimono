@@ -39,6 +39,14 @@ class CatalogPresentationController(
     private val onGridModeChanged: (Boolean) -> Unit
 ) {
 
+    private val discoveryAdapter by lazy {
+        FilesAdapter(animeAdapter.onClickListener, animeAdapter.onLongClickListener,
+            animeAdapter.onStarClickListener, animeAdapter.onPlayClickListener, compactCatalog = true).apply {
+            isGridMode = true
+            onDpadLeftListener = { railController.focusCurrentNavItem(); true }
+        }
+    }
+
     var isGridMode: Boolean = true
         private set
 
@@ -86,6 +94,14 @@ class CatalogPresentationController(
             binding.searchPillContainer?.isSelected = hasFocus
         }
         binding.etSearchAnime.setOnKeyListener { _, keyCode, event ->
+            if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_DOWN &&
+                zechs.drive.stream.utils.DeviceUi.isTenFootExperience(context)) {
+                val target = binding.rvAnimeLibrary.layoutManager?.findViewByPosition(0)
+                    ?: binding.rvDiscovery.layoutManager?.findViewByPosition(0)
+                    ?: binding.root.findViewById<View>(R.id.btnCatalogSort)
+                if (target?.requestFocus() == true) return@setOnKeyListener true
+            }
+
             if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
                 if (binding.etSearchAnime.selectionStart == 0) {
                     if (railController.isCollapsibleRail()) railController.expandSidebar()
@@ -158,7 +174,20 @@ class CatalogPresentationController(
     }
 
     fun submitCatalog() {
-        val source = viewModel.filteredAnimes.value
+        val sections = zechs.drive.stream.ui.home.catalogSections(viewModel.filteredAnimes.value,
+            railController.currentTab == "Buscar" && binding.etSearchAnime.text?.isNotBlank() == true)
+        val source = sections.library
+        val discovery = binding.rvDiscovery
+        val span = (binding.rvAnimeLibrary.layoutManager as? GridLayoutManager)?.spanCount ?: 2
+        if ((discovery.layoutManager as? GridLayoutManager)?.spanCount != span)
+            discovery.layoutManager = GridLayoutManager(context, span)
+        if (discovery.adapter == null) discovery.adapter = discoveryAdapter
+        discoveryAdapter.submitList(sections.discovery.map { FilesDataModel.File(it) })
+        val showDiscovery = sections.discovery.isNotEmpty()
+        discovery.visibility = if (showDiscovery) View.VISIBLE else View.GONE
+        binding.tvDiscoveryHeading.visibility = discovery.visibility
+        binding.rvAnimeLibrary.nextFocusDownId = if (showDiscovery) discovery.id else View.NO_ID
+        discovery.nextFocusUpId = if (source.isNotEmpty()) binding.rvAnimeLibrary.id else binding.etSearchAnime.id
         val titles = compareBy<DriveFile> {
             AnimePosterResolver.cleanAnimeTitle(it.name).lowercase(Locale.ROOT)
         }
@@ -196,6 +225,11 @@ class CatalogPresentationController(
             .translationZ(if (hasFocus) elevation else 0f)
             .setDuration(view.resources.getInteger(R.integer.motion_focus).toLong())
             .start()
+    }
+
+    fun release() {
+        binding.rvDiscovery.adapter = null
+        binding.rvGenreFilterChips?.adapter = null
     }
 
     private fun launchVoiceSearch() {

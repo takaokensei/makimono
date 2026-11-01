@@ -159,7 +159,7 @@ class HeroController(
 
     fun observeFeaturedAnime(
         currentTabProvider: () -> String,
-        reduceMotionEnabled: Boolean,
+        reduceMotionEnabled: () -> Boolean,
         isCollapsible: Boolean
     ) {
         this.activeTabProvider = currentTabProvider
@@ -171,7 +171,7 @@ class HeroController(
         if (initialFeatured != null && currentTabProvider() == "Início") {
             binding.featuredHeroContainer?.visibility = View.VISIBLE
             binding.layoutHomeEmpty?.visibility = View.GONE
-            featuredHeroBinder?.bind(initialFeatured, reduceMotionEnabled)
+            featuredHeroBinder?.bind(initialFeatured, reduceMotionEnabled())
         }
         startHeroAutoCycle(currentTabProvider)
         lifecycleOwner.lifecycleScope.launch {
@@ -183,7 +183,7 @@ class HeroController(
                             binding.layoutHomeEmpty?.visibility = View.GONE
                             focusHeroOnFirstShow(isCollapsible)
                         }
-                        featuredHeroBinder?.bind(featured, reduceMotionEnabled)
+                        featuredHeroBinder?.bind(featured, reduceMotionEnabled())
 
                         binding.btnFeaturedPlay?.setOnClickListener {
                             val file = viewModel.animeLibrary.value.firstOrNull {
@@ -270,7 +270,8 @@ class HeroController(
                         inside
                     }
 
-                    if (currentTabProvider() == "Início" && !viewModel.isFocusPreviewActive) {
+                    if (currentTabProvider() == "Início" && !viewModel.isFocusPreviewActive &&
+                        !isHeroFocused && !isRailFocused && binding.root.hasWindowFocus()) {
                         viewModel.cycleNextFeaturedSpotlight()
                     }
                 }

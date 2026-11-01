@@ -31,17 +31,6 @@ class HomeShelvesBuilder {
             )
         }
 
-        // 2. Favoritos
-        if (starred.isNotEmpty()) {
-            shelves.add(
-                LibraryShelf(
-                    id = "shelf_starred",
-                    title = "Favoritos",
-                    items = starred
-                )
-            )
-        }
-
         // 3. Novos episódios / Seguidos
         if (followed.isNotEmpty()) {
             shelves.add(
@@ -49,6 +38,17 @@ class HomeShelvesBuilder {
                     id = "shelf_followed",
                     title = "Novos Episódios",
                     items = followed
+                )
+            )
+        }
+
+        // 2. Favoritos
+        if (starred.isNotEmpty()) {
+            shelves.add(
+                LibraryShelf(
+                    id = "shelf_starred",
+                    title = "Favoritos",
+                    items = starred
                 )
             )
         }

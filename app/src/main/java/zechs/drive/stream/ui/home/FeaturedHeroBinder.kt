@@ -16,27 +16,30 @@ internal class FeaturedHeroBinder(
 ) {
     private var displayedFeaturedId: String? = null
     private var displayedBackdropUrl: String? = null
+    private var activeBackdropIsBase = true
 
     fun bind(featured: HomeViewModel.FeaturedAnime, reduceMotionEnabled: Boolean) {
         val isDifferentAnime = displayedFeaturedId != null && displayedFeaturedId != featured.folderId
         displayedFeaturedId = featured.folderId
 
-        if (isDifferentAnime && !reduceMotionEnabled && binding.layoutHeroTextContent != null) {
-            binding.layoutHeroTextContent?.animate()?.cancel()
-            binding.layoutHeroTextContent?.animate()
-                ?.alpha(0f)
-                ?.translationY(-6f)
-                ?.setDuration(140L)
-                ?.withEndAction {
+        val textContent = binding.layoutHeroTextContent
+        if (isDifferentAnime && !reduceMotionEnabled && textContent != null) {
+            textContent.animate()?.cancel()
+            textContent.animate()
+                .alpha(0f)
+                .translationY(-6f)
+                .setDuration(context.resources.getInteger(R.integer.motion_osd_hide).toLong())
+                .withEndAction {
+                    if (displayedFeaturedId != featured.folderId) return@withEndAction
                     bindTextContent(featured)
-                    binding.layoutHeroTextContent?.translationY = 6f
-                    binding.layoutHeroTextContent?.animate()
-                        ?.alpha(1f)
-                        ?.translationY(0f)
-                        ?.setDuration(240L)
-                        ?.start()
+                    textContent.translationY = 6f
+                    textContent.animate()
+                        .alpha(1f)
+                        .translationY(0f)
+                        .setDuration(context.resources.getInteger(R.integer.motion_card).toLong())
+                        .start()
                 }
-                ?.start()
+                .start()
         } else {
             binding.layoutHeroTextContent?.animate()?.cancel()
             binding.layoutHeroTextContent?.alpha = 1f
@@ -45,65 +48,45 @@ internal class FeaturedHeroBinder(
         }
 
         val imageUrl = featured.backdropUrl ?: featured.posterUrl
-        val baseImageView = binding.ivFeaturedBackdrop
-        val nextImageView = binding.ivFeaturedBackdropNext
-        if (baseImageView != null) {
+        val current = if (activeBackdropIsBase) binding.ivFeaturedBackdrop else binding.ivFeaturedBackdropNext
+        val incoming = if (activeBackdropIsBase) binding.ivFeaturedBackdropNext else binding.ivFeaturedBackdrop
+        if (current != null && displayedBackdropUrl != imageUrl) {
+            displayedBackdropUrl = imageUrl
+            incoming?.animate()?.cancel()
+            incoming?.alpha = 0f
             if (imageUrl.isNullOrBlank()) {
-                displayedBackdropUrl = null
-                Glide.with(baseImageView).clear(baseImageView)
-                baseImageView.setImageResource(R.drawable.kodi_primary_bg)
-                nextImageView?.alpha = 0f
-            } else if (displayedBackdropUrl != imageUrl) {
-                displayedBackdropUrl = imageUrl
-                if (nextImageView != null && !reduceMotionEnabled && baseImageView.drawable != null) {
-                    Glide.with(nextImageView)
-                        .load(imageUrl)
-                        .override(1440, 810)
-                        .format(com.bumptech.glide.load.DecodeFormat.PREFER_ARGB_8888)
-                        .centerCrop()
-                        .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
-                        .listener(object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
-                            override fun onLoadFailed(
-                                e: com.bumptech.glide.load.engine.GlideException?,
-                                model: Any?,
-                                target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>,
-                                isFirstResource: Boolean
-                            ): Boolean = false
-
-                            override fun onResourceReady(
-                                resource: android.graphics.drawable.Drawable,
-                                model: Any,
-                                target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?,
-                                dataSource: com.bumptech.glide.load.DataSource,
-                                isFirstResource: Boolean
-                            ): Boolean {
-                                nextImageView.animate().cancel()
-                                nextImageView.alpha = 0f
-                                nextImageView.setImageDrawable(resource)
-                                nextImageView.animate()
-                                    .alpha(1f)
-                                    .setDuration(400L)
+                Glide.with(current).clear(current)
+                incoming?.let { Glide.with(it).clear(it) }
+                current.setImageResource(R.drawable.kodi_primary_bg)
+                current.alpha = 1f
+            } else {
+                val animate = incoming != null && !reduceMotionEnabled && current.drawable != null
+                val imageTarget = if (animate) incoming!! else current
+                Glide.with(imageTarget).load(imageUrl).override(1440, 810).centerCrop()
+                    .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
+                    .listener(object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
+                        override fun onLoadFailed(e: com.bumptech.glide.load.engine.GlideException?, model: Any?,
+                            target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>,
+                            isFirstResource: Boolean): Boolean = true
+                        override fun onResourceReady(resource: android.graphics.drawable.Drawable, model: Any,
+                            target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?,
+                            dataSource: com.bumptech.glide.load.DataSource, isFirstResource: Boolean): Boolean {
+                            if (displayedBackdropUrl != imageUrl) return true
+                            imageTarget.setImageDrawable(resource)
+                            if (animate) {
+                                imageTarget.alpha = 0f
+                                imageTarget.animate().alpha(1f)
+                                    .setDuration(context.resources.getInteger(R.integer.motion_hero_crossfade).toLong())
                                     .withEndAction {
-                                        baseImageView.setImageDrawable(resource)
-                                        nextImageView.alpha = 0f
-                                    }
-                                    .start()
-                                return true
-                            }
-                        })
-                        .into(nextImageView)
-                } else {
-                    Glide.with(baseImageView)
-                        .load(imageUrl)
-                        .override(1440, 810)
-                        .format(com.bumptech.glide.load.DecodeFormat.PREFER_ARGB_8888)
-                        .centerCrop()
-                        .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
-                        .placeholder(R.drawable.kodi_primary_bg)
-                        .error(R.drawable.kodi_primary_bg)
-                        .into(baseImageView)
-                    nextImageView?.alpha = 0f
-                }
+                                        if (displayedBackdropUrl == imageUrl) {
+                                            current.alpha = 0f
+                                            activeBackdropIsBase = !activeBackdropIsBase
+                                        }
+                                    }.start()
+                            } else imageTarget.alpha = 1f
+                            return true
+                        }
+                    }).into(imageTarget)
             }
         }
     }
@@ -148,10 +131,10 @@ internal class FeaturedHeroBinder(
                 setOnFocusChangeListener { _, hasFocus ->
                     if (hasFocus) {
                         drawable.setColor(accentColor)
-                        animate().scaleY(1.4f).setDuration(120L).start()
+                        animate().scaleY(1.4f).setDuration(context.resources.getInteger(R.integer.motion_focus).toLong()).start()
                         onPillSelected(i)
                     } else {
-                        animate().scaleY(1.0f).setDuration(120L).start()
+                        animate().scaleY(1.0f).setDuration(context.resources.getInteger(R.integer.motion_focus).toLong()).start()
                         drawable.setColor(if (i == activeIndex) accentColor else inactiveColor)
                     }
                 }
@@ -165,18 +148,24 @@ internal class FeaturedHeroBinder(
 
     private fun bindTextContent(featured: HomeViewModel.FeaturedAnime) {
         val clearLogo = featured.clearLogoUrl
-        if (!clearLogo.isNullOrBlank()) {
-            binding.ivFeaturedClearLogo?.let { logoView ->
-                logoView.visibility = View.VISIBLE
-                binding.tvFeaturedTitle?.visibility = View.GONE
-                Glide.with(logoView)
-                    .load(clearLogo)
-                    .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
-                    .into(logoView)
-            }
-        } else {
-            binding.ivFeaturedClearLogo?.visibility = View.GONE
-            binding.tvFeaturedTitle?.visibility = View.VISIBLE
+        binding.tvFeaturedTitle?.visibility = View.VISIBLE
+        binding.ivFeaturedClearLogo?.let { logo ->
+            logo.visibility = View.GONE
+            if (clearLogo.isNullOrBlank()) Glide.with(logo).clear(logo)
+            else Glide.with(logo).load(clearLogo).diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
+                .listener(object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
+                    override fun onLoadFailed(e: com.bumptech.glide.load.engine.GlideException?, model: Any?,
+                        target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>,
+                        isFirstResource: Boolean): Boolean = false
+                    override fun onResourceReady(resource: android.graphics.drawable.Drawable, model: Any,
+                        target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?,
+                        dataSource: com.bumptech.glide.load.DataSource, isFirstResource: Boolean): Boolean {
+                        if (displayedFeaturedId != featured.folderId) return true
+                        logo.visibility = View.VISIBLE
+                        binding.tvFeaturedTitle?.visibility = View.GONE
+                        return false
+                    }
+                }).into(logo)
         }
         binding.tvFeaturedTitle?.text = featured.title
         val isTenFoot = zechs.drive.stream.utils.DeviceUi.isTenFootExperience(context)
@@ -190,8 +179,10 @@ internal class FeaturedHeroBinder(
             }
         }
         val genreContainer = binding.layoutFeaturedGenres
-        val topGenres = featured.genres.take(4)
-        if (genreContainer != null && topGenres.isNotEmpty()) {
+        val localizedGenres = if (androidx.core.os.ConfigurationCompat.getLocales(context.resources.configuration)[0]?.language == "pt")
+            featured.genres.map(AnimeGenrePolicy::normalize) else featured.genres
+        val topGenres = localizedGenres.take(4)
+        if (genreContainer != null && topGenres.isNotEmpty() && !isTenFoot) {
             genreContainer.removeAllViews()
             genreContainer.visibility = View.VISIBLE
             val density = context.resources.displayMetrics.density
@@ -231,8 +222,8 @@ internal class FeaturedHeroBinder(
             featured.score?.let {
                 add(context.getString(R.string.home_featured_score, it))
             }
-            if (topGenres.isEmpty() && featured.genres.isNotEmpty()) {
-                add(featured.genres.take(3).joinToString(", "))
+            if ((isTenFoot || topGenres.isEmpty()) && featured.genres.isNotEmpty()) {
+                add(localizedGenres.take(3).joinToString(", "))
             }
         }.joinToString(separator)
         binding.tvFeaturedMetadata?.apply {

@@ -73,8 +73,8 @@ class HomeShelvesBuilderTest {
 
         assertEquals(5, shelves.size)
         assertEquals("shelf_continue_watching", shelves[0].id)
-        assertEquals("shelf_starred", shelves[1].id)
-        assertEquals("shelf_followed", shelves[2].id)
+        assertEquals("shelf_followed", shelves[1].id)
+        assertEquals("shelf_starred", shelves[2].id)
         assertEquals("shelf_recently_added", shelves[3].id)
         assertEquals("shelf_catalog", shelves[4].id)
     }

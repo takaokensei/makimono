@@ -297,6 +297,7 @@ class RailController(
 
         binding.root.findViewById<View>(R.id.tvHomeCatalogTitle)?.visibility =
             if (tab == "Início") View.VISIBLE else View.GONE
+        binding.rvGenreFilterChips?.visibility = if (tab == "Início" && isTenFoot) View.GONE else View.VISIBLE
         val hasRecent = viewModel.recentWatches.value.isNotEmpty()
 
         binding.apply {

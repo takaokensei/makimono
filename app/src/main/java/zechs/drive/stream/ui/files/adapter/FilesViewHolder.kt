@@ -268,7 +268,7 @@ sealed class FilesViewHolder(
                         btnGridStar.background = null
                         val inset = (16 * root.resources.displayMetrics.density).toInt()
                         btnGridStar.setPadding(inset, inset, inset, inset)
-                        tvGridFileName.textSize = 12f
+                        tvGridFileName.textSize = 14f
                     }
                     if (params.dimensionRatio != targetRatio) {
                         params.dimensionRatio = targetRatio
@@ -284,6 +284,7 @@ sealed class FilesViewHolder(
                 }
 
                 tvGridFileName.text = cleanTitle
+                root.contentDescription = cleanTitle
 
                 // Extract episode count or display size
                 val epRegex = Regex("""(\d+)\s*(?:eps?|episodes?|cap[íi]tulos?|epis[óo]dios?)""", RegexOption.IGNORE_CASE)
