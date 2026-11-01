@@ -9,11 +9,11 @@ class BufferConfig {
         // Max buffer while playing (45s prevents 180s OOM heap spikes on 80+ Mbps streams)
         const val MAX_BUFFER_DURATION = 45_000
 
-        // Min buffer before starting playback (4s for snappy start)
-        const val MIN_PLAYBACK_START_BUFFER = 4_000
+        // Min buffer before starting playback (1.8s for instant TTFF start matching Netflix/Crunchyroll)
+        const val MIN_PLAYBACK_START_BUFFER = 1_800
 
-        // Min buffer when video is resumed after rebuffering (6s)
-        const val MIN_PLAYBACK_RESUME_BUFFER = 6_000
+        // Min buffer when video is resumed after rebuffering (3s)
+        const val MIN_PLAYBACK_RESUME_BUFFER = 3_000
 
         // Back buffer to retain in memory for instant small rewinds (10s)
         const val BACK_BUFFER_DURATION = 10_000

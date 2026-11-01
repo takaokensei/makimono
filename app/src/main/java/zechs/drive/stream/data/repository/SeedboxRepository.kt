@@ -86,7 +86,7 @@ class SeedboxRepository @Inject constructor(
         try {
             val auth = requireAuthHeader()
             val resp = pairingApi.get().cancelSeedboxJob(auth, jobId)
-            if (resp.isSuccessful) {
+            if (resp.isSuccessful || resp.code() == 404) {
                 Result.success(Unit)
             } else {
                 Result.failure(Exception("HTTP ${resp.code()}: ${resp.message()}"))

@@ -33,6 +33,7 @@ import zechs.drive.stream.utils.MakimonoMediaSessionHelper
 import zechs.drive.stream.utils.MakimonoPiPHelper
 import zechs.drive.stream.utils.PlaybackProgressPolicy
 import zechs.drive.stream.utils.AppLog
+import zechs.drive.stream.utils.FocusEngine
 import androidx.core.content.ContextCompat
 import androidx.core.view.*
 import androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -282,6 +283,7 @@ class PlayerActivity : BasePlayerActivity() {
     private var countdownJob: Job? = null
     private var progressTrackerJob: Job? = null
     private var folderSubtitles = mutableListOf<SubtitleItem>()
+    private var playbackPrepareTimestampMs: Long = 0L
     private val addedSubtitleFileIds = mutableSetOf<String>()
 
     // MAL Scrobble & Rating State
@@ -1163,7 +1165,7 @@ class PlayerActivity : BasePlayerActivity() {
                 BufferConfig.MIN_PLAYBACK_RESUME_BUFFER
             )
             .setTargetBufferBytes(targetBufferBytes)
-            .setPrioritizeTimeOverSizeThresholds(false)
+            .setPrioritizeTimeOverSizeThresholds(true)
             .setBackBuffer(BufferConfig.BACK_BUFFER_DURATION, /* retainBackBufferFromKeyframe = */ true)
             .build()
 
@@ -1208,6 +1210,17 @@ class PlayerActivity : BasePlayerActivity() {
             ) {
                 activeVideoDecoderName = decoderName
                 if (isKodiHudVisible) updateKodiInfoHud()
+            }
+
+            override fun onRenderedFirstFrame(
+                eventTime: AnalyticsListener.EventTime,
+                output: Any,
+                renderTimeMs: Long
+            ) {
+                val ttff = if (playbackPrepareTimestampMs > 0L) {
+                    System.currentTimeMillis() - playbackPrepareTimestampMs
+                } else renderTimeMs
+                AppLog.i(TAG, "TTFF Time-To-First-Frame: ${ttff}ms (renderTimeMs=${renderTimeMs}ms)")
             }
         })
 
@@ -1806,6 +1819,7 @@ class PlayerActivity : BasePlayerActivity() {
                 addListener(playerListener)
                 setAudioAttributes(audioAttributes, true)
                 setMediaItem(mediaItem, /* resetPosition = */ true)
+                playbackPrepareTimestampMs = System.currentTimeMillis()
                 prepare()
                 if (effectiveStartMs != null && effectiveStartMs > 0L) {
                     seekTo(effectiveStartMs)
@@ -2148,6 +2162,9 @@ class PlayerActivity : BasePlayerActivity() {
         card.btnCancelNextEpisode.setOnClickListener {
             dismissNextEpisodeCard(isManualCancel = true)
         }
+
+        FocusEngine.attach(card.btnPlayNextEpisodeNow, FocusEngine.FocusKind.BUTTON)
+        FocusEngine.attach(card.btnCancelNextEpisode, FocusEngine.FocusKind.BUTTON)
 
         card.btnPlayNextEpisodeNow.post {
             card.btnPlayNextEpisodeNow.requestFocus()
