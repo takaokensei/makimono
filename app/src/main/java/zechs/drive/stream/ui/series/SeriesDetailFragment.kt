@@ -23,6 +23,7 @@ import zechs.drive.stream.utils.MediaImageLoader
 import zechs.drive.stream.utils.DeviceUi
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import zechs.drive.stream.R
 import zechs.drive.stream.data.model.DownloadStatus
@@ -442,7 +443,17 @@ class SeriesDetailFragment : BaseFragment() {
                                     viewModel.loadSeriesDetails(args.folderId, args.name, args.posterUrl)
                                 }
                             }
-                            if (state.error is AppError.Empty || state.error is AppError.NotFound || state.error is AppError.AccessDenied) {
+                            if (state.error is AppError.Empty) {
+                                binding.stateView.showState(
+                                    iconRes = R.drawable.ic_folder_24,
+                                    title = getString(R.string.state_empty_series_title),
+                                    message = getString(R.string.state_empty_series_message),
+                                    actionText = getString(R.string.state_empty_series_download_action),
+                                    onActionClick = {
+                                        showSeedboxDownloadDialog(args.name)
+                                    }
+                                )
+                            } else if (state.error is AppError.NotFound || state.error is AppError.AccessDenied) {
                                 binding.stateView.setAction(R.string.state_error_go_back_action) {
                                     findNavController().navigateUp()
                                 }
@@ -956,6 +967,38 @@ class SeriesDetailFragment : BaseFragment() {
             viewModel.startDownload(episodeItem, args.name, activeFolder)
             Toast.makeText(requireContext(), R.string.download_started_toast, Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun showSeedboxDownloadDialog(seriesTitle: String) {
+        val options = arrayOf(
+            getString(R.string.seedbox_download_ep1),
+            getString(R.string.seedbox_download_all)
+        )
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_DriveStream_Dialog)
+            .setTitle(getString(R.string.seedbox_dialog_title, seriesTitle))
+            .setItems(options) { dialog, which ->
+                dialog.dismiss()
+                val filter = if (which == 0) "1" else "all"
+                viewModel.requestSeedboxDownload(seriesTitle, filter) { result ->
+                    lifecycleScope.launch(Dispatchers.Main) {
+                        if (result.isSuccess) {
+                            Toast.makeText(
+                                requireContext(),
+                                R.string.seedbox_download_requested,
+                                Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            Toast.makeText(
+                                requireContext(),
+                                R.string.state_error_generic_message,
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+            }
+            .setNegativeButton(R.string.exit_dialog_cancel, null)
+            .show()
     }
 
     private fun playEpisode(

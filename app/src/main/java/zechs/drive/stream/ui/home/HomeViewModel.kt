@@ -1245,9 +1245,73 @@ class HomeViewModel @Inject constructor(
                     val catalogEntries = tenraiAnimeService.searchAnime(trimmed)
                     if (catalogEntries.isNotEmpty() && _searchQuery.value == trimmed) {
                         val currentFiles = _filteredAnimes.value
-                        val knownTitles = currentFiles.map {
-                            AnimePosterResolver.cleanAnimeTitle(it.name).lowercase()
-                        }.toSet()
+                        val knownTitles = mutableSetOf<String>()
+                        for (file in currentFiles) {
+                            if (file.isVideoFile || file.isShortcutVideo) {
+                                knownTitles.add(AnimePosterResolver.cleanAnimeTitle(file.name).lowercase())
+                                continue
+                            }
+                            val targetId = if (file.isShortcut) file.shortcutDetails.targetId ?: file.id else file.id
+                            val children = catalogRepository.getChildren(targetId)
+                            val hasLocalVideos = if (children.isNotEmpty()) {
+                                children.any { entry ->
+                                    entry.mimeType.startsWith("video/") ||
+                                    entry.name.endsWith(".mkv", ignoreCase = true) ||
+                                    entry.name.endsWith(".mp4", ignoreCase = true) ||
+                                    entry.name.endsWith(".ts", ignoreCase = true)
+                                }
+                            } else {
+                                val hub = try {
+                                    franchiseGroupingManager.getOrCreateFranchiseHub(targetId, file.name)
+                                } catch (_: Exception) { null }
+                                val memberHasVideos = if (hub != null && hub.members.size > 1) {
+                                    hub.members.any { m ->
+                                        if (m.folderId != targetId) {
+                                            val mChildren = catalogRepository.getChildren(m.folderId)
+                                            mChildren.any { entry ->
+                                                entry.mimeType.startsWith("video/") ||
+                                                entry.name.endsWith(".mkv", ignoreCase = true) ||
+                                                entry.name.endsWith(".mp4", ignoreCase = true) ||
+                                                entry.name.endsWith(".ts", ignoreCase = true)
+                                            }
+                                        } else false
+                                    }
+                                } else false
+
+                                if (memberHasVideos) {
+                                    true
+                                } else {
+                                    try {
+                                        val res = driveRepository.get().getFiles(
+                                            query = "'$targetId' in parents and trashed = false",
+                                            pageToken = null,
+                                            pageSize = 10
+                                        )
+                                        val driveFiles = (res as? Resource.Success)?.data?.files.orEmpty()
+                                        if (driveFiles.isNotEmpty()) {
+                                            val entries = driveFiles.map { df ->
+                                                zechs.drive.stream.data.local.CatalogEntry(
+                                                    id = df.id,
+                                                    name = df.name,
+                                                    mimeType = df.mimeType,
+                                                    parentId = targetId,
+                                                    updatedAt = System.currentTimeMillis()
+                                                )
+                                            }
+                                            catalogRepository.cacheFolderContents(targetId, entries)
+                                            driveFiles.any { df -> df.toDriveFile().isVideoFile || df.toDriveFile().isShortcutVideo }
+                                        } else {
+                                            false
+                                        }
+                                    } catch (_: Exception) {
+                                        false
+                                    }
+                                }
+                            }
+                            if (hasLocalVideos) {
+                                knownTitles.add(AnimePosterResolver.cleanAnimeTitle(file.name).lowercase())
+                            }
+                        }
 
                         val catalogSeedboxFiles = catalogEntries.filter { entry ->
                             val clean = AnimePosterResolver.cleanAnimeTitle(entry.title).lowercase()

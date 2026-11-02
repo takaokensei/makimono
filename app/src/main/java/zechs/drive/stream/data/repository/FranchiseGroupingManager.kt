@@ -175,7 +175,11 @@ class FranchiseGroupingManager @Inject constructor(
                         .thenBy { it.arcTitle }
                 )
 
-                val primaryMember = sortedMembers.first()
+                // Prioritize member folder that actually has video files or non-zero episodeCount
+                val primaryMember = sortedMembers.firstOrNull { member ->
+                    val meta = allMeta[member.folderId]
+                    (meta?.episodeCount ?: 0) > 0
+                } ?: sortedMembers.first()
                 val primaryFile = members.firstOrNull { it.id == primaryMember.folderId } ?: members.first()
 
                 val bestPoster = sortedMembers.mapNotNull { it.posterUrl }.firstOrNull() ?: primaryFile.posterUrl

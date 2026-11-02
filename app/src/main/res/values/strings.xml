@@ -723,4 +723,11 @@
     <string name="profile_setup_save_error">Could not save. Try again.</string>
     <string name="profile_setup_preferences_hint">You can change these preferences during playback.</string>
     <string name="series_season_loading">Loading episodes…</string>
+    <string name="state_empty_series_title">No episodes in this folder</string>
+    <string name="state_empty_series_message">This folder does not have downloaded episodes yet. Would you like to request them via Seedbox?</string>
+    <string name="state_empty_series_download_action">Download via Seedbox</string>
+    <string name="seedbox_dialog_title">Download %1$s via Seedbox</string>
+    <string name="seedbox_download_ep1">Download Episode 1 (Fast-Start)</string>
+    <string name="seedbox_download_all">Download Full Season</string>
+    <string name="seedbox_download_requested">Download requested on Seedbox! The daemon will begin in Drive.</string>
 </resources>

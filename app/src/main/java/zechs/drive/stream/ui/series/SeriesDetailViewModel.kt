@@ -128,7 +128,8 @@ class SeriesDetailViewModel @Inject constructor(
     private val franchiseGroupingManager: FranchiseGroupingManager,
     private val episodeMetadataResolver: EpisodeMetadataResolver,
     private val catalogRepository: zechs.drive.stream.data.repository.CatalogRepository? = null,
-    private val downloadRepository: zechs.drive.stream.data.repository.DownloadRepository? = null
+    private val downloadRepository: zechs.drive.stream.data.repository.DownloadRepository? = null,
+    private val seedboxRepository: dagger.Lazy<zechs.drive.stream.data.repository.SeedboxRepository>? = null
 ) : ViewModel() {
 
     companion object {
@@ -354,14 +355,40 @@ class SeriesDetailViewModel @Inject constructor(
 
                 // 2. Fetch Drive files in folder
                 val driveResult = fetchAllDriveVideos(folderId)
-                val driveFiles = driveResult.files
-                if (driveFiles.isEmpty() && driveResult.appError != null) {
+                var effectiveFolderId = folderId
+                var effectiveDriveFiles = driveResult.files
+                var effectiveDriveResult = driveResult
+
+                if (effectiveDriveFiles.isEmpty()) {
+                    val hub = try {
+                        franchiseGroupingManager.getOrCreateFranchiseHub(folderId, seriesTitle)
+                    } catch (_: Exception) { null }
+
+                    if (hub != null && hub.members.size > 1) {
+                        AppLog.d(TAG, "Primary folder $folderId in franchise '${hub.canonicalTitle}' has no videos. Checking other members...")
+                        for (member in hub.members) {
+                            if (member.folderId != folderId) {
+                                val otherResult = fetchAllDriveVideos(member.folderId)
+                                if (otherResult.files.isNotEmpty()) {
+                                    AppLog.d(TAG, "Found ${otherResult.files.size} videos in franchise member '${member.arcTitle}' (${member.folderId})")
+                                    effectiveFolderId = member.folderId
+                                    effectiveDriveFiles = otherResult.files
+                                    effectiveDriveResult = otherResult
+                                    break
+                                }
+                            }
+                        }
+                    }
+                }
+
+                val appErr = effectiveDriveResult.appError
+                if (effectiveDriveFiles.isEmpty() && appErr != null) {
                     withContext(Dispatchers.Main) {
-                        _uiState.value = SeriesDetailUiState.Error(driveResult.appError)
+                        _uiState.value = SeriesDetailUiState.Error(appErr)
                     }
                     return@launch
                 }
-                if (driveFiles.isEmpty()) {
+                if (effectiveDriveFiles.isEmpty()) {
                     withContext(Dispatchers.Main) {
                         _uiState.value = SeriesDetailUiState.Error(
                             AppError.Empty("Nenhum arquivo de vídeo encontrado na pasta.")
@@ -372,31 +399,31 @@ class SeriesDetailViewModel @Inject constructor(
 
                 // Publish the Drive-backed state with cached Room metadata immediately so
                 // that the banner, synopsis, titles and badges appear without delay.
-                val cachedFolder = folderMetadataRepository.getMetadata(folderId)
+                val cachedFolder = folderMetadataRepository.getMetadata(effectiveFolderId) ?: folderMetadataRepository.getMetadata(folderId)
                 val cachedAniListMeta = cachedFolder?.toAnimeMetadata()
                 val cachedPoster = initialPoster
                     ?: cachedFolder?.posterUrl
-                val videoIds = driveFiles.map { it.id }
+                val videoIds = effectiveDriveFiles.map { it.id }
                 val watchList = watchListRepository.getWatches(videoIds)
                 val watchMap = watchList.associateBy { it.videoId }
 
                 // Check folder star status (local favorite has precedence, fallback to Drive star)
-                val isLocalFav = favoriteRepository.isFavorite(folderId)
-                isFolderStarred = isLocalFav || (driveFiles.firstOrNull()?.starred == zechs.drive.stream.data.model.Starred.STARRED)
-                isFolderFollowed = followedFolderRepository.isFollowed(folderId)
+                val isLocalFav = favoriteRepository.isFavorite(effectiveFolderId) || favoriteRepository.isFavorite(folderId)
+                isFolderStarred = isLocalFav || (effectiveDriveFiles.firstOrNull()?.starred == zechs.drive.stream.data.model.Starred.STARRED)
+                isFolderFollowed = followedFolderRepository.isFollowed(effectiveFolderId) || followedFolderRepository.isFollowed(folderId)
 
                 animeEntry = null
                 franchiseArcs = emptyList()
                 val shellState = buildSuccessState(
-                    folderId = folderId,
+                    folderId = effectiveFolderId,
                     seriesTitle = seriesTitle,
-                    driveFiles = driveFiles,
+                    driveFiles = effectiveDriveFiles,
                     watchMap = watchMap,
                     fetchedAnime = null,
                     aniListMeta = cachedAniListMeta,
                     arcs = emptyList(),
                     fallbackPosterUrl = cachedPoster,
-                    hasIncompleteDriveListing = driveResult.isIncomplete
+                    hasIncompleteDriveListing = effectiveDriveResult.isIncomplete
                 )
                 withContext(Dispatchers.Main) {
                     _uiState.value = shellState
@@ -427,13 +454,13 @@ class SeriesDetailViewModel @Inject constructor(
 
                 if (freshAniListMeta != null) {
                     folderMetadataRepository.saveAnimeMetadata(
-                        folderId = folderId,
+                        folderId = effectiveFolderId,
                         folderName = seriesTitle,
                         metadata = freshAniListMeta
                     )
                 } else if (!finalPoster.isNullOrBlank() || isMovie) {
                     folderMetadataRepository.updateMetadataDetails(
-                        folderId = folderId,
+                        folderId = effectiveFolderId,
                         folderName = seriesTitle,
                         posterUrl = finalPoster ?: "",
                         isMovie = isMovie,
@@ -449,15 +476,15 @@ class SeriesDetailViewModel @Inject constructor(
                 currentResolvedEpisodes = resolvedEpisodes
 
                 val enrichedState = buildSuccessState(
-                    folderId = folderId,
+                    folderId = effectiveFolderId,
                     seriesTitle = seriesTitle,
-                    driveFiles = driveFiles,
+                    driveFiles = effectiveDriveFiles,
                     watchMap = watchMap,
                     fetchedAnime = validAnime,
                     aniListMeta = aniListMeta,
                     arcs = validArcs,
                     fallbackPosterUrl = finalPoster,
-                    hasIncompleteDriveListing = driveResult.isIncomplete,
+                    hasIncompleteDriveListing = effectiveDriveResult.isIncomplete,
                     resolvedEpisodes = resolvedEpisodes
                 )
                 withContext(Dispatchers.Main) {
@@ -481,6 +508,12 @@ class SeriesDetailViewModel @Inject constructor(
                         )
                     }
                     seriesDetailCache[folderId] = stateToPublish
+                    if (effectiveFolderId != folderId) {
+                        seriesDetailCache[effectiveFolderId] = stateToPublish
+                        folderEpisodesCache[folderId] = emptyList()
+                    }
+                    folderEpisodesCache[effectiveFolderId] = allEpisodeItems
+                    observeDownloads(effectiveFolderId)
                     _uiState.value = stateToPublish
                 }
             } catch (e: Exception) {
@@ -1397,6 +1430,26 @@ class SeriesDetailViewModel @Inject constructor(
 
         viewModelScope.launch {
             downloadRepository?.deleteDownload(fileId)
+        }
+    }
+
+    fun requestSeedboxDownload(
+        seriesTitle: String,
+        episodesFilter: String = "1",
+        onResult: (Result<String>) -> Unit
+    ) {
+        viewModelScope.launch {
+            val repo = seedboxRepository?.get()
+            if (repo == null) {
+                onResult(Result.failure(IllegalStateException("Seedbox repository not available")))
+                return@launch
+            }
+            val result = repo.enqueueJob(
+                query = seriesTitle,
+                episodesFilter = episodesFilter,
+                preferPtBr = true
+            )
+            onResult(result)
         }
     }
 
