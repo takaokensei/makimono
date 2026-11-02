@@ -5365,10 +5365,24 @@ class DiskSpaceGate:
         que roda num unico loop de polling e nao pode bloquear.
         """
         valor = bytes_estimados or self.tamanho_padrao_bytes
+        # Blindagem: arquivos individuais de anime nunca devem reservar mais que 3GB
+        # mesmo que o torrent contenha um lote de 200GB.
+        if valor > 3 * (1024 ** 3):
+            valor = 3 * (1024 ** 3)
+
         with self._lock:
+            livre = self.espaco_livre_bytes()
+            # FAIL-SAFE: Se houver folga substancial de espaco (> 5 GB livres),
+            # nunca trave nem espere infinitamente.
+            if livre > 5 * (1024 ** 3):
+                if self._bytes_reservados >= (livre - self.margem_seguranca_bytes):
+                    self._bytes_reservados = 0
+                reserva = min(valor, max(1024 * 1024, livre - self.margem_seguranca_bytes))
+                self._bytes_reservados += reserva
+                return reserva
+
             if not self._cabe_agora(valor):
                 if self._bytes_reservados == 0:
-                    livre = self.espaco_livre_bytes()
                     if livre > self.margem_seguranca_bytes:
                         disponivel = livre - self.margem_seguranca_bytes
                         self._bytes_reservados += disponivel
