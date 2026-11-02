@@ -70,8 +70,8 @@ android {
         applicationId "zechs.drive.stream"
         minSdk 21
         targetSdk 33
-        versionCode 78
-        versionName "1.9.8"
+        versionCode 79
+        versionName "1.9.9"
         archivesBaseName = "makimono-v${versionName}"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -118,7 +118,7 @@ android {
         // Keep the debug-only visual fixture installable beside the signed app.
         // This avoids uninstalling the user's build and losing its Drive session.
         debug {
-            applicationIdSuffix project.findProperty("debugApplicationIdSuffix") ?: ".visualreview"
+            applicationIdSuffix project.hasProperty("debugApplicationIdSuffix") ? project.property("debugApplicationIdSuffix") : ".visualreview"
             enableUnitTestCoverage true
         }
         release {

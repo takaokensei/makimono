@@ -331,7 +331,7 @@ Run the validation and integrity-check tasks:
 * **Unit Tests:** 733 `@Test` annotations in the source code and 741 executions recorded in the JUnit XML report (0 failures, 0 errors). The static count and the execution count are distinct measures; inherited tests are reconciled by `python tools/checks/count_tests.py`.
 * **Android Lint (Baseline):** 681 issues cataloged in `app/lint-baseline.xml` with 0 blocking errors and 0 errors filtered by the baseline, plus full internationalization parity (`MissingTranslation`: 0, `MissingQuantity`: 0, `Untranslatable`: 0, `ContentDescription`: 0). Main categories: `HardcodedText` (286), `UnusedResources` (158), `SetTextI18n` (102), `InconsistentLayout` (18), `UnusedAttribute` (15). Verification: `python tools/checks/count_lint_categories.py`.
 
-* `check_strings.py`: Strict string parity validation (675 `<string>` tags in total in `values/strings.xml`, of which 672 are translatable and validated against `values-pt/strings.xml`, and 3 are technical non-translatable strings marked `translatable="false"`).
+* `check_strings.py`: Strict string parity validation (682 `<string>` tags in total in `values/strings.xml`, of which 679 are translatable and validated against `values-pt/strings.xml`, and 3 are technical non-translatable strings marked `translatable="false"`).
 * `check_kotlin_literals.py`: Guard against hardcoded UI literals (`Toast.makeText`, `setTitle`, `setMessage`, `setText`) in Kotlin files.
 * `check_kotlin_style.py`: Static Kotlin style and hygiene check with a versioned baseline (`config/ktlint-baseline.json`).
 * `check_immutable_tag.py`: Release tag immutability guard with a self-test (`--self-test`).
