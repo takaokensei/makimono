@@ -195,20 +195,20 @@ internal class ProfileOnboardingDialog(
                 if (step == ProfileSetupPolicy.LANGUAGE) {
                     heading(context.getString(R.string.profile_setup_language_hint), R.style.TextAppearance_Makimono_TV_Body)
                     button("Português (Brasil)") {
-                        androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
-                            androidx.core.os.LocaleListCompat.forLanguageTags("pt-BR")
-                        )
                         submit {
                             settings.saveProfileSetupStep(profile.id, ProfileSetupPolicy.AUDIO)
+                            androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
+                                androidx.core.os.LocaleListCompat.forLanguageTags("pt-BR")
+                            )
                             render()
                         }
                     }
                     button("English") {
-                        androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
-                            androidx.core.os.LocaleListCompat.forLanguageTags("en")
-                        )
                         submit {
                             settings.saveProfileSetupStep(profile.id, ProfileSetupPolicy.AUDIO)
+                            androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
+                                androidx.core.os.LocaleListCompat.forLanguageTags("en")
+                            )
                             render()
                         }
                     }

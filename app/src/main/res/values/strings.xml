@@ -761,4 +761,8 @@ Paste the complete URL in the field below to continue.</string>
     <string name="catalog_sort_za">Title: Z–A</string>
     <string name="catalog_default_count">0 titles</string>
     <string name="settings_language_title">App Language</string>
+    <string name="profile_preferences_title">Profile Preferences</string>
+    <string name="profile_name_label">Profile Name</string>
+    <string name="profile_change_avatar">Change Avatar</string>
+    <string name="profile_change_background">Change Backdrop</string>
 </resources>

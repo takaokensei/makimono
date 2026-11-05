@@ -742,4 +742,8 @@
     <string name="catalog_sort_za">Nome: Z–A</string>
     <string name="catalog_default_count">0 obras</string>
     <string name="settings_language_title">Idioma do aplicativo</string>
+    <string name="profile_preferences_title">Preferências do perfil</string>
+    <string name="profile_name_label">Nome do perfil</string>
+    <string name="profile_change_avatar">Mudar Avatar</string>
+    <string name="profile_change_background">Mudar Papel de Parede</string>
 </resources>

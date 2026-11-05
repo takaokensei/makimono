@@ -107,7 +107,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="36dp"
-                android:text="Preferências do perfil"
+                android:text="@string/profile_preferences_title"
                 android:textColor="@color/white"
                 android:textStyle="bold" />
 
@@ -120,6 +120,7 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center_vertical"
+                android:nextFocusDown="@+id/btnChangeAvatar"
                 android:orientation="horizontal"
                 android:paddingHorizontal="20dp">
 
@@ -129,7 +130,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Nome do perfil"
+                    android:text="@string/profile_name_label"
                     android:textColor="@color/color_profile_menu_text"
                     android:textStyle="bold" />
 
@@ -153,6 +154,8 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center_vertical"
+                android:nextFocusUp="@+id/rowProfileName"
+                android:nextFocusDown="@+id/btnChangeBackground"
                 android:orientation="horizontal"
                 android:paddingHorizontal="20dp">
 
@@ -161,7 +164,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Mudar Avatar"
+                    android:text="@string/profile_change_avatar"
                     android:textColor="@color/color_profile_menu_text"
                     android:textStyle="bold" />
             </LinearLayout>
@@ -176,6 +179,8 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center_vertical"
+                android:nextFocusUp="@+id/btnChangeAvatar"
+                android:nextFocusDown="@+id/btnDone"
                 android:orientation="horizontal"
                 android:paddingHorizontal="20dp">
 
@@ -184,7 +189,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Mudar Papel de Parede"
+                    android:text="@string/profile_change_background"
                     android:textColor="@color/color_profile_menu_text"
                     android:textStyle="bold" />
             </LinearLayout>
@@ -230,12 +235,13 @@
                     android:background="@drawable/bg_profile_done_btn"
                     android:clickable="true"
                     android:focusable="true"
+                    android:nextFocusUp="@+id/btnChangeBackground"
                     android:insetLeft="0dp"
                     android:insetTop="0dp"
                     android:insetRight="0dp"
                     android:insetBottom="0dp"
                     android:letterSpacing="0.08"
-                    android:text="CONCLUÍDO"
+                    android:text="@string/profile_manage_done"
                     android:textColor="@color/color_profile_done_text"
                     android:textStyle="bold"
                     app:backgroundTint="@null" />
@@ -257,7 +263,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:text="Escolher um avatar"
+                android:text="@string/profile_avatar_catalog_hint"
                 android:textColor="@color/white"
                 android:textStyle="bold" />
 
@@ -304,7 +310,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:text="Escolher um papel de parede"
+                android:text="@string/profile_wallpaper_catalog_hint"
                 android:textColor="@color/white"
                 android:textStyle="bold" />
 
