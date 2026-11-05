@@ -2516,7 +2516,6 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
             titleBlock.visibility = View.VISIBLE
             controlsScrollView.visibility = View.VISIBLE
             mainControls.visibility = View.VISIBLE
-            skipIntroRow.visibility = View.VISIBLE
         }
     }
 

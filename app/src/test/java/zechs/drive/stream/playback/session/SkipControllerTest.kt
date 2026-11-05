@@ -116,13 +116,14 @@ class SkipControllerTest {
     @Test
     fun `auto-skips opening when autoSkipEnabled and within grace period`() {
         skipController.setChapters(listOf(sampleOpening))
-        val (_, action) = skipController.onPlaybackTick(
+        val (state, action) = skipController.onPlaybackTick(
             positionMs = 61_000L,
             autoSkipEnabled = true,
             controllerVisible = false
         )
 
         assertTrue(action is SkipController.SkipAction.AutoSkip)
+        assertEquals(SkipController.SkipButtonUi.Hidden, state.buttonUi)
         val autoSkip = action as SkipController.SkipAction.AutoSkip
         assertEquals(150_000L, autoSkip.targetPositionMs)
         assertTrue(autoSkip.message.contains("Abertura"))

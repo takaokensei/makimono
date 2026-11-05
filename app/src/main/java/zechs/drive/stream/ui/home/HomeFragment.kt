@@ -462,7 +462,7 @@ class HomeFragment : BaseFragment() {
                             val label = when (railController.currentTab) {
                                 "Filmes" -> if (count == 1) "1 filme" else "$count filmes"
                                 "Favoritos" -> "$count favoritos"
-                                else -> if (count == 1) "1 anime" else "$count animes"
+                                else -> if (count == 1) "1 obra" else "$count obras"
                             }
                             binding.tvItemCount.text = label
                             val isEmpty = animes.isEmpty() && !viewModel.isLoadingAnime.value

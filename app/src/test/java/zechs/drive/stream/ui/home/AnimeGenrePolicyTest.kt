@@ -53,6 +53,9 @@ class AnimeGenrePolicyTest {
     fun fallbackToTitleKeywordsWhenGenresEmpty() {
         assertTrue(AnimeGenrePolicy.matches("Isekai", emptyList(), "Tensei Shitara Slime Datta Ken"))
         assertTrue(AnimeGenrePolicy.matches("Isekai", emptyList(), "Re:Zero Starting Life in Another World"))
+        assertTrue(AnimeGenrePolicy.matches("Isekai", listOf("Adventure", "Drama", "Fantasy"), "Mushoku Tensei: Isekai Ittara Honki Dasu"))
+        assertTrue(AnimeGenrePolicy.matches("Isekai", listOf("Fantasy", "Comedy"), "Kono Subarashii Sekai ni Shukufuku wo!"))
+        assertTrue(AnimeGenrePolicy.matches("Isekai", listOf("Fantasy"), "Leadale no Daichi nite"))
         assertTrue(AnimeGenrePolicy.matches("Ação", emptyList(), "Shingeki no Kyojin"))
         assertTrue(AnimeGenrePolicy.matches("Romance", emptyList(), "Kaguya-sama Love is War"))
         assertFalse(AnimeGenrePolicy.matches("Romance", emptyList(), "Random Unknown Show"))

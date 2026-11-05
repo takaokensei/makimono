@@ -13,7 +13,7 @@ import zechs.drive.stream.ui.home.adapter.WatchHistoryAdapter
 import zechs.drive.stream.utils.ext.resolveThemeColor
 
 internal class WatchHistoryDialog(
-    context: Context,
+    private val context: Context,
     history: List<WatchList>,
     private val focusAnchor: View? = null,
     private val presentation: WatchHistoryPresentation = WatchHistoryPresentation(),
@@ -60,6 +60,7 @@ internal class WatchHistoryDialog(
             setBackgroundDrawableResource(android.R.color.transparent)
             addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             setDimAmount(0.72f)
+            setWindowAnimations(0)
         }
 
         val density = context.resources.displayMetrics.density
@@ -68,7 +69,13 @@ internal class WatchHistoryDialog(
         binding.rvWatchHistory.layoutManager = GridLayoutManager(context, columns)
         binding.rvWatchHistory.adapter = adapter
         binding.rvWatchHistory.itemAnimator = null
-        binding.btnHistoryBack.setOnClickListener { dialog.dismiss() }
+        binding.btnHistoryBack.setOnClickListener { dismissAnimated() }
+        dialog.setOnKeyListener { _, keyCode, event ->
+            if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.action == android.view.KeyEvent.ACTION_UP) {
+                dismissAnimated()
+                true
+            } else false
+        }
 
         binding.btnHistoryAll.setOnClickListener { setFilter(WatchHistoryFilter.ALL) }
         binding.btnHistoryInProgress.setOnClickListener { setFilter(WatchHistoryFilter.IN_PROGRESS) }
@@ -87,6 +94,14 @@ internal class WatchHistoryDialog(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT
             )
+            binding.root.alpha = 0f
+            binding.root.translationY = 16f * density
+            binding.root.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(context.resources.getInteger(R.integer.motion_spec_normal).toLong())
+                .setInterpolator(androidx.interpolator.view.animation.FastOutSlowInInterpolator())
+                .start()
             if (allItems.isNotEmpty()) {
                 binding.rvWatchHistory.post {
                     if (!zechs.drive.stream.utils.FocusMemory.restore(binding.rvWatchHistory, "home.history") { pos ->
@@ -100,7 +115,23 @@ internal class WatchHistoryDialog(
         }
     }
 
+    private fun dismissAnimated() {
+        val density = context.resources.displayMetrics.density
+        binding.root.animate()
+            .alpha(0f)
+            .translationY(16f * density)
+            .setDuration(context.resources.getInteger(R.integer.motion_spec_fast).toLong())
+            .setInterpolator(androidx.interpolator.view.animation.FastOutLinearInInterpolator())
+            .withEndAction {
+                try {
+                    dialog.dismiss()
+                } catch (_: Exception) {}
+            }
+            .start()
+    }
+
     fun show() {
+        binding.root.alpha = 0f
         val guard = focusAnchor?.let { zechs.drive.stream.ui.common.ModalFocusGuard(it) }
         dialog.setOnDismissListener { guard?.restore() }
         dialog.show()

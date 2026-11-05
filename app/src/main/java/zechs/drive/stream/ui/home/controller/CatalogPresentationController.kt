@@ -56,7 +56,11 @@ class CatalogPresentationController(
     fun setupHeaderSearch() {
         val prefs = context.getSharedPreferences("catalog_presentation", Context.MODE_PRIVATE)
         catalogSort = prefs.getInt("sort", 0).coerceIn(0, 2)
-        binding.root.findViewById<View>(R.id.btnCatalogSort)?.setOnClickListener { button ->
+        val sortBtn = binding.root.findViewById<View>(R.id.btnCatalogSort)
+        sortBtn?.setOnFocusChangeListener { v, hasFocus ->
+            animateFocus(v, hasFocus, scale = 1.06f)
+        }
+        sortBtn?.setOnClickListener { button ->
             MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
                 .setTitle(R.string.catalog_sort_title)
                 .setSingleChoiceItems(arrayOf("Ordem da biblioteca", "Nome: A–Z", "Nome: Z–A"), catalogSort) { dialog, choice ->
@@ -146,14 +150,27 @@ class CatalogPresentationController(
         val listBtn = binding.btnToggleList
         if (gridBtn == null || listBtn == null) return
 
+        fun updateSegmentStates() {
+            gridBtn.isSelected = isGridMode
+            listBtn.isSelected = !isGridMode
+            gridBtn.setBackgroundResource(R.drawable.bg_segmented_button)
+            listBtn.setBackgroundResource(R.drawable.bg_segmented_button)
+            val primaryColor = context.resolveThemeColor(R.attr.colorTextPrimary)
+            val secondaryColor = context.resolveThemeColor(R.attr.colorTextSecondary)
+            gridBtn.imageTintList = ColorStateList.valueOf(if (isGridMode) primaryColor else secondaryColor)
+            listBtn.imageTintList = ColorStateList.valueOf(if (!isGridMode) primaryColor else secondaryColor)
+        }
+
+        updateSegmentStates()
+
+        gridBtn.setOnFocusChangeListener { v, hasFocus -> animateFocus(v, hasFocus, scale = 1.08f) }
+        listBtn.setOnFocusChangeListener { v, hasFocus -> animateFocus(v, hasFocus, scale = 1.08f) }
+
         gridBtn.setOnClickListener {
             if (!isGridMode) {
                 isGridMode = true
                 animeAdapter.isGridMode = true
-                gridBtn.setBackgroundResource(R.drawable.bg_segmented_active)
-                gridBtn.imageTintList = ColorStateList.valueOf(Color.WHITE)
-                listBtn.background = null
-                listBtn.imageTintList = ColorStateList.valueOf(context.resolveThemeColor(R.attr.colorTextSecondary))
+                updateSegmentStates()
                 onGridModeChanged(true)
                 onRebindGrid()
             }
@@ -163,10 +180,7 @@ class CatalogPresentationController(
             if (isGridMode) {
                 isGridMode = false
                 animeAdapter.isGridMode = false
-                listBtn.setBackgroundResource(R.drawable.bg_segmented_active)
-                listBtn.imageTintList = ColorStateList.valueOf(Color.WHITE)
-                gridBtn.background = null
-                gridBtn.imageTintList = ColorStateList.valueOf(context.resolveThemeColor(R.attr.colorTextSecondary))
+                updateSegmentStates()
                 onGridModeChanged(false)
                 onRebindGrid()
             }

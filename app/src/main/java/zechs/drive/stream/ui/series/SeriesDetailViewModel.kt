@@ -358,6 +358,7 @@ class SeriesDetailViewModel @Inject constructor(
                 var effectiveFolderId = folderId
                 var effectiveDriveFiles = driveResult.files
                 var effectiveDriveResult = driveResult
+                var effectiveSearchTitle = seriesTitle
 
                 if (effectiveDriveFiles.isEmpty()) {
                     val hub = try {
@@ -374,6 +375,7 @@ class SeriesDetailViewModel @Inject constructor(
                                     effectiveFolderId = member.folderId
                                     effectiveDriveFiles = otherResult.files
                                     effectiveDriveResult = otherResult
+                                    effectiveSearchTitle = member.arcTitle.ifBlank { member.folderName }
                                     break
                                 }
                             }
@@ -469,7 +471,13 @@ class SeriesDetailViewModel @Inject constructor(
                 }
 
                 val resolvedEpisodes = try {
-                    episodeMetaDeferred.await()
+                    if (effectiveSearchTitle != seriesTitle) {
+                        episodeMetadataResolver.fetchShowEpisodes(effectiveSearchTitle).ifEmpty {
+                            episodeMetaDeferred.await()
+                        }
+                    } else {
+                        episodeMetaDeferred.await()
+                    }
                 } catch (_: Exception) {
                     emptyList()
                 }
@@ -490,9 +498,25 @@ class SeriesDetailViewModel @Inject constructor(
                 withContext(Dispatchers.Main) {
                     val previous = _uiState.value as? SeriesDetailUiState.Success
                     val selectedNavTab = previous?.selectedNavTab ?: SeriesNavTab.EPISODES
-                    val selectedId = previous?.seasonTabs?.firstOrNull { it.isSelected }?.id
-                    val stateToPublish = if (selectedId == null) {
-                        enrichedState.copy(selectedNavTab = selectedNavTab)
+                    val previousSelectedId = previous?.seasonTabs?.firstOrNull { it.isSelected }?.id
+                    val selectedId = if (previousSelectedId == null || (effectiveFolderId != folderId && previousSelectedId == folderId)) {
+                        effectiveFolderId
+                    } else {
+                        previousSelectedId
+                    }
+
+                    folderEpisodesCache[effectiveFolderId] = allEpisodeItems
+                    if (effectiveFolderId != folderId) {
+                        folderEpisodesCache[folderId] = emptyList()
+                    }
+
+                    val stateToPublish = if (selectedId == effectiveFolderId) {
+                        enrichedState.copy(
+                            selectedNavTab = selectedNavTab,
+                            seasonTabs = enrichedState.seasonTabs.map { it.copy(isSelected = it.id == effectiveFolderId) },
+                            currentEpisodes = enrichedState.currentEpisodes,
+                            activeMemberFolderId = effectiveFolderId
+                        )
                     } else {
                         val selectedGroup = allSeasonGroups.firstOrNull { it.id == selectedId }
                         val eps = if (enrichedState.franchiseHub != null) {
@@ -510,9 +534,7 @@ class SeriesDetailViewModel @Inject constructor(
                     seriesDetailCache[folderId] = stateToPublish
                     if (effectiveFolderId != folderId) {
                         seriesDetailCache[effectiveFolderId] = stateToPublish
-                        folderEpisodesCache[folderId] = emptyList()
                     }
-                    folderEpisodesCache[effectiveFolderId] = allEpisodeItems
                     observeDownloads(effectiveFolderId)
                     _uiState.value = stateToPublish
                 }
@@ -907,7 +929,8 @@ class SeriesDetailViewModel @Inject constructor(
                 episodes = resolvedEpisodes,
                 season = parsed.season?.toInt() ?: 1,
                 episodeNumber = epNum,
-                canonicalName = canonName
+                canonicalName = canonName,
+                filenameOrArc = file.name
             )
         }
 

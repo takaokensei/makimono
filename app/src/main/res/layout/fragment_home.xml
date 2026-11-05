@@ -454,7 +454,7 @@
                                             android:fontFamily="@font/inter"
                                             android:text="@string/home_featured_play"
                                             android:textColor="@color/btn_hero_play_foreground"
-                                            android:textAppearance="@style/TextAppearance.Makimono.TV.Headline"
+                                            android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
                                             android:textStyle="bold" />
 
                                     </LinearLayout>
@@ -723,7 +723,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     android:text="Nenhum anime em andamento"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Headline"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
                     android:textColor="?attr/colorTextPrimary" />
 
                 <TextView
@@ -783,7 +783,7 @@
 
         <!-- Left persistent TV navigation rail -->
         <LinearLayout
-            android:id="@+id/navRail"
+            android:id="@+id/navRail" android:clipChildren="false" android:clipToPadding="false"
             android:layout_width="@dimen/tv_nav_rail_width"
             android:layout_height="match_parent"
             android:layout_gravity="start"
@@ -824,7 +824,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
                     android:text="@string/nav_home"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Headline"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
                     android:textColor="@color/obsidian_text_primary"
                     android:textStyle="bold"  android:maxLines="1" android:ellipsize="end" />
 
@@ -858,7 +858,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
                     android:text="@string/nav_catalog"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Headline"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
                     android:textColor="@color/obsidian_text_secondary"  android:maxLines="1" android:ellipsize="end" />
 
             </LinearLayout>
@@ -891,7 +891,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
                     android:text="@string/nav_movies"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Headline"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
                     android:textColor="@color/obsidian_text_secondary"  android:maxLines="1" android:ellipsize="end" />
 
             </LinearLayout>
@@ -923,7 +923,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
                     android:text="@string/nav_folders"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Headline"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
                     android:textColor="@color/obsidian_text_secondary"  android:maxLines="1" android:ellipsize="end" />
 
             </LinearLayout>
@@ -956,7 +956,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
                     android:text="@string/nav_favorites"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Headline"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
                     android:textColor="@color/obsidian_text_secondary"  android:maxLines="1" android:ellipsize="end" />
 
             </LinearLayout>
@@ -988,7 +988,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
                     android:text="@string/nav_settings"
-                    android:textAppearance="@style/TextAppearance.Makimono.TV.Headline"
+                    android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
                     android:textColor="@color/obsidian_text_secondary"  android:maxLines="1" android:ellipsize="end" />
 
             </LinearLayout>

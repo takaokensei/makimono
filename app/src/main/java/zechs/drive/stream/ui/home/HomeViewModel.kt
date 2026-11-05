@@ -1500,8 +1500,10 @@ class HomeViewModel @Inject constructor(
                 val targetId = if (file.isShortcut && file.shortcutDetails.targetId != null) {
                     file.shortcutDetails.targetId!!
                 } else file.id
-                val genres = metaMap[targetId]?.genres?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
-                AnimeGenrePolicy.matches(currentGenre, genres, file.name)
+                val meta = metaMap[targetId]
+                val genres = meta?.genres?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
+                val fullContext = listOfNotNull(file.name, meta?.titleRomaji, meta?.titleEnglish, meta?.synopsis).joinToString(" ")
+                AnimeGenrePolicy.matches(currentGenre, genres, fullContext)
             }
         }
         withContext(Dispatchers.Main) {

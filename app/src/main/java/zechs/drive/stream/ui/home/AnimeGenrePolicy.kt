@@ -77,15 +77,52 @@ object AnimeGenrePolicy {
             return true
         }
 
-        // Fallback title-based heuristics when metadata genres are absent
-        if (genres.isEmpty() && !title.isNullOrBlank()) {
+        // Title heuristics for themes (e.g. Isekai classified under themes by AniList/MAL)
+        if (!title.isNullOrBlank()) {
             val lowerTitle = title.lowercase(Locale.ROOT)
-            return when (target) {
-                "Isekai" -> lowerTitle.contains("isekai") || lowerTitle.contains("re:zero") || lowerTitle.contains("slime")
-                "Ação" -> lowerTitle.contains("shingeki") || lowerTitle.contains("jujutsu") || lowerTitle.contains("hero") || lowerTitle.contains("blade")
-                "Romance" -> lowerTitle.contains("kaguya") || lowerTitle.contains("horimiya") || lowerTitle.contains("toradora")
-                "Comédia" -> lowerTitle.contains("konosuba") || lowerTitle.contains("gintama") || lowerTitle.contains("spy x family")
-                else -> false
+            when (target) {
+                "Isekai" -> {
+                    val isIsekaiKeyword = lowerTitle.contains("isekai") ||
+                        lowerTitle.contains("re:zero") ||
+                        lowerTitle.contains("slime") ||
+                        lowerTitle.contains("mushoku") ||
+                        lowerTitle.contains("konosuba") ||
+                        lowerTitle.contains("kono subarashii") ||
+                        lowerTitle.contains("leadale") ||
+                        lowerTitle.contains("hell mode") ||
+                        lowerTitle.contains("overlord") ||
+                        lowerTitle.contains("shield hero") ||
+                        lowerTitle.contains("tate no yuusha") ||
+                        lowerTitle.contains("eminence in shadow") ||
+                        lowerTitle.contains("kage no jitsuryokusha") ||
+                        lowerTitle.contains("reincarnat") ||
+                        lowerTitle.contains("outro mundo") ||
+                        lowerTitle.contains("another world") ||
+                        lowerTitle.contains("no game no life") ||
+                        lowerTitle.contains("sword art online") ||
+                        lowerTitle.contains("youjo senki") ||
+                        lowerTitle.contains("log horizon")
+                    if (isIsekaiKeyword) return true
+                }
+                "Ação" -> {
+                    val isActionKeyword = lowerTitle.contains("shingeki") ||
+                        lowerTitle.contains("jujutsu") ||
+                        lowerTitle.contains("hero") ||
+                        lowerTitle.contains("blade")
+                    if (genres.isEmpty() && isActionKeyword) return true
+                }
+                "Romance" -> {
+                    val isRomanceKeyword = lowerTitle.contains("kaguya") ||
+                        lowerTitle.contains("horimiya") ||
+                        lowerTitle.contains("toradora")
+                    if (genres.isEmpty() && isRomanceKeyword) return true
+                }
+                "Comédia" -> {
+                    val isComedyKeyword = lowerTitle.contains("konosuba") ||
+                        lowerTitle.contains("gintama") ||
+                        lowerTitle.contains("spy x family")
+                    if (genres.isEmpty() && isComedyKeyword) return true
+                }
             }
         }
 

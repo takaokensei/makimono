@@ -24,6 +24,7 @@ class MPVView(
     private var isInitialized = false
 
     fun initialize(configDir: String) {
+        holder.addCallback(this)
         MPVLib.create(this.context)
         MPVLib.setOptionString("config", "yes")
         MPVLib.setOptionString("config-dir", configDir)
@@ -32,8 +33,7 @@ class MPVView(
         MPVLib.init()
         isInitialized = true
 
-        holder.setFormat(PixelFormat.RGBA_8888)
-        holder.addCallback(this)
+
         observeProperties()
     }
 
@@ -77,8 +77,6 @@ class MPVView(
         MPVLib.setOptionString("deband-grain", "24")
         MPVLib.setOptionString("dither-depth", "8")
         MPVLib.setOptionString("dither", "fruit")
-        MPVLib.setOptionString("target-colorspace-hint", "yes")
-        MPVLib.setOptionString("gamut-clipping", "yes")
 
         MPVLib.setOptionString("ao", "audiotrack")
         MPVLib.setOptionString("framedrop", "vo")
@@ -301,12 +299,10 @@ class MPVView(
         // This forces mpv to render subs/osd/whatever into our surface even if it would ordinarily not
         MPVLib.setOptionString("force-window", "yes")
 
+        MPVLib.setPropertyString("vo", "gpu")
         if (playUri != null) {
             MPVLib.command(arrayOf("loadfile", playUri!!))
             playUri = null
-        } else {
-            // We disable video output when the context disappears, enable it back
-            MPVLib.setPropertyString("vo", "gpu")
         }
     }
 

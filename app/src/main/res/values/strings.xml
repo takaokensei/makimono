@@ -711,6 +711,8 @@
     <string name="profile_setup_audio">How do you like to listen?</string>
     <string name="profile_setup_subtitles">Choose your subtitles</string>
     <string name="profile_setup_library">Where is your library?</string>
+        <string name="profile_setup_language">App language</string>
+    <string name="profile_setup_language_hint">Choose the language for menus and settings.</string>
     <string name="profile_setup_step">Step %1$d of %2$d</string>
     <string name="profile_setup_default">Keep the default</string>
     <string name="profile_setup_japanese">Japanese</string>
@@ -726,6 +728,7 @@
     <string name="state_empty_series_title">No episodes in this folder</string>
     <string name="state_empty_series_message">This folder does not have downloaded episodes yet. Would you like to request them via Seedbox?</string>
     <string name="state_empty_series_download_action">Download via Seedbox</string>
+    <string name="seedbox_download_action_sub">No episodes saved yet • Click to download</string>
     <string name="seedbox_dialog_title">Download %1$s via Seedbox</string>
     <string name="seedbox_download_ep1">Download Episode 1 (Fast-Start)</string>
     <string name="seedbox_download_all">Download Full Season</string>

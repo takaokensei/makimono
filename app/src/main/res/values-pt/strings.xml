@@ -698,6 +698,8 @@
     <string name="profile_setup_audio">Como você prefere ouvir?</string>
     <string name="profile_setup_subtitles">Escolha suas legendas</string>
     <string name="profile_setup_library">Onde está sua biblioteca?</string>
+        <string name="profile_setup_language">Idioma do aplicativo</string>
+    <string name="profile_setup_language_hint">Escolha o idioma para menus e configurações.</string>
     <string name="profile_setup_step">Etapa %1$d de %2$d</string>
     <string name="profile_setup_default">Manter o padrão</string>
     <string name="profile_setup_japanese">Japonês</string>
@@ -713,6 +715,7 @@
     <string name="state_empty_series_title">Nenhum episódio nesta pasta</string>
     <string name="state_empty_series_message">Esta pasta ainda não possui episódios baixados. Deseja solicitar o download via Seedbox?</string>
     <string name="state_empty_series_download_action">Baixar no Seedbox</string>
+    <string name="seedbox_download_action_sub">Nenhum episódio salvo • Clique para baixar</string>
     <string name="seedbox_dialog_title">Baixar %1$s via Seedbox</string>
     <string name="seedbox_download_ep1">Baixar Episódio 1 (Fast-Start)</string>
     <string name="seedbox_download_all">Baixar Temporada Completa</string>

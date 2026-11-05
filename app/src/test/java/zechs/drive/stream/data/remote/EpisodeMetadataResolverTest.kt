@@ -40,6 +40,17 @@ class EpisodeMetadataResolverTest {
         assertEquals("Kill the King", s3e2?.name)
         assertEquals("https://img/s3e2.jpg", s3e2?.previewImageUrl)
         assertEquals("Ichigo goes to palace", s3e2?.synopsis)
+
+        // Verify season inference from arc/filename when season is not provided
+        val inferredS3 = resolver.findEpisode(
+            episodes = episodes,
+            season = null,
+            episodeNumber = 1,
+            filenameOrArc = "[shincaps] BLEACH Sennen Kessen-hen ~Kashin-tan~ - 01.ts"
+        )
+        assertNotNull(inferredS3)
+        assertEquals("A", inferredS3?.name)
+        assertEquals(3, inferredS3?.season)
     }
 
     @Test

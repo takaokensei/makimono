@@ -71,9 +71,12 @@ if (-not $isAlreadyRunning) {
     # 5. Ensure host keyboard and D-pad are enabled in config.ini
     $lines = Get-Content -LiteralPath $avdConfig
     $updated = $false
-    foreach ($flag in @('hw.keyboard', 'hw.dPad')) {
-        $pattern = '^' + [regex]::Escape($flag) + '='
-        $desiredLine = "$flag=yes"
+    $flagsToConfigure = [ordered]@{"hw.keyboard"="yes"; "hw.dPad"="yes"; "hw.audioInput"="no"; "hw.audioOutput"="yes"}
+    foreach ($entry in $flagsToConfigure.GetEnumerator()) {
+        $flag = $entry.Key
+        $desiredVal = $entry.Value
+        $pattern = "^" + [regex]::Escape($flag) + "="
+        $desiredLine = "$flag=$desiredVal"
         $existingLine = $lines | Where-Object { $_ -match $pattern } | Select-Object -First 1
         if ($existingLine) {
             if ($existingLine -eq $desiredLine) { continue }
@@ -99,7 +102,8 @@ if (-not $isAlreadyRunning) {
 @echo off
 set ANDROID_AVD_HOME=$AvdHome
 set ANDROID_ADB_SERVER_PORT=5038
-start "" "$emulator" -avd $AvdName -gpu host -no-snapshot -no-boot-anim -no-audio -memory 2048 -cores 2
+set QEMU_AUDIO_IN_DRV=none
+start "" "$emulator" -avd $AvdName -gpu host -no-snapshot -no-boot-anim -memory 2048 -cores 2
 "@
     Set-Content -LiteralPath $launchBat -Value $batContent -Encoding ASCII
 

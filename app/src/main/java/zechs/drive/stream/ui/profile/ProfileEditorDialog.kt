@@ -508,7 +508,7 @@ class ProfileEditorDialog(
                             isKids = profile?.isKids ?: false
                         )
                     if (profile == null || required)
-                        setupSettings?.saveProfileSetupStep(targetProfile.id, ProfileSetupPolicy.AUDIO)
+                        setupSettings?.saveProfileSetupStep(targetProfile.id, ProfileSetupPolicy.LANGUAGE)
                     manager.saveProfile(targetProfile)
                     val saved = manager.getProfiles().first { it.id == targetProfile.id }
                     dialog.dismiss()

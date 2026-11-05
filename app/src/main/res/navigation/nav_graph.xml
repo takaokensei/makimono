@@ -114,10 +114,18 @@
             app:destination="@id/signInFragment" />
         <action
             android:id="@+id/action_homeFragment_to_queueFragment"
-            app:destination="@id/queueFragment" />
+            app:destination="@id/queueFragment"
+            app:enterAnim="@android:anim/fade_in"
+            app:exitAnim="@android:anim/fade_out"
+            app:popEnterAnim="@android:anim/fade_in"
+            app:popExitAnim="@android:anim/fade_out" />
         <action
             android:id="@+id/action_homeFragment_to_downloadsFragment"
-            app:destination="@id/downloadsFragment" />
+            app:destination="@id/downloadsFragment"
+            app:enterAnim="@anim/nav_fade_in"
+            app:exitAnim="@anim/nav_fade_out"
+            app:popEnterAnim="@anim/nav_pop_enter"
+            app:popExitAnim="@anim/nav_pop_exit" />
     </fragment>
 
     <fragment

@@ -606,34 +606,6 @@
                             android:checked="true" />
                     </LinearLayout>
 
-                    <!-- Smart Downloads Toggle (Netflix Style) -->
-                    <LinearLayout
-                        android:id="@+id/settingSmartDownloadsToggle"
-                        android:layout_width="match_parent"
-                        android:layout_height="64dp"
-                        android:layout_marginTop="8dp"
-                        android:background="@drawable/glass_action_item_bg"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:paddingStart="18dp"
-                        android:paddingEnd="18dp">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/smart_downloads_title"
-                            android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
-                            android:textColor="?attr/colorTextPrimary" />
-
-                        <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/switchSmartDownloads"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:checked="true" />
-                    </LinearLayout>
 
                     <!-- Section Header: Integrations -->
                     <TextView
@@ -876,6 +848,35 @@
                             android:text="Limpar  ›"
                             android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
                             android:textColor="?attr/colorAccentPrimary" />
+                    </LinearLayout>
+
+                    <!-- Smart Downloads Toggle (Netflix Style) -->
+                    <LinearLayout
+                        android:id="@+id/settingSmartDownloadsToggle"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/smart_downloads_title"
+                            android:textAppearance="@style/TextAppearance.Makimono.TV.Callout"
+                            android:textColor="?attr/colorTextPrimary" />
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/switchSmartDownloads"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true" />
                     </LinearLayout>
 
                     <!-- Check for Updates Row -->

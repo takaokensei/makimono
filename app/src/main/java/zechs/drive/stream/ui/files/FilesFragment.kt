@@ -662,11 +662,30 @@ class FilesFragment : BaseFragment() {
         }
 
         viewModel.recordFolderOpened(targetFolderId, file.name)
+        val isContainer = file.name.equals("Animes", ignoreCase = true) ||
+                file.name.equals("Anime", ignoreCase = true) ||
+                file.name.equals("Filmes", ignoreCase = true) ||
+                file.name.equals("Movies", ignoreCase = true) ||
+                file.name.equals("Series", ignoreCase = true) ||
+                file.name.equals("Séries", ignoreCase = true) ||
+                file.name.equals("TV Shows", ignoreCase = true) ||
+                file.name.equals("TV", ignoreCase = true)
+
         val isDriveRoot = args.name == getString(R.string.my_drive) ||
                 args.name == getString(R.string.shared_drives) ||
                 args.name == getString(R.string.shared_with_me) ||
                 args.name.equals("Root", ignoreCase = true)
-        if (isDriveRoot) {
+
+        val isInsideContainer = args.name.equals("Animes", ignoreCase = true) ||
+                args.name.equals("Anime", ignoreCase = true) ||
+                args.name.equals("Filmes", ignoreCase = true) ||
+                args.name.equals("Movies", ignoreCase = true) ||
+                args.name.equals("Series", ignoreCase = true) ||
+                args.name.equals("Séries", ignoreCase = true)
+
+        val shouldOpenSeriesDetail = (isDriveRoot || isInsideContainer) && !isContainer
+
+        if (shouldOpenSeriesDetail) {
             val action = FilesFragmentDirections.actionFilesFragmentToSeriesDetailFragment(
                 name = file.name,
                 folderId = targetFolderId,

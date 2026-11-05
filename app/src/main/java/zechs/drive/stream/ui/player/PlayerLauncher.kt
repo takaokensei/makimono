@@ -43,6 +43,10 @@ object PlayerLauncher {
         val isHi10pOr10bit = title.contains("hi10p", ignoreCase = true) ||
             title.contains("10bit", ignoreCase = true) ||
             title.contains("10-bit", ignoreCase = true)
+        val isTsOrMpeg = title.endsWith(".ts", ignoreCase = true) ||
+            title.endsWith(".m2ts", ignoreCase = true) ||
+            title.endsWith(".mts", ignoreCase = true) ||
+            title.contains("MPEG2", ignoreCase = true)
         val extension = title.substringAfterLast('.', "").lowercase().takeIf { it.isNotEmpty() }
         val media = MediaInfo(
             name = title,
@@ -51,7 +55,7 @@ object PlayerLauncher {
             hasSrtSubtitles = subtitles?.any { it.ext == "srt" } == true,
             isHi10pOrAnimeBd = isHi10pOr10bit
         )
-        val pref = if (hasAss || isHi10pOr10bit) UserEnginePreference.AUTO else UserEnginePreference.FORCE_MEDIA3
+        val pref = if (hasAss || isHi10pOr10bit || isTsOrMpeg) UserEnginePreference.AUTO else UserEnginePreference.FORCE_MEDIA3
         return when (EngineSelector.selectEngine(media, deviceCaps, pref)) {
             is EngineChoice.Media3 -> VideoPlayer.EXO_PLAYER
             is EngineChoice.Mpv -> VideoPlayer.MPV

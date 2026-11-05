@@ -920,11 +920,26 @@ class PlayerActivity : BasePlayerActivity() {
 
             if (playbackState == Player.STATE_READY) {
                 var subtitleText = ""
+                var hasDistinctTitle = false
 
                 player.videoFormat?.let {
                     // Editorial clean subtitle: prefer Series + Episode or clean title
                     val epNumber = currentEpNumber
-                    subtitleText = if (epNumber > 0) "Epis?dio %02d".format(epNumber) else "Reproduzindo"
+                    val rawExtraTitle = intent.getStringExtra(PlayerLauncher.EXTRA_TITLE)?.trim().orEmpty()
+                    val rawEpTitle = if (rawExtraTitle.isNotBlank()) rawExtraTitle else currentTitle.trim()
+                    val sanitizedEpTitle = rawEpTitle
+                        .replace("Epis?dio", "Episódio")
+                        .replace("epis?dio", "episódio")
+                        .replace("Episodio", "Episódio")
+                        .replace("episodio", "episódio")
+
+                    val epLabel = if (epNumber > 0) "Episódio %02d".format(epNumber) else ""
+                    hasDistinctTitle = sanitizedEpTitle.isNotBlank() &&
+                        !sanitizedEpTitle.equals(epLabel, ignoreCase = true) &&
+                        !sanitizedEpTitle.equals("Episódio $epNumber", ignoreCase = true) &&
+                        !sanitizedEpTitle.matches(Regex("^(?i)epis[oó]dio\\s*\\d+$"))
+
+                    subtitleText = if (hasDistinctTitle) sanitizedEpTitle else ""
                     val seriesName = intent.getStringExtra(PlayerLauncher.EXTRA_SERIES_TITLE)
                     if (!seriesName.isNullOrBlank()) {
                         tvPlayerTitle?.text = seriesName
@@ -1015,11 +1030,13 @@ class PlayerActivity : BasePlayerActivity() {
                     "$epPrefix • $subtitleText"
                 } else if (epPrefix.isNotEmpty()) {
                     epPrefix
-                } else {
+                } else if (subtitleText.isNotEmpty()) {
                     subtitleText
+                } else {
+                    "Reproduzindo"
                 }
                 tvPlayerMeta.text = fullMeta
-                toolbar.subtitle = subtitleText
+                toolbar.subtitle = if (hasDistinctTitle) subtitleText else epPrefix
 
                 mediaSessionHelper?.updateMetadata(
                     title = currentTitle.ifBlank { toolbar.title?.toString() ?: "" },
@@ -1130,7 +1147,8 @@ class PlayerActivity : BasePlayerActivity() {
             .setTsExtractorFlags(
                 DefaultTsPayloadReaderFactory.FLAG_ENABLE_HDMV_DTS_AUDIO_STREAMS or
                     DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or
-                    DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS
+                    DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS or
+                    DefaultTsPayloadReaderFactory.FLAG_IGNORE_SPLICE_INFO_STREAM
             )
             .setTsExtractorTimestampSearchBytes(2500 * TsExtractor.TS_PACKET_SIZE)
             .setConstantBitrateSeekingEnabled(true)
@@ -1602,7 +1620,6 @@ class PlayerActivity : BasePlayerActivity() {
         titleBlock.visibility = View.VISIBLE
         controlsScrollView.visibility = View.VISIBLE
         mainControlsRoot.visibility = View.VISIBLE
-        skipIntroRow.visibility = View.VISIBLE
     }
 
     private fun releasePlayer() {
@@ -3733,12 +3750,21 @@ class PlayerActivity : BasePlayerActivity() {
                 (errorDetailed?.contains("OMX.", ignoreCase = true) == true) ||
                 (errorDetailed?.contains("c2.", ignoreCase = true) == true)
 
-        if (isVideoError || isCodecError) {
-            val reason = if (isVideoError) "vídeo" else if (isAudioError) "áudio" else "decodificação"
-            AppLog.w(TAG, "Hardware decoder failed for $reason ($errorDetailed). Switching to MPV...")
+        val isExtractorOrFormatError = (exoException?.type == TYPE_SOURCE) && (
+                errorDetailed?.contains("AdtsReader", ignoreCase = true) == true ||
+                errorDetailed?.contains("TsExtractor", ignoreCase = true) == true ||
+                errorDetailed?.contains("PesReader", ignoreCase = true) == true ||
+                errorDetailed?.contains("extractor", ignoreCase = true) == true ||
+                errorDetailed?.contains("IllegalStateException", ignoreCase = true) == true ||
+                error.message?.contains("BehindLiveWindowException", ignoreCase = true) == true
+        )
+
+        if (isVideoError || isCodecError || isExtractorOrFormatError) {
+            val reason = if (isVideoError) "vídeo" else if (isAudioError) "áudio" else if (isExtractorOrFormatError) "formato/stream" else "decodificação"
+            AppLog.w(TAG, "ExoPlayer hardware/stream decoder failed for $reason ($errorDetailed). Switching to MPV...")
             Toast.makeText(
                 this,
-                "Incompatibilidade no decodificador de $reason do dispositivo. Alternando para o MPV...",
+                "Incompatibilidade no decodificador padrão ($reason). Alternando para o MPV...",
                 Toast.LENGTH_SHORT
             ).show()
             launchMpvFallback()

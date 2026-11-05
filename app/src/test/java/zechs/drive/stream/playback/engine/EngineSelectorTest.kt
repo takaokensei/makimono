@@ -129,9 +129,17 @@ class EngineSelectorTest {
     }
 
     @Test
+    fun `media with transport stream TS extension routes to MPV`() {
+        val tsMedia = standardMedia.copy(name = "Bleach 01.ts", extension = "ts")
+        val choice = EngineSelector.selectEngine(tsMedia, defaultDevice)
+        assertTrue(choice is EngineChoice.Mpv)
+        assertEquals("rule_transport_stream", choice.ruleId)
+    }
+
+    @Test
     fun `describeActiveRules returns human-readable rule summaries`() {
         val summaries = EngineSelector.describeActiveRules()
-        assertEquals(8, summaries.size)
+        assertEquals(9, summaries.size)
         assertTrue(summaries.first().contains("ASS/SSA"))
     }
 }

@@ -705,18 +705,29 @@ class SeriesDetailFragment : BaseFragment() {
             if (state.continueWatchingItem != null && !state.isSeasonLoading) View.VISIBLE else View.GONE
 
         // 5. Action Buttons (REF-11: 3 Primary Hero Buttons — Assistir/Continuar | Minha Lista | Mais)
+        val hasPlayableItem = state.continueWatchingItem != null
         val canResume = state.continueWatchingItem?.progressPercent in 1..94
         val actionRes = if (isMovie) {
             if (canResume) R.string.series_action_continue_movie else R.string.series_action_play
         } else {
             if (canResume) R.string.series_action_continue else R.string.series_action_play
         }
-        binding.tvPrimaryActionTitle.setText(actionRes)
-        binding.tvPrimaryActionSubtitle.text = state.continueWatchingSubtitle
-        binding.tvPrimaryActionSubtitle.visibility = if (state.continueWatchingSubtitle.isBlank()) View.GONE else View.VISIBLE
-        binding.btnPrimaryAction.setOnClickListener {
-            state.continueWatchingItem?.let { playEpisode(it) }
-                ?: Toast.makeText(requireContext(), getString(R.string.no_episodes_available), Toast.LENGTH_SHORT).show()
+
+        if (hasPlayableItem) {
+            binding.tvPrimaryActionTitle.setText(actionRes)
+            binding.tvPrimaryActionSubtitle.text = state.continueWatchingSubtitle
+            binding.tvPrimaryActionSubtitle.visibility = if (state.continueWatchingSubtitle.isBlank()) View.GONE else View.VISIBLE
+            binding.btnPrimaryAction.setOnClickListener {
+                state.continueWatchingItem?.let { playEpisode(it) }
+            }
+        } else {
+            binding.tvPrimaryActionTitle.setText(R.string.state_empty_series_download_action)
+            binding.tvPrimaryActionSubtitle.setText(R.string.seedbox_download_action_sub)
+            binding.tvPrimaryActionSubtitle.visibility = View.VISIBLE
+            binding.btnPrimaryAction.setOnClickListener {
+                val targetSeries = state.activeArcTitle ?: state.seriesTitle
+                showSeedboxDownloadDialog(targetSeries)
+            }
         }
 
         binding.btnTrailer.setOnClickListener {
@@ -797,13 +808,18 @@ class SeriesDetailFragment : BaseFragment() {
                 binding.tvEmptyEpisodes.text = when {
                     state.isSeasonLoading -> getString(R.string.series_season_loading)
                     loadError != null -> getString(loadError.messageRes) + "\n" + getString(R.string.state_error_network_action)
-                    else -> getString(R.string.no_episodes_available)
+                    else -> getString(R.string.no_episodes_available) + "\n\n" + getString(R.string.state_empty_series_download_action)
                 }
-                binding.tvEmptyEpisodes.isFocusable = loadError != null
-                binding.tvEmptyEpisodes.isClickable = loadError != null
-                binding.tvEmptyEpisodes.setBackgroundResource(if (loadError != null) R.drawable.btn_secondary_action_bg else 0)
+                binding.tvEmptyEpisodes.isFocusable = !state.isSeasonLoading
+                binding.tvEmptyEpisodes.isClickable = !state.isSeasonLoading
+                binding.tvEmptyEpisodes.setBackgroundResource(if (!state.isSeasonLoading) R.drawable.btn_secondary_action_bg else 0)
                 binding.tvEmptyEpisodes.setOnClickListener {
-                    state.seasonTabs.firstOrNull { it.isSelected }?.let(viewModel::selectSeasonTab)
+                    if (loadError != null) {
+                        state.seasonTabs.firstOrNull { it.isSelected }?.let(viewModel::selectSeasonTab)
+                    } else if (!state.isSeasonLoading) {
+                        val targetSeries = state.activeArcTitle ?: state.seriesTitle
+                        showSeedboxDownloadDialog(targetSeries)
+                    }
                 }
             } else {
                 binding.tvEmptyEpisodes.visibility = View.GONE
@@ -1063,7 +1079,7 @@ class SeriesDetailFragment : BaseFragment() {
             subtitles = localSubtitles,
             startPosition = startPos,
             isMovie = isMovie,
-            siblingFolderId = args.folderId,
+            siblingFolderId = (viewModel.uiState.value as? SeriesDetailUiState.Success)?.activeMemberFolderId ?: args.folderId,
             localUri = localUri
         )
     }

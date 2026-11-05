@@ -290,6 +290,7 @@ class SettingsFragment : BaseFragment() {
                 R.id.settingsSectionData,
                 listOf(
                     R.id.settingClearCache,
+                    R.id.settingSmartDownloadsToggle,
                     R.id.settingCheckForUpdate,
                     R.id.settingExportBackup,
                     R.id.settingImportBackup,
@@ -486,6 +487,7 @@ class SettingsFragment : BaseFragment() {
         binding.switchAutoFrameRate?.isFocusable = false
         binding.switchMatchDynamicRange?.isFocusable = false
         binding.switchPredictiveBuffering?.isFocusable = false
+        binding.switchSmartDownloads?.isFocusable = false
         binding.settingSelectProfile.apply { if (isTv) isFocusableInTouchMode = true }
         categoryButtons.forEach { it.isFocusableInTouchMode = true }
         categoryButtons.firstOrNull()?.let { button -> button.post { button.requestFocus() } }
@@ -499,6 +501,7 @@ class SettingsFragment : BaseFragment() {
         binding.settingDefaultPlayer,
         binding.settingSubtitleSize,
         binding.settingClearCache,
+        binding.settingSmartDownloadsToggle,
         binding.settingCheckForUpdate,
         binding.settingMalAccount,
         binding.settingMalTransferToTv,

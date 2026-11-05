@@ -911,6 +911,21 @@
                     android:checked="true" />
             </LinearLayout>
 
+            <!-- BACKUP & RESTAURAÇÃO (FEAT-07) -->
+            <TextView
+                android:id="@+id/settingsSectionData"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="20dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="8dp"
+                android:fontFamily="@font/inter"
+                android:letterSpacing="0.08"
+                android:text="BACKUP &amp; DADOS"
+                android:textColor="?attr/colorAccentPrimary"
+                style="@style/TextAppearance.Makimono.TV.Body"
+                android:textStyle="bold" />
+
             <!-- Smart Downloads Toggle (Netflix Style) -->
             <LinearLayout
                 android:id="@+id/settingSmartDownloadsToggle"
@@ -953,21 +968,6 @@
                     android:layout_height="wrap_content"
                     android:checked="true" />
             </LinearLayout>
-
-            <!-- BACKUP & RESTAURAÇÃO (FEAT-07) -->
-            <TextView
-                android:id="@+id/settingsSectionData"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="20dp"
-                android:layout_marginTop="24dp"
-                android:layout_marginBottom="8dp"
-                android:fontFamily="@font/inter"
-                android:letterSpacing="0.08"
-                android:text="BACKUP &amp; DADOS"
-                android:textColor="?attr/colorAccentPrimary"
-                style="@style/TextAppearance.Makimono.TV.Body"
-                android:textStyle="bold" />
 
             <!-- Exportar Backup -->
             <LinearLayout

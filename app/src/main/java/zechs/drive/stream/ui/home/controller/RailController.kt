@@ -69,6 +69,28 @@ class RailController(
     fun usesOverlaySidebar(): Boolean =
         isCollapsibleRail() && binding.sidebarDimOverlay != null
 
+    private fun animateRailItemFocus(v: View, hasFocus: Boolean) {
+        val isTv = DeviceUi.isTenFootExperience(v.context)
+        if (reduceMotionProvider()) {
+            v.scaleX = 1f
+            v.scaleY = 1f
+            v.translationX = 0f
+            v.translationZ = 0f
+            return
+        }
+        val targetScale = if (hasFocus) (if (isTv) 1.05f else 1.03f) else 1.0f
+        val targetTransX = if (hasFocus && isTv) 6f * v.resources.displayMetrics.density else 0f
+        val targetElev = if (hasFocus) 4f else 0f
+        v.animate()
+            .scaleX(targetScale)
+            .scaleY(targetScale)
+            .translationX(targetTransX)
+            .translationZ(targetElev)
+            .setDuration(v.resources.getInteger(R.integer.motion_focus).toLong())
+            .setInterpolator(androidx.interpolator.view.animation.FastOutSlowInInterpolator())
+            .start()
+    }
+
     fun setup() {
         val hasOverlay = usesOverlaySidebar()
         if (DeviceUi.isTenFootExperience(binding.root.context)) createHistoryNavItem()
@@ -244,9 +266,8 @@ class RailController(
                 item.nextFocusLeftId = item.id
                 SingleTapActivation.install(item)
                 item.setOnFocusChangeListener { v, hasFocus ->
-                    if (!DeviceUi.isTenFootExperience(v.context)) {
-                        animateFocus(v, hasFocus, 1.04f, 6f)
-                    } else if (hasFocus) {
+                    animateRailItemFocus(v, hasFocus)
+                    if (DeviceUi.isTenFootExperience(v.context) && hasFocus) {
                         expandTvRail()
                     }
                     updateRailItemColors()
@@ -333,7 +354,7 @@ class RailController(
                     containerViewToggle?.visibility = View.VISIBLE
                     containerItemCount.visibility = View.VISIBLE
                     val animesCount = viewModel.filteredAnimes.value.size
-                    tvItemCount.text = if (animesCount == 1) "1 anime" else "$animesCount animes"
+                    tvItemCount.text = if (animesCount == 1) "1 obra" else "$animesCount obras"
                     val isEmpty = animesCount == 0 && !viewModel.isLoadingAnime.value
                     layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
                 }
@@ -772,6 +793,7 @@ class RailController(
         historyNavLabel = label
         historyNavIcon = icon
         item.setOnFocusChangeListener { _, hasFocus ->
+            animateRailItemFocus(item, hasFocus)
             if (hasFocus) expandTvRail()
             updateRailItemColors()
         }
@@ -833,6 +855,7 @@ class RailController(
         downloadsNavLabel = label
         downloadsNavIcon = icon
         item.setOnFocusChangeListener { _, hasFocus ->
+            animateRailItemFocus(item, hasFocus)
             if (hasFocus) expandTvRail()
             updateRailItemColors()
         }

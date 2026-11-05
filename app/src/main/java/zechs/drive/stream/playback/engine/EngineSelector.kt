@@ -157,6 +157,24 @@ object EngineSelector {
             }
         ),
         EngineRoutingRule(
+            id = "rule_transport_stream",
+            summary = "Transport Stream (.ts / MPEG2) → MPV (FFmpeg demuxing & broadcast codec support)",
+            matches = { media, _ ->
+                media.extension.equals("ts", ignoreCase = true) ||
+                    media.extension.equals("m2ts", ignoreCase = true) ||
+                    media.extension.equals("mts", ignoreCase = true) ||
+                    media.name.endsWith(".ts", ignoreCase = true) ||
+                    media.name.endsWith(".m2ts", ignoreCase = true) ||
+                    media.name.contains("MPEG2", ignoreCase = true)
+            },
+            resolve = { _, _ ->
+                EngineChoice.Mpv(
+                    reason = "Transport Stream (.ts / MPEG2) broadcast container requires MPV FFmpeg demuxer",
+                    ruleId = "rule_transport_stream"
+                )
+            }
+        ),
+        EngineRoutingRule(
             id = "rule_hdr_media3",
             summary = "HDR10 / Dolby Vision → ExoPlayer (Media3 surface passthrough)",
             matches = { media, _ -> media.isHdr },

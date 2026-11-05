@@ -55,12 +55,75 @@ internal class ProfileOnboardingDialog(
             setBackgroundColor(color(R.color.obsidian_bg_base))
             setPadding(dp(if (tv) 48 else 20), dp(27), dp(if (tv) 48 else 20), dp(27))
         }
-        if (tv) root.addView(ImageView(context).apply {
-            scaleType = ImageView.ScaleType.CENTER_CROP
-            contentDescription = null
-            val artwork = profile.backgroundUrl?.takeIf(String::isNotBlank)
-            if (artwork != null) MediaImageLoader.backdrop(this, artwork) else setImageResource(R.drawable.bg_profile_fantasy)
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 0.40f).apply { marginEnd = dp(36) })
+        if (tv) {
+            val card = android.widget.FrameLayout(context).apply {
+                clipToOutline = true
+                outlineProvider = object : android.view.ViewOutlineProvider() {
+                    override fun getOutline(view: View, outline: android.graphics.Outline) {
+                        outline.setRoundRect(0, 0, view.width, view.height, dp(16).toFloat())
+                    }
+                }
+            }
+
+            val backdropIv = ImageView(context).apply {
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                contentDescription = null
+                val artwork = profile.backgroundUrl?.takeIf(String::isNotBlank)
+                if (artwork != null) MediaImageLoader.backdrop(this, artwork) else setImageResource(R.drawable.bg_profile_fantasy)
+            }
+            card.addView(backdropIv, android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+
+            val scrim = View(context).apply {
+                background = android.graphics.drawable.GradientDrawable(
+                    android.graphics.drawable.GradientDrawable.Orientation.BOTTOM_TOP,
+                    intArrayOf(color(R.color.obsidian_bg_base), android.graphics.Color.TRANSPARENT)
+                )
+            }
+            card.addView(scrim, android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(220)).apply {
+                gravity = Gravity.BOTTOM
+            })
+
+            val profileInfo = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
+
+            val avatarIv = ImageView(context).apply {
+                contentDescription = profile.name
+                val avatarSource: Any = profile.avatarUrl?.takeIf { it.isNotBlank() }
+                    ?: manager.getAvatarDrawableRes(profile.avatarResName)
+                com.bumptech.glide.Glide.with(context)
+                    .load(avatarSource)
+                    .placeholder(R.drawable.avatar_caua)
+                    .error(R.drawable.avatar_caua)
+                    .circleCrop()
+                    .into(this)
+                val avatarRing = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.OVAL
+                    setColor(color(R.color.obsidian_bg_surface))
+                    setStroke(dp(3), color(R.color.obsidian_accent_primary))
+                }
+                background = avatarRing
+                setPadding(dp(4), dp(4), dp(4), dp(4))
+            }
+            profileInfo.addView(avatarIv, LinearLayout.LayoutParams(dp(96), dp(96)))
+
+            val nameTv = TextView(context).apply {
+                text = profile.name
+                androidx.core.widget.TextViewCompat.setTextAppearance(this, R.style.TextAppearance_Makimono_TV_Title2)
+                setTextColor(color(R.color.obsidian_text_primary))
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
+            profileInfo.addView(nameTv, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(14)
+            })
+
+            card.addView(profileInfo, android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                gravity = Gravity.CENTER
+            })
+
+            root.addView(card, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 0.40f).apply { marginEnd = dp(36) })
+        }
         val content = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
         val viewport = ScrollView(context).apply {
             isFillViewport = true
@@ -70,7 +133,7 @@ internal class ProfileOnboardingDialog(
             else LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         dialog.setContentView(root)
         var busy = false
-        var step = ProfileSetupPolicy.AUDIO
+        var step = ProfileSetupPolicy.LANGUAGE
         lateinit var render: () -> Unit
 
         fun heading(text: String, style: Int) {
@@ -121,14 +184,35 @@ internal class ProfileOnboardingDialog(
                 if (!dialog.isShowing) return@launch
                 content.removeAllViews()
                 viewport.scrollTo(0, 0)
-                heading(context.getString(R.string.profile_setup_step, step, 3), R.style.TextAppearance_Makimono_TV_Body)
+                heading(context.getString(R.string.profile_setup_step, step, ProfileSetupPolicy.TOTAL_STEPS), R.style.TextAppearance_Makimono_TV_Body)
                 val title = when (step) {
+                    ProfileSetupPolicy.LANGUAGE -> R.string.profile_setup_language
                     ProfileSetupPolicy.AUDIO -> R.string.profile_setup_audio
                     ProfileSetupPolicy.SUBTITLES -> R.string.profile_setup_subtitles
                     else -> R.string.profile_setup_library
                 }
                 heading(context.getString(title), R.style.TextAppearance_Makimono_TV_Title1)
-                if (step == ProfileSetupPolicy.LIBRARY) {
+                if (step == ProfileSetupPolicy.LANGUAGE) {
+                    heading(context.getString(R.string.profile_setup_language_hint), R.style.TextAppearance_Makimono_TV_Body)
+                    button("Português (Brasil)") {
+                        androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
+                            androidx.core.os.LocaleListCompat.forLanguageTags("pt-BR")
+                        )
+                        submit {
+                            settings.saveProfileSetupStep(profile.id, ProfileSetupPolicy.AUDIO)
+                            render()
+                        }
+                    }
+                    button("English") {
+                        androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
+                            androidx.core.os.LocaleListCompat.forLanguageTags("en")
+                        )
+                        submit {
+                            settings.saveProfileSetupStep(profile.id, ProfileSetupPolicy.AUDIO)
+                            render()
+                        }
+                    }
+                } else if (step == ProfileSetupPolicy.LIBRARY) {
                     heading(context.getString(R.string.profile_setup_library_hint), R.style.TextAppearance_Makimono_TV_Body)
                     val current = manager.getActiveProfile()
                     current.libraryRootId?.let {
@@ -160,7 +244,7 @@ internal class ProfileOnboardingDialog(
                         settings.saveProfileSetupStep(profile.id, ProfileSetupPolicy.LIBRARY); render()
                     } }
                 }
-                if (step > ProfileSetupPolicy.AUDIO) button(context.getString(R.string.back)) { submit {
+                if (step > ProfileSetupPolicy.LANGUAGE) button(context.getString(R.string.back)) { submit {
                     settings.saveProfileSetupStep(profile.id, ProfileSetupPolicy.previous(step)); render()
                 } }
                 content.post {
@@ -169,7 +253,7 @@ internal class ProfileOnboardingDialog(
             }
         }
         dialog.setOnKeyListener { _, key, event ->
-            if (key == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_UP && step > ProfileSetupPolicy.AUDIO) {
+            if (key == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_UP && step > ProfileSetupPolicy.LANGUAGE) {
                 submit { settings.saveProfileSetupStep(profile.id, ProfileSetupPolicy.previous(step)); render() }; true
             } else false
         }

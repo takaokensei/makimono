@@ -113,7 +113,9 @@ class EpisodeMetadataResolver @Inject constructor() {
         list.add(title)
 
         val lower = title.lowercase(Locale.ROOT)
-        if (lower.contains("sennen kessen") || lower.contains("thousand-year") || lower.contains("soukoku")) {
+        if (lower.contains("sennen kessen") || lower.contains("kashin-tan") || lower.contains("kashin tan") ||
+            lower.contains("thousand-year") || lower.contains("soukoku")
+        ) {
             list.add("Bleach: Thousand-Year Blood War")
         }
         if (lower.contains("bleach")) {
@@ -139,12 +141,39 @@ class EpisodeMetadataResolver @Inject constructor() {
         episodes: List<EpisodeDetails>,
         season: Int?,
         episodeNumber: Int?,
-        canonicalName: String? = null
+        canonicalName: String? = null,
+        filenameOrArc: String? = null
     ): EpisodeDetails? {
         if (episodes.isEmpty()) return null
 
-        // 1. Match by (season, episodeNumber)
-        if (season != null && episodeNumber != null) {
+        val inferredSeason = when {
+            season != null && season > 1 -> season
+            filenameOrArc != null -> {
+                val lower = filenameOrArc.lowercase(Locale.ROOT)
+                when {
+                    lower.contains("kashin-tan") || lower.contains("kashin tan") || lower.contains("conflict") ||
+                        lower.contains("soukoku") || lower.contains("part 3") || lower.contains("part iii") ||
+                        lower.contains("season 3") || lower.contains("s03") || lower.contains("s3") -> 3
+                    lower.contains("ketsubetsu-tan") || lower.contains("ketsubetsu tan") || lower.contains("separation") ||
+                        lower.contains("part 2") || lower.contains("part ii") || lower.contains("season 2") ||
+                        lower.contains("s02") || lower.contains("s2") -> 2
+                    lower.contains("sennen kessen") || lower.contains("thousand-year") || lower.contains("blood warfare") ||
+                        lower.contains("part 1") || lower.contains("part i") || lower.contains("season 1") ||
+                        lower.contains("s01") || lower.contains("s1") -> 1
+                    else -> season
+                }
+            }
+            else -> season
+        }
+
+        // 1. Match by inferred season and episodeNumber
+        if (inferredSeason != null && episodeNumber != null) {
+            val match = episodes.firstOrNull { it.season == inferredSeason && it.episodeNumber == episodeNumber }
+            if (match != null) return match
+        }
+
+        // Direct (season, episodeNumber) if different
+        if (season != null && episodeNumber != null && season != inferredSeason) {
             val match = episodes.firstOrNull { it.season == season && it.episodeNumber == episodeNumber }
             if (match != null) return match
         }
