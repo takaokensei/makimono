@@ -57,13 +57,17 @@ class CatalogPresentationController(
         val prefs = context.getSharedPreferences("catalog_presentation", Context.MODE_PRIVATE)
         catalogSort = prefs.getInt("sort", 0).coerceIn(0, 2)
         val sortBtn = binding.root.findViewById<View>(R.id.btnCatalogSort)
-        sortBtn?.setOnFocusChangeListener { v, hasFocus ->
-            animateFocus(v, hasFocus, scale = 1.06f)
-        }
+        sortBtn?.let { zechs.drive.stream.utils.FocusEngine.attach(it, zechs.drive.stream.utils.FocusEngine.FocusKind.BUTTON) }
         sortBtn?.setOnClickListener { button ->
             MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
                 .setTitle(R.string.catalog_sort_title)
-                .setSingleChoiceItems(arrayOf("Ordem da biblioteca", "Nome: A–Z", "Nome: Z–A"), catalogSort) { dialog, choice ->
+                .setSingleChoiceItems(
+                    arrayOf(
+                        context.getString(R.string.catalog_sort_default),
+                        context.getString(R.string.catalog_sort_az),
+                        context.getString(R.string.catalog_sort_za)
+                    ), catalogSort
+                ) { dialog, choice ->
                     catalogSort = choice
                     prefs.edit().putInt("sort", choice).apply()
                     submitCatalog()
@@ -153,12 +157,12 @@ class CatalogPresentationController(
         fun updateSegmentStates() {
             gridBtn.isSelected = isGridMode
             listBtn.isSelected = !isGridMode
-            gridBtn.setBackgroundResource(R.drawable.bg_segmented_button)
-            listBtn.setBackgroundResource(R.drawable.bg_segmented_button)
-            val primaryColor = context.resolveThemeColor(R.attr.colorTextPrimary)
-            val secondaryColor = context.resolveThemeColor(R.attr.colorTextSecondary)
-            gridBtn.imageTintList = ColorStateList.valueOf(if (isGridMode) primaryColor else secondaryColor)
-            listBtn.imageTintList = ColorStateList.valueOf(if (!isGridMode) primaryColor else secondaryColor)
+            gridBtn.setBackgroundResource(if (isGridMode) R.drawable.bg_segmented_active else android.R.color.transparent)
+            listBtn.setBackgroundResource(if (!isGridMode) R.drawable.bg_segmented_active else android.R.color.transparent)
+            val activeIconColor = androidx.core.content.ContextCompat.getColor(context, R.color.obsidian_on_primary)
+            val inactiveIconColor = androidx.core.content.ContextCompat.getColor(context, R.color.obsidian_text_secondary)
+            gridBtn.imageTintList = ColorStateList.valueOf(if (isGridMode) activeIconColor else inactiveIconColor)
+            listBtn.imageTintList = ColorStateList.valueOf(if (!isGridMode) activeIconColor else inactiveIconColor)
         }
 
         updateSegmentStates()

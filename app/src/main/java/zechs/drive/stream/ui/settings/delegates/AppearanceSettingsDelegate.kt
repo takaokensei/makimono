@@ -33,7 +33,54 @@ class AppearanceSettingsDelegate(
 
     fun setup() {
         setupThemeMenu()
+        setupAppLanguage()
         setupMotionPreference()
+    }
+
+    private fun setupAppLanguage() {
+        val languageRow = binding.root.findViewById<android.view.View>(R.id.settingAppLanguage) ?: return
+        val tvValue = binding.root.findViewById<android.widget.TextView>(R.id.tvLanguageCurrentValue)
+
+        val currentLocales = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales()
+        val currentTag = if (currentLocales.isEmpty) "" else currentLocales.toLanguageTags()
+        val label = when {
+            currentTag.startsWith("pt", ignoreCase = true) -> context.getString(R.string.language_pt_br)
+            currentTag.startsWith("en", ignoreCase = true) -> context.getString(R.string.language_en)
+            else -> context.getString(R.string.language_system)
+        }
+        tvValue?.text = label
+
+        languageRow.setOnClickListener {
+            val languages = arrayOf(
+                context.getString(R.string.language_system),
+                context.getString(R.string.language_pt_br),
+                context.getString(R.string.language_en)
+            )
+            val activeLocales = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales()
+            val activeTag = if (activeLocales.isEmpty) "" else activeLocales.toLanguageTags()
+            val selectedIndex = when {
+                activeTag.startsWith("pt", ignoreCase = true) -> 1
+                activeTag.startsWith("en", ignoreCase = true) -> 2
+                else -> 0
+            }
+            MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_DriveStream_Dialog)
+                .setTitle(R.string.settings_language_title)
+                .setSingleChoiceItems(languages, selectedIndex) { dialog, which ->
+                    val tags = when (which) {
+                        1 -> "pt-BR"
+                        2 -> "en"
+                        else -> ""
+                    }
+                    val localeList = if (tags.isEmpty()) {
+                        androidx.core.os.LocaleListCompat.getEmptyLocaleList()
+                    } else {
+                        androidx.core.os.LocaleListCompat.forLanguageTags(tags)
+                    }
+                    androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(localeList)
+                    dialog.dismiss()
+                }
+                .show()
+        }
     }
 
     private fun setupThemeMenu() {

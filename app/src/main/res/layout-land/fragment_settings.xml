@@ -291,6 +291,59 @@
                             android:textColor="?attr/colorAccentPrimary" />
                     </LinearLayout>
 
+                                        <!-- App Language Row -->
+                    <LinearLayout
+                        android:id="@+id/settingAppLanguage"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/glass_action_item_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_language_24"
+                            app:tint="?attr/colorAccentPrimary" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/settings_language_title"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Title3"
+                                android:textColor="?attr/colorTextPrimary" />
+
+                            <TextView
+                                android:id="@+id/tvLanguageCurrentValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="@string/language_system"
+                                android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                                android:textColor="?attr/colorTextSecondary" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Alterar  ›"
+                            android:textAppearance="@style/TextAppearance.Makimono.TV.Caption"
+                            android:textColor="?attr/colorAccentPrimary" />
+                    </LinearLayout>
+
                     <!-- Reduce Motion Row -->
                     <LinearLayout
                         android:id="@+id/settingReduceMotion"

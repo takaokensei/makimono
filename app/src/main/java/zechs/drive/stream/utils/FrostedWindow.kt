@@ -13,13 +13,18 @@ object FrostedWindow {
         val background = GradientDrawable().apply { cornerRadius = 20 * density }
         window.setBackgroundDrawable(background)
         fun update(enabled: Boolean) {
-            val allowBlur = MotionPolicy.shouldUseBlur(
+            val isTv = DeviceUi.isTenFootExperience(window.context)
+            val allowBlur = !isTv && MotionPolicy.shouldUseBlur(
                 preference = MotionPolicy.activePreference(),
                 systemAnimationsEnabled = MotionPolicy.areSystemAnimationsEnabled(),
                 crossWindowBlurEnabled = enabled,
                 lowRamDevice = FocusEngine.isLowRam(window.context)
             )
-            background.setColor(if (allowBlur) 0xE8081828.toInt() else 0xFF081828.toInt())
+            val glassColor = androidx.core.content.ContextCompat.getColor(
+                window.context,
+                if (allowBlur) zechs.drive.stream.R.color.obsidian_bg_glass else zechs.drive.stream.R.color.obsidian_bg_surface
+            )
+            background.setColor(glassColor)
             window.setDimAmount(0.35f)
             if (Build.VERSION.SDK_INT >= 31) {
                 window.setBackgroundBlurRadius(if (allowBlur) (24 * density).toInt() else 0)

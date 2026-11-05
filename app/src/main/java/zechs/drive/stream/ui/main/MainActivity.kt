@@ -125,7 +125,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var navController: NavController
     // The splash theme is Kodi Estuary, so the first persisted theme can be
     // compared against it without flashing Tokyo Night during startup.
-    private var currentAppliedTheme: AppTheme? = AppTheme.CRUNCHYROLL
+    private var currentAppliedTheme: AppTheme? = AppTheme.OBSIDIAN
     private var updateDialog: AlertDialog? = null
     private var progressDialog: AlertDialog? = null
     private var progressBinding: DialogUpdateProgressBinding? = null

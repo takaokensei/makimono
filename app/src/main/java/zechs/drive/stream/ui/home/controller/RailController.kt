@@ -354,7 +354,8 @@ class RailController(
                     containerViewToggle?.visibility = View.VISIBLE
                     containerItemCount.visibility = View.VISIBLE
                     val animesCount = viewModel.filteredAnimes.value.size
-                    tvItemCount.text = if (animesCount == 1) "1 obra" else "$animesCount obras"
+                    val resId = if (animesCount == 1) R.string.catalog_media_count_single else R.string.catalog_media_count_multiple
+                    tvItemCount.text = binding.root.context.getString(resId, animesCount)
                     val isEmpty = animesCount == 0 && !viewModel.isLoadingAnime.value
                     layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
                 }
@@ -376,7 +377,8 @@ class RailController(
                     containerViewToggle?.visibility = View.VISIBLE
                     containerItemCount.visibility = View.VISIBLE
                     val moviesCount = viewModel.filteredAnimes.value.size
-                    tvItemCount.text = if (moviesCount == 1) "1 filme" else "$moviesCount filmes"
+                    val resId = if (moviesCount == 1) R.string.catalog_movies_single else R.string.catalog_movies_multiple
+                    tvItemCount.text = binding.root.context.getString(resId, moviesCount)
                     val isEmpty = moviesCount == 0 && !viewModel.isLoadingAnime.value
                     layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
                 }
@@ -398,7 +400,7 @@ class RailController(
                     containerViewToggle?.visibility = View.VISIBLE
                     containerItemCount.visibility = View.VISIBLE
                     val favCount = viewModel.filteredAnimes.value.size
-                    tvItemCount.text = "$favCount favoritos"
+                    tvItemCount.text = binding.root.context.getString(R.string.catalog_favorites_count, favCount)
                     val isEmpty = favCount == 0 && !viewModel.isLoadingAnime.value
                     layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
                 }

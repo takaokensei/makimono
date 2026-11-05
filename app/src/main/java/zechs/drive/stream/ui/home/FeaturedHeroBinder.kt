@@ -167,14 +167,14 @@ internal class FeaturedHeroBinder(
                     }
                 }).into(logo)
         }
-        binding.tvFeaturedTitle?.let { titleView ->
-            val cleanTitle = featured.title.trim().replace(Regex("\\s+"), " ")
-            titleView.text = cleanTitle
-            titleView.letterSpacing = 0.0f
-            titleView.includeFontPadding = true
-            titleView.setLineSpacing(6f * titleView.resources.displayMetrics.density, 1.15f)
-        }
         val isTenFoot = zechs.drive.stream.utils.DeviceUi.isTenFootExperience(context)
+        binding.tvFeaturedTitle?.let { titleView ->
+            zechs.drive.stream.utils.TitleFormattingPolicy.applyHeroTitleStyle(
+                textView = titleView,
+                rawTitle = featured.title,
+                isTv = isTenFoot
+            )
+        }
         binding.tvFeaturedOverline?.let { overline ->
             if (isTenFoot) {
                 overline.visibility = View.GONE

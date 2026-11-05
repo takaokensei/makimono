@@ -474,7 +474,7 @@
     <string name="exit_dialog_message">Deseja realmente sair do aplicativo?</string>
     <string name="exit_dialog_confirm">Sair</string>
     <string name="exit_dialog_cancel">Cancelar</string>
-    <string name="series_episode_watched_badge">ASSISTIDO</string>
+    <string name="series_episode_watched_badge">VISTO</string>
     <string name="player_skip_intro">Pular abertura</string>
     <string name="player_skip_outro">Pular encerramento</string>
     <string name="player_next_episode_countdown">A SEGUIR • %1$ds</string>
@@ -513,7 +513,7 @@
     <string name="series_action_marked_watched_btn">✓ Visto</string>
     <string name="series_audio_legendado_pt">Legendado (PT-BR)</string>
     <string name="series_synopsis_read_more">Ler sinopse completa</string>
-    <string name="profile_logout_action">LOG OUT</string>
+    <string name="profile_logout_action">Sair da conta</string>
     <string name="profile_logout_confirm_title">Sair da conta</string>
     <string name="profile_logout_confirm_message">Tem certeza de que deseja sair da sua conta?</string>
     <string name="profile_logout_action_confirm">Sair</string>
@@ -720,4 +720,26 @@
     <string name="seedbox_download_ep1">Baixar Episódio 1 (Fast-Start)</string>
     <string name="seedbox_download_all">Baixar Temporada Completa</string>
     <string name="seedbox_download_requested">Download solicitado no Seedbox! O daemon iniciará no Drive.</string>
+
+    <!-- Added by Makimono HIG Localisation Suite -->
+    <string name="catalog_sort_action">Ordenar</string>
+    <string name="onboarding_language_title">Escolha seu idioma</string>
+    <string name="onboarding_language_desc">Você pode alterar seu idioma a qualquer momento nas Configurações.</string>
+    <string name="language_pt_br">Português (Brasil)</string>
+    <string name="language_en">Inglês</string>
+    <string name="language_system">Padrão do Sistema</string>
+    <string name="catalog_media_count_single">%1$d obra</string>
+    <string name="catalog_media_count_multiple">%1$d obras</string>
+
+    <!-- Added by Makimono HIG Localisation Suite -->
+    <string name="catalog_movies_single">%1$d filme</string>
+    <string name="catalog_movies_multiple">%1$d filmes</string>
+    <string name="catalog_favorites_count">%1$d favoritos</string>
+
+    <!-- Added by Makimono HIG Localisation Suite -->
+    <string name="catalog_sort_default">Ordem da biblioteca</string>
+    <string name="catalog_sort_az">Nome: A–Z</string>
+    <string name="catalog_sort_za">Nome: Z–A</string>
+    <string name="catalog_default_count">0 obras</string>
+    <string name="settings_language_title">Idioma do aplicativo</string>
 </resources>

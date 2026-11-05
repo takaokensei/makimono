@@ -460,9 +460,17 @@ class HomeFragment : BaseFragment() {
                         if (railController.currentTab in listOf("Animes", "Filmes", "Favoritos")) {
                             val count = animes.size
                             val label = when (railController.currentTab) {
-                                "Filmes" -> if (count == 1) "1 filme" else "$count filmes"
-                                "Favoritos" -> "$count favoritos"
-                                else -> if (count == 1) "1 obra" else "$count obras"
+                                "Filmes" -> if (count == 1) {
+                                    getString(R.string.catalog_movies_single, count)
+                                } else {
+                                    getString(R.string.catalog_movies_multiple, count)
+                                }
+                                "Favoritos" -> getString(R.string.catalog_favorites_count, count)
+                                else -> if (count == 1) {
+                                    getString(R.string.catalog_media_count_single, count)
+                                } else {
+                                    getString(R.string.catalog_media_count_multiple, count)
+                                }
                             }
                             binding.tvItemCount.text = label
                             val isEmpty = animes.isEmpty() && !viewModel.isLoadingAnime.value
