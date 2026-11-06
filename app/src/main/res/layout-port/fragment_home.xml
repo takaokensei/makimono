@@ -98,7 +98,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="6dp"
                 android:fontFamily="@font/inter"
-                android:text="0 animes"
+                android:text="@string/catalog_default_count"
                 android:textColor="@color/obsidian_text_secondary"
                 style="@style/TextAppearance.Makimono.TV.Body"
                 android:textStyle="bold" />

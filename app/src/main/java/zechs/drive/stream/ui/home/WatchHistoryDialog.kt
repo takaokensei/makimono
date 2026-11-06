@@ -60,7 +60,6 @@ internal class WatchHistoryDialog(
             setBackgroundDrawableResource(android.R.color.transparent)
             addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             setDimAmount(0.72f)
-            setWindowAnimations(0)
         }
 
         val density = context.resources.displayMetrics.density

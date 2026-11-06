@@ -238,6 +238,14 @@ class ShelvesController(
                 }
 
                 launch {
+                    viewModel.animeLibrary.collect { library ->
+                        val recent = recentlyModifiedLibraryFolders(library)
+                        recentlyAddedAdapter.submitList(recent)
+                        if (railController.currentTab == "Início") onRefreshShelvesRequested()
+                    }
+                }
+
+                launch {
                     profileManager.activeProfileFlow.collectLatest { profile ->
                         combine(
                             viewModel.animeLibrary,

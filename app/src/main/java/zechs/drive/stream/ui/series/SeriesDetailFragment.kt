@@ -480,7 +480,7 @@ class SeriesDetailFragment : BaseFragment() {
 
     private fun renderContentAvailability(available: Boolean) {
         val visibility = if (available) View.VISIBLE else View.GONE
-        (binding.actionsRow.parent as? View)?.visibility = visibility
+        binding.actionsRow.visibility = visibility
         binding.tabsContainer.visibility = visibility
         if (!available) {
             listOf(binding.metaRow1, binding.metaRow2, binding.tvSynopsis, binding.tvSynopsisMore,
@@ -701,7 +701,7 @@ class SeriesDetailFragment : BaseFragment() {
         }
         synopsisDisclosure.bind(cleanSynopsis)
 
-        (binding.actionsRow.parent as? View)?.visibility =
+        binding.actionsRow.visibility =
             if (state.continueWatchingItem != null && !state.isSeasonLoading) View.VISIBLE else View.GONE
 
         // 5. Action Buttons (REF-11: 3 Primary Hero Buttons — Assistir/Continuar | Minha Lista | Mais)

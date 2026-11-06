@@ -746,4 +746,5 @@
     <string name="profile_name_label">Nome do perfil</string>
     <string name="profile_change_avatar">Mudar Avatar</string>
     <string name="profile_change_background">Mudar Papel de Parede</string>
+    <string name="queue_title">Minha Fila</string>
 </resources>

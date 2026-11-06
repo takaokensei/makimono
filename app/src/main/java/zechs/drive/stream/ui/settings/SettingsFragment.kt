@@ -105,8 +105,12 @@ class SettingsFragment : BaseFragment() {
         selectedSettingsCategory = savedInstanceState?.getInt(STATE_SETTINGS_CATEGORY, 0)
             ?: viewModel.uiState.value.selectedCategory
 
-        binding.toolbar.setNavigationOnClickListener {
-            findNavController().navigateUp()
+        if (DeviceUi.isTenFootExperience(requireContext())) {
+            binding.toolbar.navigationIcon = null
+        } else {
+            binding.toolbar.setNavigationOnClickListener {
+                findNavController().navigateUp()
+            }
         }
         binding.toolbar.title = getString(R.string.app_settings)
         binding.toolbar.navigationContentDescription = getString(R.string.back)
@@ -260,7 +264,7 @@ class SettingsFragment : BaseFragment() {
             SettingsCategory(
                 R.string.settings_category_appearance,
                 R.id.settingsSectionProfile,
-                listOf(R.id.settingSelectTheme, R.id.settingReduceMotion)
+                listOf(R.id.settingSelectTheme, R.id.settingReduceMotion, R.id.settingAppLanguage)
             ),
             SettingsCategory(
                 R.string.settings_category_playback,
@@ -498,6 +502,7 @@ class SettingsFragment : BaseFragment() {
         binding.settingLibraryRoot,
         binding.settingSelectTheme,
         binding.settingReduceMotion,
+        binding.settingAppLanguage,
         binding.settingDefaultPlayer,
         binding.settingSubtitleSize,
         binding.settingClearCache,
@@ -506,6 +511,7 @@ class SettingsFragment : BaseFragment() {
         binding.settingMalAccount,
         binding.settingMalTransferToTv,
         binding.settingMalSyncToggle,
+        binding.settingSeedbox,
         binding.settingAutoSkipToggle,
         binding.settingGesturesToggle,
         binding.settingAutoFrameRateToggle,

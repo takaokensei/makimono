@@ -366,10 +366,26 @@ class HomeFragment : BaseFragment() {
         if (railController.currentTab != "Início") return
         val hasRecent = viewModel.recentWatches.value.isNotEmpty()
         val hasQueue = viewModel.watchQueue.value.isNotEmpty()
+        val hasNewEpisodes = shelvesController.followedEpisodesAdapter.itemCount > 0
+        val hasStarred = shelvesController.starredShelfAdapter.itemCount > 0
+        val hasRecentAdded = shelvesController.recentlyAddedAdapter.itemCount > 0
+
         binding.rvContinueWatchingShelf.visibility = if (hasRecent) View.VISIBLE else View.GONE
         binding.shelfHeaderRow?.visibility = if (hasRecent || hasQueue) View.VISIBLE else View.GONE
         binding.tvShelfLabel?.visibility = if (hasRecent) View.VISIBLE else View.GONE
         binding.tvShelfViewQueue?.visibility = if (hasQueue) View.VISIBLE else View.GONE
+
+        binding.rvWatchQueueShelf.visibility = if (hasQueue) View.VISIBLE else View.GONE
+        binding.tvQueueShelfLabel.visibility = if (hasQueue) View.VISIBLE else View.GONE
+
+        binding.rvNewEpisodesShelf.visibility = if (hasNewEpisodes) View.VISIBLE else View.GONE
+        binding.tvNewEpisodesShelfLabel.visibility = if (hasNewEpisodes) View.VISIBLE else View.GONE
+
+        binding.rvStarredShelf?.visibility = if (hasStarred) View.VISIBLE else View.GONE
+        binding.tvMyListShelfLabel?.visibility = if (hasStarred) View.VISIBLE else View.GONE
+
+        binding.rvRecentlyAddedShelf.visibility = if (hasRecentAdded) View.VISIBLE else View.GONE
+        binding.tvRecentlyAddedShelfLabel.visibility = if (hasRecentAdded) View.VISIBLE else View.GONE
     }
 
     override fun onResume() {

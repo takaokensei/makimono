@@ -257,21 +257,12 @@ class HeroController(
                     val focused = binding.root.findFocus()
                     val isHeroFocused = focused === binding.btnFeaturedPlay || focused === binding.btnFeaturedInfo
                     val rail = binding.root.findViewById<View>(R.id.navRail)
-                    val isRailFocused = focused != null && rail != null && run {
-                        var p: android.view.ViewParent? = focused.parent
-                        var inside = false
-                        while (p != null) {
-                            if (p === rail) {
-                                inside = true
-                                break
-                            }
-                            p = p.parent
-                        }
-                        inside
-                    }
+                    val isRailFocused = rail != null && generateSequence(focused?.parent) { it.parent }.any { it === rail }
+                    val isContentBrowsing = generateSequence(focused?.parent) { it.parent }
+                        .any { it === binding.contentScrollView }
 
                     if (currentTabProvider() == "Início" && !viewModel.isFocusPreviewActive &&
-                        !isHeroFocused && !isRailFocused && binding.root.hasWindowFocus()) {
+                        !isHeroFocused && !isRailFocused && !isContentBrowsing && binding.root.hasWindowFocus()) {
                         viewModel.cycleNextFeaturedSpotlight()
                     }
                 }

@@ -765,4 +765,5 @@ Paste the complete URL in the field below to continue.</string>
     <string name="profile_name_label">Profile Name</string>
     <string name="profile_change_avatar">Change Avatar</string>
     <string name="profile_change_background">Change Backdrop</string>
+    <string name="queue_title">Watch Queue</string>
 </resources>

@@ -38,7 +38,7 @@
                 android:layout_marginStart="16dp"
                 android:layout_weight="1"
                 android:fontFamily="@font/inter"
-                android:text="Minha Fila"
+                android:text="@string/queue_title"
                 android:textColor="?attr/colorOnSurface"
                 style="@style/TextAppearance.Makimono.TV.Title3"
                 android:textStyle="bold" />

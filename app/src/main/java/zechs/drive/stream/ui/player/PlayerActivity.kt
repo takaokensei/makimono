@@ -606,6 +606,7 @@ class PlayerActivity : BasePlayerActivity() {
 
         val isTvDevice = DeviceUi.isTenFootExperience(this)
         btnRotate?.visibility = if (isTvDevice) View.GONE else View.VISIBLE
+        if (isTvDevice) btnBack.visibility = View.GONE
 
         btnRotate?.setOnClickListener {
             orientation = getNextOrientation(orientation)

@@ -62,8 +62,12 @@ class DownloadsFragment : Fragment() {
     }
 
     private fun setupToolbar() {
-        binding.btnBack.setOnClickListener {
-            findNavController().navigateUp()
+        if (DeviceUi.isTenFootExperience(requireContext())) {
+            binding.btnBack.visibility = View.GONE
+        } else {
+            binding.btnBack.setOnClickListener {
+                findNavController().navigateUp()
+            }
         }
 
         binding.btnDeleteAllDownloads.setOnClickListener {

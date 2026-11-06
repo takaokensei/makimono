@@ -56,9 +56,13 @@ class QueueFragment : Fragment() {
     }
 
     private fun setupToolbar() {
-        binding.toolbarTitle.text = "Minha Fila"
-        binding.btnBack.setOnClickListener {
-            findNavController().navigateUp()
+        binding.toolbarTitle.setText(R.string.queue_title)
+        if (DeviceUi.isTenFootExperience(requireContext())) {
+            binding.btnBack.visibility = View.GONE
+        } else {
+            binding.btnBack.setOnClickListener {
+                findNavController().navigateUp()
+            }
         }
     }
 
