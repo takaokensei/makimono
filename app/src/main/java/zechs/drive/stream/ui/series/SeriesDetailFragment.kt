@@ -264,6 +264,18 @@ class SeriesDetailFragment : BaseFragment() {
                             val seasonHolder = seasonRv.findViewHolderForAdapterPosition(selectedPos)
                             return seasonHolder?.itemView ?: seasonRv
                         }
+                    } else if (pos > 0) {
+                        val prevPos = pos - 1
+                        val prevView = findViewByPosition(prevPos)
+                        if (prevView != null) {
+                            return prevView
+                        } else {
+                            scrollToPosition(prevPos)
+                            b.rvEpisodes.post {
+                                findViewByPosition(prevPos)?.requestFocus()
+                            }
+                            return currentChild
+                        }
                     }
                 } else if (direction == View.FOCUS_DOWN) {
                     return focused
@@ -796,12 +808,16 @@ class SeriesDetailFragment : BaseFragment() {
         } else {
             binding.tabsContainer.visibility = View.VISIBLE
             val hasSeasons = state.seasonTabs.isNotEmpty()
+            val seasonsVisibilityChanged = (binding.layoutSeasonsColumn.visibility == View.VISIBLE) != hasSeasons
             binding.layoutSeasonsColumn.visibility = if (hasSeasons) View.VISIBLE else View.GONE
             binding.rvSeasonTabs.visibility = if (hasSeasons) View.VISIBLE else View.GONE
             seasonPicker.bind(state.seasonTabs)
 
             binding.rvEpisodes.visibility = View.VISIBLE
             episodeAdapter.submitList(state.currentEpisodes)
+            if (seasonsVisibilityChanged) {
+                binding.panelEpisodesTab.requestLayout()
+            }
             if (state.currentEpisodes.isEmpty()) {
                 binding.tvEmptyEpisodes.visibility = View.VISIBLE
                 val loadError = state.seasonLoadError?.let { UiError.fromAppError(it) }
