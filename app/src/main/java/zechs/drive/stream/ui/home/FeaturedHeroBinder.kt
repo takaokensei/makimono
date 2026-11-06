@@ -91,11 +91,14 @@ internal class FeaturedHeroBinder(
         }
     }
 
+    private var currentPillActiveIndex: Int = 0
+
     fun updatePaginationPills(
         count: Int,
         activeIndex: Int,
         onPillSelected: (Int) -> Unit
     ) {
+        currentPillActiveIndex = activeIndex
         val container = binding.layoutHeroPaginationPills ?: return
         if (count <= 1) {
             container.visibility = View.GONE
@@ -114,8 +117,16 @@ internal class FeaturedHeroBinder(
                 val targetWidth = if (isActive) (28 * density).toInt() else (10 * density).toInt()
                 val lp = pill.layoutParams as? android.widget.LinearLayout.LayoutParams
                 if (lp != null && lp.width != targetWidth) {
-                    lp.width = targetWidth
-                    pill.layoutParams = lp
+                    val startWidth = lp.width
+                    android.animation.ValueAnimator.ofInt(startWidth, targetWidth).apply {
+                        duration = 150L
+                        interpolator = android.view.animation.DecelerateInterpolator()
+                        addUpdateListener { va ->
+                            lp.width = va.animatedValue as Int
+                            pill.layoutParams = lp
+                        }
+                        start()
+                    }
                 }
                 (pill.background as? android.graphics.drawable.GradientDrawable)?.setColor(
                     if (isActive || pill.hasFocus()) accentColor else inactiveColor
@@ -152,7 +163,7 @@ internal class FeaturedHeroBinder(
                         onPillSelected(i)
                     } else {
                         animate().scaleY(1.0f).setDuration(context.resources.getInteger(R.integer.motion_focus).toLong()).start()
-                        drawable.setColor(if (i == activeIndex) accentColor else inactiveColor)
+                        drawable.setColor(if (i == currentPillActiveIndex) accentColor else inactiveColor)
                     }
                 }
                 setOnClickListener {

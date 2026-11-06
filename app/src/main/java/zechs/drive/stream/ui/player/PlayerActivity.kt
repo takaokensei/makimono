@@ -1565,10 +1565,8 @@ class PlayerActivity : BasePlayerActivity() {
             binding.netflixSkipRow.visibility = View.GONE
             return true
         }
-        if (isOsdInitialized && osdController.shouldConsumeBack) {
-            if (osdController.isVisible) {
-                osdController.hide()
-            }
+        if (isOsdInitialized && (osdController.shouldConsumeBack || isControlsShowing())) {
+            osdController.hide()
             return true
         }
         return false

@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Pure Obsidian canvas matching #07080B canonical base without jarring blue shift -->
+<!-- Cohesive Obsidian canvas matching #07080B canonical base and hero scrims -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <solid android:color="@color/obsidian_bg_base" />
+    <gradient
+        android:angle="270"
+        android:startColor="#07080B"
+        android:endColor="#080A0F"
+        android:type="linear" />
 </shape>

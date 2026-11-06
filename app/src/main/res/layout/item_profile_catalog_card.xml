@@ -12,11 +12,11 @@
         android:layout_height="match_parent"
         android:clickable="true"
         android:focusable="true"
-        app:cardBackgroundColor="@android:color/transparent"
+        app:cardBackgroundColor="@color/obsidian_bg_surface"
         app:cardCornerRadius="12dp"
         app:cardElevation="0dp"
-        app:strokeColor="@android:color/transparent"
-        app:strokeWidth="0dp">
+        app:strokeColor="@color/obsidian_border_glass"
+        app:strokeWidth="1dp">
 
         <FrameLayout
             android:id="@+id/frameArtContainer"

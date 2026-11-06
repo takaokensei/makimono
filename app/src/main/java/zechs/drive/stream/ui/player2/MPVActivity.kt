@@ -1069,10 +1069,8 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
             binding.netflixSkipRow.visibility = View.GONE
             return true
         }
-        if (isOsdInitialized && osdController.shouldConsumeBack) {
-            if (osdController.isVisible) {
-                hideControls()
-            }
+        if (isOsdInitialized && (osdController.shouldConsumeBack || isControlsShowing())) {
+            hideControls()
             return true
         }
         return false

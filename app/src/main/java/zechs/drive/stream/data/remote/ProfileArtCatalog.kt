@@ -81,20 +81,19 @@ class ProfileArtCatalog @Inject constructor(
                 ?: meta.titleEnglish?.takeIf { it.isNotBlank() }
                 ?: clean
 
-            // 1. Character avatars for this anime/work (strictly portraits from presets or AniList/TVmaze character search)
+            // 1. Character avatars for this anime/work (strictly portraits from presets or AniList/TVmaze character search cache)
             val matchingPresetAvatars = findMatchingPresetAvatars(clean, presetAvatarGroups)
             val avatarsForAnime = if (matchingPresetAvatars.isNotEmpty()) {
                 matchingPresetAvatars
             } else {
-                val searched = search(displayTitle)
-                searched.filter { !it.isWallpaper }
+                getCachedArt(displayTitle)?.filter { !it.isWallpaper } ?: emptyList()
             }
 
             if (avatarsForAnime.isNotEmpty()) {
                 avatarSections.add(Pair(displayTitle, avatarsForAnime))
             }
 
-            // 2. Wallpapers for this anime/work (from presets, Room bannerUrl, or search)
+            // 2. Wallpapers for this anime/work (from presets, Room bannerUrl, or search cache)
             val wallpapersForAnime = mutableListOf<ProfileArt>()
             val matchingPresetWallpapers = findMatchingPresetWallpapers(clean, presetWallpaperGroups)
             wallpapersForAnime.addAll(matchingPresetWallpapers)
@@ -105,8 +104,10 @@ class ProfileArtCatalog @Inject constructor(
             }
 
             if (wallpapersForAnime.isEmpty()) {
-                val searched = search(displayTitle)
-                wallpapersForAnime.addAll(searched.filter { it.isWallpaper })
+                val cached = getCachedArt(displayTitle)?.filter { it.isWallpaper }
+                if (cached != null) {
+                    wallpapersForAnime.addAll(cached)
+                }
             }
 
             if (wallpapersForAnime.isNotEmpty()) {
@@ -296,8 +297,25 @@ class ProfileArtCatalog @Inject constructor(
         ProfileArt("Wallpaper · Bleach", "https://s4.anilist.co/file/anilistcdn/media/anime/banner/269-08ar2HJOUAuL.jpg", true),
         ProfileArt("Wallpaper · Solo Leveling", "https://s4.anilist.co/file/anilistcdn/media/anime/banner/151807-37yfQA3ym8PA.jpg", true),
         ProfileArt("Wallpaper · Spy x Family", "https://s4.anilist.co/file/anilistcdn/media/anime/banner/140960-Z7xSvkRxHKfj.jpg", true),
-        ProfileArt("Wallpaper · KonoSuba God's Blessing", "https://s4.anilist.co/file/anilistcdn/media/anime/banner/21202-UWijdV7RMnXo.jpg", true)
+        ProfileArt("Wallpaper · KonoSuba God's Blessing", "https://s4.anilist.co/file/anilistcdn/media/anime/banner/21202-UWijdV7RMnXo.jpg", true),
+        ProfileArt("Wallpaper · Naruto Shippuden", "https://s4.anilist.co/file/anilistcdn/media/anime/banner/20-Yyv0jh9yP0vE.jpg", true),
+        ProfileArt("Wallpaper · Hunter x Hunter", "https://s4.anilist.co/file/anilistcdn/media/anime/banner/11061-f3b392.jpg", true),
+        ProfileArt("Wallpaper · Chainsaw Man", "https://s4.anilist.co/file/anilistcdn/media/anime/banner/127230-6d4590.jpg", true),
+        ProfileArt("Wallpaper · Steins;Gate", "https://s4.anilist.co/file/anilistcdn/media/anime/banner/n9253-JIhmKgBKsWUN.jpg", true),
+        ProfileArt("Wallpaper · Vinland Saga", "https://s4.anilist.co/file/anilistcdn/media/anime/banner/101348-pivKKffCAwAY.jpg", true),
+        ProfileArt("Wallpaper · Fullmetal Alchemist Brotherhood", "https://s4.anilist.co/file/anilistcdn/media/anime/banner/5114-118874.jpg", true),
+        ProfileArt("Wallpaper · Oshi no Ko", "https://s4.anilist.co/file/anilistcdn/media/anime/banner/150672-040277.jpg", true)
     )
+
+    fun getCachedArt(anime: String): List<ProfileArt>? {
+        val key = anime.trim().lowercase(java.util.Locale.ROOT)
+        val cached = cache.getString(key, null) ?: return null
+        val parsed = parse(cached)
+        if (parsed.isNotEmpty()) return parsed
+        val tvMazeParsed = parseTvMaze(cached, anime)
+        if (tvMazeParsed.isNotEmpty()) return tvMazeParsed
+        return null
+    }
 
     /** Public AniList character portraits and anime banners. Cached results remain available offline. */
     suspend fun search(anime: String): List<ProfileArt> = withContext(Dispatchers.IO) {

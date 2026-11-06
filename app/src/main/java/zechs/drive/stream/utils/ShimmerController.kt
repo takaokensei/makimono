@@ -38,17 +38,19 @@ object ShimmerController {
     /**
      * Starts gentle breathing shimmer on the target View or hierarchy.
      */
-    fun start(view: View): ValueAnimator? {
+    fun start(view: View, minAlpha: Float? = null, maxAlpha: Float? = null): ValueAnimator? {
         val reduced = MotionPolicy.isReducedMotion()
-        val spec = resolveSpec(reduced)
+        val defaultSpec = resolveSpec(reduced)
+        val actualMinAlpha = if (reduced) (minAlpha ?: defaultSpec.minAlpha) else (minAlpha ?: defaultSpec.minAlpha)
+        val actualMaxAlpha = if (reduced) actualMinAlpha else (maxAlpha ?: defaultSpec.maxAlpha)
 
-        view.alpha = spec.minAlpha
-        if (!spec.isAnimated) {
+        view.alpha = actualMinAlpha
+        if (!defaultSpec.isAnimated) {
             return null
         }
 
-        return ObjectAnimator.ofFloat(view, "alpha", spec.minAlpha, spec.maxAlpha).apply {
-            duration = spec.durationMs
+        return ObjectAnimator.ofFloat(view, "alpha", actualMinAlpha, actualMaxAlpha).apply {
+            duration = defaultSpec.durationMs
             repeatMode = ValueAnimator.REVERSE
             repeatCount = ValueAnimator.INFINITE
             start()

@@ -961,7 +961,12 @@ class HomeViewModel @Inject constructor(
             if (it.isShortcut) it.shortcutDetails.targetId ?: it.id else it.id
         }.take(maxSpotlight)
 
-        if (candidates != _featuredCandidates.value) {
+        val current = _featuredCandidates.value
+        if (current.size == maxSpotlight && candidates.size < maxSpotlight) {
+            return
+        }
+
+        if (candidates != current) {
             _featuredCandidates.value = candidates
             if (featuredSpotlightIndex >= candidates.size) {
                 featuredSpotlightIndex = 0

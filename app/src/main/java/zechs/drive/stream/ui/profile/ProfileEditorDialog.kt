@@ -28,9 +28,13 @@ import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.request.RequestOptions
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import zechs.drive.stream.R
 import zechs.drive.stream.data.model.UserProfile
 import zechs.drive.stream.data.remote.ProfileArt
@@ -77,19 +81,21 @@ class ProfileEditorDialog(
             }
         }
 
-        val transparentDrawable = ColorDrawable(Color.TRANSPARENT)
+        val placeholderAvatar = ContextCompat.getDrawable(context, R.drawable.bg_profile_avatar_placeholder)
+        val placeholderWallpaper = ContextCompat.getDrawable(context, R.drawable.bg_profile_card_placeholder)
+
         val glideAvatarOptions = RequestOptions()
             .format(DecodeFormat.PREFER_RGB_565)
             .diskCacheStrategy(DiskCacheStrategy.ALL)
-            .placeholder(transparentDrawable)
-            .error(transparentDrawable)
+            .placeholder(placeholderAvatar)
+            .error(placeholderAvatar)
             .circleCrop()
 
         val glideWallpaperOptions = RequestOptions()
             .format(DecodeFormat.PREFER_RGB_565)
             .diskCacheStrategy(DiskCacheStrategy.ALL)
-            .placeholder(transparentDrawable)
-            .error(transparentDrawable)
+            .placeholder(placeholderWallpaper)
+            .error(placeholderWallpaper)
             .centerCrop()
 
         var previewDebounceJob: Job? = null
@@ -198,259 +204,282 @@ class ProfileEditorDialog(
                 .show()
         }
 
-        fun renderCatalogSections(
-            sections: List<Pair<String, List<ProfileArt>>>,
+        fun appendSection(
+            sectionTitleText: String,
+            arts: List<ProfileArt>,
             container: LinearLayout,
-            isWallpaper: Boolean
+            isWallpaper: Boolean,
+            onCardCreated: ((View) -> Unit)? = null
         ) {
-            container.removeAllViews()
-            var firstFocusableCard: View? = null
+            if (arts.isEmpty()) return
 
-            sections.forEach { (sectionTitleText, arts) ->
-                if (arts.isEmpty()) return@forEach
+            val sectionTitle = TextView(context).apply {
+                text = "$sectionTitleText (${arts.size})"
+                androidx.core.widget.TextViewCompat.setTextAppearance(
+                    this,
+                    R.style.TextAppearance_Makimono_TV_Body
+                )
+                setTextColor(Color.WHITE)
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                val topPad = dp(16)
+                val botPad = dp(10)
+                setPadding(0, topPad, 0, botPad)
+            }
+            container.addView(sectionTitle)
 
-                val sectionTitle = TextView(context).apply {
-                    text = "$sectionTitleText (${arts.size})"
-                    androidx.core.widget.TextViewCompat.setTextAppearance(
-                        this,
-                        R.style.TextAppearance_Makimono_TV_Body
-                    )
-                    setTextColor(Color.WHITE)
-                    setTypeface(typeface, android.graphics.Typeface.BOLD)
-                    val topPad = dp(16)
-                    val botPad = dp(10)
-                    setPadding(0, topPad, 0, botPad)
-                }
-                container.addView(sectionTitle)
-
-                val hScroll = HorizontalScrollView(context).apply {
-                    clipChildren = false
-                    clipToPadding = false
-                    isFillViewport = false
-                    isHorizontalScrollBarEnabled = false
-                    overScrollMode = View.OVER_SCROLL_NEVER
-                }
-
-                val row = LinearLayout(context).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    clipChildren = false
-                    clipToPadding = false
-                    setPadding(0, dp(4), dp(16), dp(8))
-                }
-
-                val cardWidth: Int
-                val cardHeight: Int
-                val radius: Float
-                val selectorBg: Int
-
-                if (isWallpaper) {
-                    cardWidth = dp(192)
-                    cardHeight = dp(108) // 16:9
-                    radius = dp(10).toFloat()
-                    selectorBg = R.drawable.bg_profile_wallpaper_selector
-                } else {
-                    cardWidth = dp(84)
-                    cardHeight = dp(84)
-                    radius = cardWidth / 2f
-                    selectorBg = R.drawable.bg_profile_avatar_selector
-                }
-                val cardMargin = dp(16)
-
-                arts.forEach { art ->
-                    val cardBinding = ItemProfileCatalogCardBinding.inflate(LayoutInflater.from(context), row, false)
-                    cardBinding.root.layoutParams = LinearLayout.LayoutParams(cardWidth, cardHeight).apply {
-                        marginEnd = cardMargin
-                    }
-                    val isCurrentlySelected = if (isWallpaper) (art.url == selectedBackgroundUrl) else (art.url == selectedAvatarUrl)
-
-                    cardBinding.cardArtRoot.apply {
-                        this.radius = radius
-                        strokeWidth = 0
-                        setCardBackgroundColor(Color.TRANSPARENT)
-                        foreground = ContextCompat.getDrawable(context, selectorBg)
-                        isFocusable = true
-                        isClickable = true
-                        isSelected = isCurrentlySelected
-
-                        setOnFocusChangeListener { v, hasFocus ->
-                            if (hasFocus) {
-                                val scale = if (isWallpaper) 1.08f else 1.12f
-                                v.animate().scaleX(scale).scaleY(scale).translationZ(dp(8).toFloat()).setDuration(160).start()
-                                previewDebounceJob?.cancel()
-                                previewDebounceJob = fragment.viewLifecycleOwner.lifecycleScope.launch {
-                                    delay(70L)
-                                    if (isWallpaper) {
-                                        selectedBackgroundUrl = art.url
-                                    } else {
-                                        selectedAvatarUrl = art.url
-                                    }
-                                    refreshPreview(smoothTransition = true)
-                                }
-                            } else {
-                                v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(160).start()
-                            }
-                        }
-
-                        setOnClickListener {
-                            previewDebounceJob?.cancel()
-                            if (isWallpaper) {
-                                selectedBackgroundUrl = art.url
-                                refreshPreview(smoothTransition = true)
-                                showMainMenu(b.btnChangeBackground)
-                            } else {
-                                selectedAvatarUrl = art.url
-                                refreshPreview(smoothTransition = true)
-                                showMainMenu(b.btnChangeAvatar)
-                            }
-                        }
-
-                        if (firstFocusableCard == null) {
-                            firstFocusableCard = this
-                        }
-                    }
-
-                    cardBinding.ivArtSelected.isVisible = isCurrentlySelected
-                    Glide.with(context)
-                        .load(art.url)
-                        .apply(if (isWallpaper) glideWallpaperOptions else glideAvatarOptions)
-                        .listener(object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
-                            override fun onLoadFailed(
-                                e: com.bumptech.glide.load.engine.GlideException?,
-                                model: Any?,
-                                target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>,
-                                isFirstResource: Boolean
-                            ): Boolean {
-                                cardBinding.root.visibility = View.GONE
-                                return false
-                            }
-
-                            override fun onResourceReady(
-                                resource: android.graphics.drawable.Drawable,
-                                model: Any,
-                                target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?,
-                                dataSource: com.bumptech.glide.load.DataSource,
-                                isFirstResource: Boolean
-                            ): Boolean = false
-                        })
-                        .into(cardBinding.ivArtImage)
-
-                    row.addView(cardBinding.root)
-                }
-
-                hScroll.addView(row)
-                container.addView(hScroll)
+            val hScroll = HorizontalScrollView(context).apply {
+                clipChildren = false
+                clipToPadding = false
+                isFillViewport = false
+                isHorizontalScrollBarEnabled = false
+                overScrollMode = View.OVER_SCROLL_NEVER
             }
 
-            firstFocusableCard?.post { firstFocusableCard?.requestFocus() }
+            val row = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                clipChildren = false
+                clipToPadding = false
+                setPadding(0, dp(4), dp(16), dp(8))
+            }
+
+            val cardWidth: Int
+            val cardHeight: Int
+            val radius: Float
+            val selectorBg: Int
+
+            if (isWallpaper) {
+                cardWidth = dp(192)
+                cardHeight = dp(108) // 16:9
+                radius = dp(10).toFloat()
+                selectorBg = R.drawable.bg_profile_wallpaper_selector
+            } else {
+                cardWidth = dp(84)
+                cardHeight = dp(84)
+                radius = cardWidth / 2f
+                selectorBg = R.drawable.bg_profile_avatar_selector
+            }
+            val cardMargin = dp(16)
+
+            arts.forEach { art ->
+                val cardBinding = ItemProfileCatalogCardBinding.inflate(LayoutInflater.from(context), row, false)
+                cardBinding.root.layoutParams = LinearLayout.LayoutParams(cardWidth, cardHeight).apply {
+                    marginEnd = cardMargin
+                }
+                val isCurrentlySelected = if (isWallpaper) (art.url == selectedBackgroundUrl) else (art.url == selectedAvatarUrl)
+
+                cardBinding.cardArtRoot.apply {
+                    this.radius = radius
+                    strokeWidth = 0
+                    setCardBackgroundColor(Color.TRANSPARENT)
+                    foreground = ContextCompat.getDrawable(context, selectorBg)
+                    isFocusable = true
+                    isClickable = true
+                    isSelected = isCurrentlySelected
+
+                    setOnFocusChangeListener { v, hasFocus ->
+                        if (hasFocus) {
+                            val scale = if (isWallpaper) 1.08f else 1.12f
+                            v.animate().scaleX(scale).scaleY(scale).translationZ(dp(8).toFloat()).setDuration(160).start()
+                            previewDebounceJob?.cancel()
+                            previewDebounceJob = fragment.viewLifecycleOwner.lifecycleScope.launch {
+                                delay(70L)
+                                if (isWallpaper) {
+                                    selectedBackgroundUrl = art.url
+                                } else {
+                                    selectedAvatarUrl = art.url
+                                }
+                                refreshPreview(smoothTransition = true)
+                            }
+                        } else {
+                            v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(160).start()
+                        }
+                    }
+
+                    setOnClickListener {
+                        previewDebounceJob?.cancel()
+                        if (isWallpaper) {
+                            selectedBackgroundUrl = art.url
+                            refreshPreview(smoothTransition = true)
+                            showMainMenu(b.btnChangeBackground)
+                        } else {
+                            selectedAvatarUrl = art.url
+                            refreshPreview(smoothTransition = true)
+                            showMainMenu(b.btnChangeAvatar)
+                        }
+                    }
+
+                    onCardCreated?.invoke(this)
+                }
+
+                cardBinding.ivArtSelected.isVisible = isCurrentlySelected
+                Glide.with(context)
+                    .load(art.url)
+                    .apply(if (isWallpaper) glideWallpaperOptions else glideAvatarOptions)
+                    .transition(com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade(150))
+                    .into(cardBinding.ivArtImage)
+
+                row.addView(cardBinding.root)
+            }
+
+            hScroll.addView(row)
+            container.addView(hScroll)
         }
 
         var avatarCatalogPopulated = false
+        var avatarRenderJob: kotlinx.coroutines.Job? = null
         fun populateAvatarCatalog() {
-            if (avatarCatalogPopulated) return
-            avatarCatalogPopulated = true
+            if (avatarCatalogPopulated && b.layoutAvatarSections.childCount > 0) {
+                b.layoutAvatarSkeleton.isVisible = false
+                b.scrollAvatarCatalog.isVisible = true
+                b.layoutAvatarSections.findFocus()?.requestFocus()
+                    ?: (b.layoutAvatarSections.getChildAt(1) as? ViewGroup)?.getChildAt(0)?.requestFocus()
+                return
+            }
 
             b.scrollAvatarCatalog.isVisible = false
             b.layoutAvatarSkeleton.isVisible = true
-            val shimmerAnim = ShimmerController.start(b.layoutAvatarSkeleton)
+            val shimmerAnim = ShimmerController.start(b.layoutAvatarSkeleton, 0.40f, 0.85f)
 
-            fragment.viewLifecycleOwner.lifecycleScope.launch {
-                val (libAvatarSections, _) = resolver.getLibraryArtSections()
-                val presetAvatars = resolver.getPresetAvatars()
-
-                val allSections = mutableListOf<Pair<String, List<ProfileArt>>>()
-                val seenFranchises = mutableSetOf<String>()
-
-                // 1. Each anime from the user's library gets its OWN individual section with character avatars
-                libAvatarSections.forEach { (animeTitle, avatars) ->
-                    if (avatars.isNotEmpty()) {
-                        val descriptor = ProfileArtCatalogPolicy.resolveFranchise(animeTitle)
-                        seenFranchises.add(descriptor.franchiseKey)
-                        allSections.add(Pair(animeTitle, avatars))
-                    }
+            // Tier 1: Instant display of presets (< 2ms)
+            val presetAvatars = resolver.getPresetAvatars()
+            val groupedPresets = presetAvatars.groupBy { art ->
+                art.label.substringAfterLast("(", "").substringBefore(")", "").ifBlank { "Destaques" }
+            }
+            val presetSections = mutableListOf<Pair<String, List<ProfileArt>>>()
+            val seenFranchises = mutableSetOf<String>()
+            groupedPresets.forEach { (franchise, arts) ->
+                val descriptor = ProfileArtCatalogPolicy.resolveFranchise(franchise)
+                if (seenFranchises.add(descriptor.franchiseKey)) {
+                    presetSections.add(Pair(franchise, arts))
                 }
+            }
 
-                // 2. Preset anime franchise sections that weren't already in the library
-                val groupedPresets = presetAvatars.groupBy { art ->
-                    art.label.substringAfterLast("(", "").substringBefore(")", "").ifBlank { "Destaques" }
-                }
-                groupedPresets.forEach { (franchise, arts) ->
-                    val descriptor = ProfileArtCatalogPolicy.resolveFranchise(franchise)
-                    if (seenFranchises.add(descriptor.franchiseKey)) {
-                        allSections.add(Pair(franchise, arts))
-                    }
-                }
+            b.layoutAvatarSections.removeAllViews()
+            var firstFocusableCard: View? = null
+            val initialBatch = presetSections.take(2)
+            val remainingPresets = presetSections.drop(2)
 
-                val relevantTitles = resolver.getRelevantTitles()
-                val organizedSections = ProfileArtCatalogPolicy.organizeSections(
-                    rawSections = allSections,
-                    relevantTitles = relevantTitles,
-                    maxRelevant = 3
-                )
-
-                shimmerAnim?.cancel()
-                b.layoutAvatarSkeleton.isVisible = false
-                b.scrollAvatarCatalog.isVisible = true
-
-                renderCatalogSections(
-                    sections = organizedSections,
+            initialBatch.forEach { (title, arts) ->
+                appendSection(
+                    sectionTitleText = title,
+                    arts = arts,
                     container = b.layoutAvatarSections,
                     isWallpaper = false
-                )
+                ) { card ->
+                    if (firstFocusableCard == null) firstFocusableCard = card
+                }
+            }
+
+            avatarCatalogPopulated = true
+            shimmerAnim?.cancel()
+            b.layoutAvatarSkeleton.isVisible = false
+            b.scrollAvatarCatalog.isVisible = true
+            firstFocusableCard?.post { firstFocusableCard?.requestFocus() }
+
+            // Tier 2: Progressive on-demand background streaming
+            avatarRenderJob?.cancel()
+            avatarRenderJob = fragment.viewLifecycleOwner.lifecycleScope.launch {
+                val libAvatarSections: List<Pair<String, List<ProfileArt>>> = withContext(Dispatchers.IO) {
+                    withTimeoutOrNull(2000L) {
+                        try { resolver.getLibraryArtSections().first } catch (_: Exception) { emptyList() }
+                    } ?: emptyList()
+                }
+
+                if (libAvatarSections.isNotEmpty()) {
+                    libAvatarSections.forEach { (animeTitle, avatars) ->
+                        if (!isActive) return@forEach
+                        val descriptor = ProfileArtCatalogPolicy.resolveFranchise(animeTitle)
+                        if (seenFranchises.add(descriptor.franchiseKey)) {
+                            kotlinx.coroutines.delay(16L)
+                            appendSection(animeTitle, avatars, b.layoutAvatarSections, isWallpaper = false)
+                        }
+                    }
+                }
+
+                for (section in remainingPresets) {
+                    if (!isActive) break
+                    kotlinx.coroutines.delay(16L)
+                    appendSection(section.first, section.second, b.layoutAvatarSections, isWallpaper = false)
+                }
             }
         }
 
         var wallpaperCatalogPopulated = false
+        var wallpaperRenderJob: kotlinx.coroutines.Job? = null
         fun populateWallpaperCatalog() {
-            if (wallpaperCatalogPopulated) return
-            wallpaperCatalogPopulated = true
+            if (wallpaperCatalogPopulated && b.layoutWallpaperSections.childCount > 0) {
+                b.layoutWallpaperSkeleton.isVisible = false
+                b.scrollWallpaperCatalog.isVisible = true
+                b.layoutWallpaperSections.findFocus()?.requestFocus()
+                    ?: (b.layoutWallpaperSections.getChildAt(1) as? ViewGroup)?.getChildAt(0)?.requestFocus()
+                return
+            }
 
             b.scrollWallpaperCatalog.isVisible = false
             b.layoutWallpaperSkeleton.isVisible = true
-            val shimmerAnim = ShimmerController.start(b.layoutWallpaperSkeleton)
+            val shimmerAnim = ShimmerController.start(b.layoutWallpaperSkeleton, 0.40f, 0.85f)
 
-            fragment.viewLifecycleOwner.lifecycleScope.launch {
-                val (_, libWallpaperSections) = resolver.getLibraryArtSections()
-                val presetWallpapers = resolver.getPresetWallpapers()
-
-                val allSections = mutableListOf<Pair<String, List<ProfileArt>>>()
-                val seenFranchises = mutableSetOf<String>()
-
-                // 1. Each anime from the user's library gets its OWN wallpaper section
-                libWallpaperSections.forEach { (animeTitle, wallpapers) ->
-                    if (wallpapers.isNotEmpty()) {
-                        val descriptor = ProfileArtCatalogPolicy.resolveFranchise(animeTitle)
-                        seenFranchises.add(descriptor.franchiseKey)
-                        allSections.add(Pair(animeTitle, wallpapers))
-                    }
+            // Tier 1: Instant display of presets (< 2ms)
+            val presetWallpapers = resolver.getPresetWallpapers()
+            val groupedPresets = presetWallpapers.groupBy { art ->
+                art.label.substringAfter("· ", "").ifBlank { "Destaques" }
+            }
+            val presetSections = mutableListOf<Pair<String, List<ProfileArt>>>()
+            val seenFranchises = mutableSetOf<String>()
+            groupedPresets.forEach { (franchise, arts) ->
+                val descriptor = ProfileArtCatalogPolicy.resolveFranchise(franchise)
+                if (seenFranchises.add(descriptor.franchiseKey)) {
+                    presetSections.add(Pair(franchise, arts))
                 }
+            }
 
-                // 2. Preset wallpapers that were not already in the library
-                val groupedPresets = presetWallpapers.groupBy { art ->
-                    art.label.substringAfter("· ", "").ifBlank { "Destaques" }
-                }
-                groupedPresets.forEach { (franchise, arts) ->
-                    val descriptor = ProfileArtCatalogPolicy.resolveFranchise(franchise)
-                    if (seenFranchises.add(descriptor.franchiseKey)) {
-                        allSections.add(Pair(franchise, arts))
-                    }
-                }
+            b.layoutWallpaperSections.removeAllViews()
+            var firstFocusableCard: View? = null
+            val initialBatch = presetSections.take(2)
+            val remainingPresets = presetSections.drop(2)
 
-                val relevantTitles = resolver.getRelevantTitles()
-                val organizedSections = ProfileArtCatalogPolicy.organizeSections(
-                    rawSections = allSections,
-                    relevantTitles = relevantTitles,
-                    maxRelevant = 3
-                )
-
-                shimmerAnim?.cancel()
-                b.layoutWallpaperSkeleton.isVisible = false
-                b.scrollWallpaperCatalog.isVisible = true
-
-                renderCatalogSections(
-                    sections = organizedSections,
+            initialBatch.forEach { (title, arts) ->
+                appendSection(
+                    sectionTitleText = title,
+                    arts = arts,
                     container = b.layoutWallpaperSections,
                     isWallpaper = true
-                )
+                ) { card ->
+                    if (firstFocusableCard == null) firstFocusableCard = card
+                }
+            }
+
+            wallpaperCatalogPopulated = true
+            shimmerAnim?.cancel()
+            b.layoutWallpaperSkeleton.isVisible = false
+            b.scrollWallpaperCatalog.isVisible = true
+            firstFocusableCard?.post { firstFocusableCard?.requestFocus() }
+
+            // Tier 2: Progressive on-demand background streaming
+            wallpaperRenderJob?.cancel()
+            wallpaperRenderJob = fragment.viewLifecycleOwner.lifecycleScope.launch {
+                val libWallpaperSections: List<Pair<String, List<ProfileArt>>> = withContext(Dispatchers.IO) {
+                    withTimeoutOrNull(2000L) {
+                        try { resolver.getLibraryArtSections().second } catch (_: Exception) { emptyList() }
+                    } ?: emptyList()
+                }
+
+                if (libWallpaperSections.isNotEmpty()) {
+                    libWallpaperSections.forEach { (animeTitle, wallpapers) ->
+                        if (!isActive) return@forEach
+                        val descriptor = ProfileArtCatalogPolicy.resolveFranchise(animeTitle)
+                        if (seenFranchises.add(descriptor.franchiseKey)) {
+                            kotlinx.coroutines.delay(16L)
+                            appendSection(animeTitle, wallpapers, b.layoutWallpaperSections, isWallpaper = true)
+                        }
+                    }
+                }
+
+                for (section in remainingPresets) {
+                    if (!isActive) break
+                    kotlinx.coroutines.delay(16L)
+                    appendSection(section.first, section.second, b.layoutWallpaperSections, isWallpaper = true)
+                }
             }
         }
 
@@ -567,12 +596,16 @@ class ProfileEditorDialog(
         val observer = object : DefaultLifecycleObserver {
             override fun onDestroy(owner: LifecycleOwner) {
                 previewDebounceJob?.cancel()
+                avatarRenderJob?.cancel()
+                wallpaperRenderJob?.cancel()
                 if (dialog.isShowing) dialog.dismiss()
             }
         }
         lifecycle.addObserver(observer)
         dialog.setOnDismissListener {
             previewDebounceJob?.cancel()
+            avatarRenderJob?.cancel()
+            wallpaperRenderJob?.cancel()
             lifecycle.removeObserver(observer)
         }
 

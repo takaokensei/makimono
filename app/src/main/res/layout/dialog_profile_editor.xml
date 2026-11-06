@@ -270,17 +270,19 @@
             <LinearLayout
                 android:id="@+id/layoutAvatarSkeleton"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
                 android:orientation="vertical"
                 android:visibility="gone">
-                <include layout="@layout/component_crunchyroll_skeleton" />
-                <include layout="@layout/component_crunchyroll_skeleton" />
+                <include layout="@layout/component_skeleton_avatar_section" />
+                <include layout="@layout/component_skeleton_avatar_section" />
             </LinearLayout>
 
             <androidx.core.widget.NestedScrollView
                 android:id="@+id/scrollAvatarCatalog"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
                 android:clipChildren="false"
                 android:clipToPadding="false"
                 android:fillViewport="true">
@@ -317,17 +319,19 @@
             <LinearLayout
                 android:id="@+id/layoutWallpaperSkeleton"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
                 android:orientation="vertical"
                 android:visibility="gone">
-                <include layout="@layout/component_crunchyroll_skeleton" />
-                <include layout="@layout/component_crunchyroll_skeleton" />
+                <include layout="@layout/component_skeleton_wallpaper_section" />
+                <include layout="@layout/component_skeleton_wallpaper_section" />
             </LinearLayout>
 
             <androidx.core.widget.NestedScrollView
                 android:id="@+id/scrollWallpaperCatalog"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
                 android:clipChildren="false"
                 android:clipToPadding="false"
                 android:fillViewport="true">
