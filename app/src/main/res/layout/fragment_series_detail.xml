@@ -822,7 +822,7 @@
 
         </LinearLayout>
 
-        <!-- 5. TAB 1: Panel Episodes - 2-Column Split Layout (Image 5) -->
+        <!-- 5. TAB 1: Panel Episodes - Single Column Vertical Layout (Mobile Portrait) -->
         <LinearLayout
             android:id="@+id/panelEpisodesTab"
             android:layout_width="0dp"
@@ -831,18 +831,19 @@
             android:layout_marginTop="16dp"
             android:layout_marginEnd="40dp"
             android:baselineAligned="false"
-            android:clipChildren="true"
+            android:clipChildren="false"
             android:clipToPadding="false"
-            android:orientation="horizontal"
+            android:orientation="vertical"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tabsContainer">
 
-            <!-- Left Column: Seasons / Franchise Arcs (Vertical list) -->
+            <!-- Seasons / Franchise Arcs (Horizontal or picker on Mobile Portrait) -->
             <LinearLayout
                 android:id="@+id/layoutSeasonsColumn"
-                android:layout_width="280dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
                 android:clipChildren="false"
                 android:clipToPadding="false"
                 android:elevation="6dp"
@@ -884,7 +885,7 @@
                     android:clipChildren="false"
                     android:clipToPadding="false"
                     android:nestedScrollingEnabled="false"
-                    android:orientation="vertical"
+                    android:orientation="horizontal"
                     android:paddingStart="4dp"
                     android:paddingTop="8dp"
                     android:paddingEnd="4dp"
@@ -895,13 +896,12 @@
 
             </LinearLayout>
 
-            <!-- Right Column: Episodes (Horizontal Carousel) -->
+            <!-- Episodes Column (Horizontal Carousel full width) -->
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="24dp"
-                android:layout_weight="1"
-                android:clipChildren="true"
+                android:layout_marginStart="0dp"
+                android:clipChildren="false"
                 android:clipToPadding="false"
                 android:orientation="vertical">
 
@@ -919,11 +919,11 @@
                     android:id="@+id/rvEpisodes"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:clipChildren="true"
+                    android:clipChildren="false"
                     android:clipToPadding="false"
                     android:nestedScrollingEnabled="false"
                     android:orientation="horizontal"
-                    android:paddingStart="8dp"
+                    android:paddingStart="12dp"
                     android:paddingTop="12dp"
                     android:paddingEnd="24dp"
                     android:paddingBottom="16dp"

@@ -667,6 +667,8 @@
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switchMalSync"
+                    android:clickable="false"
+                    android:focusable="false"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:checked="true" />
@@ -779,6 +781,8 @@
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switchAutoSkip"
+                    android:clickable="false"
+                    android:focusable="false"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:checked="true" />
@@ -822,6 +826,8 @@
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switchGestures"
+                    android:clickable="false"
+                    android:focusable="false"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:checked="true" />
@@ -865,6 +871,8 @@
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switchAutoFrameRate"
+                    android:clickable="false"
+                    android:focusable="false"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:checked="true" />
@@ -908,6 +916,8 @@
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switchMatchDynamicRange"
+                    android:clickable="false"
+                    android:focusable="false"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:checked="true" />
@@ -951,6 +961,8 @@
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switchPredictiveBuffering"
+                    android:clickable="false"
+                    android:focusable="false"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:checked="true" />
@@ -1009,6 +1021,8 @@
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switchSmartDownloads"
+                    android:clickable="false"
+                    android:focusable="false"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:checked="true" />

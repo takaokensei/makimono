@@ -110,14 +110,13 @@ class EpisodeMetadataResolver @Inject constructor() {
 
     internal fun buildSearchQueries(title: String): List<String> {
         val list = mutableListOf<String>()
-        list.add(title)
-
         val lower = title.lowercase(Locale.ROOT)
         if (lower.contains("sennen kessen") || lower.contains("kashin-tan") || lower.contains("kashin tan") ||
             lower.contains("thousand-year") || lower.contains("soukoku")
         ) {
             list.add("Bleach: Thousand-Year Blood War")
         }
+        list.add(title)
         if (lower.contains("bleach")) {
             list.add("Bleach")
         }
@@ -189,8 +188,8 @@ class EpisodeMetadataResolver @Inject constructor() {
             if (match != null) return match
         }
 
-        // 3. Match by episodeNumber across single season or overall
-        if (episodeNumber != null) {
+        // 3. Match by episodeNumber across single season or overall if season was not explicitly inferred > 1
+        if (episodeNumber != null && (inferredSeason == null || inferredSeason <= 1)) {
             val match = episodes.firstOrNull { it.episodeNumber == episodeNumber }
             if (match != null) return match
         }

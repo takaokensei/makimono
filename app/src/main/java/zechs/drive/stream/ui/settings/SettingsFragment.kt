@@ -418,6 +418,8 @@ class SettingsFragment : BaseFragment() {
             else R.string.settings_section_profile
         )
         updateCategoryButtonStyles(categories)
+        val currentRows = visibleCategory.rowIds.mapNotNull { id -> binding.root.findViewById<View>(id) }
+        updateSettingsFocusOrder(currentRows)
     }
 
     private fun updateCategoryButtonStyles(categories: List<SettingsCategory>) {
@@ -505,18 +507,18 @@ class SettingsFragment : BaseFragment() {
         binding.settingAppLanguage,
         binding.settingDefaultPlayer,
         binding.settingSubtitleSize,
-        binding.settingClearCache,
-        binding.settingSmartDownloadsToggle,
-        binding.settingCheckForUpdate,
-        binding.settingMalAccount,
-        binding.settingMalTransferToTv,
-        binding.settingMalSyncToggle,
-        binding.settingSeedbox,
         binding.settingAutoSkipToggle,
         binding.settingGesturesToggle,
         binding.settingAutoFrameRateToggle,
         binding.settingMatchDynamicRangeToggle,
         binding.settingPredictiveBufferingToggle,
+        binding.settingMalAccount,
+        binding.settingMalTransferToTv,
+        binding.settingMalSyncToggle,
+        binding.settingSeedbox,
+        binding.settingClearCache,
+        binding.settingSmartDownloadsToggle,
+        binding.settingCheckForUpdate,
         binding.settingExportBackup,
         binding.settingImportBackup,
         binding.settingLogOut,

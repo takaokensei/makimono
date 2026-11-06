@@ -928,19 +928,9 @@ class PlayerActivity : BasePlayerActivity() {
                     val epNumber = currentEpNumber
                     val rawExtraTitle = intent.getStringExtra(PlayerLauncher.EXTRA_TITLE)?.trim().orEmpty()
                     val rawEpTitle = if (rawExtraTitle.isNotBlank()) rawExtraTitle else currentTitle.trim()
-                    val sanitizedEpTitle = rawEpTitle
-                        .replace("Epis?dio", "Episódio")
-                        .replace("epis?dio", "episódio")
-                        .replace("Episodio", "Episódio")
-                        .replace("episodio", "episódio")
-
-                    val epLabel = if (epNumber > 0) "Episódio %02d".format(epNumber) else ""
-                    hasDistinctTitle = sanitizedEpTitle.isNotBlank() &&
-                        !sanitizedEpTitle.equals(epLabel, ignoreCase = true) &&
-                        !sanitizedEpTitle.equals("Episódio $epNumber", ignoreCase = true) &&
-                        !sanitizedEpTitle.matches(Regex("^(?i)epis[oó]dio\\s*\\d+$"))
-
-                    subtitleText = if (hasDistinctTitle) sanitizedEpTitle else ""
+                    val (distinctTitle, isDistinct) = PlaybackLabel.sanitizeEpisodeTitle(rawEpTitle, epNumber, isMovie)
+                    hasDistinctTitle = isDistinct
+                    subtitleText = distinctTitle
                     val seriesName = intent.getStringExtra(PlayerLauncher.EXTRA_SERIES_TITLE)
                     if (!seriesName.isNullOrBlank()) {
                         tvPlayerTitle?.text = seriesName
@@ -1339,7 +1329,13 @@ class PlayerActivity : BasePlayerActivity() {
             if (target != null) {
                 handledFocusDirectionKeyCode = event.keyCode
                 when (target) {
-                    zechs.drive.stream.utils.PlayerFocusItem.EXIT -> btnBack.requestFocus()
+                    zechs.drive.stream.utils.PlayerFocusItem.EXIT -> {
+                        if (!DeviceUi.isTenFootExperience(this)) {
+                            btnBack.requestFocus()
+                        } else {
+                            btnPlayPause.requestFocus()
+                        }
+                    }
                     zechs.drive.stream.utils.PlayerFocusItem.PLAY_PAUSE -> btnPlayPause.requestFocus()
                     zechs.drive.stream.utils.PlayerFocusItem.OTHER -> Unit
                 }
@@ -1692,7 +1688,9 @@ class PlayerActivity : BasePlayerActivity() {
 
         toolbar.title = displayTitle
         tvPlayerTitle.text = displayTitle
-        val epText = PlaybackLabel.renderSubtitle(this, isMovie, currentEpNumber)
+        val (distinctSub, hasDistinct) = PlaybackLabel.sanitizeEpisodeTitle(title ?: "", currentEpNumber, isMovie)
+        val baseEp = PlaybackLabel.renderSubtitle(this, isMovie, currentEpNumber)
+        val epText = if (hasDistinct) "$baseEp • $distinctSub" else baseEp
         tvPlayerMeta.text = epText
         if (::btnEpisodes.isInitialized) {
             btnEpisodes.visibility = if (isMovie || playlist.size <= 1) View.GONE else View.VISIBLE

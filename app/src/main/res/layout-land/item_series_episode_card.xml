@@ -54,7 +54,7 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="top|start"
                     android:layout_margin="6dp"
-                    android:background="@color/obsidian_media_scrim"
+                    android:background="@drawable/bg_badge_scrim"
                     android:paddingStart="6dp"
                     android:paddingTop="2dp"
                     android:paddingEnd="6dp"

@@ -324,11 +324,11 @@ Run the validation and integrity-check tasks:
 
 | Metric | Result |
 | --- | --- |
-| **Unit tests** | 738 `@Test` annotations · 742 executions · 0 failures · 0 errors |
+| **Unit tests** | 740 `@Test` annotations · 744 executions · 0 failures · 0 errors |
 | **Android Lint** | 681 issues in baseline · 0 blocking errors · 0 errors filtered by the baseline |
 | **i18n parity** | `MissingTranslation`: 0 · `MissingQuantity`: 0 · `Untranslatable`: 0 · `ContentDescription`: 0 |
 
-* **Unit Tests:** 738 `@Test` annotations in the source code and 742 executions recorded in the JUnit XML report (0 failures, 0 errors). The static count and the execution count are distinct measures; inherited tests are reconciled by `python tools/checks/count_tests.py`.
+* **Unit Tests:** 740 `@Test` annotations in the source code and 744 executions recorded in the JUnit XML report (0 failures, 0 errors). The static count and the execution count are distinct measures; inherited tests are reconciled by `python tools/checks/count_tests.py`.
 * **Android Lint (Baseline):** 681 issues cataloged in `app/lint-baseline.xml` with 0 blocking errors and 0 errors filtered by the baseline, plus full internationalization parity (`MissingTranslation`: 0, `MissingQuantity`: 0, `Untranslatable`: 0, `ContentDescription`: 0). Main categories: `HardcodedText` (286), `UnusedResources` (158), `SetTextI18n` (102), `InconsistentLayout` (18), `UnusedAttribute` (15). Verification: `python tools/checks/count_lint_categories.py`.
 
 * `check_strings.py`: Strict string parity validation (706 `<string>` tags in total in `values/strings.xml`, of which 703 are translatable and validated against `values-pt/strings.xml`, and 3 are technical non-translatable strings marked `translatable="false"`).

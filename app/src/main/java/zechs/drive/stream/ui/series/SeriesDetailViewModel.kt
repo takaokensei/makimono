@@ -510,25 +510,39 @@ class SeriesDetailViewModel @Inject constructor(
                         folderEpisodesCache[folderId] = emptyList()
                     }
 
-                    val stateToPublish = if (selectedId == effectiveFolderId) {
+                    val targetTab = enrichedState.seasonTabs.firstOrNull { it.id == selectedId }
+                        ?: enrichedState.seasonTabs.firstOrNull { it.id == effectiveFolderId }
+                        ?: enrichedState.seasonTabs.firstOrNull()
+                    val stateToPublish = if (selectedId == effectiveFolderId || !enrichedState.isFranchiseHub) {
+                        val isSelectedMatcher: (String) -> Boolean = { tabId ->
+                            if (enrichedState.isFranchiseHub) tabId == effectiveFolderId else tabId == selectedId
+                        }
                         enrichedState.copy(
                             selectedNavTab = selectedNavTab,
-                            seasonTabs = enrichedState.seasonTabs.map { it.copy(isSelected = it.id == effectiveFolderId) },
-                            currentEpisodes = enrichedState.currentEpisodes,
-                            activeMemberFolderId = effectiveFolderId
+                            seasonTabs = enrichedState.seasonTabs.map { it.copy(isSelected = isSelectedMatcher(it.id)) },
+                            currentEpisodes = if (enrichedState.isFranchiseHub) enrichedState.currentEpisodes else {
+                                val selectedGroup = allSeasonGroups.firstOrNull { it.id == selectedId }
+                                getEpisodesForGroup(selectedGroup).ifEmpty { enrichedState.currentEpisodes }
+                            },
+                            activeMemberFolderId = if (enrichedState.isFranchiseHub) effectiveFolderId else selectedId,
+                            activeArcId = targetTab?.id ?: effectiveFolderId,
+                            activeArcTitle = targetTab?.title ?: enrichedState.activeArcTitle,
+                            activeArcYear = targetTab?.releaseYear ?: enrichedState.activeArcYear,
+                            activeArcScore = targetTab?.score ?: enrichedState.activeArcScore,
+                            activeArcScoreSource = targetTab?.scoreSource ?: enrichedState.activeArcScoreSource
                         )
                     } else {
-                        val selectedGroup = allSeasonGroups.firstOrNull { it.id == selectedId }
-                        val eps = if (enrichedState.franchiseHub != null) {
-                            folderEpisodesCache[selectedId] ?: enrichedState.currentEpisodes
-                        } else {
-                            getEpisodesForGroup(selectedGroup)
-                        }
+                        val eps = folderEpisodesCache[selectedId] ?: enrichedState.currentEpisodes
                         enrichedState.copy(
                             selectedNavTab = selectedNavTab,
                             seasonTabs = enrichedState.seasonTabs.map { it.copy(isSelected = it.id == selectedId) },
                             currentEpisodes = eps,
-                            activeMemberFolderId = selectedId
+                            activeMemberFolderId = selectedId,
+                            activeArcId = selectedId,
+                            activeArcTitle = targetTab?.title ?: enrichedState.activeArcTitle,
+                            activeArcYear = targetTab?.releaseYear ?: enrichedState.activeArcYear,
+                            activeArcScore = targetTab?.score ?: enrichedState.activeArcScore,
+                            activeArcScoreSource = targetTab?.scoreSource ?: enrichedState.activeArcScoreSource
                         )
                     }
                     seriesDetailCache[folderId] = stateToPublish

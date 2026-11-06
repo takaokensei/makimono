@@ -702,7 +702,7 @@ class SeriesDetailFragment : BaseFragment() {
         synopsisDisclosure.bind(cleanSynopsis)
 
         binding.actionsRow.visibility =
-            if (state.continueWatchingItem != null && !state.isSeasonLoading) View.VISIBLE else View.GONE
+            if (!state.isSeasonLoading) View.VISIBLE else View.GONE
 
         // 5. Action Buttons (REF-11: 3 Primary Hero Buttons — Assistir/Continuar | Minha Lista | Mais)
         val hasPlayableItem = state.continueWatchingItem != null
@@ -771,12 +771,12 @@ class SeriesDetailFragment : BaseFragment() {
         // 6. Navigation Tabs & Panels
         binding.tabButtonEpisodes.isSelected = state.selectedNavTab == SeriesNavTab.EPISODES
         binding.tabButtonDetails.isSelected = state.selectedNavTab == SeriesNavTab.DETAILS
-        binding.tabButtonMoreLikeThis.isSelected = state.selectedNavTab == SeriesNavTab.MORE_LIKE_THIS
+        binding.tabButtonMoreLikeThis.visibility = View.GONE
 
         val showEpisodes = isMovie || state.selectedNavTab == SeriesNavTab.EPISODES
         binding.panelEpisodesTab.visibility = if (showEpisodes) View.VISIBLE else View.GONE
         binding.panelDetailsTab.visibility = if (state.selectedNavTab == SeriesNavTab.DETAILS) View.VISIBLE else View.GONE
-        binding.panelMoreLikeThisTab.visibility = if (state.selectedNavTab == SeriesNavTab.MORE_LIKE_THIS) View.VISIBLE else View.GONE
+        binding.panelMoreLikeThisTab.visibility = View.GONE
 
         binding.tvDetailsFullSynopsis.text = cleanSynopsis ?: ""
 
@@ -1032,7 +1032,7 @@ class SeriesDetailFragment : BaseFragment() {
             val localPath = viewModel.getCompletedDownloadPath(ep.file.id)
             PlaylistItem(
                 fileId = ep.file.id,
-                title = ep.file.name,
+                title = ep.displayTitle,
                 thumbnailLink = ep.file.thumbnailLarge ?: ep.file.thumbnailLink,
                 localUri = localPath?.let { "file://$it" }
             )
@@ -1059,12 +1059,12 @@ class SeriesDetailFragment : BaseFragment() {
         val launchTitle = if (isMovie) {
             canonicalTitle
         } else {
-            file.name
+            item.displayTitle
         }
         val seriesTitle = if (isMovie) {
             canonicalTitle
         } else {
-            SeriesDetailViewModel.humanizeFolderTitle(args.name)
+            currentState.activeArcTitle ?: SeriesDetailViewModel.humanizeFolderTitle(args.name)
         }
 
         PlayerLauncher.launch(

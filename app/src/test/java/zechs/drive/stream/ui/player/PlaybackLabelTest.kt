@@ -1,6 +1,8 @@
 package zechs.drive.stream.ui.player
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import zechs.drive.stream.R
 
@@ -35,5 +37,44 @@ class PlaybackLabelTest {
 
         assertEquals(R.string.playback_movie_full, PlaybackLabel.subtitleRes(isMovie = false, episode = 0))
         assertEquals("Filme Completo", PlaybackLabel.format(isMovie = false, episode = 0))
+    }
+
+    @Test
+    fun sanitizeEpisodeTitleRedundantTitlesCollapsed() {
+        // Redundant "Episódio 02" when epNumber = 2 collapses to not distinct
+        val (title1, isDistinct1) = PlaybackLabel.sanitizeEpisodeTitle("Episódio 02", 2, isMovie = false)
+        assertFalse(isDistinct1)
+        assertEquals("", title1)
+
+        // Mojibake "Epis?dio 02" when epNumber = 2 is sanitized and collapsed
+        val (title2, isDistinct2) = PlaybackLabel.sanitizeEpisodeTitle("Epis?dio 02", 2, isMovie = false)
+        assertFalse(isDistinct2)
+        assertEquals("", title2)
+
+        // Simple "02" when epNumber = 2 collapses
+        val (title3, isDistinct3) = PlaybackLabel.sanitizeEpisodeTitle("02", 2, isMovie = false)
+        assertFalse(isDistinct3)
+        assertEquals("", title3)
+    }
+
+    @Test
+    fun sanitizeEpisodeTitleExtractsDistinctTitles() {
+        // "Episódio 01 - The Day I Became a Shinigami" -> "The Day I Became a Shinigami"
+        val (title1, isDistinct1) = PlaybackLabel.sanitizeEpisodeTitle(
+            "Episódio 01 - The Day I Became a Shinigami",
+            1,
+            isMovie = false
+        )
+        assertTrue(isDistinct1)
+        assertEquals("The Day I Became a Shinigami", title1)
+
+        // Raw torrent filename with group tags and extensions stripped
+        val (title2, isDistinct2) = PlaybackLabel.sanitizeEpisodeTitle(
+            "[shincaps] BLEACH Sennen Kessen-hen ~Kashin-tan~ - 01 (BS 1440x1080 MPEG2 AAC).ts",
+            1,
+            isMovie = false
+        )
+        assertTrue(isDistinct2)
+        assertEquals("BLEACH Sennen Kessen-hen ~Kashin-tan~", title2)
     }
 }

@@ -874,7 +874,13 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
             if (target != null) {
                 handledFocusDirectionKeyCode = event.keyCode
                 when (target) {
-                    zechs.drive.stream.utils.PlayerFocusItem.EXIT -> controller.btnBack.requestFocus()
+                    zechs.drive.stream.utils.PlayerFocusItem.EXIT -> {
+                        if (!DeviceUi.isTenFootExperience(this)) {
+                            controller.btnBack.requestFocus()
+                        } else {
+                            controller.btnPlayPause.requestFocus()
+                        }
+                    }
                     zechs.drive.stream.utils.PlayerFocusItem.PLAY_PAUSE -> controller.btnPlayPause.requestFocus()
                     zechs.drive.stream.utils.PlayerFocusItem.OTHER -> Unit
                 }
@@ -1412,9 +1418,14 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
                 return@launch
             }
 
-            val accessToken = withContext(Dispatchers.IO) { tokenProvider.get().validToken() }
+            val isLocal = currentLocalUri != null || MediaUriResolver.isLocalUri(getStreamUrl(fileId))
+            val accessToken = if (isLocal) {
+                "offline"
+            } else {
+                withContext(Dispatchers.IO) { tokenProvider.get().validToken() }
+            }
             if (isFinishing || fileId != currentFileId) return@launch
-            if (fileId.isBlank() || accessToken == null) {
+            if (fileId.isBlank() || (!isLocal && accessToken == null)) {
                 Toast.makeText(this@MPVActivity, R.string.drive_session_unavailable, Toast.LENGTH_LONG).show()
                 finish()
                 return@launch
@@ -1423,7 +1434,7 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
             intent.removeExtra("startPosition")
             val resumeMs = if (explicitStart >= 0L) explicitStart else viewModel.resumePosition(fileId)
             if (isFinishing || fileId != currentFileId) return@launch
-            prepareMedia(fileId, title, accessToken, resumeMs)
+            prepareMedia(fileId, title ?: "", accessToken ?: "", resumeMs)
         }
     }
 
@@ -1522,7 +1533,9 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
 
         controller.playerToolbar.title = displayTitle
         controller.tvPlayerTitle.text = displayTitle
-        val epText = PlaybackLabel.renderSubtitle(this, isMovie, currentEpNumber)
+        val (distinctSub, hasDistinct) = PlaybackLabel.sanitizeEpisodeTitle(title ?: "", currentEpNumber, isMovie)
+        val baseEp = PlaybackLabel.renderSubtitle(this, isMovie, currentEpNumber)
+        val epText = if (hasDistinct) "$baseEp • $distinctSub" else baseEp
         controller.tvPlayerMeta.text = epText
         if (::controller.isInitialized) {
             controller.btnEpisodes.visibility = if (isMovie || playlist.size <= 1) View.GONE else View.VISIBLE
@@ -3149,7 +3162,7 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
 
     private fun applyMpvSubtitleStyle(style: zechs.drive.stream.utils.SubtitleStyle) {
         MPVLib.setPropertyInt("sub-pos", 96)
-        MPVLib.setPropertyString("sub-ass-override", "force")
+        MPVLib.setPropertyString("sub-ass-override", "scale")
         MPVLib.setPropertyString("sub-font", style.fontFamily.mpvFont)
         MPVLib.setPropertyString("sub-bold", if (style.bold) "yes" else "no")
         MPVLib.setPropertyString("sub-italic", if (style.italic) "yes" else "no")

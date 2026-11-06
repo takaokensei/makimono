@@ -14,8 +14,10 @@ import zechs.drive.stream.domain.library.MediaItemCategory
 import zechs.drive.stream.ui.series.EpisodeAudioBadgePolicy
 import zechs.drive.stream.ui.series.EpisodeCardAccessibilityLabel
 import zechs.drive.stream.data.model.DownloadStatus
+import zechs.drive.stream.utils.DeviceUi
 import zechs.drive.stream.utils.FocusEngine
 import zechs.drive.stream.utils.MediaImageLoader
+import zechs.drive.stream.utils.PlaybackProgressPolicy
 
 data class SeriesEpisodeItem(
     val file: DriveFile,
@@ -148,7 +150,7 @@ class SeriesDetailEpisodeAdapter(
             }
 
             // Watched state & Progress bar
-            val isWatched = item.progressPercent >= 90
+            val isWatched = item.progressPercent >= PlaybackProgressPolicy.FINISHED_PERCENT
             if (isWatched) {
                 binding.badgeWatched.visibility = View.VISIBLE
                 binding.pbEpisodeProgress.visibility = View.VISIBLE
@@ -172,7 +174,7 @@ class SeriesDetailEpisodeAdapter(
             binding.tvEpisodeProgressPercent.visibility = View.GONE
 
             val progressDescription = when {
-                item.progressPercent >= 90 -> context.getString(R.string.series_episode_accessibility_watched)
+                item.progressPercent >= PlaybackProgressPolicy.FINISHED_PERCENT -> context.getString(R.string.series_episode_accessibility_watched)
                 item.progressPercent > 0 -> context.getString(
                     R.string.series_episode_accessibility_in_progress,
                     item.progressPercent
@@ -245,7 +247,8 @@ class SeriesDetailEpisodeAdapter(
                     binding.btnEpisodeDownload.contentDescription = context.getString(R.string.download_status_failed)
                 }
                 else -> {
-                    binding.btnEpisodeDownload.visibility = View.VISIBLE
+                    val isTenFoot = DeviceUi.isTenFootExperience(context)
+                    binding.btnEpisodeDownload.visibility = if (isTenFoot) View.GONE else View.VISIBLE
                     binding.ivDownloadIcon.visibility = View.VISIBLE
                     binding.pbDownloadProgress.visibility = View.GONE
                     binding.tvDownloadPercent.visibility = View.GONE
@@ -265,7 +268,7 @@ class SeriesDetailEpisodeAdapter(
         private fun updateSynopsisVisibility(hasFocus: Boolean) {
             val hasText = binding.tvEpisodeSynopsis.text.isNotBlank()
             binding.tvEpisodeSynopsis.visibility = if (hasText) View.VISIBLE else View.GONE
-            binding.tvEpisodeSynopsis.maxLines = if (hasFocus) 4 else 2
+            binding.tvEpisodeSynopsis.maxLines = 2
         }
     }
 
