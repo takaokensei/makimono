@@ -1568,7 +1568,6 @@ class PlayerActivity : BasePlayerActivity() {
         if (isOsdInitialized && osdController.shouldConsumeBack) {
             if (osdController.isVisible) {
                 osdController.hide()
-                gestureHelper.showNotification(getString(R.string.player_back_again_to_exit))
             }
             return true
         }

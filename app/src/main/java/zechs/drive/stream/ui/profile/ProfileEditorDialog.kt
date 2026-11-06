@@ -158,6 +158,12 @@ class ProfileEditorDialog(
         refreshPreview(smoothTransition = false)
 
         fun showMainMenu(focusedTarget: View? = null) {
+            android.transition.TransitionManager.beginDelayedTransition(
+                b.root as? android.view.ViewGroup ?: b.root,
+                android.transition.AutoTransition().apply {
+                    duration = context.resources.getInteger(R.integer.motion_focus).toLong()
+                }
+            )
             b.panelAvatarCatalog.isVisible = false
             b.panelWallpaperCatalog.isVisible = false
             b.panelMainMenu.isVisible = true
@@ -449,6 +455,12 @@ class ProfileEditorDialog(
 
         // Row 2: Change Avatar
         b.btnChangeAvatar.setOnClickListener {
+            android.transition.TransitionManager.beginDelayedTransition(
+                b.root as? android.view.ViewGroup ?: b.root,
+                android.transition.AutoTransition().apply {
+                    duration = context.resources.getInteger(R.integer.motion_focus).toLong()
+                }
+            )
             b.panelMainMenu.isVisible = false
             b.panelWallpaperCatalog.isVisible = false
             b.panelAvatarCatalog.isVisible = true
@@ -457,11 +469,23 @@ class ProfileEditorDialog(
 
         // Row 3: Change Wallpaper
         b.btnChangeBackground.setOnClickListener {
+            android.transition.TransitionManager.beginDelayedTransition(
+                b.root as? android.view.ViewGroup ?: b.root,
+                android.transition.AutoTransition().apply {
+                    duration = context.resources.getInteger(R.integer.motion_focus).toLong()
+                }
+            )
             b.panelMainMenu.isVisible = false
             b.panelAvatarCatalog.isVisible = false
             b.panelWallpaperCatalog.isVisible = true
             populateWallpaperCatalog()
         }
+
+        zechs.drive.stream.utils.FocusEngine.attach(b.rowProfileName, zechs.drive.stream.utils.FocusEngine.FocusKind.BUTTON)
+        zechs.drive.stream.utils.FocusEngine.attach(b.btnChangeAvatar, zechs.drive.stream.utils.FocusEngine.FocusKind.BUTTON)
+        zechs.drive.stream.utils.FocusEngine.attach(b.btnChangeBackground, zechs.drive.stream.utils.FocusEngine.FocusKind.BUTTON)
+        zechs.drive.stream.utils.FocusEngine.attach(b.btnDeleteProfile, zechs.drive.stream.utils.FocusEngine.FocusKind.BUTTON)
+        zechs.drive.stream.utils.FocusEngine.attach(b.btnDone, zechs.drive.stream.utils.FocusEngine.FocusKind.BUTTON)
 
         // Delete button (visible when editing an existing profile and more than 1 profile exists)
         val canDelete = profile != null && manager.getProfiles().size > 1

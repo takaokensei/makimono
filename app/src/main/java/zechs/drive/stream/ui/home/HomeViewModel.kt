@@ -572,6 +572,7 @@ class HomeViewModel @Inject constructor(
                 }
 
                 _starredFiles.value = filesWithPosters
+                refreshFeaturedCandidates()
             } else {
                 _starredFiles.value = emptyList()
             }
@@ -667,7 +668,10 @@ class HomeViewModel @Inject constructor(
                             val groupedCached = franchiseGroupingManager.groupLibrary(cachedDriveFiles)
                             _animeLibrary.value = groupedCached
                             _filteredAnimes.value = groupedCached
-                            resolveFeaturedSpotlight(groupedCached)
+                            refreshFeaturedCandidates()
+                            if (_featuredAnime.value == null && _featuredCandidates.value.isNotEmpty()) {
+                                resolveFeaturedSpotlight(listOf(_featuredCandidates.value.first()))
+                            }
                             mediaPreloadManager?.startPreload(cachedDriveFiles)
                         }
 
@@ -750,8 +754,9 @@ class HomeViewModel @Inject constructor(
                             _animeLibrary.value = groupedDisplay
                             _filteredAnimes.value = groupedDisplay
                             _isLoadingAnime.value = false
-                            if (_featuredAnime.value == null) {
-                                resolveFeaturedSpotlight(groupedDisplay)
+                            refreshFeaturedCandidates()
+                            if (_featuredAnime.value == null && _featuredCandidates.value.isNotEmpty()) {
+                                resolveFeaturedSpotlight(listOf(_featuredCandidates.value.first()))
                             }
 
                             // Never replace a complete offline snapshot with a truncated response.
@@ -833,6 +838,7 @@ class HomeViewModel @Inject constructor(
                                 }
                                 val groupedUpdated = franchiseGroupingManager.groupLibrary(updatedList)
                                 _animeLibrary.value = groupedUpdated
+                                refreshFeaturedCandidates()
                                 applyCurrentFilter()
                             }
                             cachedFolderMetaMap = folderMetadataRepository.getAllMetadata().associateBy { it.folderId }
@@ -933,12 +939,40 @@ class HomeViewModel @Inject constructor(
     val featuredCandidates = _featuredCandidates.asStateFlow()
     val currentFeaturedIndex = MutableStateFlow(0)
 
+    suspend fun refreshFeaturedCandidates() {
+        val libraryFolders = _animeLibrary.value.filter { it.isFolder || it.isShortcutFolder }
+        if (libraryFolders.isEmpty()) return
+
+        val localFavs = try {
+            favoriteRepository.getFavoritesSync().map { it.folderId }.toSet()
+        } catch (_: Exception) {
+            emptySet()
+        }
+
+        val starred = libraryFolders.filter {
+            it.starred == zechs.drive.stream.data.model.Starred.STARRED || localFavs.contains(it.id)
+        }
+        val unstarred = libraryFolders.filterNot {
+            it.starred == zechs.drive.stream.data.model.Starred.STARRED || localFavs.contains(it.id)
+        }
+
+        val maxSpotlight = 6
+        val candidates = (starred + unstarred).distinctBy {
+            if (it.isShortcut) it.shortcutDetails.targetId ?: it.id else it.id
+        }.take(maxSpotlight)
+
+        if (candidates != _featuredCandidates.value) {
+            _featuredCandidates.value = candidates
+            if (featuredSpotlightIndex >= candidates.size) {
+                featuredSpotlightIndex = 0
+                currentFeaturedIndex.value = 0
+            }
+        }
+    }
+
     fun cycleNextFeaturedSpotlight() {
         if (focusedFeaturedFolderId != null) return
-        val candidates = _featuredCandidates.value.ifEmpty {
-            val folders = _animeLibrary.value.filter { it.isFolder || it.isShortcutFolder }
-            folders.filter { it.starred == zechs.drive.stream.data.model.Starred.STARRED }.ifEmpty { folders }.take(7)
-        }
+        val candidates = _featuredCandidates.value
         if (candidates.size <= 1) return
         featuredSpotlightIndex = (featuredSpotlightIndex + 1) % candidates.size
         currentFeaturedIndex.value = featuredSpotlightIndex
@@ -947,11 +981,8 @@ class HomeViewModel @Inject constructor(
     }
 
     fun selectFeaturedByIndex(index: Int) {
-        val candidates = _featuredCandidates.value.ifEmpty {
-            val folders = _animeLibrary.value.filter { it.isFolder || it.isShortcutFolder }
-            folders.filter { it.starred == zechs.drive.stream.data.model.Starred.STARRED }.ifEmpty { folders }.take(7)
-        }
-        if (index !in candidates.indices) return
+        val candidates = _featuredCandidates.value
+        if (candidates.isEmpty() || index !in candidates.indices) return
         featuredSpotlightIndex = index
         currentFeaturedIndex.value = index
         val chosen = candidates[index]
@@ -973,13 +1004,6 @@ class HomeViewModel @Inject constructor(
         if (!isFocusedPreview && focusedFeaturedFolderId != null) return
         val folders = files.filter { it.isFolder || it.isShortcutFolder }
         if (folders.isEmpty()) return
-
-        if (!isFocusedPreview) {
-            val allLibraryFolders = _animeLibrary.value.filter { it.isFolder || it.isShortcutFolder }
-            val source = allLibraryFolders.ifEmpty { folders }
-            _featuredCandidates.value = source.filter { it.starred == zechs.drive.stream.data.model.Starred.STARRED }
-                .ifEmpty { source }.take(7)
-        }
 
         // Prefer starred anime, or the first folder
         val chosenFolder = folders.firstOrNull { it.starred == zechs.drive.stream.data.model.Starred.STARRED }
@@ -1397,6 +1421,7 @@ class HomeViewModel @Inject constructor(
                 if (item.id == file.id || item.shortcutDetails.targetId == targetId) item.copy(starred = status) else item
             }
             _animeLibrary.value = updatedLibrary
+            refreshFeaturedCandidates()
             _filteredAnimes.value = _filteredAnimes.value.map { item ->
                 if (item.id == file.id || item.shortcutDetails.targetId == targetId) item.copy(starred = status) else item
             }

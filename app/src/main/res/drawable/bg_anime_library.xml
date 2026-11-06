@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Near-black neutral canvas. The hero scrim ends on #070A10, the top of this gradient. -->
+<!-- Pure Obsidian canvas matching #07080B canonical base without jarring blue shift -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <gradient
-        android:angle="270"
-        android:startColor="#070A10"
-        android:endColor="#0B121B" />
+    <solid android:color="@color/obsidian_bg_base" />
 </shape>

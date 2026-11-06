@@ -102,12 +102,29 @@ internal class FeaturedHeroBinder(
             return
         }
         container.visibility = View.VISIBLE
-        container.removeAllViews()
 
         val density = context.resources.displayMetrics.density
         val accentColor = context.resolveThemeColor(R.attr.colorAccentPrimary)
         val inactiveColor = androidx.core.content.ContextCompat.getColor(context, R.color.obsidian_border_glass)
 
+        if (container.childCount == count) {
+            for (i in 0 until count) {
+                val pill = container.getChildAt(i)
+                val isActive = i == activeIndex
+                val targetWidth = if (isActive) (28 * density).toInt() else (10 * density).toInt()
+                val lp = pill.layoutParams as? android.widget.LinearLayout.LayoutParams
+                if (lp != null && lp.width != targetWidth) {
+                    lp.width = targetWidth
+                    pill.layoutParams = lp
+                }
+                (pill.background as? android.graphics.drawable.GradientDrawable)?.setColor(
+                    if (isActive || pill.hasFocus()) accentColor else inactiveColor
+                )
+            }
+            return
+        }
+
+        container.removeAllViews()
         for (i in 0 until count) {
             val isActive = i == activeIndex
             val pill = View(context).apply {

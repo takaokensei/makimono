@@ -1072,7 +1072,6 @@ class MPVActivity : BasePlayerActivity(), MPVLib.EventObserver {
         if (isOsdInitialized && osdController.shouldConsumeBack) {
             if (osdController.isVisible) {
                 hideControls()
-                gestureHelper.showNotification(getString(R.string.player_back_again_to_exit))
             }
             return true
         }

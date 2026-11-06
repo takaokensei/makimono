@@ -182,6 +182,12 @@ internal class ProfileOnboardingDialog(
                 step = settings.fetchProfileSetupStep(profile.id)
                 if (step == ProfileSetupPolicy.COMPLETE) { dialog.dismiss(); onFinished(); return@launch }
                 if (!dialog.isShowing) return@launch
+                android.transition.TransitionManager.beginDelayedTransition(
+                    content,
+                    android.transition.AutoTransition().apply {
+                        duration = context.resources.getInteger(R.integer.motion_focus).toLong()
+                    }
+                )
                 content.removeAllViews()
                 viewport.scrollTo(0, 0)
                 heading(context.getString(R.string.profile_setup_step, step, ProfileSetupPolicy.TOTAL_STEPS), R.style.TextAppearance_Makimono_TV_Body)

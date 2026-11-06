@@ -6,11 +6,26 @@
     app:startDestination="@id/startupFragment">
 
     <action android:id="@+id/action_global_signInFragment"
-        app:destination="@id/signInFragment" app:popUpTo="@id/nav_graph.xml" />
+        app:destination="@id/signInFragment"
+        app:enterAnim="@anim/nav_fade_in"
+        app:exitAnim="@anim/nav_fade_out"
+        app:popEnterAnim="@anim/nav_pop_enter"
+        app:popExitAnim="@anim/nav_pop_exit"
+        app:popUpTo="@id/nav_graph.xml" />
     <action android:id="@+id/action_global_profileSelectionFragment"
-        app:destination="@id/profileSelectionFragment" app:popUpTo="@id/nav_graph.xml" />
+        app:destination="@id/profileSelectionFragment"
+        app:enterAnim="@anim/nav_fade_in"
+        app:exitAnim="@anim/nav_fade_out"
+        app:popEnterAnim="@anim/nav_pop_enter"
+        app:popExitAnim="@anim/nav_pop_exit"
+        app:popUpTo="@id/nav_graph.xml" />
     <action android:id="@+id/action_global_startupFragment"
-        app:destination="@id/startupFragment" app:popUpTo="@id/nav_graph.xml" />
+        app:destination="@id/startupFragment"
+        app:enterAnim="@anim/nav_fade_in"
+        app:exitAnim="@anim/nav_fade_out"
+        app:popEnterAnim="@anim/nav_pop_enter"
+        app:popExitAnim="@anim/nav_pop_exit"
+        app:popUpTo="@id/nav_graph.xml" />
     <fragment android:id="@+id/startupFragment"
         android:name="zechs.drive.stream.ui.main.StartupFragment"
         android:label="StartupFragment" tools:layout="@layout/fragment_startup" />
@@ -23,18 +38,26 @@
         <action
             android:id="@+id/action_profileSelectionFragment_to_homeFragment"
             app:destination="@id/homeFragment"
-            app:enterAnim="@android:anim/fade_in"
-            app:exitAnim="@android:anim/fade_out"
+            app:enterAnim="@anim/nav_fade_in"
+            app:exitAnim="@anim/nav_fade_out"
+            app:popEnterAnim="@anim/nav_pop_enter"
+            app:popExitAnim="@anim/nav_pop_exit"
             app:popUpTo="@id/profileSelectionFragment"
             app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_profileSelectionFragment_to_settingsFragment"
-            app:destination="@id/settingsFragment" />
+            app:destination="@id/settingsFragment"
+            app:enterAnim="@anim/nav_fade_in"
+            app:exitAnim="@anim/nav_fade_out"
+            app:popEnterAnim="@anim/nav_pop_enter"
+            app:popExitAnim="@anim/nav_pop_exit" />
         <action
             android:id="@+id/action_profileSelectionFragment_to_signInFragment"
             app:destination="@id/signInFragment"
-            app:enterAnim="@android:anim/fade_in"
-            app:exitAnim="@android:anim/fade_out"
+            app:enterAnim="@anim/nav_fade_in"
+            app:exitAnim="@anim/nav_fade_out"
+            app:popEnterAnim="@anim/nav_pop_enter"
+            app:popExitAnim="@anim/nav_pop_exit"
             app:popUpTo="@id/profileSelectionFragment"
             app:popUpToInclusive="true" />
     </fragment>
@@ -58,22 +81,46 @@
             android:defaultValue="@null" />
         <action
             android:id="@+id/action_filesFragment_self"
-            app:destination="@id/filesFragment" />
+            app:destination="@id/filesFragment"
+            app:enterAnim="@anim/nav_fade_in"
+            app:exitAnim="@anim/nav_fade_out"
+            app:popEnterAnim="@anim/nav_pop_enter"
+            app:popExitAnim="@anim/nav_pop_exit" />
         <action
             android:id="@+id/action_filesFragment_to_seriesDetailFragment"
-            app:destination="@id/seriesDetailFragment" />
+            app:destination="@id/seriesDetailFragment"
+            app:enterAnim="@anim/nav_fade_in"
+            app:exitAnim="@anim/nav_fade_out"
+            app:popEnterAnim="@anim/nav_pop_enter"
+            app:popExitAnim="@anim/nav_pop_exit" />
         <action
             android:id="@+id/action_filesFragment_to_signInFragment"
-            app:destination="@id/signInFragment" />
+            app:destination="@id/signInFragment"
+            app:enterAnim="@anim/nav_fade_in"
+            app:exitAnim="@anim/nav_fade_out"
+            app:popEnterAnim="@anim/nav_pop_enter"
+            app:popExitAnim="@anim/nav_pop_exit" />
         <action
             android:id="@+id/action_filesFragment_to_settingsFragment"
-            app:destination="@id/settingsFragment" />
+            app:destination="@id/settingsFragment"
+            app:enterAnim="@anim/nav_fade_in"
+            app:exitAnim="@anim/nav_fade_out"
+            app:popEnterAnim="@anim/nav_pop_enter"
+            app:popExitAnim="@anim/nav_pop_exit" />
         <action
             android:id="@+id/action_filesFragment_to_profileSelectionFragment"
-            app:destination="@id/profileSelectionFragment" />
+            app:destination="@id/profileSelectionFragment"
+            app:enterAnim="@anim/nav_fade_in"
+            app:exitAnim="@anim/nav_fade_out"
+            app:popEnterAnim="@anim/nav_pop_enter"
+            app:popExitAnim="@anim/nav_pop_exit" />
         <action
             android:id="@+id/action_filesFragment_to_downloadsFragment"
-            app:destination="@id/downloadsFragment" />
+            app:destination="@id/downloadsFragment"
+            app:enterAnim="@anim/nav_fade_in"
+            app:exitAnim="@anim/nav_fade_out"
+            app:popEnterAnim="@anim/nav_pop_enter"
+            app:popExitAnim="@anim/nav_pop_exit" />
     </fragment>
 
     <fragment
@@ -84,10 +131,10 @@
         <action
             android:id="@+id/action_signInFragment_to_homeFragment"
             app:destination="@id/homeFragment"
-            app:enterAnim="@android:anim/slide_in_left"
-            app:exitAnim="@android:anim/slide_out_right"
-            app:popEnterAnim="@android:anim/slide_in_left"
-            app:popExitAnim="@android:anim/slide_out_right"
+            app:enterAnim="@anim/nav_fade_in"
+            app:exitAnim="@anim/nav_fade_out"
+            app:popEnterAnim="@anim/nav_pop_enter"
+            app:popExitAnim="@anim/nav_pop_exit"
             app:popUpTo="@id/signInFragment"
             app:popUpToInclusive="true" />
     </fragment>
@@ -99,26 +146,46 @@
         tools:layout="@layout/fragment_home">
         <action
             android:id="@+id/action_homeFragment_to_filesFragment"
-            app:destination="@id/filesFragment" />
+            app:destination="@id/filesFragment"
+            app:enterAnim="@anim/nav_fade_in"
+            app:exitAnim="@anim/nav_fade_out"
+            app:popEnterAnim="@anim/nav_pop_enter"
+            app:popExitAnim="@anim/nav_pop_exit" />
         <action
             android:id="@+id/action_homeFragment_to_settingsFragment"
-            app:destination="@id/settingsFragment" />
+            app:destination="@id/settingsFragment"
+            app:enterAnim="@anim/nav_fade_in"
+            app:exitAnim="@anim/nav_fade_out"
+            app:popEnterAnim="@anim/nav_pop_enter"
+            app:popExitAnim="@anim/nav_pop_exit" />
         <action
             android:id="@+id/action_homeFragment_to_seriesDetailFragment"
-            app:destination="@id/seriesDetailFragment" />
+            app:destination="@id/seriesDetailFragment"
+            app:enterAnim="@anim/nav_fade_in"
+            app:exitAnim="@anim/nav_fade_out"
+            app:popEnterAnim="@anim/nav_pop_enter"
+            app:popExitAnim="@anim/nav_pop_exit" />
         <action
             android:id="@+id/action_homeFragment_to_profileSelectionFragment"
-            app:destination="@id/profileSelectionFragment" />
+            app:destination="@id/profileSelectionFragment"
+            app:enterAnim="@anim/nav_fade_in"
+            app:exitAnim="@anim/nav_fade_out"
+            app:popEnterAnim="@anim/nav_pop_enter"
+            app:popExitAnim="@anim/nav_pop_exit" />
         <action
             android:id="@+id/action_homeFragment_to_signInFragment"
-            app:destination="@id/signInFragment" />
+            app:destination="@id/signInFragment"
+            app:enterAnim="@anim/nav_fade_in"
+            app:exitAnim="@anim/nav_fade_out"
+            app:popEnterAnim="@anim/nav_pop_enter"
+            app:popExitAnim="@anim/nav_pop_exit" />
         <action
             android:id="@+id/action_homeFragment_to_queueFragment"
             app:destination="@id/queueFragment"
-            app:enterAnim="@android:anim/fade_in"
-            app:exitAnim="@android:anim/fade_out"
-            app:popEnterAnim="@android:anim/fade_in"
-            app:popExitAnim="@android:anim/fade_out" />
+            app:enterAnim="@anim/nav_fade_in"
+            app:exitAnim="@anim/nav_fade_out"
+            app:popEnterAnim="@anim/nav_pop_enter"
+            app:popExitAnim="@anim/nav_pop_exit" />
         <action
             android:id="@+id/action_homeFragment_to_downloadsFragment"
             app:destination="@id/downloadsFragment"
@@ -146,7 +213,11 @@
         android:label="SettingsFragment">
         <action
             android:id="@+id/action_settingsFragment_to_profileSelectionFragment"
-            app:destination="@id/profileSelectionFragment" />
+            app:destination="@id/profileSelectionFragment"
+            app:enterAnim="@anim/nav_fade_in"
+            app:exitAnim="@anim/nav_fade_out"
+            app:popEnterAnim="@anim/nav_pop_enter"
+            app:popExitAnim="@anim/nav_pop_exit" />
     </fragment>
 
     <fragment
@@ -167,10 +238,18 @@
             android:defaultValue="@null" />
         <action
             android:id="@+id/action_seriesDetailFragment_to_filesFragment"
-            app:destination="@id/filesFragment" />
+            app:destination="@id/filesFragment"
+            app:enterAnim="@anim/nav_fade_in"
+            app:exitAnim="@anim/nav_fade_out"
+            app:popEnterAnim="@anim/nav_pop_enter"
+            app:popExitAnim="@anim/nav_pop_exit" />
         <action
             android:id="@+id/action_seriesDetailFragment_to_signInFragment"
-            app:destination="@id/signInFragment" />
+            app:destination="@id/signInFragment"
+            app:enterAnim="@anim/nav_fade_in"
+            app:exitAnim="@anim/nav_fade_out"
+            app:popEnterAnim="@anim/nav_pop_enter"
+            app:popExitAnim="@anim/nav_pop_exit" />
     </fragment>
 
 </navigation>
