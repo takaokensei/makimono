@@ -39,6 +39,15 @@ class SignInFragment : Fragment(R.layout.fragment_sign_in) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         _binding = FragmentSignInBinding.bind(view)
+        listOf(
+            binding.btnGeneratePairing,
+            binding.btnOpenBrowser,
+            binding.btnCopyCode,
+            binding.btnCopyUrl,
+            binding.btnToggleQr
+        ).forEach { btn ->
+            zechs.drive.stream.utils.FocusEngine.attach(btn, zechs.drive.stream.utils.FocusEngine.FocusKind.BUTTON)
+        }
         setupActions()
         collectState()
     }

@@ -191,6 +191,10 @@ class ProfileSelectionFragment : BaseFragment() {
     }
 
     private fun setupActions() {
+        zechs.drive.stream.utils.FocusEngine.attach(
+            binding.btnLogOut,
+            zechs.drive.stream.utils.FocusEngine.FocusKind.BUTTON
+        )
         binding.btnLogOut.setOnKeyListener { _, keyCode, event ->
             if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_UP) {
                 val targetPos = profilesAdapter.currentList.indexOfFirst {

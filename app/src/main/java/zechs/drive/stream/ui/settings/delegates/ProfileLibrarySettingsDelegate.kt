@@ -3,6 +3,7 @@ package zechs.drive.stream.ui.settings.delegates
 import android.content.Context
 import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.navigation.NavController
+import zechs.drive.stream.utils.ext.navigateSafe
 import com.bumptech.glide.Glide
 import zechs.drive.stream.R
 import zechs.drive.stream.databinding.FragmentSettingsBinding
@@ -25,7 +26,7 @@ class ProfileLibrarySettingsDelegate(
 
     fun setup() {
         binding.settingSelectProfile.setOnClickListener {
-            navController.navigate(R.id.action_settingsFragment_to_profileSelectionFragment)
+            navController.navigateSafe(R.id.action_settingsFragment_to_profileSelectionFragment)
         }
 
         binding.settingLibraryRoot.setOnClickListener {

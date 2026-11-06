@@ -147,4 +147,21 @@ abstract class BasePlayerActivity : AppCompatActivity(), PlayerModalHost {
     }
 
     protected open fun onPlaybackFinished(finishedFileId: String) {}
+
+    override fun finish() {
+        super.finish()
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            overrideActivityTransition(
+                OVERRIDE_TRANSITION_CLOSE,
+                zechs.drive.stream.R.anim.nav_fade_in,
+                zechs.drive.stream.R.anim.nav_fade_out
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            overridePendingTransition(
+                zechs.drive.stream.R.anim.nav_fade_in,
+                zechs.drive.stream.R.anim.nav_fade_out
+            )
+        }
+    }
 }

@@ -304,7 +304,13 @@
     </style>
 
     <!-- Unified Glass / Theme Dialog Overlay for Audio, Subtitle, Speed and Chapters -->
+        <style name="Animation.Makimono.DialogFade" parent="@android:style/Animation.Dialog">
+        <item name="android:windowEnterAnimation">@anim/nav_fade_in</item>
+        <item name="android:windowExitAnimation">@anim/nav_fade_out</item>
+    </style>
+
     <style name="ThemeOverlay.DriveStream.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="android:windowAnimationStyle">@style/Animation.Makimono.DialogFade</item>
         <item name="colorSurface">?attr/colorBgSurface</item>
         <item name="colorOnSurface">?attr/colorTextPrimary</item>
         <item name="colorOnSurfaceVariant">?attr/colorTextSecondary</item>

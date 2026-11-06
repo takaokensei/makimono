@@ -3,5 +3,6 @@
 </style>
 <style name="ThemeOverlay.Makimono.Glass" parent="ThemeOverlay.Material3.MaterialAlertDialog">
     <item name="android:windowIsTranslucent">true</item>
+    <item name="android:windowAnimationStyle">@style/Animation.Makimono.DialogFade</item>
 </style>
 </resources>

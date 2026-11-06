@@ -257,8 +257,12 @@ class ProfilesAdapter(
 
                     binding.ivEditBadge.isVisible = false
 
-                    binding.cardProfileRoot.setOnClickListener {
-                        onProfileSelected(profile)
+                    binding.cardProfileRoot.setOnClickListener { v ->
+                        v.animate().scaleX(0.93f).scaleY(0.93f).setDuration(80).withEndAction {
+                            v.animate().scaleX(1.06f).scaleY(1.06f).setDuration(120).withEndAction {
+                                onProfileSelected(profile)
+                            }.start()
+                        }.start()
                     }
                 }
                 is ProfileUiModel.AddProfileItem -> {
@@ -284,8 +288,12 @@ class ProfilesAdapter(
                     binding.cardProfileRoot.isSelected = false
                     binding.cardProfileRoot.setOnLongClickListener(null)
 
-                    binding.cardProfileRoot.setOnClickListener {
-                        onAddProfileClicked()
+                    binding.cardProfileRoot.setOnClickListener { v ->
+                        v.animate().scaleX(0.93f).scaleY(0.93f).setDuration(80).withEndAction {
+                            v.animate().scaleX(1.06f).scaleY(1.06f).setDuration(120).withEndAction {
+                                onAddProfileClicked()
+                            }.start()
+                        }.start()
                     }
                 }
             }

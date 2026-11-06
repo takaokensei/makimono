@@ -18,6 +18,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
+import zechs.drive.stream.utils.ext.navigateSafe
 import androidx.navigation.fragment.navArgs
 import zechs.drive.stream.utils.MediaImageLoader
 import zechs.drive.stream.utils.DeviceUi
@@ -302,8 +303,7 @@ class SeriesDetailFragment : BaseFragment() {
         )
 
         for (btn in heroButtons + headerButtons) {
-            FocusEngine.attach(btn, FocusEngine.FocusKind.BUTTON)
-            btn.setOnFocusChangeListener { _, hasFocus ->
+            FocusEngine.attach(btn, FocusEngine.FocusKind.BUTTON) { _, hasFocus ->
                 if (hasFocus && binding.tvSynopsis.maxLines <= 8 && binding.scrollView.scrollY > 0) {
                     binding.scrollView.smoothScrollTo(0, 0)
                 }
@@ -448,7 +448,7 @@ class SeriesDetailFragment : BaseFragment() {
                             }
                             binding.stateView.setState(stateType) {
                                 if (state.error is AppError.Authentication) {
-                                    findNavController().navigate(
+                                    findNavController().navigateSafe(
                                         R.id.action_seriesDetailFragment_to_signInFragment
                                     )
                                 } else {

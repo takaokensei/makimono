@@ -83,7 +83,7 @@ class FilesFragment : BaseFragment() {
             onPageErrorAction = { errorKind ->
                 when (errorKind) {
                     ResourceErrorKind.AUTHENTICATION ->
-                        findNavController().navigate(R.id.action_filesFragment_to_signInFragment)
+                        findNavController().navigateSafe(R.id.action_filesFragment_to_signInFragment)
                     ResourceErrorKind.ACCESS_DENIED,
                     ResourceErrorKind.NOT_FOUND -> findNavController().popBackStack()
                     else -> viewModel.queryFiles(args.query)
@@ -691,7 +691,7 @@ class FilesFragment : BaseFragment() {
                 folderId = targetFolderId,
                 posterUrl = file.posterUrl ?: file.thumbnailLarge ?: file.thumbnailLink
             )
-            findNavController().navigate(action)
+            findNavController().navigateSafe(action)
         } else {
             val isLocal = targetFolderId.startsWith(zechs.drive.stream.data.repository.LocalMediaRepository.LOCAL_BUCKET_PREFIX)
             val action = FilesFragmentDirections.actionFilesFragmentSelf(
@@ -699,7 +699,7 @@ class FilesFragment : BaseFragment() {
                 query = if (isLocal) targetFolderId else "'$targetFolderId' in parents and trashed=false",
                 folderPath = navigation.folderPath.toTypedArray()
             )
-            findNavController().navigate(action)
+            findNavController().navigateSafe(action)
         }
     }
 

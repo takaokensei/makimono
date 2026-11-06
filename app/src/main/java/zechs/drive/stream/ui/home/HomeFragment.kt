@@ -226,7 +226,16 @@ class HomeFragment : BaseFragment() {
         shelvesController.observeShelves { refreshInicioShelfUi() }
 
         binding.tvShelfViewQueue?.setOnClickListener { actionHandler.showWatchQueueDialog() }
-        binding.btnExploreAnimes?.setOnClickListener { railController.selectTab("Animes") }
+        binding.btnExploreAnimes?.let { btn ->
+            zechs.drive.stream.utils.FocusEngine.attach(btn, zechs.drive.stream.utils.FocusEngine.FocusKind.BUTTON)
+            btn.setOnClickListener {
+                btn.animate().scaleX(0.94f).scaleY(0.94f).setDuration(80).withEndAction {
+                    btn.animate().scaleX(1.04f).scaleY(1.04f).setDuration(120).withEndAction {
+                        railController.selectTab("Animes")
+                    }.start()
+                }.start()
+            }
+        }
 
         observeAnimeLibrary()
         heroController.observeFeaturedAnime(
@@ -596,7 +605,7 @@ class HomeFragment : BaseFragment() {
                                 }
                                 binding.stateView.setState(stateType) {
                                     if (state.error is AppError.Authentication) {
-                                        findNavController().navigate(
+                                        findNavController().navigateSafe(
                                             R.id.action_homeFragment_to_signInFragment
                                         )
                                     } else {

@@ -73,6 +73,7 @@ class ProfileEditorDialog(
                 setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                 setBackgroundDrawable(ColorDrawable(Color.BLACK))
                 decorView.setPadding(0, 0, 0, 0)
+                setWindowAnimations(R.style.Animation_Makimono_DialogFade)
             }
         }
 

@@ -269,7 +269,10 @@ internal class ProfileOnboardingDialog(
             guard.restore(); owner.lifecycle.removeObserver(observer); onDismiss()
         }
         dialog.show()
-        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        dialog.window?.apply {
+            setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            setWindowAnimations(R.style.Animation_Makimono_DialogFade)
+        }
         render()
         return dialog
     }

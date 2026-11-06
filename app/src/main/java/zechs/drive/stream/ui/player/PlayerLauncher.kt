@@ -147,6 +147,13 @@ object PlayerLauncher {
             deviceCaps = deviceCaps,
             localUri = localUri
         )
-        context.startActivity(intent)
+        val bundle = if (context is android.app.Activity) {
+            androidx.core.app.ActivityOptionsCompat.makeCustomAnimation(
+                context,
+                zechs.drive.stream.R.anim.nav_fade_in,
+                zechs.drive.stream.R.anim.nav_fade_out
+            ).toBundle()
+        } else null
+        context.startActivity(intent, bundle)
     }
 }

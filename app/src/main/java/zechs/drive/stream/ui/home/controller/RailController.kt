@@ -140,6 +140,11 @@ class RailController(
             })
         }
 
+        val transition = androidx.transition.Fade().apply {
+            duration = binding.root.context.resources.getInteger(R.integer.motion_focus).toLong()
+        }
+        binding.workspaceContainer?.let { androidx.transition.TransitionManager.beginDelayedTransition(it, transition) }
+
         binding.apply {
             btnHamburgerMenu?.setOnClickListener { toggleSidebar() }
 
